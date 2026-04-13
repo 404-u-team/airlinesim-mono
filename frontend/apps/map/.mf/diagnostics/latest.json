@@ -1,0 +1,10 @@
+{
+  "latestErrorEvent": {
+    "code": "TYPE-001",
+    "message": "Failed to generate type declaration. Execute the below cmd to reproduce and fix the error. #TYPE-001\nargs: {\"cmd\":\"npx tsc --project U:\\\\DEV\\\\airlinesim-kr\\\\frontend\\\\apps\\\\map\\\\node_modules\\\\.federation\\\\tsconfig.14ed3898b3608d02cbfb3eacba0d744c.json\"}\nView the docs to see how to solve: https://module-federation.io/guide/troubleshooting/type#type-001",
+    "args": {
+      "cmd": "npx tsc --project U:\\DEV\\airlinesim-kr\\frontend\\apps\\map\\node_modules\\.federation\\tsconfig.14ed3898b3608d02cbfb3eacba0d744c.json"
+    },
+    "timestamp": 1776114876398
+  }
+}
