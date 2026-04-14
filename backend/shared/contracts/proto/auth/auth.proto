@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package auth.v1;
+
+option go_package = "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1;authpb";
+
+// authentication service
+service AuthService {
+  // register user
+  rpc Register(RegisterRequest) returns (TokenResponse);
+
+  // login user and give him pair of access and refresh jwt token
+  rpc Login(LoginRequest) returns (TokenResponse);
+
+  // validate given token
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+}
+
+// request to register user
+message RegisterRequest {
+  string email = 1;
+  string nickname = 2;
+  string password = 3;
+}
+
+// request to login (login represent email or nickname)
+message LoginRequest {
+  string login = 1;
+  string password = 2;
+}
+
+// access and refresh token response
+message TokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+// request to validate access token
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+// response of validate token
+message ValidateTokenResponse {
+  int64 user_id = 1;
+  bool valid = 2;
+}
