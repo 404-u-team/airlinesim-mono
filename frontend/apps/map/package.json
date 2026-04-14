@@ -10,6 +10,9 @@
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "lint": "oxlint -c ../../.oxlintrc.json --tsconfig tsconfig.app.json -D all"
   },
+  "dependencies": {
+    "@airlinesim/ui-kit": "workspace:*"
+  },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.0.0",
     "@tsconfig/svelte": "^5.0.8",

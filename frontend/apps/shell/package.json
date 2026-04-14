@@ -10,7 +10,8 @@
     "lint": "oxlint -c ../../.oxlintrc.json --tsconfig tsconfig.app.json -D all"
   },
   "dependencies": {
-    "vue": "^3.5.32"
+    "vue": "^3.5.32",
+    "@airlinesim/ui-kit": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.12.2",

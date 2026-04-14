@@ -1,0 +1,36 @@
+{
+  "name": "@airlinesim/ui-kit",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "scripts": {
+    "generate": "bun run scripts/generate-index.ts",
+    "prebuild": "bun run generate",
+    "build": "vite build",
+    "predev": "bun run generate",
+    "dev": "vite build --watch"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.9",
+    "tailwindcss": "^4.2.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@vitejs/plugin-vue": "^6.0.6",
+    "vite": "^8.0.8",
+    "vite-plugin-dts": "^4.5.4",
+    "vue": "^3.5.32"
+  }
+}
