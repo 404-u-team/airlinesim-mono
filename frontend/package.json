@@ -1,33 +1,22 @@
 {
-  "name": "airlinesim-fe",
-  "packageManager": "bun@1.3.1",
-  "module": "index.ts",
-  "type": "module",
-  "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
-  "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint",
-    "format": "turbo run format"
-  },
+  "name": "airlinesim",
   "devDependencies": {
-    "@module-federation/vite": "^1.14.3",
-    "@types/bun": "latest",
-    "map": "workspace:*",
-    "oxlint": "^1.60.0",
-    "oxlint-tsgolint": "^0.20.0",
-    "prettier": "^3.8.2",
-    "prettier-plugin-svelte": "^3.5.1",
-    "prettier-plugin-tailwindcss": "^0.7.2",
-    "sass": "^1.99.0",
-    "shell": "workspace:*",
-    "turbo": "^2.9.6"
+    "@types/bun": "latest"
   },
+  "packageManager": "bun@1.3.1",
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "scripts": {
+    "dev": "turbo dev"
+  },
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "dependencies": {
+    "turbo": "^2.9.6"
   }
 }

@@ -1,27 +1,28 @@
-import { defineConfig } from 'vite';
-import vue from '@vitejs/plugin-vue';
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
 import { federation } from '@module-federation/vite';
 
+// https://vite.dev/config/
 export default defineConfig({
   server: {
-    port: 5000,
+    port: 4000,
+    cors: true,
   },
   plugins: [
     vue(),
     federation({
-      name: 'shellHost',
-      dts: false,
+      name: 'shell',
+      manifest: false,
       remotes: {
-        mapRemote: {
-          type: 'module',
-          name: 'mapRemote',
-          entry: 'http://localhost:5001/remoteEntry.js',
+        map: 'http://localhost:4001/mf-manifest.json'
+      },
+      shared: {
+        'vue': {
+          singleton: true,
+          requiredVersion: '^3.5.32'
         }
       },
-      shared: ['vue']
+      dts: false
     })
   ],
-  build: {
-    target: 'esnext'
-  }
-});
+})

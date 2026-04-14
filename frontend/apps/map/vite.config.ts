@@ -1,24 +1,28 @@
-import { defineConfig } from 'vite';
-import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { defineConfig } from 'vite'
+import { svelte } from '@sveltejs/vite-plugin-svelte'
 import { federation } from '@module-federation/vite';
 
+// https://vite.dev/config/
 export default defineConfig({
-  server: {
-    port: 5001, // Жестко фиксируем порт для ремоута
-  },
   plugins: [
     svelte(),
     federation({
-      name: 'mapRemote',
-      dts: false,
-      filename: 'remoteEntry.js',
+      name: 'map',
+      manifest: true,
       exposes: {
-        './WorldMap': './src/App.svelte',
+        './Map': './src/moduleFederationComponents.svelte.ts'
       },
-      shared: ['svelte']
+      shared: {
+        'svelte': {
+          singleton: true,
+          requiredVersion: '^5.55.1'
+        }
+      }
     })
   ],
-  build: {
-    target: 'esnext'
-  }
-});
+  server: {
+    port: 4001,
+    cors: true,
+    origin: 'http://localhost:4001',
+  },
+})

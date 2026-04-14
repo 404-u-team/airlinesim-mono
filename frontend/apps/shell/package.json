@@ -6,12 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview",
-    "lint": "oxlint -c ../../.oxlintrc.json --tsconfig tsconfig.app.json -D all"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.5.32",
-    "@airlinesim/ui-kit": "workspace:*"
+    "@module-federation/vite": "^1.14.3",
+    "vue": "^3.5.32"
   },
   "devDependencies": {
     "@types/node": "^24.12.2",

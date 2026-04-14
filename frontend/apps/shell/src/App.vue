@@ -1,7 +1,14 @@
-<script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
-  <HelloWorld />
+  <div>
+    <h1>Мой Vue Сайт</h1>
+    
+    <SvelteWrapper 
+        :createFn="createMap" 
+      />
+  </div>
 </template>
+
+<script setup lang="ts">
+import { createMap } from 'map/Map';
+import SvelteWrapper from './components/SvelteWrapper.vue';
+</script>
