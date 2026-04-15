@@ -2,12 +2,13 @@ package handlers
 
 import (
 	"context"
-	"log"
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/dto"
+	grpcerrors "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/errors"
 	grpcclient "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/grpc"
 	authpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1"
 	"github.com/gin-gonic/gin"
@@ -28,16 +29,16 @@ func NewAuthHandler(authClient *grpcclient.AuthClient, config *config.Config) *A
 // @Tags         Auth
 // @Accept       json
 // @Produce      json
-// @Success      200  {object}  dto.AccessTokenResponse
-// @Failure      400  {object}  map[string]interface{}
-// @Failure      404  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]interface{}
+// @Param request body dto.RegisterRequest true "User registration details"
+// @Success      201  {object}  dto.AccessTokenResponse "User created and authenticated"
+// @Failure      400  {object}  dto.ErrorResponse "1 - request validation error, 2 - email exists, 3 - nickname exists"
+// @Failure      500 "Internal server error"
 // @Router       /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	// getting payload and validate it
 	var payload dto.RegisterRequest
 	if err := c.ShouldBindJSON(&payload); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
 		return
 	}
 
@@ -55,8 +56,15 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	// grpc register
 	tokenResponse, err := h.authClient.Register(ctx, &registerRequest)
 	if err != nil {
-		log.Println(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		if errors.Is(err, grpcerrors.ErrUserWithSuchEmailExists) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 2})
+			return
+		}
+		if errors.Is(err, grpcerrors.ErrUserWithSuchNicknameExists) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 3})
+			return
+		}
+		c.Status(http.StatusInternalServerError)
 		return
 	}
 
@@ -65,11 +73,22 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.AccessTokenResponse{AccessToken: tokenResponse.AccessToken})
 }
 
+// Login godoc
+// @Summary      Login user
+// @Description  Returns access token and sets refresh token into cookie
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param request body dto.LoginRequest true "User login details"
+// @Success      200  {object}  dto.AccessTokenResponse "User authenticated"
+// @Failure      400  {object}  dto.ErrorResponse "1 - request validation error, 2 - user not found"
+// @Failure      500 "Internal server error"
+// @Router       /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	// getting payload and validate it
 	var payload dto.LoginRequest
 	if err := c.ShouldBindJSON(&payload); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
 		return
 	}
 
@@ -86,8 +105,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// grpc login
 	tokenResponse, err := h.authClient.Login(ctx, &loginRequest)
 	if err != nil {
-		log.Println(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		if errors.Is(err, grpcerrors.ErrUserNotFound) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 2})
+			return
+		}
+		c.Status(http.StatusInternalServerError)
 		return
 	}
 

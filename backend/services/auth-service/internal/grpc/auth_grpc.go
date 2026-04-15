@@ -23,13 +23,6 @@ func (s *authServer) Register(ctx context.Context, payload *authpb.RegisterReque
 	tokenResponse, err := s.authService.Register(ctx, payload, s.config)
 	if err != nil {
 		return nil, err
-		// if errors.Is(err, service.ErrUserWithSuchEmailExists) {
-		// 	return nil, service.ErrUserWithSuchEmailExists
-		// }
-		// if errors.Is(err, service.ErrUserWithSuchNicknameExists) {
-		// 	return nil, service.ErrUserWithSuchNicknameExists
-		// }
-		// return nil, service.ErrInternal
 	}
 
 	return tokenResponse, nil
@@ -39,17 +32,16 @@ func (s *authServer) Login(context context.Context, payload *authpb.LoginRequest
 	tokenResponse, err := s.authService.Login(context, payload, s.config)
 	if err != nil {
 		return nil, err
-		// if errors.Is(err, service.ErrUserExists) {
-		// 	return nil, service.ErrUserExists
-		// }
-		// if errors.Is(err, service.ErrInternal) {
-		// 	return nil, service.ErrInternal
-		// }
 	}
 
 	return tokenResponse, nil
 }
 
-func (s *authServer) ValidateToken(context context.Context, req *authpb.ValidateTokenRequest) (*authpb.ValidateTokenResponse, error) {
-	return &authpb.ValidateTokenResponse{UserId: 18, Valid: true}, nil
-}
+// func (s *authServer) RefreshToken(context context.Context, payload *authpb.RefreshTokenRequest) (*authpb.TokenResponse, error) {
+// 	tokenResponse, err := s.authService.Refresh(context, payload, s.config)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	return tokenResponse, nil
+// }

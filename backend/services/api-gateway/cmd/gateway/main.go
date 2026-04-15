@@ -10,13 +10,12 @@ import (
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/routes"
 )
 
-// @title           Swagger Example API
+// @title           AirlineSim API
 // @version         1.0
 // @openapi         3.0.0
-// @description     This is a sample server celler server.
-// @contact.name   API Support
-// @contact.url    http://www.swagger.io/support
-// @contact.email  support@swagger.io
+// @contact.name   Jeno7u
+// @contact.url    https://github.com/Jeno7u
+// @contact.email  lboris201@yandex.ru
 // @host           localhost:8080
 // @schemes        http https
 
