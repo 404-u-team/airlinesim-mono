@@ -265,3 +265,129 @@ func TestAuthService_Login_WrongPassword(t *testing.T) {
 		t.Fatalf("expected wrong password to look like not found, got %v", err)
 	}
 }
+
+func TestAuthService_Refresh_Success(t *testing.T) {
+	config := testConfig(t)
+
+	userID := uuid.New()
+	refreshToken, err := auth.CreateSignedToken(userID, "user", config.JWTRefreshTokenExpireTime, config.JWTPrivateKey)
+	if err != nil {
+		t.Fatalf("got error when tried to create refresh token, %v", err)
+	}
+	refreshTokenRequest := &authpb.RefreshTokenRequest{RefreshToken: refreshToken}
+
+	repo := &mockUserRepository{
+		isUserExists: func(context.Context, uuid.UUID) (bool, error) {
+			return true, nil
+		},
+	}
+
+	authService := NewAuthService(repo)
+	tokenResponse, err := authService.RefreshToken(context.Background(), refreshTokenRequest, config)
+	if err != nil {
+		t.Fatalf("got error when tried to refresh token, %v", err)
+	}
+
+	if tokenResponse == nil {
+		t.Fatalf("token response is nil")
+	}
+
+	// check userID and role from access token
+	tokenUserID, tokenRole, err := auth.VerifyToken(tokenResponse.AccessToken, config.JWTPublicKey)
+	if err != nil {
+		t.Fatalf("got error when tried to verify access token: %v", err)
+	}
+
+	if tokenUserID != userID {
+		t.Fatalf("unexpected access token value, want %v, got %v", userID, tokenUserID)
+	}
+	if tokenRole != "user" {
+		t.Fatalf("unexpected access token value, want %v, got \"user\"", tokenRole)
+	}
+
+	// check userID and role from refresh token
+	tokenUserID, tokenRole, err = auth.VerifyToken(tokenResponse.RefreshToken, config.JWTPublicKey)
+	if err != nil {
+		t.Fatalf("got error when tried to verify refresh token: %v", err)
+	}
+
+	if tokenUserID != userID {
+		t.Fatalf("unexpected refresh token value, want %v, got %v", userID, tokenUserID)
+	}
+	if tokenRole != "user" {
+		t.Fatalf("unexpected refresh token value, want \"user\", got %v", tokenRole)
+	}
+}
+
+func TestAuthService_Refresh_Bad_Token(t *testing.T) {
+	config := testConfig(t)
+
+	userID := uuid.New()
+
+	t.Run("expired token passed", func(t *testing.T) {
+		repo := &mockUserRepository{
+			isUserExists: func(context.Context, uuid.UUID) (bool, error) {
+				return false, nil
+			},
+		}
+
+		authService := NewAuthService(repo)
+
+		tokenExpired, err := auth.CreateSignedToken(userID, "user", 0, config.JWTPrivateKey)
+		if err != nil {
+			t.Fatalf("got error when tried to create token, %v", err)
+		}
+		refreshTokenRequest := &authpb.RefreshTokenRequest{RefreshToken: tokenExpired}
+		_, err = authService.RefreshToken(context.Background(), refreshTokenRequest, config)
+		if !errors.Is(err, grpcerrors.ErrUserUnauthenticated) {
+			t.Fatalf("expired token should return ErrUserUnauthenticated")
+		}
+	})
+
+	t.Run("cant find user with such userID", func(t *testing.T) {
+		repo := &mockUserRepository{
+			isUserExists: func(context.Context, uuid.UUID) (bool, error) {
+				return false, nil
+			},
+		}
+
+		authService := NewAuthService(repo)
+
+		token, err := auth.CreateSignedToken(userID, "user", config.JWTRefreshTokenExpireTime, config.JWTPrivateKey)
+		if err != nil {
+			t.Fatalf("got error when tried to create token, %v", err)
+		}
+		refreshTokenRequest := &authpb.RefreshTokenRequest{RefreshToken: token}
+
+		_, err = authService.RefreshToken(context.Background(), refreshTokenRequest, config)
+		if !errors.Is(err, grpcerrors.ErrUserUnauthenticated) {
+			t.Fatalf("when user is not in db, the error should be ErrUserUnauthenticated, got %v", err)
+		}
+
+	})
+}
+
+func TestAuthService_Refresh_RepositoryError(t *testing.T) {
+	config := testConfig(t)
+
+	userID := uuid.New()
+
+	refreshToken, err := auth.CreateSignedToken(userID, "user", config.JWTRefreshTokenExpireTime, config.JWTPrivateKey)
+	if err != nil {
+		t.Fatalf("got error when tried to create refresh token, %v", err)
+	}
+	refreshTokenRequest := &authpb.RefreshTokenRequest{RefreshToken: refreshToken}
+
+	repo := &mockUserRepository{
+		isUserExists: func(context.Context, uuid.UUID) (bool, error) {
+			return false, pgx.ErrNoRows
+		},
+	}
+
+	authService := NewAuthService(repo)
+
+	_, err = authService.RefreshToken(context.Background(), refreshTokenRequest, config)
+	if !errors.Is(err, grpcerrors.ErrInternal) {
+		t.Fatalf("error in repository should return ErrInternal")
+	}
+}
