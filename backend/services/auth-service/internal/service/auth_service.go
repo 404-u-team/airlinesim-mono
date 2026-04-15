@@ -9,6 +9,7 @@ import (
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/auth"
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/dto"
+	grpcerrors "github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/errors"
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/repository"
 	authpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1"
 	"github.com/google/uuid"
@@ -35,7 +36,7 @@ func (s *authService) Register(ctx context.Context, payload *authpb.RegisterRequ
 	hashedPassword, err := auth.HashPassword(payload.Password)
 	if err != nil {
 		log.Println("error when tried to hash password, ", err)
-		return nil, ErrInternal
+		return nil, grpcerrors.ErrInternal
 	}
 	payload.Password = hashedPassword
 
@@ -46,19 +47,19 @@ func (s *authService) Register(ctx context.Context, payload *authpb.RegisterRequ
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			// unique constraint violation
 			if pgErr.ConstraintName == "users_email_key" {
-				return nil, ErrUserWithSuchEmailExists
+				return nil, grpcerrors.ErrUserWithSuchEmailExists
 			}
 			if pgErr.ConstraintName == "users_nickname_key" {
-				return nil, ErrUserWithSuchNicknameExists
+				return nil, grpcerrors.ErrUserWithSuchNicknameExists
 			}
 		}
-		return nil, ErrInternal
+		return nil, grpcerrors.ErrInternal
 	}
 
 	// create tokens. we using role 'user' because it is default role for created user
 	tokenResponse, err := getTokenResponse(userID, "user", config)
 	if err != nil {
-		return nil, ErrInternal
+		return nil, grpcerrors.ErrInternal
 	}
 
 	return tokenResponse, nil
@@ -77,20 +78,20 @@ func (s *authService) Login(ctx context.Context, payload *authpb.LoginRequest, c
 	}
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrUserNotFound
+			return nil, grpcerrors.ErrUserNotFound
 		}
-		return nil, ErrInternal
+		return nil, grpcerrors.ErrInternal
 	}
 
 	// compare password
 	if !auth.ComparePasswords(user.PasswordHash, payload.Password) {
-		return nil, ErrUserNotFound
+		return nil, grpcerrors.ErrUserNotFound
 	}
 
 	// create tokens
 	tokenResponse, err := getTokenResponse(user.ID, user.Role, config)
 	if err != nil {
-		return nil, ErrInternal
+		return nil, grpcerrors.ErrInternal
 	}
 	return tokenResponse, nil
 }
@@ -99,22 +100,25 @@ func (s *authService) RefreshToken(ctx context.Context, payload *authpb.RefreshT
 	// validate refresh token
 	userID, role, err := auth.VerifyToken(payload.RefreshToken, config.JWTPublicKey)
 	if err != nil {
-		return nil, ErrInternal
+		if errors.Is(err, grpcerrors.ErrUserUnauthenticated) {
+			return nil, grpcerrors.ErrUserUnauthenticated
+		}
+		return nil, grpcerrors.ErrInternal
 	}
 
 	// check user is still in db
 	exists, err := s.repo.IsUserExists(ctx, userID)
 	if err != nil {
-		return nil, ErrInternal
+		return nil, grpcerrors.ErrInternal
 	}
 	if !exists {
-		return nil, ErrUserNotFound
+		return nil, grpcerrors.ErrUserNotFound
 	}
 
 	// create new pair of tokens
 	tokenResponse, err := getTokenResponse(userID, role, config)
 	if err != nil {
-		return nil, ErrInternal
+		return nil, grpcerrors.ErrInternal
 	}
 
 	return tokenResponse, nil

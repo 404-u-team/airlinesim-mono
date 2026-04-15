@@ -10,6 +10,7 @@ import (
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/auth"
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/dto"
+	grpcerrors "github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/errors"
 	authpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -133,7 +134,7 @@ func TestAuthService_Register_UniqueConstraintErrors(t *testing.T) {
 		Nickname: "neo",
 		Password: "secret",
 	}, config)
-	if !errors.Is(err, ErrUserWithSuchEmailExists) {
+	if !errors.Is(err, grpcerrors.ErrUserWithSuchEmailExists) {
 		t.Fatalf("expected email conflict error, got %v", err)
 	}
 
@@ -148,7 +149,7 @@ func TestAuthService_Register_UniqueConstraintErrors(t *testing.T) {
 		Nickname: "neo",
 		Password: "secret",
 	}, config)
-	if !errors.Is(err, ErrUserWithSuchNicknameExists) {
+	if !errors.Is(err, grpcerrors.ErrUserWithSuchNicknameExists) {
 		t.Fatalf("expected nickname conflict error, got %v", err)
 	}
 }
@@ -167,7 +168,7 @@ func TestAuthService_Register_RepositoryError(t *testing.T) {
 		Nickname: "neo",
 		Password: "secret",
 	}, config)
-	if !errors.Is(err, ErrInternal) {
+	if !errors.Is(err, grpcerrors.ErrInternal) {
 		t.Fatalf("expected internal error, got %v", err)
 	}
 }
@@ -223,7 +224,7 @@ func TestAuthService_Login_UserNotFoundAndRepositoryError(t *testing.T) {
 		Login:    "neo",
 		Password: "secret",
 	}, config)
-	if !errors.Is(err, ErrUserNotFound) {
+	if !errors.Is(err, grpcerrors.ErrUserNotFound) {
 		t.Fatalf("expected not found error, got %v", err)
 	}
 
@@ -237,7 +238,7 @@ func TestAuthService_Login_UserNotFoundAndRepositoryError(t *testing.T) {
 		Login:    "user@example.com",
 		Password: "secret",
 	}, config)
-	if !errors.Is(err, ErrInternal) {
+	if !errors.Is(err, grpcerrors.ErrInternal) {
 		t.Fatalf("expected internal error, got %v", err)
 	}
 }
@@ -260,7 +261,7 @@ func TestAuthService_Login_WrongPassword(t *testing.T) {
 		Login:    "user@example.com",
 		Password: "wrong-password",
 	}, config)
-	if !errors.Is(err, ErrUserNotFound) {
+	if !errors.Is(err, grpcerrors.ErrUserNotFound) {
 		t.Fatalf("expected wrong password to look like not found, got %v", err)
 	}
 }
