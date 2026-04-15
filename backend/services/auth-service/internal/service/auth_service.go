@@ -103,16 +103,18 @@ func (s *authService) RefreshToken(ctx context.Context, payload *authpb.RefreshT
 		if errors.Is(err, grpcerrors.ErrUserUnauthenticated) {
 			return nil, grpcerrors.ErrUserUnauthenticated
 		}
+		log.Println("got error when tried to verify token, ", err)
 		return nil, grpcerrors.ErrInternal
 	}
 
 	// check user is still in db
 	exists, err := s.repo.IsUserExists(ctx, userID)
 	if err != nil {
+		log.Println("got error when tried to check user existence, ", err)
 		return nil, grpcerrors.ErrInternal
 	}
 	if !exists {
-		return nil, grpcerrors.ErrUserNotFound
+		return nil, grpcerrors.ErrUserUnauthenticated
 	}
 
 	// create new pair of tokens

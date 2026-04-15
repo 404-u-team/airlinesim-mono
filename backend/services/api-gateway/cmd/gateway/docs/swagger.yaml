@@ -78,6 +78,23 @@ paths:
       summary: Login user
       tags:
       - Auth
+  /auth/refresh:
+    post:
+      description: Returns access token and sets refresh token into cookie
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User authenticated
+          schema:
+            $ref: '#/definitions/dto.AccessTokenResponse'
+        "401":
+          description: Refresh token or user is not valid
+        "500":
+          description: Internal server error
+      summary: Refreshes access and refresh token using refresh token stored in cookies
+      tags:
+      - Auth
   /auth/register:
     post:
       consumes:

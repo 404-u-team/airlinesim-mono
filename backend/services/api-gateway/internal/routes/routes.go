@@ -23,7 +23,7 @@ func SetupRoutes(authClient *grpcclient.AuthClient, config *config.Config) *gin.
 		// публичные эндпоинты
 		api.POST("/auth/register", authHandler.Register)
 		api.POST("/auth/login", authHandler.Login)
-		// api.POST("/auth/refresh", authHandler.Refresh)
+		api.POST("/auth/refresh", authHandler.RefreshToken)
 
 		// защищенные
 		// protected := api.Group("")

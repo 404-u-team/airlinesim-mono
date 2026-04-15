@@ -62,6 +62,32 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/refresh": {
+            "post": {
+                "description": "Returns access token and sets refresh token into cookie",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Refreshes access and refresh token using refresh token stored in cookies",
+                "responses": {
+                    "200": {
+                        "description": "User authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/dto.AccessTokenResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Refresh token or user is not valid"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
         "/auth/register": {
             "post": {
                 "description": "Returns access token and sets refresh token into cookie",

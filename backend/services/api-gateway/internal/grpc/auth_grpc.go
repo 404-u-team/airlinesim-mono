@@ -41,3 +41,7 @@ func (c *AuthClient) Register(ctx context.Context, req *authpb.RegisterRequest) 
 func (c *AuthClient) Login(ctx context.Context, req *authpb.LoginRequest) (*authpb.TokenResponse, error) {
 	return c.client.Login(ctx, req)
 }
+
+func (c *AuthClient) RefreshToken(ctx context.Context, req *authpb.RefreshTokenRequest) (*authpb.TokenResponse, error) {
+	return c.client.RefreshToken(ctx, req)
+}

@@ -115,7 +115,44 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	// set refresh token into cookie and send access token just as json
 	setTokenIntoCookie(c, tokenResponse.RefreshToken, int(h.config.JWTRefreshTokenExpireTime))
-	c.JSON(http.StatusCreated, dto.AccessTokenResponse{AccessToken: tokenResponse.AccessToken})
+	c.JSON(http.StatusOK, dto.AccessTokenResponse{AccessToken: tokenResponse.AccessToken})
+}
+
+// RefreshToken godoc
+// @Summary      Refreshes access and refresh token using refresh token stored in cookies
+// @Description  Returns access token and sets refresh token into cookie
+// @Tags         Auth
+// @Produce      json
+// @Success      200  {object}  dto.AccessTokenResponse "User authenticated"
+// @Failure      401 "Refresh token or user is not valid"
+// @Failure      500 "Internal server error"
+// @Router       /auth/refresh [post]
+func (h *AuthHandler) RefreshToken(c *gin.Context) {
+	// getting refresh token out of cookie
+	refreshToken, err := c.Cookie("refresh_token")
+	if err != nil {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	// set timeout of request
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	// grpc login
+	tokenResponse, err := h.authClient.RefreshToken(ctx, &authpb.RefreshTokenRequest{RefreshToken: refreshToken})
+	if err != nil {
+		if errors.Is(err, grpcerrors.ErrUserUnauthenticated) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+			return
+		}
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	// set refresh token into cookie and send access token just as json
+	setTokenIntoCookie(c, tokenResponse.RefreshToken, int(h.config.JWTRefreshTokenExpireTime))
+	c.JSON(http.StatusOK, dto.AccessTokenResponse{AccessToken: tokenResponse.AccessToken})
 }
 
 func setTokenIntoCookie(c *gin.Context, token string, expirationTime int) {
