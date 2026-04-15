@@ -19,6 +19,7 @@ import (
 type AuthService interface {
 	Register(ctx context.Context, payload *authpb.RegisterRequest, config *config.Config) (*authpb.TokenResponse, error)
 	Login(ctx context.Context, payload *authpb.LoginRequest, config *config.Config) (*authpb.TokenResponse, error)
+	RefreshToken(ctx context.Context, payload *authpb.RefreshTokenRequest, config *config.Config) (*authpb.TokenResponse, error)
 }
 
 type authService struct {
@@ -91,6 +92,31 @@ func (s *authService) Login(ctx context.Context, payload *authpb.LoginRequest, c
 	if err != nil {
 		return nil, ErrInternal
 	}
+	return tokenResponse, nil
+}
+
+func (s *authService) RefreshToken(ctx context.Context, payload *authpb.RefreshTokenRequest, config *config.Config) (*authpb.TokenResponse, error) {
+	// validate refresh token
+	userID, role, err := auth.VerifyToken(payload.RefreshToken, config.JWTPublicKey)
+	if err != nil {
+		return nil, ErrInternal
+	}
+
+	// check user is still in db
+	exists, err := s.repo.IsUserExists(ctx, userID)
+	if err != nil {
+		return nil, ErrInternal
+	}
+	if !exists {
+		return nil, ErrUserNotFound
+	}
+
+	// create new pair of tokens
+	tokenResponse, err := getTokenResponse(userID, role, config)
+	if err != nil {
+		return nil, ErrInternal
+	}
+
 	return tokenResponse, nil
 }
 

@@ -11,7 +11,6 @@ import (
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/dto"
 	authpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1"
-	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -21,6 +20,7 @@ type mockUserRepository struct {
 	createUser     func(context.Context, *authpb.RegisterRequest) (uuid.UUID, error)
 	getUserByEmail func(context.Context, string) (*dto.User, error)
 	getUserByNick  func(context.Context, string) (*dto.User, error)
+	isUserExists   func(context.Context, uuid.UUID) (bool, error)
 }
 
 func (m *mockUserRepository) CreateUser(ctx context.Context, payload *authpb.RegisterRequest) (uuid.UUID, error) {
@@ -33,6 +33,10 @@ func (m *mockUserRepository) GetUserByEmail(ctx context.Context, email string) (
 
 func (m *mockUserRepository) GetUserByNickname(ctx context.Context, nickname string) (*dto.User, error) {
 	return m.getUserByNick(ctx, nickname)
+}
+
+func (m *mockUserRepository) IsUserExists(ctx context.Context, userID uuid.UUID) (bool, error) {
+	return m.isUserExists(ctx, userID)
 }
 
 func testConfig(t *testing.T) *config.Config {
@@ -49,22 +53,6 @@ func testConfig(t *testing.T) *config.Config {
 		JWTAccessTokenExpireTime:  60,
 		JWTRefreshTokenExpireTime: 120,
 	}
-}
-
-func parseTokenClaims(t *testing.T, tokenString string, publicKey *rsa.PublicKey) jwt.MapClaims {
-	t.Helper()
-
-	token, err := auth.VerifyToken(tokenString, publicKey)
-	if err != nil {
-		t.Fatalf("got error when tried to verify token: %v", err)
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		t.Fatal("expected jwt.MapClaims")
-	}
-
-	return claims
 }
 
 func TestAuthService_Register_Success(t *testing.T) {
@@ -103,18 +91,32 @@ func TestAuthService_Register_Success(t *testing.T) {
 		t.Fatal("expected hashed password to match original password")
 	}
 
-	accessClaims := parseTokenClaims(t, response.AccessToken, config.JWTPublicKey)
-	if accessClaims["sub"] != userID.String() {
-		t.Fatalf("unexpected access token subject: %v", accessClaims["sub"])
-	}
-	if accessClaims["role"] != "user" {
-		t.Fatalf("unexpected access token role: %v", accessClaims["role"])
+	// check userID and role from access token
+	tokenUserID, tokenRole, err := auth.VerifyToken(response.AccessToken, config.JWTPublicKey)
+	if err != nil {
+		t.Fatalf("got error when tried to verify access token: %v", err)
 	}
 
-	refreshClaims := parseTokenClaims(t, response.RefreshToken, config.JWTPublicKey)
-	if refreshClaims["sub"] != userID.String() {
-		t.Fatalf("unexpected refresh token subject: %v", refreshClaims["sub"])
+	if tokenUserID != userID {
+		t.Fatalf("unexpected access token value, want %v, got %v", userID, tokenUserID)
 	}
+	if tokenRole != "user" {
+		t.Fatalf("unexpected access token value, want %v, got \"user\"", tokenRole)
+	}
+
+	// check userID and role from refresh token
+	tokenUserID, tokenRole, err = auth.VerifyToken(response.RefreshToken, config.JWTPublicKey)
+	if err != nil {
+		t.Fatalf("got error when tried to verify refresh token: %v", err)
+	}
+
+	if tokenUserID != userID {
+		t.Fatalf("unexpected refresh token value, want %v, got %v", userID, tokenUserID)
+	}
+	if tokenRole != "user" {
+		t.Fatalf("unexpected refresh token value, want \"user\", got %v", tokenRole)
+	}
+
 }
 
 func TestAuthService_Register_UniqueConstraintErrors(t *testing.T) {
@@ -196,12 +198,15 @@ func TestAuthService_Login_ByEmailSuccess(t *testing.T) {
 		t.Fatal("expected token response, got nil")
 	}
 
-	claims := parseTokenClaims(t, response.AccessToken, config.JWTPublicKey)
-	if claims["sub"] != userID.String() {
-		t.Fatalf("unexpected token subject: %v", claims["sub"])
+	tokenUserID, tokenRole, err := auth.VerifyToken(response.AccessToken, config.JWTPublicKey)
+	if err != nil {
+		t.Fatalf("got error when tried to verify access token: %v", err)
 	}
-	if claims["role"] != "admin" {
-		t.Fatalf("unexpected token role: %v", claims["role"])
+	if tokenRole != "admin" {
+		t.Fatalf("unexpected userID, want %v, got %v", userID, tokenUserID)
+	}
+	if tokenRole != "admin" {
+		t.Fatalf("unexpected token role, want \"admin\", got %v", tokenRole)
 	}
 }
 

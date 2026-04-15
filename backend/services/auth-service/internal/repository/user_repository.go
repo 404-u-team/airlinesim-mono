@@ -13,6 +13,7 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, payload *authpb.RegisterRequest) (uuid.UUID, error)
 	GetUserByEmail(ctx context.Context, email string) (*dto.User, error)
 	GetUserByNickname(ctx context.Context, nickname string) (*dto.User, error)
+	IsUserExists(ctx context.Context, userID uuid.UUID) (bool, error)
 }
 
 type userRepository struct {
@@ -49,6 +50,21 @@ func (r *userRepository) GetUserByEmail(ctx context.Context, email string) (*dto
 		Scan(&user.ID, &user.PasswordHash)
 
 	return &user, err
+}
+
+// returns *dto.User with userID and password hash
+func (r *userRepository) IsUserExists(ctx context.Context, userID uuid.UUID) (bool, error) {
+	query := `
+		SELECT EXISTS(
+			SELECT 1
+			FROM users WHERE id=$1
+		)
+	`
+	var exists bool
+	err := r.pool.QueryRow(ctx, query, userID).
+		Scan(&exists)
+
+	return exists, err
 }
 
 // returns *dto.User with userID and password hash

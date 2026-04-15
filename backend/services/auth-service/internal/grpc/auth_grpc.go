@@ -37,11 +37,11 @@ func (s *authServer) Login(context context.Context, payload *authpb.LoginRequest
 	return tokenResponse, nil
 }
 
-// func (s *authServer) RefreshToken(context context.Context, payload *authpb.RefreshTokenRequest) (*authpb.TokenResponse, error) {
-// 	tokenResponse, err := s.authService.Refresh(context, payload, s.config)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+func (s *authServer) RefreshToken(context context.Context, payload *authpb.RefreshTokenRequest) (*authpb.TokenResponse, error) {
+	tokenResponse, err := s.authService.RefreshToken(context, payload, s.config)
+	if err != nil {
+		return nil, err
+	}
 
-// 	return tokenResponse, nil
-// }
+	return tokenResponse, nil
+}

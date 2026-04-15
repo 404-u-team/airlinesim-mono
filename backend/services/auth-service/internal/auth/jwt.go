@@ -23,7 +23,9 @@ func CreateSignedToken(userID uuid.UUID, role string, expirationInSeconds int64,
 	return tokenString, nil
 }
 
-func VerifyToken(tokenString string, publicKey *rsa.PublicKey) (*jwt.Token, error) {
+// if token is valid and didnt expired will return userID and role
+func VerifyToken(tokenString string, publicKey *rsa.PublicKey) (uuid.UUID, string, error) {
+	// verifying token
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -32,12 +34,40 @@ func VerifyToken(tokenString string, publicKey *rsa.PublicKey) (*jwt.Token, erro
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse/verify token: %w", err)
+		return uuid.Nil, "", fmt.Errorf("failed to parse/verify token: %w", err)
 	}
 
-	if !token.Valid {
-		return nil, fmt.Errorf("invalid token")
+	// getting claims
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return uuid.Nil, "", fmt.Errorf("bad token")
 	}
 
-	return token, nil
+	// checking expiration time
+	if exp, ok := claims["exp"].(float64); ok {
+		if float64(time.Now().Unix()) > exp {
+			return uuid.Nil, "", fmt.Errorf("token is expired")
+		}
+	} else {
+		return uuid.Nil, "", fmt.Errorf("token dont have 'exp' key")
+	}
+
+	// getting 'sub'
+	sub, ok := claims["sub"].(string)
+	if !ok {
+		return uuid.Nil, "", fmt.Errorf("token dont have 'sub' key")
+	}
+
+	userID, err := uuid.Parse(sub)
+	if err != nil {
+		return uuid.Nil, "", fmt.Errorf("cant convert 'sub' from token to uuid: %v", err)
+	}
+
+	// getting 'role'
+	role, ok := claims["role"].(string)
+	if !ok {
+		return uuid.Nil, "", fmt.Errorf("token dont have 'role' key")
+	}
+
+	return userID, role, nil
 }
