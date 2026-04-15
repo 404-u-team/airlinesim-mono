@@ -8,6 +8,8 @@ import (
 	"log"
 	"os"
 	"strconv"
+
+	"github.com/lpernett/godotenv"
 )
 
 type Config struct {
@@ -18,6 +20,10 @@ type Config struct {
 }
 
 func InitConfig() Config {
+	_ = godotenv.Load(".env")
+	_ = godotenv.Load("../../.env")
+	_ = godotenv.Load("backend/services/api-gateway/.env")
+
 	publicKey, err := loadPublicKey("./public_key.pem")
 	if err != nil {
 		log.Println("got error when tried to get public key, ", err)

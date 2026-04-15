@@ -26,7 +26,7 @@ func NewUserRepository(pool *pgxpool.Pool) UserRepository {
 // creates user, using default role - 'user'
 func (r *userRepository) CreateUser(ctx context.Context, payload *authpb.RegisterRequest) (uuid.UUID, error) {
 	query := `
-		INSERT INTO users (email, nickname, password_hash)
+		INSERT INTO users (email, nickname, password_hashed)
 		VALUES ($1, $2, $3)
 		RETURNING id
 	`

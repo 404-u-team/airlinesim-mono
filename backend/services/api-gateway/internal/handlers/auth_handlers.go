@@ -22,6 +22,17 @@ func NewAuthHandler(authClient *grpcclient.AuthClient, config *config.Config) *A
 	return &AuthHandler{authClient: authClient, config: config}
 }
 
+// Register godoc
+// @Summary      Register user
+// @Description  Returns access token and sets refresh token into cookie
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  dto.AccessTokenResponse
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Router       /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	// getting payload and validate it
 	var payload dto.RegisterRequest

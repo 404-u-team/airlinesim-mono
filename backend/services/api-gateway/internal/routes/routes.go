@@ -7,10 +7,14 @@ import (
 	grpcclient "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/grpc"
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/handlers"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func SetupRoutes(authClient *grpcclient.AuthClient, config *config.Config) *gin.Engine {
 	router := gin.Default()
+
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	authHandler := handlers.NewAuthHandler(authClient, config)
 

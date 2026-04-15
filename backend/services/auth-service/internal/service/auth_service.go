@@ -51,6 +51,7 @@ func (s *authService) Register(ctx context.Context, payload *authpb.RegisterRequ
 				return nil, ErrUserWithSuchNicknameExists
 			}
 		}
+		return nil, ErrInternal
 	}
 
 	// create tokens. we using role 'user' because it is default role for created user
@@ -70,14 +71,14 @@ func (s *authService) Login(ctx context.Context, payload *authpb.LoginRequest, c
 	)
 	if strings.Contains(payload.Login, "@") {
 		user, err = s.repo.GetUserByEmail(ctx, payload.Login)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrUserNotFound
-		}
 	} else {
 		user, err = s.repo.GetUserByNickname(ctx, payload.Login)
+	}
+	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrUserNotFound
 		}
+		return nil, ErrInternal
 	}
 
 	// compare password
