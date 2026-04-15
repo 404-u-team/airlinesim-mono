@@ -143,7 +143,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	tokenResponse, err := h.authClient.RefreshToken(ctx, &authpb.RefreshTokenRequest{RefreshToken: refreshToken})
 	if err != nil {
 		if errors.Is(err, grpcerrors.ErrUserUnauthenticated) {
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+			c.Status(http.StatusUnauthorized)
 			return
 		}
 		c.Status(http.StatusInternalServerError)
