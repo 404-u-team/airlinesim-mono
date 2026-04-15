@@ -17,6 +17,7 @@
     "apps/*"
   ],
   "dependencies": {
+    "@module-federation/rsbuild-plugin": "^2.3.2",
     "turbo": "^2.9.6"
   }
 }
