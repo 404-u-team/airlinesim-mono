@@ -1,6 +1,5 @@
 import { mount, unmount, type Component } from 'svelte';
 import MapComponent from './components/Map.component.svelte'
-import './index.css'
 
 function mountSvelte(SvelteComponent: Component, targetElement: HTMLElement, initialProps = {}) {
     let propsState = $state({ ...initialProps });
