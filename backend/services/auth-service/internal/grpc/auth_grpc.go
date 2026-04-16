@@ -28,8 +28,8 @@ func (s *authServer) Register(ctx context.Context, payload *authpb.RegisterReque
 	return tokenResponse, nil
 }
 
-func (s *authServer) Login(context context.Context, payload *authpb.LoginRequest) (*authpb.TokenResponse, error) {
-	tokenResponse, err := s.authService.Login(context, payload, s.config)
+func (s *authServer) Login(ctx context.Context, payload *authpb.LoginRequest) (*authpb.TokenResponse, error) {
+	tokenResponse, err := s.authService.Login(ctx, payload, s.config)
 	if err != nil {
 		return nil, err
 	}
@@ -37,8 +37,8 @@ func (s *authServer) Login(context context.Context, payload *authpb.LoginRequest
 	return tokenResponse, nil
 }
 
-func (s *authServer) RefreshToken(context context.Context, payload *authpb.RefreshTokenRequest) (*authpb.TokenResponse, error) {
-	tokenResponse, err := s.authService.RefreshToken(context, payload, s.config)
+func (s *authServer) RefreshToken(ctx context.Context, payload *authpb.RefreshTokenRequest) (*authpb.TokenResponse, error) {
+	tokenResponse, err := s.authService.RefreshToken(ctx, payload, s.config)
 	if err != nil {
 		return nil, err
 	}
