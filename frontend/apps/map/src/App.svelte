@@ -3,7 +3,7 @@
 </script>
 
 <main>
-  <Map />
+  <Map controls={true} />
 </main>
 
 <style>

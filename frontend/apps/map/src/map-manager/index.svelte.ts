@@ -2,7 +2,7 @@ import maplibregl from 'maplibre-gl';
 import { MAP__STYLES } from './styles';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { ThreeLayer, type AirplaneModel } from './ThreeLayer';
+import { ThreeLayer, type AirplaneModel } from './3D/ThreeLayer';
 
 export class MapManager {
     private map: maplibregl.Map | null = null;
@@ -16,11 +16,6 @@ export class MapManager {
 
     private threeLayer: ThreeLayer | null = null;
     private gltfLoader = new GLTFLoader();
-
-    private planesGeoJSON: GeoJSON.FeatureCollection = {
-        type: 'FeatureCollection',
-        features: []
-    };
 
     public init(container: HTMLElement) {
         this.map = new maplibregl.Map({
@@ -42,43 +37,43 @@ export class MapManager {
     private async initThreeLayer() {
         if (!this.map) return;
 
-        if (!this.map.hasImage('plane-2d')) {
-            const img = new Image();
+        // if (!this.map.hasImage('plane-2d')) {
+        //     const img = new Image();
 
-            img.width = 64;
-            img.height = 64;
+        //     img.width = 64;
+        //     img.height = 64;
 
-            img.onload = () => {
-                if (this.map && !this.map.hasImage('plane-2d')) {
-                    this.map.addImage('plane-2d', img);
-                }
-            };
+        //     img.onload = () => {
+        //         if (this.map && !this.map.hasImage('plane-2d')) {
+        //             this.map.addImage('plane-2d', img);
+        //         }
+        //     };
 
-            img.onerror = (err) => console.error('Не удалось загрузить иконку самолета:', err);
+        //     img.onerror = (err) => console.error('Не удалось загрузить иконку самолета:', err);
 
-            img.src = '/plane-2d/airplane-black.svg';
-        }
-        if (!this.map.getSource('airplanes-2d-source')) {
-            this.map.addSource('airplanes-2d-source', {
-                type: 'geojson',
-                data: this.planesGeoJSON
-            });
-        }
+        //     img.src = '/plane-2d/airplane-black.svg';
+        // }
+        // if (!this.map.getSource('airplanes-2d-source')) {
+        //     this.map.addSource('airplanes-2d-source', {
+        //         type: 'geojson',
+        //         data: this.planesGeoJSON
+        //     });
+        // }
 
-        if (!this.map.getLayer('airplanes-2d-layer')) {
-            this.map.addLayer({
-                id: 'airplanes-2d-layer',
-                type: 'symbol',
-                source: 'airplanes-2d-source',
-                maxzoom: 6,
-                layout: {
-                    'icon-image': 'plane-2d',
-                    'icon-size': 0.5,
-                    'icon-allow-overlap': true,
-                    'icon-ignore-placement': true
-                }
-            });
-        }
+        // if (!this.map.getLayer('airplanes-2d-layer')) {
+        //     this.map.addLayer({
+        //         id: 'airplanes-2d-layer',
+        //         type: 'symbol',
+        //         source: 'airplanes-2d-source',
+        //         maxzoom: 6,
+        //         layout: {
+        //             'icon-image': 'plane-2d',
+        //             'icon-size': 0.5,
+        //             'icon-allow-overlap': true,
+        //             'icon-ignore-placement': true
+        //         }
+        //     });
+        // }
 
         this.threeLayer = new ThreeLayer(this.map);
         this.map.addLayer(this.threeLayer);
@@ -165,51 +160,45 @@ export class MapManager {
         }
     }
 
-    public drawAirports(airportsData: any) {
-        console.warn("drawAirports is not implemented yet");
-        if (!this.map) return;
-        console.log('Готовимся рисовать аэропорты:', airportsData);
-    }
+    // public spawnAirplane(lng: number, lat: number) {
+    //     if (!this.threeLayer || !this.map) return;
 
-    public spawnAirplane(lng: number, lat: number) {
-        if (!this.threeLayer || !this.map) return;
+    //     const planeId = `flight-${Date.now()}`;
 
-        const planeId = `flight-${Date.now()}`;
+    //     this.planesGeoJSON.features.push({
+    //         type: 'Feature',
+    //         geometry: {
+    //             type: 'Point',
+    //             coordinates: [lng, lat]
+    //         },
+    //         properties: { id: planeId }
+    //     });
 
-        this.planesGeoJSON.features.push({
-            type: 'Feature',
-            geometry: {
-                type: 'Point',
-                coordinates: [lng, lat]
-            },
-            properties: { id: planeId }
-        });
+    //     const source = this.map.getSource('airplanes-2d-source') as maplibregl.GeoJSONSource;
+    //     if (source) {
+    //         source.setData(this.planesGeoJSON);
+    //     }
 
-        const source = this.map.getSource('airplanes-2d-source') as maplibregl.GeoJSONSource;
-        if (source) {
-            source.setData(this.planesGeoJSON);
-        }
+    //     this.gltfLoader.load('/plane-3d/Airplane.glb', (gltf) => {
+    //         const model = gltf.scene;
+    //         model.scale.set(5000, 5000, 5000);
 
-        this.gltfLoader.load('/plane-3d/Airplane.glb', (gltf) => {
-            const model = gltf.scene;
-            model.scale.set(5000, 5000, 5000);
+    //         const group = new THREE.Group();
+    //         group.add(model);
 
-            const group = new THREE.Group();
-            group.add(model);
+    //         const airplane: AirplaneModel = {
+    //             id: planeId,
+    //             lng,
+    //             lat,
+    //             altitude: 0,
+    //             group
+    //         };
 
-            const airplane: AirplaneModel = {
-                id: planeId,
-                lng,
-                lat,
-                altitude: 0,
-                group
-            };
+    //         this.threeLayer!.addAirplane(airplane);
 
-            this.threeLayer!.addAirplane(airplane);
-
-            this.map!.flyTo({ center: [lng, lat] as [number, number], zoom: 6, duration: 2000 });
-        }, undefined, (err) => console.error(err));
-    }
+    //         this.map!.flyTo({ center: [lng, lat] as [number, number], zoom: 6, duration: 2000 });
+    //     }, undefined, (err) => console.error(err));
+    // }
 
     private spinGlobe = () => {
         if (!this.isInRotation || !this.map) return;

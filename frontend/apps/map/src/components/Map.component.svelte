@@ -7,6 +7,8 @@
 
     let mapContainer: HTMLElement;
 
+    const { controls = false } = $props();
+
     onMount(() => {
         mapManager.init(mapContainer);
     });
@@ -22,32 +24,37 @@
 >
     <div bind:this={mapContainer} class="map-container"></div>
 
-    <div class="custom-controls">
-        <div class="control-group">
-            <ControlButton click={() => mapManager.zoomIn()}>+</ControlButton>
-            <ControlButton click={() => mapManager.zoomOut()}>−</ControlButton>
-        </div>
+    {#if controls}
+        <div class="custom-controls">
+            <div class="control-group">
+                <ControlButton click={() => mapManager.zoomIn()}
+                    >+</ControlButton
+                >
+                <ControlButton click={() => mapManager.zoomOut()}
+                    >−</ControlButton
+                >
+            </div>
 
-        <div class="control-group">
-            <ControlDropdown
-                options={mapManager.AvailableStyles.map((style) => style.name)}
-                values={mapManager.AvailableStyles.map((style) => style.name)}
-                change={(e: any) => mapManager.changeStyle(e.target.value)}
-            />
-            <ControlButton
-                click={() => mapManager.setGlobeProjection(!mapManager.Globe)}
-                >2D/3D</ControlButton
-            >
-        </div>
+            <div class="control-group">
+                <ControlDropdown
+                    options={mapManager.AvailableStyles.map(
+                        (style) => style.name,
+                    )}
+                    values={mapManager.AvailableStyles.map(
+                        (style) => style.name,
+                    )}
+                    change={(e: any) => mapManager.changeStyle(e.target.value)}
+                />
+                <ControlButton
+                    click={() =>
+                        mapManager.setGlobeProjection(!mapManager.Globe)}
+                    >2D/3D</ControlButton
+                >
+            </div>
 
-        <div class="control-group">
-            <ControlButton
-                click={() => mapManager.spawnAirplane(37.6173, 55.7558)}
-            >
-                ✈️ Спавн (МСК)
-            </ControlButton>
+            <div class="control-group"></div>
         </div>
-    </div>
+    {/if}
 </div>
 
 <style>
