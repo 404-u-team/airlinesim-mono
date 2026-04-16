@@ -197,3 +197,115 @@ func TestUserCreate(t *testing.T) {
 		}
 	})
 }
+
+func TestGetUserByEmail(t *testing.T) {
+	t.Run("happy ending", func(t *testing.T) {
+		repo, rollback := setupTxRepo(t)
+		defer rollback()
+
+		registerRequest := &authpb.RegisterRequest{
+			Email: "email", Nickname: "nickname", Password: "password",
+		}
+		_, err := repo.CreateUser(context.Background(), registerRequest)
+		if err != nil {
+			t.Fatalf("got error when tried to create user, %v", err)
+		}
+
+		user, err := repo.GetUserByEmail(context.Background(), "email")
+		if err != nil {
+			t.Fatalf("got error when tried to get user by email, %v", err)
+		}
+
+		if user.ID == uuid.Nil {
+			t.Fatalf("userID cant be nil")
+		}
+
+		if user.PasswordHash != registerRequest.Password {
+			t.Fatalf("user password is not the same with passed to register, want %v, got %v", registerRequest.Password, user.PasswordHash)
+		}
+	})
+
+	t.Run("no user found by email", func(t *testing.T) {
+		repo, rollback := setupTxRepo(t)
+		defer rollback()
+
+		_, err := repo.GetUserByEmail(context.Background(), "email")
+		if !errors.Is(err, pgx.ErrNoRows) {
+			t.Fatalf("want ErrNoRows, got %v", err)
+		}
+	})
+}
+
+func TestGetUserByNickname(t *testing.T) {
+	t.Run("happy ending", func(t *testing.T) {
+		repo, rollback := setupTxRepo(t)
+		defer rollback()
+
+		registerRequest := &authpb.RegisterRequest{
+			Email: "email", Nickname: "nickname", Password: "password",
+		}
+		_, err := repo.CreateUser(context.Background(), registerRequest)
+		if err != nil {
+			t.Fatalf("got error when tried to create user, %v", err)
+		}
+
+		user, err := repo.GetUserByNickname(context.Background(), "nickname")
+		if err != nil {
+			t.Fatalf("got error when tried to get user by nickname, %v", err)
+		}
+		if user.ID == uuid.Nil {
+			t.Fatalf("userID cant be nil")
+		}
+
+		if user.PasswordHash != registerRequest.Password {
+			t.Fatalf("user password is not the same with passed to register, want %v, got %v", registerRequest.Password, user.PasswordHash)
+		}
+	})
+
+	t.Run("no user found by nickname", func(t *testing.T) {
+		repo, rollback := setupTxRepo(t)
+		defer rollback()
+
+		_, err := repo.GetUserByNickname(context.Background(), "nickname")
+		if !errors.Is(err, pgx.ErrNoRows) {
+			t.Fatalf("want ErrNoRows, got %v", err)
+		}
+	})
+}
+
+func TestIsUserExists(t *testing.T) {
+	t.Run("happy ending", func(t *testing.T) {
+		repo, rollback := setupTxRepo(t)
+		defer rollback()
+
+		registerRequest := &authpb.RegisterRequest{
+			Email: "email", Nickname: "nickname", Password: "password",
+		}
+		userID, err := repo.CreateUser(context.Background(), registerRequest)
+		if err != nil {
+			t.Fatalf("got error when tried to create user, %v", err)
+		}
+
+		exists, err := repo.IsUserExists(context.Background(), userID)
+		if err != nil {
+			t.Fatalf("got error when tried to check user existence, %v", err)
+		}
+		if !exists {
+			t.Fatal("user should exist, but got false")
+		}
+	})
+
+	t.Run("user not found", func(t *testing.T) {
+		repo, rollback := setupTxRepo(t)
+		defer rollback()
+
+		exists, err := repo.IsUserExists(context.Background(), uuid.Nil)
+		if err != nil {
+			t.Fatalf("got error when tried to check user existence, %v", err)
+		}
+
+		if exists {
+			t.Fatalf("want user not exists, got opposite")
+		}
+	})
+}
