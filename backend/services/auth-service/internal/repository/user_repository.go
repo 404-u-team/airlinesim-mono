@@ -6,7 +6,7 @@ import (
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/dto"
 	authpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
 )
 
 type UserRepository interface {
@@ -16,11 +16,15 @@ type UserRepository interface {
 	IsUserExists(ctx context.Context, userID uuid.UUID) (bool, error)
 }
 
-type userRepository struct {
-	pool *pgxpool.Pool
+type DBConn interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
-func NewUserRepository(pool *pgxpool.Pool) UserRepository {
+type userRepository struct {
+	pool DBConn
+}
+
+func NewUserRepository(pool DBConn) UserRepository {
 	return &userRepository{pool: pool}
 }
 
