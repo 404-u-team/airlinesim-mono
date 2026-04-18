@@ -19,95 +19,35 @@
 </script>
 
 <div
-    class="relative-wrapper"
+    class="relative w-full h-screen bg-background transition-colors duration-300"
     class:dark={mapManager.SelectedStyle.theme === "dark"}
 >
     <div bind:this={mapContainer} class="map-container"></div>
 
     {#if controls}
-        <div class="custom-controls">
-            <div class="control-group">
-                <ControlButton click={() => mapManager.zoomIn()}
-                    >+</ControlButton
-                >
-                <ControlButton click={() => mapManager.zoomOut()}
-                    >−</ControlButton
-                >
+        <div class="absolute bottom-8 right-8 flex flex-col gap-4 z-10">
+            <div class="flex flex-col bg-surface/90 rounded-lg shadow-md overflow-hidden">
+                <ControlButton click={() => mapManager.zoomIn()}>+</ControlButton>
+                <ControlButton click={() => mapManager.zoomOut()}>−</ControlButton>
             </div>
 
-            <div class="control-group">
+            <div class="flex flex-col bg-surface/90 rounded-lg shadow-md overflow-hidden">
                 <ControlDropdown
-                    options={mapManager.AvailableStyles.map(
-                        (style) => style.name,
-                    )}
-                    values={mapManager.AvailableStyles.map(
-                        (style) => style.name,
-                    )}
+                    options={mapManager.AvailableStyles.map((style) => style.name)}
+                    values={mapManager.AvailableStyles.map((style) => style.name)}
                     change={(e: any) => mapManager.changeStyle(e.target.value)}
                 />
                 <ControlButton
-                    click={() =>
-                        mapManager.setGlobeProjection(!mapManager.Globe)}
-                    >2D/3D</ControlButton
-                >
+                    click={() => mapManager.setGlobeProjection(!mapManager.Globe)}
+                >2D/3D</ControlButton>
             </div>
-
-            <div class="control-group"></div>
         </div>
     {/if}
 </div>
 
 <style>
-    .relative-wrapper {
-        position: relative;
-        width: 100%;
-        height: 100vh;
-        background: #f4f4f5; /* Light theme background equivalent */
-        transition: background-color 0.3s ease;
-    }
-
-    .relative-wrapper.dark {
-        background: #18181b; /* Dark theme background equivalent */
-    }
-
     .map-container {
         width: 100%;
         height: 100%;
-    }
-
-    .custom-controls {
-        position: absolute;
-        bottom: 30px;
-        right: 30px;
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-        z-index: 10;
-    }
-
-    .control-group {
-        display: flex;
-        flex-direction: column;
-        background: rgba(255, 255, 255, 0.9);
-        border-radius: 8px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-    }
-
-    button {
-        padding: 10px 15px;
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        font-weight: bold;
-        border-bottom: 1px solid #eee;
-    }
-
-    button:last-child {
-        border-bottom: none;
-    }
-
-    button:hover {
-        background: #f0f0f0;
     }
 </style>

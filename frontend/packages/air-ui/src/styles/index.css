@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+/* Scan library components for Tailwind class detection */
+@source "../components/**/*.vue";
+
+/* Class-based dark mode: add .dark to <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+  Semantic color tokens — utilities reference CSS vars so they
+  automatically switch when .dark is toggled on <html>.
+*/
+@theme inline {
+  --color-background:      var(--background);
+  --color-surface:         var(--surface);
+  --color-surface-subtle:  var(--surface-subtle);
+  --color-border:          var(--border);
+  --color-text-primary:    var(--text-primary);
+  --color-text-muted:      var(--text-muted);
+  --color-primary:         var(--primary);
+  --color-primary-soft:    var(--primary-soft);
+  --color-on-primary:      var(--on-primary);
+  --color-on-primary-soft: var(--on-primary-soft);
+  --color-success:         var(--state-success);
+  --color-success-bg:      var(--state-success-bg);
+  --color-error:           var(--state-error);
+  --color-error-bg:        var(--state-error-bg);
+  --color-warning:         var(--state-warning);
+  --color-warning-bg:      var(--state-warning-bg);
+  --color-link:            var(--link);
+  --color-disabled:        var(--disabled);
+}
+
+/* ── Light theme (default) ───────────────────────────────────────── */
+:root {
+  --background:       #f3f4f6;
+  --surface:          #ffffff;
+  --surface-subtle:   #e1e1e1;
+  --border:           #e5e7eb;
+  --text-primary:     #0f172a;
+  --text-muted:       #4b5563;
+  --primary:          #1d4ed8;
+  --primary-soft:     #dbeafe;
+  --on-primary:       #ffffff;
+  --on-primary-soft:  #020617;
+  --state-success:    #166534;
+  --state-success-bg: #bdffd4;
+  --state-error:      #b91c1c;
+  --state-error-bg:   #ffc4c4;
+  --state-warning:    #c56a01;
+  --state-warning-bg: #ffdfb3;
+  --link:             #1d4ed8;
+  --disabled:         #d1d5db;
+}
+
+/* ── Dark theme ──────────────────────────────────────────────────── */
+:root.dark {
+  --background:       #020617;
+  --surface:          #0f172a;
+  --surface-subtle:   #020617;
+  --border:           #1f2937;
+  --text-primary:     #f9fafb;
+  --text-muted:       #9ca3af;
+  --primary:          #60a5fa;
+  --primary-soft:     #1d4ed8;
+  --on-primary:       #020617;
+  --on-primary-soft:  #f9fafb;
+  --state-success:    #6ee7b7;
+  --state-success-bg: #022c22;
+  --state-error:      #fca5a5;
+  --state-error-bg:   #450a0a;
+  --state-warning:    #fed7aa;
+  --state-warning-bg: #451a03;
+  --link:             #60a5fa;
+  --disabled:         #4b5563;
+}

@@ -2,7 +2,7 @@
   <div ref="container" class="svelte-container"></div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 
 const props = defineProps({
@@ -16,8 +16,8 @@ const props = defineProps({
   }
 });
 
-const container = ref(null);
-let svelteInstance = null;
+const container = ref<HTMLElement | null>(null);
+let svelteInstance: any = null;
 
 onMounted(() => {
   if (container.value) {

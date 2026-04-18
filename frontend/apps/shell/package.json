@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@airlinesim/air-ui": "workspace:*",
     "@module-federation/vite": "^1.14.3",
     "@originjs/vite-plugin-federation": "^1.4.1",
     "@tailwindcss/vite": "^4.2.2",

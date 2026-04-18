@@ -2,30 +2,11 @@
     let { click } = $props();
 </script>
 
-<div onclick={click} aria-label="button" role="button">
+<div
+    onclick={click}
+    aria-label="button"
+    role="button"
+    class="flex items-center justify-center px-4 py-2.5 bg-transparent border-b border-border last:border-b-0 cursor-pointer font-bold transition-colors duration-300 hover:bg-surface-subtle"
+>
     <slot />
 </div>
-
-<style scoped>
-    div {
-        padding: 10px 15px;
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        font-weight: bold;
-        border-bottom: 1px solid #eee;
-        transition: background-color 0.3s ease;
-        align-items: center;
-        justify-content: center;
-        display: flex;
-    }
-
-    div:last-child {
-        border-bottom: none;
-    }
-
-    div:hover {
-        background: #f0f0f0;
-        transition: background-color 0.3s ease;
-    }
-</style>
