@@ -1,6 +1,5 @@
 <template>
   <div>
-    <h1>Мой Vue Сайт</h1>
     
     <SvelteWrapper 
         :createFn="createMap" 
