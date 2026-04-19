@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 CREATE TYPE user_role AS ENUM ('user', 'admin');
 
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     nickname VARCHAR(50) UNIQUE NOT NULL,
