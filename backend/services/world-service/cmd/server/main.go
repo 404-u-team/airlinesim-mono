@@ -45,6 +45,7 @@ func main() {
 		"game-service-group", // Consumer Group ID
 		[]string{kafka.TopicImportDataReceived},
 		consumerHandler,
+		config.KafkaConsumerWorkers,
 	)
 	if err != nil {
 		log.Fatalf("got error during Kafka consumer initializing, %v", err)
