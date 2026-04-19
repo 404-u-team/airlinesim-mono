@@ -13,6 +13,10 @@ import (
 type ImportHandler struct {
 	importService services.ImportService
 	producer      kafka.Producer
+
+	TotalCount     int
+	ProcessedCount int
+	FailedCount    int
 }
 
 func NewImportHandler(importService services.ImportService, producer kafka.Producer) *ImportHandler {
@@ -24,12 +28,16 @@ func (h *ImportHandler) ImportReceived(ctx context.Context, data []byte) error {
 	if err := json.Unmarshal(data, &event); err != nil {
 		return fmt.Errorf("invalid payload: %w", err)
 	}
+	if h.TotalCount == 0 {
+		h.TotalCount = event.TotalCount
+	}
 
 	err := h.importService.ImportReceived(ctx, &event)
 	if err != nil {
+		h.FailedCount++
 		return fmt.Errorf("error in import service: %w", err)
 	}
 
-	// Smth to say that import is success
+	h.ProcessedCount++
 	return nil
 }

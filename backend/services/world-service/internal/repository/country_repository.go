@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"log"
 
 	"github.com/404-u-team/airlinesim-mono/backend/game-service/internal/db"
 	"github.com/404-u-team/airlinesim-mono/backend/game-service/internal/dto"
@@ -21,17 +20,18 @@ func NewCountryRepository(pool db.DBConn) CountryRepository {
 }
 
 func (r *countryRepository) CreateCountry(ctx context.Context, payload *dto.CreateCountryRequest) error {
-	log.Println("created country with iso: ", payload.ISO)
-	return nil
-	// query := `
-	// 	INSERT INTO users (email, nickname, password_hashed)
-	// 	VALUES ($1, $2, $3)
-	// 	RETURNING id
-	// `
+	query := `
+		INSERT INTO country (
+			iso, local_name, intl_name, flythrough_permission_pricem,
+			land_permission_price, corp_tax_rate, vat_rate, aircraft_tail_code, 
+			wikipedia_link
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`
 
-	// var userID uuid.UUID
-	// err := r.pool.QueryRow(ctx, query, payload.Email, payload.Nickname, payload.Password).
-	// 	Scan(&userID)
+	_, err := r.pool.Exec(ctx, query, payload.ISO, payload.LocalName, payload.IntlName, payload.FlythroughPermissionPrice,
+		payload.LandPermissionPrice, payload.CorpTaxRate, payload.VatRate, payload.AircraftTailCode,
+		payload.WikipediaLink)
 
-	// return userID, err
+	return err
 }
