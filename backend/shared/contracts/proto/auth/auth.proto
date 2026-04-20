@@ -4,8 +4,8 @@ package auth.v1;
 
 option go_package = "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1;authpb";
 
+// Run inside this folder to autogenerate golang grpc
 /*
-Run inside this folder to autogenerate golang grpc
 protoc --go_out=./v1 --go_opt=paths=source_relative \
     --go-grpc_out=./v1 --go-grpc_opt=paths=source_relative \
     auth.proto
@@ -19,8 +19,11 @@ service AuthService {
   // login user and give him pair of access and refresh jwt token
   rpc Login(LoginRequest) returns (TokenResponse);
 
-  // validate given token
+  // validate given token and return new
   rpc RefreshToken(RefreshTokenRequest) returns (TokenResponse);
+
+  // verify token
+  rpc VerifyToken(VerifyTokenRequest) returns (VerifyTokenResponse);
 }
 
 // request to register user
@@ -45,4 +48,14 @@ message RefreshTokenRequest {
 message TokenResponse {
   string access_token = 1;
   string refresh_token = 2;
+}
+
+// verifing jwt token
+message VerifyTokenRequest {
+  string access_token = 1;
+}
+
+// returns just is jwt valid and user is in db
+message  VerifyTokenResponse {
+  bool valid = 1;
 }
