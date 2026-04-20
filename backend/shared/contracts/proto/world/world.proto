@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package auth.v1;
+
+option go_package = "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/world/v1;worldpb";
+
+// Run inside this folder to autogenerate golang grpc
+/*
+protoc --go_out=./v1 --go_opt=paths=source_relative \
+    --go-grpc_out=./v1 --go-grpc_opt=paths=source_relative \
+    world.proto
+*/
+
+// authentication service
+service WorldService {
+  // create country 
+  rpc CreateCountry(CreateCountryRequest) returns (IDResponse);
+}
+
+// request to create country
+message CreateCountryRequest {
+  string iso = 1;
+  string local_name = 2;
+  string intl_name = 3;
+  double flythrough_permission_price = 4;
+  double land_permission_price = 5;
+  double corp_tax_rate = 6;
+  double vat_rate = 7;
+  string aircraft_tail_code = 8;
+  string wikipedia_link = 9;
+}
+
+message IDResponse {
+  string id = 1;
+}
