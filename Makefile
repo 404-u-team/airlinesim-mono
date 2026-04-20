@@ -10,4 +10,9 @@ swagger:
 compose-up:
 	docker compose -f $(COMPOSE_FILE) up --build
 
+github-push:
+	git push origin backend
+
 up: swagger compose-up
+
+swagger-and-push: swagger github-push
