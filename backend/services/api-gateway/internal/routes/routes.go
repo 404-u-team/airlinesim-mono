@@ -33,7 +33,7 @@ func SetupRoutes(authClient *grpcclient.AuthClient, worldClient *grpcclient.Worl
 		{
 			// admin only
 			adminOnly := api.Group("")
-			adminOnly.Use(middleware.AdminMiddleware())
+			adminOnly.Use(middleware.AuthMiddleware(config.JWTPublicKey, authClient), middleware.AdminMiddleware())
 			{
 				adminOnly.POST("/country", worldHandler.CreateCountry)
 			}

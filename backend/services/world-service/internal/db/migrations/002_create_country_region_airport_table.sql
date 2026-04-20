@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE country (
-    id UUID PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     iso VARCHAR(3) UNIQUE NOT NULL,                  -- ISO 3166-1
     local_name VARCHAR(255) NOT NULL,
     intl_name VARCHAR(255) NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE country (
 );
 
 CREATE TABLE region (
-    id UUID PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     local_code VARCHAR(20) UNIQUE NOT NULL,          -- e.g. US-NY
     local_name VARCHAR(255) NOT NULL,
     intl_name VARCHAR(255) NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE region (
 );
 
 CREATE TABLE region_link (
-    id UUID PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     region_a UUID NOT NULL REFERENCES region(id) ON DELETE CASCADE,
     region_b UUID NOT NULL REFERENCES region(id) ON DELETE CASCADE,
     diaspora NUMERIC CHECK (diaspora >= 0 AND diaspora <= 1),
@@ -36,7 +36,7 @@ CREATE TABLE region_link (
 );
 
 CREATE TABLE airport (
-    id UUID PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     icao_code CHAR(4) UNIQUE,
     iata_code CHAR(3) UNIQUE,
     local_name VARCHAR(255),
@@ -61,8 +61,6 @@ CREATE TABLE airport (
     geog GEOGRAPHY,                                  -- POSTGIS geography
     geom GEOMETRY                                    -- POSTGIS geometry
 );
-
-CREATE INDEX idx_global_fuel_price_date ON global_fuel_price(recorded_at);
 
 -- +goose Down
 DROP TABLE IF EXISTS country;

@@ -42,7 +42,7 @@ func (s *authService) Register(ctx context.Context, payload *authpb.RegisterRequ
 	payload.Password = hashedPassword
 
 	// create user
-	userID, err := s.repo.CreateUser(ctx, payload)
+	userID, err := s.repo.CreateUser(ctx, payload, "user")
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {

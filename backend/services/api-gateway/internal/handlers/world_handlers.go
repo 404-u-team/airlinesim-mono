@@ -1,11 +1,17 @@
 package handlers
 
 import (
+	"context"
+	"errors"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/dto"
+	customerrors "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/errors"
 	grpcclient "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/grpc"
+	worldpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/world/v1"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,53 +25,40 @@ func NewWorldHandler(worldClient *grpcclient.WorldClient, config *config.Config)
 }
 
 // CreateCountry godoc
-// @Summary      Add country (admin only)
+// @Summary      Create country (admin only)
 // @Description  Returns
 // @Tags         Country
 // @Accept       json
 // @Produce      json
 // @Param request body dto.CreateCountryRequest true "Country details"
 // @Success      201  {object}  dto.IDResponse "Country created successfully, id returned"
-// @Failure      400  {object}  dto.ErrorResponse "1 - request validation error, 2 - iso exists"
+// @Failure      400  {object}  dto.ErrorResponse "1 - request validation error"
+// @Failure      409 "Country with such ISO already exists"
 // @Failure      500 "Internal server error"
-// @Router       /create-country [post]
+// @Router       /country [post]
 func (h *WorldHandler) CreateCountry(c *gin.Context) {
 	// getting payload and validate it
-	var payload dto.CreateCountryRequest
+	var payload worldpb.CreateCountryRequest
 	if err := c.ShouldBindJSON(&payload); err != nil {
+		log.Println("got error when tried to parse, ", err)
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
 		return
 	}
 
-	return
+	// set timeout of request
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
 
-	// creating grpc create country request
-	// registerRequest := authpb.{
-	// 	Email:    payload.Email,
-	// 	Nickname: payload.Nickname,
-	// 	Password: payload.Password,
-	// }
+	// grpc create country
+	IDResponse, err := h.worldClient.CreateCountry(ctx, &payload)
+	if err != nil {
+		if errors.Is(err, customerrors.ErrISOConflict) {
+			c.Status(http.StatusConflict)
+			return
+		}
+		c.Status(http.StatusInternalServerError)
+		return
+	}
 
-	// // set timeout of request
-	// ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
-	// defer cancel()
-
-	// // grpc register
-	// tokenResponse, err := h.authClient.Register(ctx, &registerRequest)
-	// if err != nil {
-	// 	if errors.Is(err, grpcerrors.ErrUserWithSuchEmailExists) {
-	// 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 2})
-	// 		return
-	// 	}
-	// 	if errors.Is(err, grpcerrors.ErrUserWithSuchNicknameExists) {
-	// 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 3})
-	// 		return
-	// 	}
-	// 	c.Status(http.StatusInternalServerError)
-	// 	return
-	// }
-
-	// // set refresh token into cookie and send access token just as json
-	// setTokenIntoCookie(c, tokenResponse.RefreshToken, int(h.config.JWTRefreshTokenExpireTime))
-	// c.JSON(http.StatusCreated, dto.AccessTokenResponse{AccessToken: tokenResponse.AccessToken})
+	c.JSON(http.StatusCreated, IDResponse)
 }

@@ -150,7 +150,7 @@ paths:
       summary: Register user
       tags:
       - Auth
-  /create-country:
+  /country:
     post:
       consumes:
       - application/json
@@ -170,12 +170,14 @@ paths:
           schema:
             $ref: '#/definitions/dto.IDResponse'
         "400":
-          description: 1 - request validation error, 2 - iso exists
+          description: 1 - request validation error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Country with such ISO already exists
         "500":
           description: Internal server error
-      summary: Add country (admin only)
+      summary: Create country (admin only)
       tags:
       - Country
 schemes:

@@ -11,3 +11,5 @@ var ErrUserWithSuchEmailExists = status.Error(codes.AlreadyExists, "email taken"
 var ErrUserWithSuchNicknameExists = status.Error(codes.AlreadyExists, "nickname taken")
 var ErrUserNotFound = status.Error(codes.NotFound, "user is not found")
 var ErrUserUnauthenticated = status.Error(codes.Unauthenticated, "user is unauthenticated")
+
+var ErrISOConflict = status.Error(codes.AlreadyExists, "iso taken")

@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE aircraft_manufacturer (
-    id UUID PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     logo_upload_id UUID,                              -- FK to upload table
     market_name VARCHAR(255),
@@ -8,7 +8,7 @@ CREATE TABLE aircraft_manufacturer (
 );
 
 CREATE TABLE aircraft_type (
-    id UUID PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     manufacturer_id UUID NOT NULL REFERENCES aircraft_manufacturer(id) ON DELETE RESTRICT,
     model_name VARCHAR(255) NOT NULL,
     icao_code CHAR(4) UNIQUE,
@@ -35,9 +35,8 @@ CREATE TABLE aircraft_type (
 );
 
 CREATE TABLE aircraft (
-    id UUID PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     type_id UUID NOT NULL REFERENCES aircraft_type(id) ON DELETE RESTRICT,
-    current_owner_id UUID NOT NULL REFERENCES airline(id) ON DELETE RESTRICT,
     base_airport_id UUID NOT NULL REFERENCES airport(id) ON DELETE RESTRICT,
     tail_number CHAR(16) UNIQUE NOT NULL,
     in_service BOOLEAN NOT NULL DEFAULT TRUE,

@@ -20,9 +20,7 @@ type Config struct {
 	KafkaBrokers         []string
 	KafkaConsumerWorkers int
 
-	JWTPublicKey              *rsa.PublicKey
-	JWTAccessTokenExpireTime  int64
-	JWTRefreshTokenExpireTime int64
+	JWTPublicKey *rsa.PublicKey
 }
 
 func InitConfig() Config {
@@ -43,12 +41,10 @@ func InitConfig() Config {
 	}
 
 	return Config{
-		PostgresConnString:        postgresConnString,
-		KafkaBrokers:              strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
-		KafkaConsumerWorkers:      int(getEnvAsInt("KAFKA_CONSUMER_WORKERS", int64(runtime.NumCPU()))),
-		JWTPublicKey:              publicKey,
-		JWTAccessTokenExpireTime:  getEnvAsInt("JWT_ACCESS_TOKEN_EXPIRE_TIME", 900),
-		JWTRefreshTokenExpireTime: getEnvAsInt("JWT_REFRESH_TOKEN_EXPIRE_TIME", 86400),
+		PostgresConnString:   postgresConnString,
+		KafkaBrokers:         strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
+		KafkaConsumerWorkers: int(getEnvAsInt("KAFKA_CONSUMER_WORKERS", int64(runtime.NumCPU()))),
+		JWTPublicKey:         publicKey,
 	}
 }
 

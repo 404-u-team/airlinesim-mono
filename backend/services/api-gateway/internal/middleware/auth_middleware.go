@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"crypto/rsa"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -19,6 +20,7 @@ func AuthMiddleware(JWTPublicKey *rsa.PublicKey, authClient *grpcclient.AuthClie
 	return func(c *gin.Context) {
 		tokenString := getAccessToken(c)
 		if tokenString == "" {
+			log.Println("no token found in headers")
 			c.Status(http.StatusUnauthorized)
 			c.Abort()
 			return
@@ -27,6 +29,7 @@ func AuthMiddleware(JWTPublicKey *rsa.PublicKey, authClient *grpcclient.AuthClie
 		// verify just token signature
 		userID, role, err := verifyTokenLocal(tokenString, JWTPublicKey)
 		if err != nil {
+			log.Println("got error when tried to verify token local, ", err)
 			c.Status(http.StatusUnauthorized)
 			c.Abort()
 			return
@@ -39,12 +42,14 @@ func AuthMiddleware(JWTPublicKey *rsa.PublicKey, authClient *grpcclient.AuthClie
 		verifyTokenRequest := &authpb.VerifyTokenRequest{AccessToken: tokenString}
 		verifyTokenResponse, err := authClient.VerifyToken(ctx, verifyTokenRequest)
 		if err != nil {
+			log.Println("got error when tried to verify token through auth servuce, ", err)
 			c.Status(http.StatusInternalServerError)
 			c.Abort()
 			return
 		}
 
 		if !verifyTokenResponse.Valid {
+			log.Println("token is not valid")
 			c.Status(http.StatusUnauthorized)
 			c.Abort()
 			return
@@ -61,13 +66,15 @@ func AdminMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get(RoleKey)
 		if !exists {
+			log.Println("no role is found in context")
 			c.Status(http.StatusUnauthorized)
 			c.Abort()
 			return
 		}
 
 		if role != "admin" {
-			c.Status(http.StatusUnauthorized)
+			log.Println("user role is not admin, role is ", role)
+			c.Status(http.StatusForbidden)
 			c.Abort()
 			return
 		}

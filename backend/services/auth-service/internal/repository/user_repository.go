@@ -10,7 +10,7 @@ import (
 )
 
 type UserRepository interface {
-	CreateUser(ctx context.Context, payload *authpb.RegisterRequest) (uuid.UUID, error)
+	CreateUser(ctx context.Context, payload *authpb.RegisterRequest, role string) (uuid.UUID, error)
 	GetUserByEmail(ctx context.Context, email string) (*dto.User, error)
 	GetUserByNickname(ctx context.Context, nickname string) (*dto.User, error)
 	IsUserExists(ctx context.Context, userID uuid.UUID) (bool, error)
@@ -29,15 +29,15 @@ func NewUserRepository(pool DBConn) UserRepository {
 }
 
 // creates user, using default role - 'user'
-func (r *userRepository) CreateUser(ctx context.Context, payload *authpb.RegisterRequest) (uuid.UUID, error) {
+func (r *userRepository) CreateUser(ctx context.Context, payload *authpb.RegisterRequest, role string) (uuid.UUID, error) {
 	query := `
-		INSERT INTO users (email, nickname, password_hashed)
-		VALUES ($1, $2, $3)
+		INSERT INTO users (email, nickname, password_hashed, role)
+		VALUES ($1, $2, $3, $4)
 		RETURNING id
 	`
 
 	var userID uuid.UUID
-	err := r.pool.QueryRow(ctx, query, payload.Email, payload.Nickname, payload.Password).
+	err := r.pool.QueryRow(ctx, query, payload.Email, payload.Nickname, payload.Password, role).
 		Scan(&userID)
 
 	return userID, err
@@ -46,12 +46,12 @@ func (r *userRepository) CreateUser(ctx context.Context, payload *authpb.Registe
 // returns *dto.User with userID and password hash
 func (r *userRepository) GetUserByEmail(ctx context.Context, email string) (*dto.User, error) {
 	query := `
-		SELECT id, password_hashed
+		SELECT id, password_hashed, role
         FROM users WHERE email=$1	
 	`
 	var user dto.User
 	err := r.pool.QueryRow(ctx, query, email).
-		Scan(&user.ID, &user.PasswordHash)
+		Scan(&user.ID, &user.PasswordHash, &user.Role)
 
 	return &user, err
 }
@@ -74,12 +74,12 @@ func (r *userRepository) IsUserExists(ctx context.Context, userID uuid.UUID) (bo
 // returns *dto.User with userID and password hash
 func (r *userRepository) GetUserByNickname(ctx context.Context, nickname string) (*dto.User, error) {
 	query := `
-		SELECT id, password_hashed
+		SELECT id, password_hashed, role
         FROM users WHERE nickname=$1	
 	`
 	var user dto.User
 	err := r.pool.QueryRow(ctx, query, nickname).
-		Scan(&user.ID, &user.PasswordHash)
+		Scan(&user.ID, &user.PasswordHash, &user.Role)
 
 	return &user, err
 }

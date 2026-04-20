@@ -26,6 +26,7 @@ service AuthService {
   rpc VerifyToken(VerifyTokenRequest) returns (VerifyTokenResponse);
 }
 
+// TODO: add validation
 // request to register user
 message RegisterRequest {
   string email = 1;

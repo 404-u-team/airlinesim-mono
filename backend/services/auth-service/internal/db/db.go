@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log"
 	"os"
 	"path/filepath"
@@ -12,13 +13,14 @@ import (
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/config"
 	authpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose"
 )
 
 type UserCreator interface {
-	CreateUser(ctx context.Context, payload *authpb.RegisterRequest) (uuid.UUID, error)
+	CreateUser(ctx context.Context, payload *authpb.RegisterRequest, role string) (uuid.UUID, error)
 }
 
 func NewPostgresPool(postgresConnString string) *pgxpool.Pool {
@@ -86,8 +88,12 @@ func CreateDefaultAdmin(repo UserCreator, config *config.Config) {
 		Password: hashedPassword,
 	}
 
-	_, err = repo.CreateUser(context.Background(), createUserRequest)
+	_, err = repo.CreateUser(context.Background(), createUserRequest, "admin")
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			log.Println("admin user is already created")
+		}
 		log.Println("got error during create user admin, ", err)
 	}
 }

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
@@ -38,6 +39,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	// getting payload and validate it
 	var payload dto.RegisterRequest
 	if err := c.ShouldBindJSON(&payload); err != nil {
+		log.Println("got error when tried to parse, ", err)
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
 		return
 	}
@@ -88,6 +90,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// getting payload and validate it
 	var payload dto.LoginRequest
 	if err := c.ShouldBindJSON(&payload); err != nil {
+		log.Println("got error when tried to parse, ", err)
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
 		return
 	}

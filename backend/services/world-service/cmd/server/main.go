@@ -6,9 +6,10 @@ import (
 
 	"github.com/404-u-team/airlinesim-mono/backend/game-service/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/game-service/internal/db"
-	"github.com/404-u-team/airlinesim-mono/backend/game-service/internal/handlers"
+	worldgrpc "github.com/404-u-team/airlinesim-mono/backend/game-service/internal/grpc"
 	"github.com/404-u-team/airlinesim-mono/backend/game-service/internal/repository"
-	"github.com/404-u-team/airlinesim-mono/backend/game-service/internal/services"
+	"github.com/404-u-team/airlinesim-mono/backend/game-service/internal/service"
+	worldpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/world/v1"
 	"google.golang.org/grpc"
 )
 
@@ -34,11 +35,12 @@ func main() {
 	// defer producer.Close()
 
 	countryRepo := repository.NewCountryRepository(pool)
-	importService := services.NewImportService(countryRepo)
-	importHandler := handlers.NewImportHandler(importService, producer)
+	worldService := service.NewWorldService(countryRepo)
+	worldServer := worldgrpc.NewWorldServer(worldService)
 
 	grpcServer := grpc.NewServer()
-	authpb.RegisterAuthServiceServer(grpcServer, authServer)
+
+	worldpb.RegisterWorldServiceServer(grpcServer, worldServer)
 
 	log.Print("The Auth gRPC server is listening on :50051")
 	if err := grpcServer.Serve(lis); err != nil {

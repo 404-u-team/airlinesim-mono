@@ -131,7 +131,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/create-country": {
+        "/country": {
             "post": {
                 "description": "Returns",
                 "consumes": [
@@ -143,7 +143,7 @@ const docTemplate = `{
                 "tags": [
                     "Country"
                 ],
-                "summary": "Add country (admin only)",
+                "summary": "Create country (admin only)",
                 "parameters": [
                     {
                         "description": "Country details",
@@ -163,10 +163,13 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "1 - request validation error, 2 - iso exists",
+                        "description": "1 - request validation error",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
+                    },
+                    "409": {
+                        "description": "Country with such ISO already exists"
                     },
                     "500": {
                         "description": "Internal server error"

@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE global_fuel_price (
-    id UUID PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     price NUMERIC NOT NULL,                          -- базовая цена нефти
     recorded_at DATE NOT NULL
 );

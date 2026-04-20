@@ -103,7 +103,7 @@ func TestUserCreate(t *testing.T) {
 			Email: "email", Nickname: "nickname", Password: "password",
 		}
 
-		userID, err := repo.CreateUser(context.Background(), registerRequest)
+		userID, err := repo.CreateUser(context.Background(), registerRequest, "user")
 		if err != nil {
 			t.Fatalf("valid user creation should not return error, got %v", err)
 		}
@@ -116,7 +116,7 @@ func TestUserCreate(t *testing.T) {
 			Email: "email2", Nickname: "nickname2", Password: "password",
 		}
 
-		userID, err = repo.CreateUser(context.Background(), anotherRegisterRequest)
+		userID, err = repo.CreateUser(context.Background(), anotherRegisterRequest, "user")
 		if err != nil {
 			t.Fatalf("valid user creation of second user should not return error, got %v", err)
 		}
@@ -132,9 +132,9 @@ func TestUserCreate(t *testing.T) {
 		registerRequest := &authpb.RegisterRequest{
 			Email: "email", Nickname: "nickname", Password: "password",
 		}
-		_, _ = repo.CreateUser(context.Background(), registerRequest)
+		_, _ = repo.CreateUser(context.Background(), registerRequest, "user")
 
-		_, err := repo.CreateUser(context.Background(), registerRequest)
+		_, err := repo.CreateUser(context.Background(), registerRequest, "user")
 		var pgErr *pgconn.PgError
 		if !errors.As(err, &pgErr) {
 			t.Fatalf("same user creation should return pg error, got %v", err)
@@ -154,7 +154,7 @@ func TestUserCreate(t *testing.T) {
 		registerRequest := &authpb.RegisterRequest{
 			Email: "email", Nickname: "nickname", Password: "password",
 		}
-		_, err := repo.CreateUser(context.Background(), registerRequest)
+		_, err := repo.CreateUser(context.Background(), registerRequest, "user")
 		if err != nil {
 			t.Fatalf("got error when tried to create user, %v", err)
 		}
@@ -162,7 +162,7 @@ func TestUserCreate(t *testing.T) {
 		// create user with same email
 		registerRequest.Nickname = "nickname2"
 
-		_, err = repo.CreateUser(context.Background(), registerRequest)
+		_, err = repo.CreateUser(context.Background(), registerRequest, "user")
 		var pgErr *pgconn.PgError
 		if !errors.As(err, &pgErr) {
 			t.Fatalf("want pgError, got %v", err)
@@ -179,7 +179,7 @@ func TestUserCreate(t *testing.T) {
 		registerRequest := &authpb.RegisterRequest{
 			Email: "email", Nickname: "nickname", Password: "password",
 		}
-		_, err := repo.CreateUser(context.Background(), registerRequest)
+		_, err := repo.CreateUser(context.Background(), registerRequest, "user")
 		if err != nil {
 			t.Fatalf("got error when tried to create user, %v", err)
 		}
@@ -187,7 +187,7 @@ func TestUserCreate(t *testing.T) {
 		// create user with same nickname
 		registerRequest.Nickname = "email2"
 
-		_, err = repo.CreateUser(context.Background(), registerRequest)
+		_, err = repo.CreateUser(context.Background(), registerRequest, "user")
 		var pgErr *pgconn.PgError
 		if !errors.As(err, &pgErr) {
 			t.Fatalf("want pgError, got %v", err)
@@ -206,7 +206,7 @@ func TestGetUserByEmail(t *testing.T) {
 		registerRequest := &authpb.RegisterRequest{
 			Email: "email", Nickname: "nickname", Password: "password",
 		}
-		_, err := repo.CreateUser(context.Background(), registerRequest)
+		_, err := repo.CreateUser(context.Background(), registerRequest, "user")
 		if err != nil {
 			t.Fatalf("got error when tried to create user, %v", err)
 		}
@@ -244,7 +244,7 @@ func TestGetUserByNickname(t *testing.T) {
 		registerRequest := &authpb.RegisterRequest{
 			Email: "email", Nickname: "nickname", Password: "password",
 		}
-		_, err := repo.CreateUser(context.Background(), registerRequest)
+		_, err := repo.CreateUser(context.Background(), registerRequest, "user")
 		if err != nil {
 			t.Fatalf("got error when tried to create user, %v", err)
 		}
@@ -281,7 +281,7 @@ func TestIsUserExists(t *testing.T) {
 		registerRequest := &authpb.RegisterRequest{
 			Email: "email", Nickname: "nickname", Password: "password",
 		}
-		userID, err := repo.CreateUser(context.Background(), registerRequest)
+		userID, err := repo.CreateUser(context.Background(), registerRequest, "user")
 		if err != nil {
 			t.Fatalf("got error when tried to create user, %v", err)
 		}

@@ -18,14 +18,14 @@ import (
 )
 
 type mockUserRepository struct {
-	createUser     func(context.Context, *authpb.RegisterRequest) (uuid.UUID, error)
+	createUser     func(context.Context, *authpb.RegisterRequest, string) (uuid.UUID, error)
 	getUserByEmail func(context.Context, string) (*dto.User, error)
 	getUserByNick  func(context.Context, string) (*dto.User, error)
 	isUserExists   func(context.Context, uuid.UUID) (bool, error)
 }
 
-func (m *mockUserRepository) CreateUser(ctx context.Context, payload *authpb.RegisterRequest) (uuid.UUID, error) {
-	return m.createUser(ctx, payload)
+func (m *mockUserRepository) CreateUser(ctx context.Context, payload *authpb.RegisterRequest, role string) (uuid.UUID, error) {
+	return m.createUser(ctx, payload, role)
 }
 
 func (m *mockUserRepository) GetUserByEmail(ctx context.Context, email string) (*dto.User, error) {
@@ -62,7 +62,7 @@ func TestAuthService_Register_Success(t *testing.T) {
 
 	var capturedPayload *authpb.RegisterRequest
 	repo := &mockUserRepository{
-		createUser: func(ctx context.Context, payload *authpb.RegisterRequest) (uuid.UUID, error) {
+		createUser: func(ctx context.Context, payload *authpb.RegisterRequest, role string) (uuid.UUID, error) {
 			capturedPayload = payload
 			return userID, nil
 		},
@@ -123,7 +123,7 @@ func TestAuthService_Register_Success(t *testing.T) {
 func TestAuthService_Register_UniqueConstraintErrors(t *testing.T) {
 	config := testConfig(t)
 	repo := &mockUserRepository{
-		createUser: func(ctx context.Context, payload *authpb.RegisterRequest) (uuid.UUID, error) {
+		createUser: func(ctx context.Context, payload *authpb.RegisterRequest, role string) (uuid.UUID, error) {
 			return uuid.Nil, &pgconn.PgError{Code: "23505", ConstraintName: "users_email_key"}
 		},
 	}
@@ -139,7 +139,7 @@ func TestAuthService_Register_UniqueConstraintErrors(t *testing.T) {
 	}
 
 	repo = &mockUserRepository{
-		createUser: func(ctx context.Context, payload *authpb.RegisterRequest) (uuid.UUID, error) {
+		createUser: func(ctx context.Context, payload *authpb.RegisterRequest, role string) (uuid.UUID, error) {
 			return uuid.Nil, &pgconn.PgError{Code: "23505", ConstraintName: "users_nickname_key"}
 		},
 	}
@@ -157,7 +157,7 @@ func TestAuthService_Register_UniqueConstraintErrors(t *testing.T) {
 func TestAuthService_Register_RepositoryError(t *testing.T) {
 	config := testConfig(t)
 	repo := &mockUserRepository{
-		createUser: func(ctx context.Context, payload *authpb.RegisterRequest) (uuid.UUID, error) {
+		createUser: func(ctx context.Context, payload *authpb.RegisterRequest, role string) (uuid.UUID, error) {
 			return uuid.Nil, errors.New("db down")
 		},
 	}

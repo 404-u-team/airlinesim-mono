@@ -6,6 +6,7 @@ WORKDIR /src/backend/services/world-service
 RUN apk add --no-cache ca-certificates
 
 COPY backend/services/world-service/go.mod backend/services/world-service/go.sum ./
+COPY backend/shared/contracts/proto/world/go.mod backend/shared/contracts/proto/world/go.sum /src/backend/shared/contracts/proto/world/
 
 # installing packages
 RUN --mount=type=cache,target=/go/pkg/mod \
@@ -13,6 +14,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 	go mod download
 
 COPY backend/services/world-service/ ./
+COPY backend/shared/contracts/proto/world/ /src/backend/shared/contracts/proto/world/
 
 # building runtime file
 RUN --mount=type=cache,target=/go/pkg/mod \
@@ -31,6 +33,7 @@ WORKDIR /app
 
 COPY --from=build /out/world-service ./world-service
 COPY --chown=appuser:appgroup backend/services/world-service/internal/config/public_key.pem ./public_key.pem
+COPY --chown=appuser:appgroup backend/services/world-service/internal/db/migrations ./migrations
 
 # setting user rights and folder mode
 RUN chmod 755 /app/world-service \
