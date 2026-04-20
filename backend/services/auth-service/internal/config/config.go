@@ -13,6 +13,10 @@ import (
 type Config struct {
 	PostgresConnString string
 
+	AdminEmail    string
+	AdminNickname string
+	AdminPassword string
+
 	JWTPrivateKey *rsa.PrivateKey
 	JWTPublicKey  *rsa.PublicKey
 
@@ -40,6 +44,9 @@ func InitConfig() Config {
 
 	return Config{
 		PostgresConnString:        postgresConnString,
+		AdminEmail:                getEnv("ADMIN_EMAIL", "admin"),
+		AdminNickname:             getEnv("ADMIN_NICKNAME", "admin"),
+		AdminPassword:             getEnv("ADMIN_PASSWORD", "admin"),
 		JWTPrivateKey:             privateKey,
 		JWTPublicKey:              publicKey,
 		JWTAccessTokenExpireTime:  getEnvAsInt("JWT_ACCESS_TOKEN_EXPIRE_TIME", 900),

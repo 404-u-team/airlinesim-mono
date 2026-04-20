@@ -8,10 +8,18 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/auth"
+	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/config"
+	authpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose"
 )
+
+type UserCreator interface {
+	CreateUser(ctx context.Context, payload *authpb.RegisterRequest) (uuid.UUID, error)
+}
 
 func NewPostgresPool(postgresConnString string) *pgxpool.Pool {
 	poolConfig, err := pgxpool.ParseConfig(postgresConnString)
@@ -64,6 +72,24 @@ func MigrateDatabase(postgresConnString string) {
 
 	log.Println("migration was performed successfully!")
 
+}
+
+func CreateDefaultAdmin(repo UserCreator, config *config.Config) {
+	hashedPassword, err := auth.HashPassword(config.AdminPassword)
+	if err != nil {
+		log.Println("error when hashing admin password, ", err)
+	}
+
+	createUserRequest := &authpb.RegisterRequest{
+		Email:    config.AdminEmail,
+		Nickname: config.AdminNickname,
+		Password: hashedPassword,
+	}
+
+	_, err = repo.CreateUser(context.Background(), createUserRequest)
+	if err != nil {
+		log.Println("got error during create user admin, ", err)
+	}
 }
 
 func firstExistingPath(paths ...string) string {

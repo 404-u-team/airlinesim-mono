@@ -131,7 +131,7 @@ func (s *authService) VerifyToken(ctx context.Context, payload *authpb.VerifyTok
 	_, _, err := auth.VerifyToken(payload.AccessToken, config.JWTPublicKey)
 	if err != nil {
 		if errors.Is(err, grpcerrors.ErrUserUnauthenticated) {
-			return &authpb.VerifyTokenResponse{Valid: false}, grpcerrors.ErrUserUnauthenticated
+			return &authpb.VerifyTokenResponse{Valid: false}, nil
 		}
 		log.Println("got error when tried to verify token, ", err)
 		return nil, grpcerrors.ErrInternal
@@ -145,12 +145,12 @@ func getTokenResponse(userID uuid.UUID, role string, config *config.Config) (*au
 	accessToken, err := auth.CreateSignedToken(userID, role, config.JWTAccessTokenExpireTime, config.JWTPrivateKey)
 	if err != nil {
 		log.Println("error when tried to create access token, ", err)
-		return nil, err
+		return nil, grpcerrors.ErrInternal
 	}
 	refreshToken, err := auth.CreateSignedToken(userID, role, config.JWTRefreshTokenExpireTime, config.JWTPrivateKey)
 	if err != nil {
 		log.Println("error when tried to create access token, ", err)
-		return nil, err
+		return nil, grpcerrors.ErrInternal
 	}
 
 	tokenResponse := authpb.TokenResponse{AccessToken: accessToken, RefreshToken: refreshToken}
