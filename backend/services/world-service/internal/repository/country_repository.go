@@ -5,10 +5,11 @@ import (
 
 	"github.com/404-u-team/airlinesim-mono/backend/game-service/internal/db"
 	"github.com/404-u-team/airlinesim-mono/backend/game-service/internal/dto"
+	"github.com/google/uuid"
 )
 
 type CountryRepository interface {
-	CreateCountry(ctx context.Context, payload *dto.CreateCountryRequest) error
+	CreateCountry(ctx context.Context, payload *dto.CreateCountryRequest) (uuid.UUID, error)
 }
 
 type countryRepository struct {
@@ -19,7 +20,7 @@ func NewCountryRepository(pool db.DBConn) CountryRepository {
 	return &countryRepository{pool: pool}
 }
 
-func (r *countryRepository) CreateCountry(ctx context.Context, payload *dto.CreateCountryRequest) error {
+func (r *countryRepository) CreateCountry(ctx context.Context, payload *dto.CreateCountryRequest) (uuid.UUID, error) {
 	query := `
 		INSERT INTO country (
 			iso, local_name, intl_name, flythrough_permission_pricem,
@@ -27,11 +28,13 @@ func (r *countryRepository) CreateCountry(ctx context.Context, payload *dto.Crea
 			wikipedia_link
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id
 	`
 
-	_, err := r.pool.Exec(ctx, query, payload.ISO, payload.LocalName, payload.IntlName, payload.FlythroughPermissionPrice,
+	var countryID uuid.UUID
+	err := r.pool.QueryRow(ctx, query, payload.ISO, payload.LocalName, payload.IntlName, payload.FlythroughPermissionPrice,
 		payload.LandPermissionPrice, payload.CorpTaxRate, payload.VatRate, payload.AircraftTailCode,
-		payload.WikipediaLink)
+		payload.WikipediaLink).Scan(&countryID)
 
-	return err
+	return countryID, err
 }
