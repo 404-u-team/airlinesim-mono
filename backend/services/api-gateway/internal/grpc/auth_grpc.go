@@ -45,3 +45,7 @@ func (c *AuthClient) Login(ctx context.Context, req *authpb.LoginRequest) (*auth
 func (c *AuthClient) RefreshToken(ctx context.Context, req *authpb.RefreshTokenRequest) (*authpb.TokenResponse, error) {
 	return c.client.RefreshToken(ctx, req)
 }
+
+func (c *AuthClient) VerifyToken(ctx context.Context, req *authpb.VerifyTokenRequest) (*authpb.VerifyTokenResponse, error) {
+	return c.client.VerifyToken(ctx, req)
+}
