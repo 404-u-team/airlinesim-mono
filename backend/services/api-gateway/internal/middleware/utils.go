@@ -1,31 +1,17 @@
-package auth
+package middleware
 
 import (
 	"crypto/rsa"
 	"fmt"
 	"time"
 
-	grpcerrors "github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/errors"
+	customerrors "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/errors"
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 )
 
-func CreateSignedToken(userID uuid.UUID, role string, expirationInSeconds int64, privateKey *rsa.PrivateKey) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
-		"sub":  userID.String(),
-		"role": role,
-		"exp":  time.Now().Add(time.Duration(expirationInSeconds) * time.Second).Unix(),
-	})
-
-	tokenString, err := token.SignedString(privateKey)
-	if err != nil {
-		return "", fmt.Errorf("failed to sign token: %w", err)
-	}
-	return tokenString, nil
-}
-
 // if token is valid and didnt expired will return userID and role
-func VerifyToken(tokenString string, publicKey *rsa.PublicKey) (uuid.UUID, string, error) {
+func verifyTokenLocal(tokenString string, publicKey *rsa.PublicKey) (uuid.UUID, string, error) {
 	// verifying token
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
@@ -39,7 +25,7 @@ func VerifyToken(tokenString string, publicKey *rsa.PublicKey) (uuid.UUID, strin
 	}
 
 	if !token.Valid {
-		return uuid.Nil, "", grpcerrors.ErrUserUnauthenticated
+		return uuid.Nil, "", customerrors.ErrUserUnauthenticated
 	}
 
 	// getting claims
@@ -51,7 +37,7 @@ func VerifyToken(tokenString string, publicKey *rsa.PublicKey) (uuid.UUID, strin
 	// checking expiration time
 	if exp, ok := claims["exp"].(float64); ok {
 		if float64(time.Now().Unix()) > exp {
-			return uuid.Nil, "", grpcerrors.ErrUserUnauthenticated
+			return uuid.Nil, "", customerrors.ErrUserUnauthenticated
 		}
 	} else {
 		return uuid.Nil, "", fmt.Errorf("token dont have 'exp' key")
