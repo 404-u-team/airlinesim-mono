@@ -23,15 +23,18 @@ func main() {
 	// get config from env
 	config := config.InitConfig()
 
-	// create gRPC client and handler for auth service communication
+	// create gRPC client for auth service communication
 	authClient, err := grpcclient.NewAuthClient("auth-service:50051")
 	if err != nil {
-		log.Fatalf("got error when tried to connect to gRPC server, %v", err)
+		log.Println("got error when tried to connect to gRPC server, ", err)
 	}
 	defer authClient.Close()
 
+	// create gRPC client for world service communication
+	worldClient, err := grpcclient.NewWorldClient("world-service:50051")
+
 	// setup HTTP server
-	router := routes.SetupRoutes(authClient, &config)
+	router := routes.SetupRoutes(authClient, worldClient, &config)
 
 	log.Println("Server starting on :8080")
 	if err := http.ListenAndServe(":8080", router); err != nil {

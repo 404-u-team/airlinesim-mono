@@ -130,6 +130,49 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/create-country": {
+            "post": {
+                "description": "Returns",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Country"
+                ],
+                "summary": "Add country (admin only)",
+                "parameters": [
+                    {
+                        "description": "Country details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateCountryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Country created successfully, id returned",
+                        "schema": {
+                            "$ref": "#/definitions/dto.IDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "1 - request validation error, 2 - iso exists",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -141,11 +184,51 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.CreateCountryRequest": {
+            "type": "object",
+            "properties": {
+                "aircraft_tail_code": {
+                    "type": "string"
+                },
+                "corp_tax_rate": {
+                    "type": "number"
+                },
+                "flythrough_permission_price": {
+                    "type": "number"
+                },
+                "intl_name": {
+                    "type": "string"
+                },
+                "iso": {
+                    "type": "string"
+                },
+                "land_permission_price": {
+                    "type": "number"
+                },
+                "local_name": {
+                    "type": "string"
+                },
+                "vat_rate": {
+                    "type": "number"
+                },
+                "wikipedia_link": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.ErrorResponse": {
             "type": "object",
             "properties": {
                 "error": {
                     "type": "integer"
+                }
+            }
+        },
+        "dto.IDResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
                 }
             }
         },

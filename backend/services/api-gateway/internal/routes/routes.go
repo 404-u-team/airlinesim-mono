@@ -35,7 +35,7 @@ func SetupRoutes(authClient *grpcclient.AuthClient, worldClient *grpcclient.Worl
 			adminOnly := api.Group("")
 			adminOnly.Use(middleware.AdminMiddleware())
 			{
-				adminOnly.POST("/create-country", worldHandler.CreateCountry)
+				adminOnly.POST("/country", worldHandler.CreateCountry)
 			}
 		}
 	}
