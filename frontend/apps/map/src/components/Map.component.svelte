@@ -7,10 +7,22 @@
 
     let mapContainer: HTMLElement;
 
-    const { controls = false } = $props();
+    const {
+        controls = false,
+        rotation = false,
+        theme = "light",
+    }: {
+        controls?: boolean;
+        rotation?: boolean;
+        theme?: "light" | "dark";
+    } = $props();
 
     onMount(() => {
-        mapManager.init(mapContainer);
+        mapManager.init(mapContainer, rotation);
+    });
+
+    $effect(() => {
+        mapManager.handleThemeChange(theme);
     });
 
     onDestroy(() => {
@@ -26,20 +38,34 @@
 
     {#if controls}
         <div class="absolute bottom-8 right-8 flex flex-col gap-4 z-10">
-            <div class="flex flex-col bg-surface/90 rounded-lg shadow-md overflow-hidden">
-                <ControlButton click={() => mapManager.zoomIn()}>+</ControlButton>
-                <ControlButton click={() => mapManager.zoomOut()}>−</ControlButton>
+            <div
+                class="flex flex-col bg-surface/90 rounded-lg shadow-md overflow-hidden"
+            >
+                <ControlButton click={() => mapManager.zoomIn()}
+                    >+</ControlButton
+                >
+                <ControlButton click={() => mapManager.zoomOut()}
+                    >−</ControlButton
+                >
             </div>
 
-            <div class="flex flex-col bg-surface/90 rounded-lg shadow-md overflow-hidden">
+            <div
+                class="flex flex-col bg-surface/90 rounded-lg shadow-md overflow-hidden"
+            >
                 <ControlDropdown
-                    options={mapManager.AvailableStyles.map((style) => style.name)}
-                    values={mapManager.AvailableStyles.map((style) => style.name)}
+                    options={mapManager.AvailableStyles.map(
+                        (style) => style.name,
+                    )}
+                    values={mapManager.AvailableStyles.map(
+                        (style) => style.name,
+                    )}
                     change={(e: any) => mapManager.changeStyle(e.target.value)}
                 />
                 <ControlButton
-                    click={() => mapManager.setGlobeProjection(!mapManager.Globe)}
-                >2D/3D</ControlButton>
+                    click={() =>
+                        mapManager.setGlobeProjection(!mapManager.Globe)}
+                    >2D/3D</ControlButton
+                >
             </div>
         </div>
     {/if}

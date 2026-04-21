@@ -3,6 +3,7 @@
     
     <SvelteWrapper 
         :createFn="createMap" 
+        :componentProps="{rotation:true}"
       />
   </div>
 </template>

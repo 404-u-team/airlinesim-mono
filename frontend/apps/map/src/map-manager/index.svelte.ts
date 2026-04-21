@@ -17,7 +17,7 @@ export class MapManager {
     private threeLayer: ThreeLayer | null = null;
     private gltfLoader = new GLTFLoader();
 
-    public init(container: HTMLElement) {
+    public init(container: HTMLElement, rotation: boolean) {
         this.map = new maplibregl.Map({
             container,
             style: this.style.url,
@@ -25,6 +25,7 @@ export class MapManager {
             zoom: this.zoom,
             interactive: this.interactable,
         });
+        this.isInRotation = rotation;
 
         this.map.on('style.load', () => {
             this.setGlobeProjection(this.isGlobe, true);

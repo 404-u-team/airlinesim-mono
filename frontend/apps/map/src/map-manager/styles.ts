@@ -10,11 +10,6 @@ export const MAP__STYLES = [
         theme: "dark"
     },
     {
-        name: "Voyager",
-        url: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
-        theme: "light"
-    },
-    {
         name: "ArcGIS Hybrid",
         url: "https://raw.githubusercontent.com/go2garret/maps/main/src/assets/json/arcgis_hybrid.json",
         theme: "dark"
