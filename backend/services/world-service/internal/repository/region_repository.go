@@ -16,7 +16,7 @@ type regionRepository struct {
 	pool db.DBConn
 }
 
-func NewregionRepository(pool db.DBConn) RegionRepository {
+func NewRegionRepository(pool db.DBConn) RegionRepository {
 	return &regionRepository{pool: pool}
 }
 

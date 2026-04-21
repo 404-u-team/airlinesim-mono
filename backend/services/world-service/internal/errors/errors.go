@@ -16,3 +16,6 @@ var ErrISOConflict = status.Error(codes.AlreadyExists, "iso taken")
 
 var ErrLocalCodeConflict = status.Error(codes.AlreadyExists, "local code taken")
 var ErrNoSuchCountry = status.Error(codes.InvalidArgument, "country with such id not found")
+
+var ErrRegionLinkConflict = status.Error(codes.AlreadyExists, "region link with such combination of regions exists")
+var ErrNoSuchRegion = status.Error(codes.InvalidArgument, "no such region exists")
