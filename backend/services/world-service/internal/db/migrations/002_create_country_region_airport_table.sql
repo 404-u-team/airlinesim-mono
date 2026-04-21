@@ -32,7 +32,8 @@ CREATE TABLE region_link (
     diaspora NUMERIC CHECK (diaspora >= 0 AND diaspora <= 1),
     business NUMERIC CHECK (business >= 0 AND business <= 1),
     tourism NUMERIC CHECK (tourism >= 0 AND tourism <= 1),
-    CHECK (region_a < region_b)                      -- enforce symmetry, avoid duplicates
+    CHECK (region_a < region_b),                      -- enforce symmetry, avoid duplicates
+    UNIQUE (region_a, region_b)        
 );
 
 CREATE TABLE airport (

@@ -35,8 +35,8 @@ func main() {
 	// defer producer.Close()
 
 	countryRepo := repository.NewCountryRepository(pool)
-	worldService := service.NewWorldService(countryRepo)
-	worldServer := worldgrpc.NewWorldServer(worldService)
+	countryService := service.NewCountryService(countryRepo)
+	worldServer := worldgrpc.NewWorldServer(countryService)
 
 	grpcServer := grpc.NewServer()
 
