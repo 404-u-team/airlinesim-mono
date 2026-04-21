@@ -11,19 +11,19 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-type WorldService interface {
+type CountryService interface {
 	CreateCountry(ctx context.Context, payload *worldpb.CreateCountryRequest) (*worldpb.IDResponse, error)
 }
 
-type worldService struct {
+type countryService struct {
 	countryRepo repository.CountryRepository
 }
 
-func NewWorldService(countryRepo repository.CountryRepository) WorldService {
-	return &worldService{countryRepo: countryRepo}
+func NewCountryService(countryRepo repository.CountryRepository) CountryService {
+	return &countryService{countryRepo: countryRepo}
 }
 
-func (s *worldService) CreateCountry(ctx context.Context, payload *worldpb.CreateCountryRequest) (*worldpb.IDResponse, error) {
+func (s *countryService) CreateCountry(ctx context.Context, payload *worldpb.CreateCountryRequest) (*worldpb.IDResponse, error) {
 	countryID, err := s.countryRepo.CreateCountry(ctx, payload)
 	if err != nil {
 		var pgErr *pgconn.PgError

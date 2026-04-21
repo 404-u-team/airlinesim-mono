@@ -10,17 +10,29 @@ import (
 
 type worldServer struct {
 	worldpb.UnimplementedWorldServiceServer
-	worldService service.WorldService
-	config       *config.Config
+	countryService service.CountryService
+	regionService  service.RegionService
+	config         *config.Config
 }
 
-func NewWorldServer(worldService service.WorldService) *worldServer {
+func NewWorldServer(countryService service.CountryService) *worldServer {
 	config := config.InitConfig()
-	return &worldServer{worldService: worldService, config: &config}
+	return &worldServer{countryService: countryService, config: &config}
 }
 
+// --- COUNTRY ---
 func (s *worldServer) CreateCountry(ctx context.Context, payload *worldpb.CreateCountryRequest) (*worldpb.IDResponse, error) {
-	IDResponse, err := s.worldService.CreateCountry(ctx, payload)
+	IDResponse, err := s.countryService.CreateCountry(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return IDResponse, nil
+}
+
+// --- REGION ---
+func (s *worldServer) CreateRegion(ctx context.Context, payload *worldpb.CreateRegionRequest) (*worldpb.IDResponse, error) {
+	IDResponse, err := s.regionService.CreateRegion(ctx, payload)
 	if err != nil {
 		return nil, err
 	}
