@@ -1,0 +1,40 @@
+package repository
+
+import (
+	"context"
+
+	"github.com/404-u-team/airlinesim-mono/backend/game-service/internal/db"
+	worldpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/world/v1"
+	"github.com/google/uuid"
+)
+
+type CountryRepository interface {
+	CreateCountry(ctx context.Context, payload *worldpb.CreateCountryRequest) (uuid.UUID, error)
+}
+
+type countryRepository struct {
+	pool db.DBConn
+}
+
+func NewCountryRepository(pool db.DBConn) CountryRepository {
+	return &countryRepository{pool: pool}
+}
+
+func (r *countryRepository) CreateCountry(ctx context.Context, payload *worldpb.CreateCountryRequest) (uuid.UUID, error) {
+	query := `
+		INSERT INTO country (
+			iso, local_name, intl_name, flythrough_permission_price,
+			land_permission_price, corp_tax_rate, vat_rate, aircraft_tail_code, 
+			wikipedia_link
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id
+	`
+
+	var countryID uuid.UUID
+	err := r.pool.QueryRow(ctx, query, payload.Iso, payload.LocalName, payload.IntlName, payload.FlythroughPermissionPrice,
+		payload.LandPermissionPrice, payload.CorpTaxRate, payload.VatRate, payload.AircraftTailCode,
+		payload.WikipediaLink).Scan(&countryID)
+
+	return countryID, err
+}

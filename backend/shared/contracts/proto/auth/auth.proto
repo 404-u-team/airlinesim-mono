@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package auth.v1;
+
+option go_package = "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1;authpb";
+
+// Run inside this folder to autogenerate golang grpc
+/*
+protoc --go_out=./v1 --go_opt=paths=source_relative \
+    --go-grpc_out=./v1 --go-grpc_opt=paths=source_relative \
+    auth.proto
+*/
+
+// authentication service
+service AuthService {
+  // register user
+  rpc Register(RegisterRequest) returns (TokenResponse);
+
+  // login user and give him pair of access and refresh jwt token
+  rpc Login(LoginRequest) returns (TokenResponse);
+
+  // validate given token and return new
+  rpc RefreshToken(RefreshTokenRequest) returns (TokenResponse);
+
+  // verify token
+  rpc VerifyToken(VerifyTokenRequest) returns (VerifyTokenResponse);
+}
+
+// TODO: add validation
+// request to register user
+message RegisterRequest {
+  string email = 1;
+  string nickname = 2;
+  string password = 3;
+}
+
+// request to login (login represent email or nickname)
+message LoginRequest {
+  string login = 1;
+  string password = 2;
+}
+
+// request to validate access token
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+// access and refresh token response
+message TokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+// verifing jwt token
+message VerifyTokenRequest {
+  string access_token = 1;
+}
+
+// returns just is jwt valid and user is in db
+message  VerifyTokenResponse {
+  bool valid = 1;
+}

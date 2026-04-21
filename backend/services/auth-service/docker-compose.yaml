@@ -1,0 +1,35 @@
+services:
+    auth-db:
+        image: postgres:18.3-alpine
+        restart: always
+        env_file:
+            - .env
+        volumes:
+            - db_data:/var/lib/postgresql/data
+        ports:
+            - "5432:5432"
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c 'SELECT 1' || exit 1",
+                ]
+            interval: 5s
+            timeout: 2s
+            retries: 10
+
+    auth-service:
+        build:
+            context: ../../..
+            dockerfile: backend/services/auth-service/Dockerfile
+        restart: on-failure
+        depends_on:
+            - auth-db
+        env_file:
+            - .env
+        ports:
+            - "50051:50051"
+
+volumes:
+    db_data:
+        driver: local
