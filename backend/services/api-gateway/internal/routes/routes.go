@@ -38,6 +38,8 @@ func SetupRoutes(authClient *grpcclient.AuthClient, worldClient *grpcclient.Worl
 				adminOnly.POST("/country", worldHandler.CreateCountry)
 
 				adminOnly.POST("/region", worldHandler.CreateRegion)
+
+				adminOnly.POST("/region-link", worldHandler.CreateRegionLink)
 			}
 		}
 	}
