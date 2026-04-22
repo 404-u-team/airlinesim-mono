@@ -9,9 +9,15 @@ import (
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/auth"
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/dto"
+<<<<<<< HEAD
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/repository"
 	authpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1"
 	"github.com/404-u-team/airlinesim-mono/backend/shared/customerrors"
+=======
+	grpcerrors "github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/errors"
+	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/repository"
+	authpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1"
+>>>>>>> master
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -37,7 +43,11 @@ func (s *authService) Register(ctx context.Context, payload *authpb.RegisterRequ
 	hashedPassword, err := auth.HashPassword(payload.Password)
 	if err != nil {
 		log.Println("error when tried to hash password, ", err)
+<<<<<<< HEAD
 		return nil, customerrors.ErrInternal
+=======
+		return nil, grpcerrors.ErrInternal
+>>>>>>> master
 	}
 	payload.Password = hashedPassword
 
@@ -48,6 +58,7 @@ func (s *authService) Register(ctx context.Context, payload *authpb.RegisterRequ
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			// unique constraint violation
 			if pgErr.ConstraintName == "users_email_key" {
+<<<<<<< HEAD
 				return nil, customerrors.ErrUserWithSuchEmailExists
 			}
 			if pgErr.ConstraintName == "users_nickname_key" {
@@ -55,12 +66,25 @@ func (s *authService) Register(ctx context.Context, payload *authpb.RegisterRequ
 			}
 		}
 		return nil, customerrors.ErrInternal
+=======
+				return nil, grpcerrors.ErrUserWithSuchEmailExists
+			}
+			if pgErr.ConstraintName == "users_nickname_key" {
+				return nil, grpcerrors.ErrUserWithSuchNicknameExists
+			}
+		}
+		return nil, grpcerrors.ErrInternal
+>>>>>>> master
 	}
 
 	// create tokens. we using role 'user' because it is default role for created user
 	tokenResponse, err := getTokenResponse(userID, "user", config)
 	if err != nil {
+<<<<<<< HEAD
 		return nil, customerrors.ErrInternal
+=======
+		return nil, grpcerrors.ErrInternal
+>>>>>>> master
 	}
 
 	return tokenResponse, nil
@@ -79,20 +103,34 @@ func (s *authService) Login(ctx context.Context, payload *authpb.LoginRequest, c
 	}
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+<<<<<<< HEAD
 			return nil, customerrors.ErrUserNotFound
 		}
 		return nil, customerrors.ErrInternal
+=======
+			return nil, grpcerrors.ErrUserNotFound
+		}
+		return nil, grpcerrors.ErrInternal
+>>>>>>> master
 	}
 
 	// compare password
 	if !auth.ComparePasswords(user.PasswordHash, payload.Password) {
+<<<<<<< HEAD
 		return nil, customerrors.ErrUserNotFound
+=======
+		return nil, grpcerrors.ErrUserNotFound
+>>>>>>> master
 	}
 
 	// create tokens
 	tokenResponse, err := getTokenResponse(user.ID, user.Role, config)
 	if err != nil {
+<<<<<<< HEAD
 		return nil, customerrors.ErrInternal
+=======
+		return nil, grpcerrors.ErrInternal
+>>>>>>> master
 	}
 	return tokenResponse, nil
 }
@@ -101,27 +139,46 @@ func (s *authService) RefreshToken(ctx context.Context, payload *authpb.RefreshT
 	// validate refresh token
 	userID, role, err := auth.VerifyToken(payload.RefreshToken, config.JWTPublicKey)
 	if err != nil {
+<<<<<<< HEAD
 		if errors.Is(err, customerrors.ErrUserUnauthenticated) {
 			return nil, customerrors.ErrUserUnauthenticated
 		}
 		log.Println("got error when tried to verify token, ", err)
 		return nil, customerrors.ErrInternal
+=======
+		if errors.Is(err, grpcerrors.ErrUserUnauthenticated) {
+			return nil, grpcerrors.ErrUserUnauthenticated
+		}
+		log.Println("got error when tried to verify token, ", err)
+		return nil, grpcerrors.ErrInternal
+>>>>>>> master
 	}
 
 	// check user is still in db
 	exists, err := s.repo.IsUserExists(ctx, userID)
 	if err != nil {
 		log.Println("got error when tried to check user existence, ", err)
+<<<<<<< HEAD
 		return nil, customerrors.ErrInternal
 	}
 	if !exists {
 		return nil, customerrors.ErrUserUnauthenticated
+=======
+		return nil, grpcerrors.ErrInternal
+	}
+	if !exists {
+		return nil, grpcerrors.ErrUserUnauthenticated
+>>>>>>> master
 	}
 
 	// create new pair of tokens
 	tokenResponse, err := getTokenResponse(userID, role, config)
 	if err != nil {
+<<<<<<< HEAD
 		return nil, customerrors.ErrInternal
+=======
+		return nil, grpcerrors.ErrInternal
+>>>>>>> master
 	}
 
 	return tokenResponse, nil
@@ -130,11 +187,19 @@ func (s *authService) RefreshToken(ctx context.Context, payload *authpb.RefreshT
 func (s *authService) VerifyToken(ctx context.Context, payload *authpb.VerifyTokenRequest, config *config.Config) (*authpb.VerifyTokenResponse, error) {
 	_, _, err := auth.VerifyToken(payload.AccessToken, config.JWTPublicKey)
 	if err != nil {
+<<<<<<< HEAD
 		if errors.Is(err, customerrors.ErrUserUnauthenticated) {
 			return &authpb.VerifyTokenResponse{Valid: false}, nil
 		}
 		log.Println("got error when tried to verify token, ", err)
 		return nil, customerrors.ErrInternal
+=======
+		if errors.Is(err, grpcerrors.ErrUserUnauthenticated) {
+			return &authpb.VerifyTokenResponse{Valid: false}, nil
+		}
+		log.Println("got error when tried to verify token, ", err)
+		return nil, grpcerrors.ErrInternal
+>>>>>>> master
 	}
 
 	return &authpb.VerifyTokenResponse{Valid: true}, nil
@@ -145,12 +210,20 @@ func getTokenResponse(userID uuid.UUID, role string, config *config.Config) (*au
 	accessToken, err := auth.CreateSignedToken(userID, role, config.JWTAccessTokenExpireTime, config.JWTPrivateKey)
 	if err != nil {
 		log.Println("error when tried to create access token, ", err)
+<<<<<<< HEAD
 		return nil, customerrors.ErrInternal
+=======
+		return nil, grpcerrors.ErrInternal
+>>>>>>> master
 	}
 	refreshToken, err := auth.CreateSignedToken(userID, role, config.JWTRefreshTokenExpireTime, config.JWTPrivateKey)
 	if err != nil {
 		log.Println("error when tried to create access token, ", err)
+<<<<<<< HEAD
 		return nil, customerrors.ErrInternal
+=======
+		return nil, grpcerrors.ErrInternal
+>>>>>>> master
 	}
 
 	tokenResponse := authpb.TokenResponse{AccessToken: accessToken, RefreshToken: refreshToken}

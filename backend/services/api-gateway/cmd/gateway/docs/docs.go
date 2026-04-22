@@ -151,7 +151,11 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
+<<<<<<< HEAD
                             "$ref": "#/definitions/worldpb.CreateCountryRequest"
+=======
+                            "$ref": "#/definitions/dto.CreateCountryRequest"
+>>>>>>> master
                         }
                     }
                 ],
@@ -159,7 +163,11 @@ const docTemplate = `{
                     "201": {
                         "description": "Country created successfully, id returned",
                         "schema": {
+<<<<<<< HEAD
                             "$ref": "#/definitions/worldpb.IDResponse"
+=======
+                            "$ref": "#/definitions/dto.IDResponse"
+>>>>>>> master
                         }
                     },
                     "400": {
@@ -176,6 +184,7 @@ const docTemplate = `{
                     }
                 }
             }
+<<<<<<< HEAD
         },
         "/region": {
             "post": {
@@ -268,6 +277,8 @@ const docTemplate = `{
                     }
                 }
             }
+=======
+>>>>>>> master
         }
     },
     "definitions": {
@@ -279,6 +290,41 @@ const docTemplate = `{
                 }
             }
         },
+<<<<<<< HEAD
+=======
+        "dto.CreateCountryRequest": {
+            "type": "object",
+            "properties": {
+                "aircraft_tail_code": {
+                    "type": "string"
+                },
+                "corp_tax_rate": {
+                    "type": "number"
+                },
+                "flythrough_permission_price": {
+                    "type": "number"
+                },
+                "intl_name": {
+                    "type": "string"
+                },
+                "iso": {
+                    "type": "string"
+                },
+                "land_permission_price": {
+                    "type": "number"
+                },
+                "local_name": {
+                    "type": "string"
+                },
+                "vat_rate": {
+                    "type": "number"
+                },
+                "wikipedia_link": {
+                    "type": "string"
+                }
+            }
+        },
+>>>>>>> master
         "dto.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -337,6 +383,7 @@ const docTemplate = `{
                     "minLength": 8
                 }
             }
+<<<<<<< HEAD
         },
         "worldpb.CreateCountryRequest": {
             "type": "object",
@@ -435,6 +482,8 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+=======
+>>>>>>> master
         }
     }
 }`

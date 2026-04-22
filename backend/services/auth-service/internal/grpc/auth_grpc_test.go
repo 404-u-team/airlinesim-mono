@@ -5,8 +5,13 @@ import (
 	"testing"
 
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/config"
+<<<<<<< HEAD
 	authpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1"
 	"github.com/404-u-team/airlinesim-mono/backend/shared/customerrors"
+=======
+	grpcerrors "github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/errors"
+	authpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1"
+>>>>>>> master
 )
 
 type mockAuthService struct {
@@ -65,7 +70,11 @@ func TestRegister(t *testing.T) {
 	t.Run("errors are passed as they are (email exists)", func(t *testing.T) {
 		serviceEmailExists := &mockAuthService{
 			register: func(ctx context.Context, payload *authpb.RegisterRequest, config *config.Config) (*authpb.TokenResponse, error) {
+<<<<<<< HEAD
 				return nil, customerrors.ErrUserWithSuchEmailExists
+=======
+				return nil, grpcerrors.ErrUserWithSuchEmailExists
+>>>>>>> master
 			},
 		}
 
@@ -74,7 +83,11 @@ func TestRegister(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected to get an error, got nil")
 		}
+<<<<<<< HEAD
 		if err != customerrors.ErrUserWithSuchEmailExists {
+=======
+		if err != grpcerrors.ErrUserWithSuchEmailExists {
+>>>>>>> master
 			t.Fatalf("want email exists error, got %v", err)
 		}
 	})
@@ -82,7 +95,11 @@ func TestRegister(t *testing.T) {
 	t.Run("errors are passed as they are (nickname exists)", func(t *testing.T) {
 		serviceEmailExists := &mockAuthService{
 			register: func(ctx context.Context, payload *authpb.RegisterRequest, config *config.Config) (*authpb.TokenResponse, error) {
+<<<<<<< HEAD
 				return nil, customerrors.ErrUserWithSuchNicknameExists
+=======
+				return nil, grpcerrors.ErrUserWithSuchNicknameExists
+>>>>>>> master
 			},
 		}
 
@@ -91,7 +108,11 @@ func TestRegister(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected to get an error, got nil")
 		}
+<<<<<<< HEAD
 		if err != customerrors.ErrUserWithSuchNicknameExists {
+=======
+		if err != grpcerrors.ErrUserWithSuchNicknameExists {
+>>>>>>> master
 			t.Fatalf("want nickname exists error, got %v", err)
 		}
 	})
@@ -129,7 +150,11 @@ func TestLogin(t *testing.T) {
 	t.Run("errors are passed as they are (email exists)", func(t *testing.T) {
 		serviceEmailExists := &mockAuthService{
 			login: func(ctx context.Context, payload *authpb.LoginRequest, config *config.Config) (*authpb.TokenResponse, error) {
+<<<<<<< HEAD
 				return nil, customerrors.ErrUserWithSuchEmailExists
+=======
+				return nil, grpcerrors.ErrUserWithSuchEmailExists
+>>>>>>> master
 			},
 		}
 
@@ -138,7 +163,11 @@ func TestLogin(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected to get an error, got nil")
 		}
+<<<<<<< HEAD
 		if err != customerrors.ErrUserWithSuchEmailExists {
+=======
+		if err != grpcerrors.ErrUserWithSuchEmailExists {
+>>>>>>> master
 			t.Fatalf("want email exists error, got %v", err)
 		}
 	})
@@ -146,7 +175,11 @@ func TestLogin(t *testing.T) {
 	t.Run("errors are passed as they are (nickname exists)", func(t *testing.T) {
 		serviceEmailExists := &mockAuthService{
 			login: func(ctx context.Context, payload *authpb.LoginRequest, config *config.Config) (*authpb.TokenResponse, error) {
+<<<<<<< HEAD
 				return nil, customerrors.ErrUserWithSuchNicknameExists
+=======
+				return nil, grpcerrors.ErrUserWithSuchNicknameExists
+>>>>>>> master
 			},
 		}
 
@@ -155,7 +188,11 @@ func TestLogin(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected to get an error, got nil")
 		}
+<<<<<<< HEAD
 		if err != customerrors.ErrUserWithSuchNicknameExists {
+=======
+		if err != grpcerrors.ErrUserWithSuchNicknameExists {
+>>>>>>> master
 			t.Fatalf("want nickname exists error, got %v", err)
 		}
 	})
@@ -192,7 +229,11 @@ func TestRefresh(t *testing.T) {
 	t.Run("errors are passed as they are (email exists)", func(t *testing.T) {
 		serviceEmailExists := &mockAuthService{
 			login: func(ctx context.Context, payload *authpb.LoginRequest, config *config.Config) (*authpb.TokenResponse, error) {
+<<<<<<< HEAD
 				return nil, customerrors.ErrUserWithSuchEmailExists
+=======
+				return nil, grpcerrors.ErrUserWithSuchEmailExists
+>>>>>>> master
 			},
 		}
 
@@ -201,7 +242,11 @@ func TestRefresh(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected to get an error, got nil")
 		}
+<<<<<<< HEAD
 		if err != customerrors.ErrUserWithSuchEmailExists {
+=======
+		if err != grpcerrors.ErrUserWithSuchEmailExists {
+>>>>>>> master
 			t.Fatalf("want email exists error, got %v", err)
 		}
 	})
@@ -209,7 +254,11 @@ func TestRefresh(t *testing.T) {
 	t.Run("errors are passed as they are (nickname exists)", func(t *testing.T) {
 		serviceEmailExists := &mockAuthService{
 			login: func(ctx context.Context, payload *authpb.LoginRequest, config *config.Config) (*authpb.TokenResponse, error) {
+<<<<<<< HEAD
 				return nil, customerrors.ErrUserWithSuchNicknameExists
+=======
+				return nil, grpcerrors.ErrUserWithSuchNicknameExists
+>>>>>>> master
 			},
 		}
 
@@ -218,7 +267,11 @@ func TestRefresh(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected to get an error, got nil")
 		}
+<<<<<<< HEAD
 		if err != customerrors.ErrUserWithSuchNicknameExists {
+=======
+		if err != grpcerrors.ErrUserWithSuchNicknameExists {
+>>>>>>> master
 			t.Fatalf("want nickname exists error, got %v", err)
 		}
 	})

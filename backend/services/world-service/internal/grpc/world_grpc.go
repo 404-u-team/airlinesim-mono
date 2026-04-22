@@ -10,6 +10,7 @@ import (
 
 type worldServer struct {
 	worldpb.UnimplementedWorldServiceServer
+<<<<<<< HEAD
 	countryService    service.CountryService
 	regionService     service.RegionService
 	regionLinkService service.RegionLinkService
@@ -49,6 +50,19 @@ func (s *worldServer) CreateRegion(ctx context.Context, payload *worldpb.CreateR
 // --- REGION LINK ---
 func (s *worldServer) CreateRegionLink(ctx context.Context, payload *worldpb.CreateRegionLinkRequest) (*worldpb.IDResponse, error) {
 	IDResponse, err := s.regionLinkService.CreateRegionLink(ctx, payload)
+=======
+	worldService service.WorldService
+	config       *config.Config
+}
+
+func NewWorldServer(worldService service.WorldService) *worldServer {
+	config := config.InitConfig()
+	return &worldServer{worldService: worldService, config: &config}
+}
+
+func (s *worldServer) CreateCountry(ctx context.Context, payload *worldpb.CreateCountryRequest) (*worldpb.IDResponse, error) {
+	IDResponse, err := s.worldService.CreateCountry(ctx, payload)
+>>>>>>> master
 	if err != nil {
 		return nil, err
 	}
