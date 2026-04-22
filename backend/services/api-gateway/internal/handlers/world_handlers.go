@@ -133,12 +133,12 @@ func (h *WorldHandler) CreateRegionLink(c *gin.Context) {
 	// grpc create region
 	IDResponse, err := h.worldClient.CreateRegionLink(ctx, &payload)
 	if err != nil {
-		if errors.Is(err, customerrors.ErrNoSuchCountry) {
+		if errors.Is(err, customerrors.ErrNoSuchRegion) {
 			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 2})
-		}
-		if errors.Is(err, customerrors.ErrLocalCodeConflict) {
-			c.Status(http.StatusConflict)
 			return
+		}
+		if errors.Is(err, customerrors.ErrRegionLinkConflict) {
+			c.Status(http.StatusConflict)
 		}
 		c.Status(http.StatusInternalServerError)
 		return
