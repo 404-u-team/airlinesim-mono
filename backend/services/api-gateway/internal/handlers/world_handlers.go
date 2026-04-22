@@ -9,9 +9,9 @@ import (
 
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/dto"
-	customerrors "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/errors"
 	grpcclient "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/grpc"
 	worldpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/world/v1"
+	"github.com/404-u-team/airlinesim-mono/backend/shared/customerrors"
 	"github.com/gin-gonic/gin"
 )
 

@@ -10,8 +10,8 @@ import (
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/auth"
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/dto"
-	grpcerrors "github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/errors"
 	authpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1"
+	"github.com/404-u-team/airlinesim-mono/backend/shared/customerrors"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -134,7 +134,7 @@ func TestAuthService_Register_UniqueConstraintErrors(t *testing.T) {
 		Nickname: "neo",
 		Password: "secret",
 	}, config)
-	if !errors.Is(err, grpcerrors.ErrUserWithSuchEmailExists) {
+	if !errors.Is(err, customerrors.ErrUserWithSuchEmailExists) {
 		t.Fatalf("expected email conflict error, got %v", err)
 	}
 
@@ -149,7 +149,7 @@ func TestAuthService_Register_UniqueConstraintErrors(t *testing.T) {
 		Nickname: "neo",
 		Password: "secret",
 	}, config)
-	if !errors.Is(err, grpcerrors.ErrUserWithSuchNicknameExists) {
+	if !errors.Is(err, customerrors.ErrUserWithSuchNicknameExists) {
 		t.Fatalf("expected nickname conflict error, got %v", err)
 	}
 }
@@ -168,7 +168,7 @@ func TestAuthService_Register_RepositoryError(t *testing.T) {
 		Nickname: "neo",
 		Password: "secret",
 	}, config)
-	if !errors.Is(err, grpcerrors.ErrInternal) {
+	if !errors.Is(err, customerrors.ErrInternal) {
 		t.Fatalf("expected internal error, got %v", err)
 	}
 }
@@ -224,7 +224,7 @@ func TestAuthService_Login_UserNotFoundAndRepositoryError(t *testing.T) {
 		Login:    "neo",
 		Password: "secret",
 	}, config)
-	if !errors.Is(err, grpcerrors.ErrUserNotFound) {
+	if !errors.Is(err, customerrors.ErrUserNotFound) {
 		t.Fatalf("expected not found error, got %v", err)
 	}
 
@@ -238,7 +238,7 @@ func TestAuthService_Login_UserNotFoundAndRepositoryError(t *testing.T) {
 		Login:    "user@example.com",
 		Password: "secret",
 	}, config)
-	if !errors.Is(err, grpcerrors.ErrInternal) {
+	if !errors.Is(err, customerrors.ErrInternal) {
 		t.Fatalf("expected internal error, got %v", err)
 	}
 }
@@ -261,7 +261,7 @@ func TestAuthService_Login_WrongPassword(t *testing.T) {
 		Login:    "user@example.com",
 		Password: "wrong-password",
 	}, config)
-	if !errors.Is(err, grpcerrors.ErrUserNotFound) {
+	if !errors.Is(err, customerrors.ErrUserNotFound) {
 		t.Fatalf("expected wrong password to look like not found, got %v", err)
 	}
 }
@@ -339,7 +339,7 @@ func TestAuthService_Refresh_Bad_Token(t *testing.T) {
 		}
 		refreshTokenRequest := &authpb.RefreshTokenRequest{RefreshToken: tokenExpired}
 		_, err = authService.RefreshToken(context.Background(), refreshTokenRequest, config)
-		if !errors.Is(err, grpcerrors.ErrUserUnauthenticated) {
+		if !errors.Is(err, customerrors.ErrUserUnauthenticated) {
 			t.Fatalf("expired token should return ErrUserUnauthenticated")
 		}
 	})
@@ -360,7 +360,7 @@ func TestAuthService_Refresh_Bad_Token(t *testing.T) {
 		refreshTokenRequest := &authpb.RefreshTokenRequest{RefreshToken: token}
 
 		_, err = authService.RefreshToken(context.Background(), refreshTokenRequest, config)
-		if !errors.Is(err, grpcerrors.ErrUserUnauthenticated) {
+		if !errors.Is(err, customerrors.ErrUserUnauthenticated) {
 			t.Fatalf("when user is not in db, the error should be ErrUserUnauthenticated, got %v", err)
 		}
 
@@ -387,7 +387,7 @@ func TestAuthService_Refresh_RepositoryError(t *testing.T) {
 	authService := NewAuthService(repo)
 
 	_, err = authService.RefreshToken(context.Background(), refreshTokenRequest, config)
-	if !errors.Is(err, grpcerrors.ErrInternal) {
+	if !errors.Is(err, customerrors.ErrInternal) {
 		t.Fatalf("error in repository should return ErrInternal")
 	}
 }

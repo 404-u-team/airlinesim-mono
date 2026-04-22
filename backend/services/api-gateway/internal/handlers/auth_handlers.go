@@ -9,9 +9,9 @@ import (
 
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/dto"
-	grpcerrors "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/errors"
 	grpcclient "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/grpc"
 	authpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1"
+	"github.com/404-u-team/airlinesim-mono/backend/shared/customerrors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -58,11 +58,11 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	// grpc register
 	tokenResponse, err := h.authClient.Register(ctx, &registerRequest)
 	if err != nil {
-		if errors.Is(err, grpcerrors.ErrUserWithSuchEmailExists) {
+		if errors.Is(err, customerrors.ErrUserWithSuchEmailExists) {
 			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 2})
 			return
 		}
-		if errors.Is(err, grpcerrors.ErrUserWithSuchNicknameExists) {
+		if errors.Is(err, customerrors.ErrUserWithSuchNicknameExists) {
 			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 3})
 			return
 		}
@@ -108,7 +108,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// grpc login
 	tokenResponse, err := h.authClient.Login(ctx, &loginRequest)
 	if err != nil {
-		if errors.Is(err, grpcerrors.ErrUserNotFound) {
+		if errors.Is(err, customerrors.ErrUserNotFound) {
 			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 2})
 			return
 		}
@@ -145,7 +145,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	// grpc login
 	tokenResponse, err := h.authClient.RefreshToken(ctx, &authpb.RefreshTokenRequest{RefreshToken: refreshToken})
 	if err != nil {
-		if errors.Is(err, grpcerrors.ErrUserUnauthenticated) {
+		if errors.Is(err, customerrors.ErrUserUnauthenticated) {
 			c.Status(http.StatusUnauthorized)
 			return
 		}

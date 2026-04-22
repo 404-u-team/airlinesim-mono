@@ -5,9 +5,9 @@ import (
 	"errors"
 	"log"
 
-	customerrors "github.com/404-u-team/airlinesim-mono/backend/game-service/internal/errors"
 	"github.com/404-u-team/airlinesim-mono/backend/game-service/internal/repository"
 	worldpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/world/v1"
+	"github.com/404-u-team/airlinesim-mono/backend/shared/customerrors"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 

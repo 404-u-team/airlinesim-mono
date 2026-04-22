@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	grpcerrors "github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/errors"
+	"github.com/404-u-team/airlinesim-mono/backend/shared/customerrors"
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 )
@@ -39,7 +39,7 @@ func VerifyToken(tokenString string, publicKey *rsa.PublicKey) (uuid.UUID, strin
 	}
 
 	if !token.Valid {
-		return uuid.Nil, "", grpcerrors.ErrUserUnauthenticated
+		return uuid.Nil, "", customerrors.ErrUserUnauthenticated
 	}
 
 	// getting claims
@@ -51,7 +51,7 @@ func VerifyToken(tokenString string, publicKey *rsa.PublicKey) (uuid.UUID, strin
 	// checking expiration time
 	if exp, ok := claims["exp"].(float64); ok {
 		if float64(time.Now().Unix()) > exp {
-			return uuid.Nil, "", grpcerrors.ErrUserUnauthenticated
+			return uuid.Nil, "", customerrors.ErrUserUnauthenticated
 		}
 	} else {
 		return uuid.Nil, "", fmt.Errorf("token dont have 'exp' key")
