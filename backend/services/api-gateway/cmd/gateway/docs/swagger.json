@@ -62,6 +62,60 @@
             }
         },
         "/airport/{id}": {
+            "put": {
+                "description": "Returns patched airport id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Airport"
+                ],
+                "summary": "Change airport (admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Airport ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Airport details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.ChangeAirportRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Airport patched successfully",
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.IDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "1 - request validation error, 2 - country not found, 3 - region not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Airport not found"
+                    },
+                    "409": {
+                        "description": "Airport conflict"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            },
             "delete": {
                 "description": "Returns deleted airport id",
                 "produces": [
@@ -307,6 +361,60 @@
             }
         },
         "/country/{id}": {
+            "put": {
+                "description": "Returns patched country id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Country"
+                ],
+                "summary": "Change country (admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Country ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Country details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.ChangeCountryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Country patched successfully",
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.IDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "1 - request validation error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Country not found"
+                    },
+                    "409": {
+                        "description": "Country conflict"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            },
             "delete": {
                 "description": "Returns deleted country id",
                 "produces": [
@@ -443,6 +551,60 @@
             }
         },
         "/region-link/{id}": {
+            "put": {
+                "description": "Returns patched region link id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Region Link"
+                ],
+                "summary": "Change region link (admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Region Link ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Region link details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.ChangeRegionLinkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Region link patched successfully",
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.IDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "1 - request validation error, 2 - region not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Region link not found"
+                    },
+                    "409": {
+                        "description": "Region link conflict"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            },
             "delete": {
                 "description": "Returns deleted region link id",
                 "produces": [
@@ -507,6 +669,60 @@
             }
         },
         "/region/{id}": {
+            "put": {
+                "description": "Returns patched region id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Region"
+                ],
+                "summary": "Change region (admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Region ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Region details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.ChangeRegionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Region patched successfully",
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.IDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "1 - request validation error, 2 - country not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Region not found"
+                    },
+                    "409": {
+                        "description": "Region conflict"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            },
             "delete": {
                 "description": "Returns deleted region id",
                 "produces": [
@@ -716,6 +932,176 @@
                 },
                 "works_at_night": {
                     "type": "boolean"
+                }
+            }
+        },
+        "worldpb.ChangeAirportRequest": {
+            "type": "object",
+            "properties": {
+                "continent": {
+                    "type": "string"
+                },
+                "country_id": {
+                    "type": "string"
+                },
+                "elevation_ft": {
+                    "type": "number"
+                },
+                "fuel_price_multiplier": {
+                    "type": "number"
+                },
+                "gate_fee": {
+                    "type": "number"
+                },
+                "geog": {
+                    "type": "string"
+                },
+                "geom": {
+                    "type": "string"
+                },
+                "home_link": {
+                    "type": "string"
+                },
+                "iata_code": {
+                    "type": "string"
+                },
+                "icao_code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "intl_name": {
+                    "type": "string"
+                },
+                "local_name": {
+                    "type": "string"
+                },
+                "maintenance_point_price": {
+                    "type": "number"
+                },
+                "max_runway_length_m": {
+                    "type": "number"
+                },
+                "max_runway_uses_per_day": {
+                    "type": "number"
+                },
+                "municipality": {
+                    "type": "string"
+                },
+                "region_id": {
+                    "type": "string"
+                },
+                "runway_fee": {
+                    "type": "number"
+                },
+                "stand_fee": {
+                    "type": "number"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "turnaround_point_price": {
+                    "type": "number"
+                },
+                "wikipedia_link": {
+                    "type": "string"
+                },
+                "works_at_night": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "worldpb.ChangeCountryRequest": {
+            "type": "object",
+            "properties": {
+                "aircraft_tail_code": {
+                    "type": "string"
+                },
+                "corp_tax_rate": {
+                    "type": "number"
+                },
+                "flythrough_permission_price": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "intl_name": {
+                    "type": "string"
+                },
+                "iso": {
+                    "type": "string"
+                },
+                "land_permission_price": {
+                    "type": "number"
+                },
+                "local_name": {
+                    "type": "string"
+                },
+                "vat_rate": {
+                    "type": "number"
+                },
+                "wikipedia_link": {
+                    "type": "string"
+                }
+            }
+        },
+        "worldpb.ChangeRegionLinkRequest": {
+            "type": "object",
+            "properties": {
+                "business": {
+                    "type": "number"
+                },
+                "diaspora": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "region_a": {
+                    "type": "string"
+                },
+                "region_b": {
+                    "type": "string"
+                },
+                "tourism": {
+                    "type": "number"
+                }
+            }
+        },
+        "worldpb.ChangeRegionRequest": {
+            "type": "object",
+            "properties": {
+                "business_score": {
+                    "type": "number"
+                },
+                "country_id": {
+                    "type": "string"
+                },
+                "gdp_per_capita": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "intl_name": {
+                    "type": "string"
+                },
+                "local_code": {
+                    "type": "string"
+                },
+                "local_name": {
+                    "type": "string"
+                },
+                "population": {
+                    "type": "number"
+                },
+                "tourism_score": {
+                    "type": "number"
+                },
+                "wikipedia_link": {
+                    "type": "string"
                 }
             }
         },
