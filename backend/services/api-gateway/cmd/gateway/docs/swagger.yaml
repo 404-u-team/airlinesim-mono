@@ -46,6 +46,131 @@ definitions:
     - nickname
     - password
     type: object
+  worldpb.Airport:
+    properties:
+      continent:
+        type: string
+      country_id:
+        type: string
+      elevation_ft:
+        type: number
+      fuel_price_multiplier:
+        type: number
+      gate_fee:
+        type: number
+      geog:
+        type: string
+      geom:
+        type: string
+      home_link:
+        type: string
+      iata_code:
+        type: string
+      icao_code:
+        type: string
+      id:
+        type: string
+      intl_name:
+        type: string
+      local_name:
+        type: string
+      maintenance_point_price:
+        type: number
+      max_runway_length_m:
+        type: number
+      max_runway_uses_per_day:
+        type: number
+      municipality:
+        type: string
+      region_id:
+        type: string
+      runway_fee:
+        type: number
+      stand_fee:
+        type: number
+      timezone:
+        type: string
+      turnaround_point_price:
+        type: number
+      wikipedia_link:
+        type: string
+      works_at_night:
+        type: boolean
+    type: object
+  worldpb.Country:
+    properties:
+      aircraft_tail_code:
+        type: string
+      corp_tax_rate:
+        type: number
+      flythrough_permission_price:
+        type: number
+      id:
+        type: string
+      intl_name:
+        type: string
+      iso:
+        type: string
+      land_permission_price:
+        type: number
+      local_name:
+        type: string
+      vat_rate:
+        type: number
+      wikipedia_link:
+        type: string
+    type: object
+  worldpb.CreateAirportRequest:
+    properties:
+      continent:
+        type: string
+      country_id:
+        type: string
+      elevation_ft:
+        type: number
+      fuel_price_multiplier:
+        type: number
+      gate_fee:
+        type: number
+      geog:
+        type: string
+      geom:
+        type: string
+      home_link:
+        type: string
+      iata_code:
+        type: string
+      icao_code:
+        type: string
+      id:
+        type: string
+      intl_name:
+        type: string
+      local_name:
+        type: string
+      maintenance_point_price:
+        type: number
+      max_runway_length_m:
+        type: number
+      max_runway_uses_per_day:
+        type: number
+      municipality:
+        type: string
+      region_id:
+        type: string
+      runway_fee:
+        type: number
+      stand_fee:
+        type: number
+      timezone:
+        type: string
+      turnaround_point_price:
+        type: number
+      wikipedia_link:
+        type: string
+      works_at_night:
+        type: boolean
+    type: object
   worldpb.CreateCountryRequest:
     properties:
       aircraft_tail_code:
@@ -110,6 +235,72 @@ definitions:
       id:
         type: string
     type: object
+  worldpb.ListAirportsResponse:
+    properties:
+      airports:
+        items:
+          $ref: '#/definitions/worldpb.Airport'
+        type: array
+    type: object
+  worldpb.ListCountriesResponse:
+    properties:
+      countries:
+        items:
+          $ref: '#/definitions/worldpb.Country'
+        type: array
+    type: object
+  worldpb.ListRegionLinksResponse:
+    properties:
+      region_links:
+        items:
+          $ref: '#/definitions/worldpb.RegionLink'
+        type: array
+    type: object
+  worldpb.ListRegionsResponse:
+    properties:
+      regions:
+        items:
+          $ref: '#/definitions/worldpb.Region'
+        type: array
+    type: object
+  worldpb.Region:
+    properties:
+      business_score:
+        type: number
+      country_id:
+        type: string
+      gdp_per_capita:
+        type: number
+      id:
+        type: string
+      intl_name:
+        type: string
+      local_code:
+        type: string
+      local_name:
+        type: string
+      population:
+        type: number
+      tourism_score:
+        type: number
+      wikipedia_link:
+        type: string
+    type: object
+  worldpb.RegionLink:
+    properties:
+      business:
+        type: number
+      diaspora:
+        type: number
+      id:
+        type: string
+      region_a:
+        type: string
+      region_b:
+        type: string
+      tourism:
+        type: number
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -119,6 +310,52 @@ info:
   title: AirlineSim API
   version: "1.0"
 paths:
+  /airport:
+    post:
+      consumes:
+      - application/json
+      description: Returns
+      parameters:
+      - description: Airport details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/worldpb.CreateAirportRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Airport created successfully, id returned
+          schema:
+            $ref: '#/definitions/worldpb.IDResponse'
+        "400":
+          description: 1 - request validation error, 2 - country with such country_id
+            dont exists, 3 - region with such region_id dont exists
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Airport with such ICAO/IATA already exists
+        "500":
+          description: Internal server error
+      summary: Create Airport (admin only)
+      tags:
+      - Airport
+  /airports:
+    get:
+      description: Returns all airports
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Airports list
+          schema:
+            $ref: '#/definitions/worldpb.ListAirportsResponse'
+        "500":
+          description: Internal server error
+      summary: List airports
+      tags:
+      - Airport
   /auth/login:
     post:
       consumes:
@@ -193,6 +430,21 @@ paths:
       summary: Register user
       tags:
       - Auth
+  /countries:
+    get:
+      description: Returns all countries
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Countries list
+          schema:
+            $ref: '#/definitions/worldpb.ListCountriesResponse'
+        "500":
+          description: Internal server error
+      summary: List countries
+      tags:
+      - Country
   /country:
     post:
       consumes:
@@ -285,6 +537,36 @@ paths:
       summary: Create Region Link (admin only)
       tags:
       - Region Link
+  /region-links:
+    get:
+      description: Returns all region links
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Region links list
+          schema:
+            $ref: '#/definitions/worldpb.ListRegionLinksResponse'
+        "500":
+          description: Internal server error
+      summary: List region links
+      tags:
+      - Region Link
+  /regions:
+    get:
+      description: Returns all regions
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Regions list
+          schema:
+            $ref: '#/definitions/worldpb.ListRegionsResponse'
+        "500":
+          description: Internal server error
+      summary: List regions
+      tags:
+      - Region
 schemes:
 - http
 - https

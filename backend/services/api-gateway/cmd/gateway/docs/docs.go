@@ -19,6 +19,75 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/airport": {
+            "post": {
+                "description": "Returns",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Airport"
+                ],
+                "summary": "Create Airport (admin only)",
+                "parameters": [
+                    {
+                        "description": "Airport details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.CreateAirportRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Airport created successfully, id returned",
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.IDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "1 - request validation error, 2 - country with such country_id dont exists, 3 - region with such region_id dont exists",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Airport with such ICAO/IATA already exists"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/airports": {
+            "get": {
+                "description": "Returns all airports",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Airport"
+                ],
+                "summary": "List airports",
+                "responses": {
+                    "200": {
+                        "description": "Airports list",
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.ListAirportsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Returns access token and sets refresh token into cookie",
@@ -123,6 +192,29 @@ const docTemplate = `{
                         "description": "1 - request validation error, 2 - email exists, 3 - nickname exists",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/countries": {
+            "get": {
+                "description": "Returns all countries",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Country"
+                ],
+                "summary": "List countries",
+                "responses": {
+                    "200": {
+                        "description": "Countries list",
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.ListCountriesResponse"
                         }
                     },
                     "500": {
@@ -268,6 +360,52 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/region-links": {
+            "get": {
+                "description": "Returns all region links",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Region Link"
+                ],
+                "summary": "List region links",
+                "responses": {
+                    "200": {
+                        "description": "Region links list",
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.ListRegionLinksResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/regions": {
+            "get": {
+                "description": "Returns all regions",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Region"
+                ],
+                "summary": "List regions",
+                "responses": {
+                    "200": {
+                        "description": "Regions list",
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.ListRegionsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -335,6 +473,195 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 72,
                     "minLength": 8
+                }
+            }
+        },
+        "worldpb.Airport": {
+            "type": "object",
+            "properties": {
+                "continent": {
+                    "type": "string"
+                },
+                "country_id": {
+                    "type": "string"
+                },
+                "elevation_ft": {
+                    "type": "number"
+                },
+                "fuel_price_multiplier": {
+                    "type": "number"
+                },
+                "gate_fee": {
+                    "type": "number"
+                },
+                "geog": {
+                    "type": "string"
+                },
+                "geom": {
+                    "type": "string"
+                },
+                "home_link": {
+                    "type": "string"
+                },
+                "iata_code": {
+                    "type": "string"
+                },
+                "icao_code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "intl_name": {
+                    "type": "string"
+                },
+                "local_name": {
+                    "type": "string"
+                },
+                "maintenance_point_price": {
+                    "type": "number"
+                },
+                "max_runway_length_m": {
+                    "type": "number"
+                },
+                "max_runway_uses_per_day": {
+                    "type": "number"
+                },
+                "municipality": {
+                    "type": "string"
+                },
+                "region_id": {
+                    "type": "string"
+                },
+                "runway_fee": {
+                    "type": "number"
+                },
+                "stand_fee": {
+                    "type": "number"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "turnaround_point_price": {
+                    "type": "number"
+                },
+                "wikipedia_link": {
+                    "type": "string"
+                },
+                "works_at_night": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "worldpb.Country": {
+            "type": "object",
+            "properties": {
+                "aircraft_tail_code": {
+                    "type": "string"
+                },
+                "corp_tax_rate": {
+                    "type": "number"
+                },
+                "flythrough_permission_price": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "intl_name": {
+                    "type": "string"
+                },
+                "iso": {
+                    "type": "string"
+                },
+                "land_permission_price": {
+                    "type": "number"
+                },
+                "local_name": {
+                    "type": "string"
+                },
+                "vat_rate": {
+                    "type": "number"
+                },
+                "wikipedia_link": {
+                    "type": "string"
+                }
+            }
+        },
+        "worldpb.CreateAirportRequest": {
+            "type": "object",
+            "properties": {
+                "continent": {
+                    "type": "string"
+                },
+                "country_id": {
+                    "type": "string"
+                },
+                "elevation_ft": {
+                    "type": "number"
+                },
+                "fuel_price_multiplier": {
+                    "type": "number"
+                },
+                "gate_fee": {
+                    "type": "number"
+                },
+                "geog": {
+                    "type": "string"
+                },
+                "geom": {
+                    "type": "string"
+                },
+                "home_link": {
+                    "type": "string"
+                },
+                "iata_code": {
+                    "type": "string"
+                },
+                "icao_code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "intl_name": {
+                    "type": "string"
+                },
+                "local_name": {
+                    "type": "string"
+                },
+                "maintenance_point_price": {
+                    "type": "number"
+                },
+                "max_runway_length_m": {
+                    "type": "number"
+                },
+                "max_runway_uses_per_day": {
+                    "type": "number"
+                },
+                "municipality": {
+                    "type": "string"
+                },
+                "region_id": {
+                    "type": "string"
+                },
+                "runway_fee": {
+                    "type": "number"
+                },
+                "stand_fee": {
+                    "type": "number"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "turnaround_point_price": {
+                    "type": "number"
+                },
+                "wikipedia_link": {
+                    "type": "string"
+                },
+                "works_at_night": {
+                    "type": "boolean"
                 }
             }
         },
@@ -433,6 +760,108 @@ const docTemplate = `{
             "properties": {
                 "id": {
                     "type": "string"
+                }
+            }
+        },
+        "worldpb.ListAirportsResponse": {
+            "type": "object",
+            "properties": {
+                "airports": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/worldpb.Airport"
+                    }
+                }
+            }
+        },
+        "worldpb.ListCountriesResponse": {
+            "type": "object",
+            "properties": {
+                "countries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/worldpb.Country"
+                    }
+                }
+            }
+        },
+        "worldpb.ListRegionLinksResponse": {
+            "type": "object",
+            "properties": {
+                "region_links": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/worldpb.RegionLink"
+                    }
+                }
+            }
+        },
+        "worldpb.ListRegionsResponse": {
+            "type": "object",
+            "properties": {
+                "regions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/worldpb.Region"
+                    }
+                }
+            }
+        },
+        "worldpb.Region": {
+            "type": "object",
+            "properties": {
+                "business_score": {
+                    "type": "number"
+                },
+                "country_id": {
+                    "type": "string"
+                },
+                "gdp_per_capita": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "intl_name": {
+                    "type": "string"
+                },
+                "local_code": {
+                    "type": "string"
+                },
+                "local_name": {
+                    "type": "string"
+                },
+                "population": {
+                    "type": "number"
+                },
+                "tourism_score": {
+                    "type": "number"
+                },
+                "wikipedia_link": {
+                    "type": "string"
+                }
+            }
+        },
+        "worldpb.RegionLink": {
+            "type": "object",
+            "properties": {
+                "business": {
+                    "type": "number"
+                },
+                "diaspora": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "region_a": {
+                    "type": "string"
+                },
+                "region_b": {
+                    "type": "string"
+                },
+                "tourism": {
+                    "type": "number"
                 }
             }
         }
