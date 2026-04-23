@@ -4,6 +4,7 @@ go 1.26.2
 
 require (
 	github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/world v0.0.0-00010101000000-000000000000
+	github.com/404-u-team/airlinesim-mono/backend/shared/customerrors v0.0.0-00010101000000-000000000000
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.9.1
@@ -16,6 +17,8 @@ require (
 replace github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth => ../../shared/contracts/proto/auth
 
 replace github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/world => ../../shared/contracts/proto/world
+
+replace github.com/404-u-team/airlinesim-mono/backend/shared/customerrors => ../../shared/customerrors
 
 require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect

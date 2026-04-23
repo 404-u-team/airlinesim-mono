@@ -10,17 +10,45 @@ import (
 
 type worldServer struct {
 	worldpb.UnimplementedWorldServiceServer
-	worldService service.WorldService
-	config       *config.Config
+	countryService    service.CountryService
+	regionService     service.RegionService
+	regionLinkService service.RegionLinkService
+	config            *config.Config
 }
 
-func NewWorldServer(worldService service.WorldService) *worldServer {
+func NewWorldServer(countryService service.CountryService, regionService service.RegionService,
+	regionLinkService service.RegionLinkService) *worldServer {
 	config := config.InitConfig()
-	return &worldServer{worldService: worldService, config: &config}
+
+	return &worldServer{
+		countryService: countryService, regionService: regionService,
+		regionLinkService: regionLinkService, config: &config,
+	}
 }
 
+// --- COUNTRY ---
 func (s *worldServer) CreateCountry(ctx context.Context, payload *worldpb.CreateCountryRequest) (*worldpb.IDResponse, error) {
-	IDResponse, err := s.worldService.CreateCountry(ctx, payload)
+	IDResponse, err := s.countryService.CreateCountry(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return IDResponse, nil
+}
+
+// --- REGION ---
+func (s *worldServer) CreateRegion(ctx context.Context, payload *worldpb.CreateRegionRequest) (*worldpb.IDResponse, error) {
+	IDResponse, err := s.regionService.CreateRegion(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return IDResponse, nil
+}
+
+// --- REGION LINK ---
+func (s *worldServer) CreateRegionLink(ctx context.Context, payload *worldpb.CreateRegionLinkRequest) (*worldpb.IDResponse, error) {
+	IDResponse, err := s.regionLinkService.CreateRegionLink(ctx, payload)
 	if err != nil {
 		return nil, err
 	}

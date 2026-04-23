@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	customerrors "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/errors"
+	"github.com/404-u-team/airlinesim-mono/backend/shared/customerrors"
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 )

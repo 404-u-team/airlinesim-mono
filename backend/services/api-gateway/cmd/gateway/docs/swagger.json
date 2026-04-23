@@ -147,7 +147,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.CreateCountryRequest"
+                            "$ref": "#/definitions/worldpb.CreateCountryRequest"
                         }
                     }
                 ],
@@ -155,7 +155,7 @@
                     "201": {
                         "description": "Country created successfully, id returned",
                         "schema": {
-                            "$ref": "#/definitions/dto.IDResponse"
+                            "$ref": "#/definitions/worldpb.IDResponse"
                         }
                     },
                     "400": {
@@ -172,6 +172,98 @@
                     }
                 }
             }
+        },
+        "/region": {
+            "post": {
+                "description": "Returns",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Region"
+                ],
+                "summary": "Create Region (admin only)",
+                "parameters": [
+                    {
+                        "description": "Region details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.CreateRegionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Region created successfully, id returned",
+                        "schema": {
+                            "$ref": "#/definitions/dto.IDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "1 - request validation error, 2 - country with such country_id dont exists",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Region with such local code already exists"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/region-link": {
+            "post": {
+                "description": "Returns",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Region Link"
+                ],
+                "summary": "Create Region Link (admin only)",
+                "parameters": [
+                    {
+                        "description": "Region Link details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.CreateRegionLinkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Region Link created successfully, id returned",
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.IDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "1 - request validation error, 2 - region with such region_id dont exists",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Region Link with such regions already exists"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -179,38 +271,6 @@
             "type": "object",
             "properties": {
                 "access_token": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.CreateCountryRequest": {
-            "type": "object",
-            "properties": {
-                "aircraft_tail_code": {
-                    "type": "string"
-                },
-                "corp_tax_rate": {
-                    "type": "number"
-                },
-                "flythrough_permission_price": {
-                    "type": "number"
-                },
-                "intl_name": {
-                    "type": "string"
-                },
-                "iso": {
-                    "type": "string"
-                },
-                "land_permission_price": {
-                    "type": "number"
-                },
-                "local_name": {
-                    "type": "string"
-                },
-                "vat_rate": {
-                    "type": "number"
-                },
-                "wikipedia_link": {
                     "type": "string"
                 }
             }
@@ -271,6 +331,104 @@
                     "type": "string",
                     "maxLength": 72,
                     "minLength": 8
+                }
+            }
+        },
+        "worldpb.CreateCountryRequest": {
+            "type": "object",
+            "properties": {
+                "aircraft_tail_code": {
+                    "type": "string"
+                },
+                "corp_tax_rate": {
+                    "type": "number"
+                },
+                "flythrough_permission_price": {
+                    "type": "number"
+                },
+                "intl_name": {
+                    "type": "string"
+                },
+                "iso": {
+                    "type": "string"
+                },
+                "land_permission_price": {
+                    "type": "number"
+                },
+                "local_name": {
+                    "type": "string"
+                },
+                "vat_rate": {
+                    "type": "number"
+                },
+                "wikipedia_link": {
+                    "type": "string"
+                }
+            }
+        },
+        "worldpb.CreateRegionLinkRequest": {
+            "type": "object",
+            "properties": {
+                "business": {
+                    "type": "number"
+                },
+                "diaspora": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "region_a": {
+                    "type": "string"
+                },
+                "region_b": {
+                    "type": "string"
+                },
+                "tourism": {
+                    "type": "number"
+                }
+            }
+        },
+        "worldpb.CreateRegionRequest": {
+            "type": "object",
+            "properties": {
+                "business_score": {
+                    "type": "number"
+                },
+                "country_id": {
+                    "type": "string"
+                },
+                "gdp_per_capita": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "intl_name": {
+                    "type": "string"
+                },
+                "local_code": {
+                    "type": "string"
+                },
+                "local_name": {
+                    "type": "string"
+                },
+                "population": {
+                    "type": "number"
+                },
+                "tourism_score": {
+                    "type": "number"
+                },
+                "wikipedia_link": {
+                    "type": "string"
+                }
+            }
+        },
+        "worldpb.IDResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
                 }
             }
         }

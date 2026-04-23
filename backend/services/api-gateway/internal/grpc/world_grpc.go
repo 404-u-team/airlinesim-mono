@@ -37,3 +37,15 @@ func (c *WorldClient) Close() {
 func (c *WorldClient) CreateCountry(ctx context.Context, req *worldpb.CreateCountryRequest) (*worldpb.IDResponse, error) {
 	return c.client.CreateCountry(ctx, req)
 }
+
+func (c *WorldClient) CreateRegion(ctx context.Context, req *worldpb.CreateRegionRequest) (*worldpb.IDResponse, error) {
+	return c.client.CreateRegion(ctx, req)
+}
+
+func (c *WorldClient) CreateRegionLink(ctx context.Context, req *worldpb.CreateRegionLinkRequest) (*worldpb.IDResponse, error) {
+	return c.client.CreateRegionLink(ctx, req)
+}
+
+func (c *WorldClient) CreateAirport(ctx context.Context, req *worldpb.CreateAirportRequest) (*worldpb.IDResponse, error) {
+	return c.client.CreateAirport(ctx, req)
+}

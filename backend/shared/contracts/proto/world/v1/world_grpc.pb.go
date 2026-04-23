@@ -19,7 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	WorldService_CreateCountry_FullMethodName = "/auth.v1.WorldService/CreateCountry"
+	WorldService_CreateCountry_FullMethodName    = "/auth.v1.WorldService/CreateCountry"
+	WorldService_CreateRegion_FullMethodName     = "/auth.v1.WorldService/CreateRegion"
+	WorldService_CreateRegionLink_FullMethodName = "/auth.v1.WorldService/CreateRegionLink"
+	WorldService_CreateAirport_FullMethodName    = "/auth.v1.WorldService/CreateAirport"
 )
 
 // WorldServiceClient is the client API for WorldService service.
@@ -28,8 +31,14 @@ const (
 //
 // authentication service
 type WorldServiceClient interface {
-	// create country
+	// create country, returns id of newly created country
 	CreateCountry(ctx context.Context, in *CreateCountryRequest, opts ...grpc.CallOption) (*IDResponse, error)
+	// create region, returns id of newly created region
+	CreateRegion(ctx context.Context, in *CreateRegionRequest, opts ...grpc.CallOption) (*IDResponse, error)
+	// create region link, returns id of newly created region link
+	CreateRegionLink(ctx context.Context, in *CreateRegionLinkRequest, opts ...grpc.CallOption) (*IDResponse, error)
+	// create airport, returns id of newly created airport
+	CreateAirport(ctx context.Context, in *CreateAirportRequest, opts ...grpc.CallOption) (*IDResponse, error)
 }
 
 type worldServiceClient struct {
@@ -50,14 +59,50 @@ func (c *worldServiceClient) CreateCountry(ctx context.Context, in *CreateCountr
 	return out, nil
 }
 
+func (c *worldServiceClient) CreateRegion(ctx context.Context, in *CreateRegionRequest, opts ...grpc.CallOption) (*IDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IDResponse)
+	err := c.cc.Invoke(ctx, WorldService_CreateRegion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *worldServiceClient) CreateRegionLink(ctx context.Context, in *CreateRegionLinkRequest, opts ...grpc.CallOption) (*IDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IDResponse)
+	err := c.cc.Invoke(ctx, WorldService_CreateRegionLink_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *worldServiceClient) CreateAirport(ctx context.Context, in *CreateAirportRequest, opts ...grpc.CallOption) (*IDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IDResponse)
+	err := c.cc.Invoke(ctx, WorldService_CreateAirport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WorldServiceServer is the server API for WorldService service.
 // All implementations must embed UnimplementedWorldServiceServer
 // for forward compatibility.
 //
 // authentication service
 type WorldServiceServer interface {
-	// create country
+	// create country, returns id of newly created country
 	CreateCountry(context.Context, *CreateCountryRequest) (*IDResponse, error)
+	// create region, returns id of newly created region
+	CreateRegion(context.Context, *CreateRegionRequest) (*IDResponse, error)
+	// create region link, returns id of newly created region link
+	CreateRegionLink(context.Context, *CreateRegionLinkRequest) (*IDResponse, error)
+	// create airport, returns id of newly created airport
+	CreateAirport(context.Context, *CreateAirportRequest) (*IDResponse, error)
 	mustEmbedUnimplementedWorldServiceServer()
 }
 
@@ -70,6 +115,15 @@ type UnimplementedWorldServiceServer struct{}
 
 func (UnimplementedWorldServiceServer) CreateCountry(context.Context, *CreateCountryRequest) (*IDResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateCountry not implemented")
+}
+func (UnimplementedWorldServiceServer) CreateRegion(context.Context, *CreateRegionRequest) (*IDResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateRegion not implemented")
+}
+func (UnimplementedWorldServiceServer) CreateRegionLink(context.Context, *CreateRegionLinkRequest) (*IDResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateRegionLink not implemented")
+}
+func (UnimplementedWorldServiceServer) CreateAirport(context.Context, *CreateAirportRequest) (*IDResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateAirport not implemented")
 }
 func (UnimplementedWorldServiceServer) mustEmbedUnimplementedWorldServiceServer() {}
 func (UnimplementedWorldServiceServer) testEmbeddedByValue()                      {}
@@ -110,6 +164,60 @@ func _WorldService_CreateCountry_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WorldService_CreateRegion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateRegionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorldServiceServer).CreateRegion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorldService_CreateRegion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorldServiceServer).CreateRegion(ctx, req.(*CreateRegionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorldService_CreateRegionLink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateRegionLinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorldServiceServer).CreateRegionLink(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorldService_CreateRegionLink_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorldServiceServer).CreateRegionLink(ctx, req.(*CreateRegionLinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorldService_CreateAirport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateAirportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorldServiceServer).CreateAirport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorldService_CreateAirport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorldServiceServer).CreateAirport(ctx, req.(*CreateAirportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // WorldService_ServiceDesc is the grpc.ServiceDesc for WorldService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -120,6 +228,18 @@ var WorldService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateCountry",
 			Handler:    _WorldService_CreateCountry_Handler,
+		},
+		{
+			MethodName: "CreateRegion",
+			Handler:    _WorldService_CreateRegion_Handler,
+		},
+		{
+			MethodName: "CreateRegionLink",
+			Handler:    _WorldService_CreateRegionLink_Handler,
+		},
+		{
+			MethodName: "CreateAirport",
+			Handler:    _WorldService_CreateAirport_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
