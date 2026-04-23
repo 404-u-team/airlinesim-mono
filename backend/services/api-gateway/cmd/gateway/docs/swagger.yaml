@@ -341,6 +341,33 @@ paths:
       summary: Create Airport (admin only)
       tags:
       - Airport
+  /airport/{id}:
+    delete:
+      description: Returns deleted airport id
+      parameters:
+      - description: Airport ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Airport deleted
+          schema:
+            $ref: '#/definitions/worldpb.IDResponse'
+        "400":
+          description: 1 - invalid id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Airport not found
+        "500":
+          description: Internal server error
+      summary: Delete airport (admin only)
+      tags:
+      - Airport
   /airports:
     get:
       description: Returns all airports
@@ -475,6 +502,35 @@ paths:
       summary: Create country (admin only)
       tags:
       - Country
+  /country/{id}:
+    delete:
+      description: Returns deleted country id
+      parameters:
+      - description: Country ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Country deleted
+          schema:
+            $ref: '#/definitions/worldpb.IDResponse'
+        "400":
+          description: 1 - invalid id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Country not found
+        "409":
+          description: Country has dependencies
+        "500":
+          description: Internal server error
+      summary: Delete country (admin only)
+      tags:
+      - Country
   /region:
     post:
       consumes:
@@ -537,6 +593,33 @@ paths:
       summary: Create Region Link (admin only)
       tags:
       - Region Link
+  /region-link/{id}:
+    delete:
+      description: Returns deleted region link id
+      parameters:
+      - description: Region Link ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Region link deleted
+          schema:
+            $ref: '#/definitions/worldpb.IDResponse'
+        "400":
+          description: 1 - invalid id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Region link not found
+        "500":
+          description: Internal server error
+      summary: Delete region link (admin only)
+      tags:
+      - Region Link
   /region-links:
     get:
       description: Returns all region links
@@ -552,6 +635,35 @@ paths:
       summary: List region links
       tags:
       - Region Link
+  /region/{id}:
+    delete:
+      description: Returns deleted region id
+      parameters:
+      - description: Region ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Region deleted
+          schema:
+            $ref: '#/definitions/worldpb.IDResponse'
+        "400":
+          description: 1 - invalid id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Region not found
+        "409":
+          description: Region has dependencies
+        "500":
+          description: Internal server error
+      summary: Delete region (admin only)
+      tags:
+      - Region
   /regions:
     get:
       description: Returns all regions

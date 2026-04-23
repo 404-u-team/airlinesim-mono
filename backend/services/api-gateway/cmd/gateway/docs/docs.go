@@ -65,6 +65,47 @@ const docTemplate = `{
                 }
             }
         },
+        "/airport/{id}": {
+            "delete": {
+                "description": "Returns deleted airport id",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Airport"
+                ],
+                "summary": "Delete airport (admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Airport ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Airport deleted",
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.IDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "1 - invalid id",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Airport not found"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
         "/airports": {
             "get": {
                 "description": "Returns all airports",
@@ -269,6 +310,50 @@ const docTemplate = `{
                 }
             }
         },
+        "/country/{id}": {
+            "delete": {
+                "description": "Returns deleted country id",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Country"
+                ],
+                "summary": "Delete country (admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Country ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Country deleted",
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.IDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "1 - invalid id",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Country not found"
+                    },
+                    "409": {
+                        "description": "Country has dependencies"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
         "/region": {
             "post": {
                 "description": "Returns",
@@ -361,6 +446,47 @@ const docTemplate = `{
                 }
             }
         },
+        "/region-link/{id}": {
+            "delete": {
+                "description": "Returns deleted region link id",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Region Link"
+                ],
+                "summary": "Delete region link (admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Region Link ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Region link deleted",
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.IDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "1 - invalid id",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Region link not found"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
         "/region-links": {
             "get": {
                 "description": "Returns all region links",
@@ -377,6 +503,50 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/worldpb.ListRegionLinksResponse"
                         }
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/region/{id}": {
+            "delete": {
+                "description": "Returns deleted region id",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Region"
+                ],
+                "summary": "Delete region (admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Region ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Region deleted",
+                        "schema": {
+                            "$ref": "#/definitions/worldpb.IDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "1 - invalid id",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Region not found"
+                    },
+                    "409": {
+                        "description": "Region has dependencies"
                     },
                     "500": {
                         "description": "Internal server error"
