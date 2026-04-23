@@ -14,6 +14,7 @@ import (
 
 type AirportService interface {
 	CreateAirport(ctx context.Context, payload *worldpb.CreateAirportRequest) (*worldpb.IDResponse, error)
+	ChangeAirport(ctx context.Context, payload *worldpb.ChangeAirportRequest) (*worldpb.IDResponse, error)
 	ListAirports(ctx context.Context) (*worldpb.ListAirportsResponse, error)
 	DeleteAirport(ctx context.Context, id string) (*worldpb.IDResponse, error)
 }
@@ -51,6 +52,37 @@ func (s *airportService) CreateAirport(ctx context.Context, payload *worldpb.Cre
 		}
 		log.Println("got error in create airport repo, ", err)
 		return nil, customerrors.ErrInternal
+	}
+
+	return &worldpb.IDResponse{Id: airportID.String()}, nil
+}
+
+func (s *airportService) ChangeAirport(ctx context.Context, payload *worldpb.ChangeAirportRequest) (*worldpb.IDResponse, error) {
+	airportID, err := uuid.Parse(payload.Id)
+	if err != nil {
+		return nil, customerrors.ErrAirportNotFound
+	}
+
+	updated, err := s.airportRepo.ChangeAirport(ctx, payload)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			switch pgErr.ConstraintName {
+			case "airport_icao_code_key":
+				return nil, customerrors.ErrAirportIcaoConflict
+			case "airport_iata_code_key":
+				return nil, customerrors.ErrAirportIataConflict
+			case "airport_country_id_fkey":
+				return nil, customerrors.ErrNoSuchCountry
+			case "airport_region_id_fkey":
+				return nil, customerrors.ErrNoSuchRegion
+			}
+		}
+		log.Println("got error in patch airport repo, ", err)
+		return nil, customerrors.ErrInternal
+	}
+	if !updated {
+		return nil, customerrors.ErrAirportNotFound
 	}
 
 	return &worldpb.IDResponse{Id: airportID.String()}, nil

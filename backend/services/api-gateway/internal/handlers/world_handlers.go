@@ -63,6 +63,49 @@ func (h *WorldHandler) CreateCountry(c *gin.Context) {
 	c.JSON(http.StatusCreated, IDResponse)
 }
 
+// ChangeCountry godoc
+// @Summary      Change country (admin only)
+// @Description  Returns patched country id
+// @Tags         Country
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Country ID"
+// @Param        request body worldpb.ChangeCountryRequest true "Country details"
+// @Success      200  {object}  worldpb.IDResponse "Country patched successfully"
+// @Failure      400  {object}  dto.ErrorResponse "1 - request validation error"
+// @Failure      404  "Country not found"
+// @Failure      409  "Country conflict"
+// @Failure      500  "Internal server error"
+// @Router       /country/{id} [put]
+func (h *WorldHandler) ChangeCountry(c *gin.Context) {
+	var payload worldpb.ChangeCountryRequest
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		log.Println("got error when tried to parse, ", err)
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+	payload.Id = c.Param("id")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	response, err := h.worldClient.ChangeCountry(ctx, &payload)
+	if err != nil {
+		if errors.Is(err, customerrors.ErrCountryNotFound) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		if errors.Is(err, customerrors.ErrISOConflict) {
+			c.Status(http.StatusConflict)
+			return
+		}
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
 // CreateCountry godoc
 // @Summary      Create Region (admin only)
 // @Description  Returns
@@ -103,6 +146,53 @@ func (h *WorldHandler) CreateRegion(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, IDResponse)
+}
+
+// ChangeRegion godoc
+// @Summary      Change region (admin only)
+// @Description  Returns patched region id
+// @Tags         Region
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Region ID"
+// @Param        request body worldpb.ChangeRegionRequest true "Region details"
+// @Success      200  {object}  worldpb.IDResponse "Region patched successfully"
+// @Failure      400  {object}  dto.ErrorResponse "1 - request validation error, 2 - country not found"
+// @Failure      404  "Region not found"
+// @Failure      409  "Region conflict"
+// @Failure      500  "Internal server error"
+// @Router       /region/{id} [put]
+func (h *WorldHandler) ChangeRegion(c *gin.Context) {
+	var payload worldpb.ChangeRegionRequest
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		log.Println("got error when tried to parse, ", err)
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+	payload.Id = c.Param("id")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	response, err := h.worldClient.ChangeRegion(ctx, &payload)
+	if err != nil {
+		if errors.Is(err, customerrors.ErrRegionNotFound) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		if errors.Is(err, customerrors.ErrNoSuchCountry) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 2})
+			return
+		}
+		if errors.Is(err, customerrors.ErrLocalCodeConflict) {
+			c.Status(http.StatusConflict)
+			return
+		}
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // CreateCountry godoc
@@ -147,6 +237,53 @@ func (h *WorldHandler) CreateRegionLink(c *gin.Context) {
 	c.JSON(http.StatusCreated, IDResponse)
 }
 
+// ChangeRegionLink godoc
+// @Summary      Change region link (admin only)
+// @Description  Returns patched region link id
+// @Tags         Region Link
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Region Link ID"
+// @Param        request body worldpb.ChangeRegionLinkRequest true "Region link details"
+// @Success      200  {object}  worldpb.IDResponse "Region link patched successfully"
+// @Failure      400  {object}  dto.ErrorResponse "1 - request validation error, 2 - region not found"
+// @Failure      404  "Region link not found"
+// @Failure      409  "Region link conflict"
+// @Failure      500  "Internal server error"
+// @Router       /region-link/{id} [put]
+func (h *WorldHandler) ChangeRegionLink(c *gin.Context) {
+	var payload worldpb.ChangeRegionLinkRequest
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		log.Println("got error when tried to parse, ", err)
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+	payload.Id = c.Param("id")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	response, err := h.worldClient.ChangeRegionLink(ctx, &payload)
+	if err != nil {
+		if errors.Is(err, customerrors.ErrRegionLinkNotFound) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		if errors.Is(err, customerrors.ErrNoSuchRegion) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 2})
+			return
+		}
+		if errors.Is(err, customerrors.ErrRegionLinkConflict) {
+			c.Status(http.StatusConflict)
+			return
+		}
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
 // CreateAirport godoc
 // @Summary      Create Airport (admin only)
 // @Description  Returns
@@ -189,6 +326,57 @@ func (h *WorldHandler) CreateAirport(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, IDResponse)
+}
+
+// ChangeAirport godoc
+// @Summary      Change airport (admin only)
+// @Description  Returns patched airport id
+// @Tags         Airport
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Airport ID"
+// @Param        request body worldpb.ChangeAirportRequest true "Airport details"
+// @Success      200  {object}  worldpb.IDResponse "Airport patched successfully"
+// @Failure      400  {object}  dto.ErrorResponse "1 - request validation error, 2 - country not found, 3 - region not found"
+// @Failure      404  "Airport not found"
+// @Failure      409  "Airport conflict"
+// @Failure      500  "Internal server error"
+// @Router       /airport/{id} [put]
+func (h *WorldHandler) ChangeAirport(c *gin.Context) {
+	var payload worldpb.ChangeAirportRequest
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		log.Println("got error when tried to parse, ", err)
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+	payload.Id = c.Param("id")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	response, err := h.worldClient.ChangeAirport(ctx, &payload)
+	if err != nil {
+		if errors.Is(err, customerrors.ErrAirportNotFound) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		if errors.Is(err, customerrors.ErrNoSuchCountry) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 2})
+			return
+		}
+		if errors.Is(err, customerrors.ErrNoSuchRegion) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 3})
+			return
+		}
+		if errors.Is(err, customerrors.ErrAirportIcaoConflict) || errors.Is(err, customerrors.ErrAirportIataConflict) {
+			c.Status(http.StatusConflict)
+			return
+		}
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // ListCountries godoc

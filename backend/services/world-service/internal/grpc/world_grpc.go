@@ -37,6 +37,15 @@ func (s *worldServer) CreateCountry(ctx context.Context, payload *worldpb.Create
 	return IDResponse, nil
 }
 
+func (s *worldServer) ChangeCountry(ctx context.Context, payload *worldpb.ChangeCountryRequest) (*worldpb.IDResponse, error) {
+	IDResponse, err := s.countryService.ChangeCountry(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return IDResponse, nil
+}
+
 func (s *worldServer) ListCountries(ctx context.Context, _ *worldpb.ListCountriesRequest) (*worldpb.ListCountriesResponse, error) {
 	return s.countryService.ListCountries(ctx)
 }
@@ -48,6 +57,15 @@ func (s *worldServer) DeleteCountry(ctx context.Context, payload *worldpb.Delete
 // --- REGION ---
 func (s *worldServer) CreateRegion(ctx context.Context, payload *worldpb.CreateRegionRequest) (*worldpb.IDResponse, error) {
 	IDResponse, err := s.regionService.CreateRegion(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return IDResponse, nil
+}
+
+func (s *worldServer) ChangeRegion(ctx context.Context, payload *worldpb.ChangeRegionRequest) (*worldpb.IDResponse, error) {
+	IDResponse, err := s.regionService.ChangeRegion(ctx, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +91,15 @@ func (s *worldServer) CreateRegionLink(ctx context.Context, payload *worldpb.Cre
 	return IDResponse, nil
 }
 
+func (s *worldServer) ChangeRegionLink(ctx context.Context, payload *worldpb.ChangeRegionLinkRequest) (*worldpb.IDResponse, error) {
+	IDResponse, err := s.regionLinkService.ChangeRegionLink(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return IDResponse, nil
+}
+
 func (s *worldServer) ListRegionLinks(ctx context.Context, _ *worldpb.ListRegionLinksRequest) (*worldpb.ListRegionLinksResponse, error) {
 	return s.regionLinkService.ListRegionLinks(ctx)
 }
@@ -84,6 +111,15 @@ func (s *worldServer) DeleteRegionLink(ctx context.Context, payload *worldpb.Del
 // --- AIRPORT ---
 func (s *worldServer) CreateAirport(ctx context.Context, payload *worldpb.CreateAirportRequest) (*worldpb.IDResponse, error) {
 	IDResponse, err := s.airportService.CreateAirport(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return IDResponse, nil
+}
+
+func (s *worldServer) ChangeAirport(ctx context.Context, payload *worldpb.ChangeAirportRequest) (*worldpb.IDResponse, error) {
+	IDResponse, err := s.airportService.ChangeAirport(ctx, payload)
 	if err != nil {
 		return nil, err
 	}

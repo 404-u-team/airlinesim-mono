@@ -10,6 +10,7 @@ import (
 
 type AirportRepository interface {
 	CreateAirport(ctx context.Context, payload *worldpb.CreateAirportRequest) (uuid.UUID, error)
+	ChangeAirport(ctx context.Context, payload *worldpb.ChangeAirportRequest) (bool, error)
 	ListAirports(ctx context.Context) ([]*worldpb.Airport, error)
 	DeleteAirport(ctx context.Context, id uuid.UUID) (bool, error)
 }
@@ -71,6 +72,29 @@ func (r *airportRepository) CreateAirport(ctx context.Context, payload *worldpb.
 	).Scan(&airportID)
 
 	return airportID, err
+}
+
+func (r *airportRepository) ChangeAirport(ctx context.Context, payload *worldpb.ChangeAirportRequest) (bool, error) {
+	result, err := r.pool.Exec(ctx, `
+		UPDATE airport
+		SET icao_code=$2, iata_code=$3, local_name=$4, intl_name=$5, timezone=$6,
+			country_id=$7, region_id=$8, municipality=$9, continent=$10, elevation_ft=$11,
+			max_runway_length_m=$12, works_at_night=$13, max_runway_uses_per_day=$14,
+			turnaround_point_price=$15, maintenance_point_price=$16, runway_fee=$17,
+			gate_fee=$18, stand_fee=$19, fuel_price_multiplier=$20, home_link=$21,
+			wikipedia_link=$22, geog=NULLIF($23, '')::geography, geom=NULLIF($24, '')::geometry
+		WHERE id=$1
+	`, payload.Id, payload.IcaoCode, payload.IataCode, payload.LocalName, payload.IntlName, payload.Timezone,
+		payload.CountryId, payload.RegionId, payload.Municipality, payload.Continent, payload.ElevationFt,
+		payload.MaxRunwayLengthM, payload.WorksAtNight, payload.MaxRunwayUsesPerDay,
+		payload.TurnaroundPointPrice, payload.MaintenancePointPrice, payload.RunwayFee,
+		payload.GateFee, payload.StandFee, payload.FuelPriceMultiplier, payload.HomeLink,
+		payload.WikipediaLink, payload.Geog, payload.Geom)
+	if err != nil {
+		return false, err
+	}
+
+	return result.RowsAffected() > 0, nil
 }
 
 func (r *airportRepository) ListAirports(ctx context.Context) ([]*worldpb.Airport, error) {

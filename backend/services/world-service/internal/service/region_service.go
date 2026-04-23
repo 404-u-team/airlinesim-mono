@@ -14,6 +14,7 @@ import (
 
 type RegionService interface {
 	CreateRegion(ctx context.Context, payload *worldpb.CreateRegionRequest) (*worldpb.IDResponse, error)
+	ChangeRegion(ctx context.Context, payload *worldpb.ChangeRegionRequest) (*worldpb.IDResponse, error)
 	ListRegions(ctx context.Context) (*worldpb.ListRegionsResponse, error)
 	DeleteRegion(ctx context.Context, id string) (*worldpb.IDResponse, error)
 }
@@ -45,6 +46,33 @@ func (s *regionService) CreateRegion(ctx context.Context, payload *worldpb.Creat
 
 	IDResponse := &worldpb.IDResponse{Id: regionID.String()}
 	return IDResponse, nil
+}
+
+func (s *regionService) ChangeRegion(ctx context.Context, payload *worldpb.ChangeRegionRequest) (*worldpb.IDResponse, error) {
+	regionID, err := uuid.Parse(payload.Id)
+	if err != nil {
+		return nil, customerrors.ErrRegionNotFound
+	}
+
+	updated, err := s.regionRepo.ChangeRegion(ctx, payload)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return nil, customerrors.ErrLocalCodeConflict
+			}
+			if pgErr.Code == "23503" {
+				return nil, customerrors.ErrNoSuchCountry
+			}
+		}
+		log.Println("got error in patch region repo, ", err)
+		return nil, customerrors.ErrInternal
+	}
+	if !updated {
+		return nil, customerrors.ErrRegionNotFound
+	}
+
+	return &worldpb.IDResponse{Id: regionID.String()}, nil
 }
 
 func (s *regionService) ListRegions(ctx context.Context) (*worldpb.ListRegionsResponse, error) {

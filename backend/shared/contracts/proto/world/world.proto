@@ -17,6 +17,9 @@ service WorldService {
   // create country, returns id of newly created country
   rpc CreateCountry(CreateCountryRequest) returns (IDResponse);
 
+  // change country
+  rpc ChangeCountry(ChangeCountryRequest) returns (IDResponse);
+
   // list countries
   rpc ListCountries(ListCountriesRequest) returns (ListCountriesResponse);
 
@@ -25,6 +28,9 @@ service WorldService {
 
   // create region, returns id of newly created region
   rpc CreateRegion(CreateRegionRequest) returns (IDResponse);
+
+  // change region
+  rpc ChangeRegion(ChangeRegionRequest) returns (IDResponse);
 
   // list regions
   rpc ListRegions(ListRegionsRequest) returns (ListRegionsResponse);
@@ -35,6 +41,9 @@ service WorldService {
   // create region link, returns id of newly created region link
   rpc CreateRegionLink(CreateRegionLinkRequest) returns (IDResponse);
 
+  // change region link
+  rpc ChangeRegionLink(ChangeRegionLinkRequest) returns (IDResponse);
+
   // list region links
   rpc ListRegionLinks(ListRegionLinksRequest) returns (ListRegionLinksResponse);
 
@@ -43,6 +52,9 @@ service WorldService {
 
   // create airport, returns id of newly created airport
   rpc CreateAirport(CreateAirportRequest) returns (IDResponse);
+
+  // change airport
+  rpc ChangeAirport(ChangeAirportRequest) returns (IDResponse);
 
   // list airports
   rpc ListAirports(ListAirportsRequest) returns (ListAirportsResponse);
@@ -63,6 +75,19 @@ message CreateCountryRequest {
   double vat_rate = 7;
   string aircraft_tail_code = 8;
   string wikipedia_link = 9;
+}
+
+message ChangeCountryRequest {
+  string id = 1;
+  string iso = 2;
+  string local_name = 3;
+  string intl_name = 4;
+  double flythrough_permission_price = 5;
+  double land_permission_price = 6;
+  double corp_tax_rate = 7;
+  double vat_rate = 8;
+  string aircraft_tail_code = 9;
+  string wikipedia_link = 10;
 }
 
 message ListCountriesRequest {}
@@ -90,6 +115,19 @@ message DeleteCountryRequest {
 
 // request to create region
 message CreateRegionRequest {
+  string id = 1;
+  string local_code = 2;
+  string local_name = 3;
+  string intl_name = 4;
+  string country_id = 5;
+  double population = 6;
+  double gdp_per_capita = 7;
+  double tourism_score = 8;
+  double business_score = 9;
+  string wikipedia_link = 10;
+}
+
+message ChangeRegionRequest {
   string id = 1;
   string local_code = 2;
   string local_name = 3;
@@ -135,6 +173,15 @@ message CreateRegionLinkRequest {
   double tourism = 6;
 }
 
+message ChangeRegionLinkRequest {
+  string id = 1;
+  string region_a = 2;
+  string region_b = 3;
+  double diaspora = 4;
+  double business = 5;
+  double tourism = 6;
+}
+
 message ListRegionLinksRequest {}
 
 message RegionLink {
@@ -156,6 +203,33 @@ message DeleteRegionLinkRequest {
 
 // request to create airport
 message CreateAirportRequest {
+  string id = 1;
+  string icao_code = 2;
+  string iata_code = 3;
+  string local_name = 4;
+  string intl_name = 5;
+  string timezone = 6;
+  string country_id = 7;
+  string region_id = 8;
+  string municipality = 9;
+  string continent = 10;
+  double elevation_ft = 11;
+  double max_runway_length_m = 12;
+  bool works_at_night = 13;
+  double max_runway_uses_per_day = 14;
+  double turnaround_point_price = 15;
+  double maintenance_point_price = 16;
+  double runway_fee = 17;
+  double gate_fee = 18;
+  double stand_fee = 19;
+  double fuel_price_multiplier = 20;
+  string home_link = 21;
+  string wikipedia_link = 22;
+  string geog = 23;
+  string geom = 24;
+}
+
+message ChangeAirportRequest {
   string id = 1;
   string icao_code = 2;
   string iata_code = 3;

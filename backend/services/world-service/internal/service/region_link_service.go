@@ -14,6 +14,7 @@ import (
 
 type RegionLinkService interface {
 	CreateRegionLink(ctx context.Context, payload *worldpb.CreateRegionLinkRequest) (*worldpb.IDResponse, error)
+	ChangeRegionLink(ctx context.Context, payload *worldpb.ChangeRegionLinkRequest) (*worldpb.IDResponse, error)
 	ListRegionLinks(ctx context.Context) (*worldpb.ListRegionLinksResponse, error)
 	DeleteRegionLink(ctx context.Context, id string) (*worldpb.IDResponse, error)
 }
@@ -45,6 +46,31 @@ func (s *regionLinkService) CreateRegionLink(ctx context.Context, payload *world
 
 	IDResponse := &worldpb.IDResponse{Id: regionLinkID.String()}
 	return IDResponse, nil
+}
+
+func (s *regionLinkService) ChangeRegionLink(ctx context.Context, payload *worldpb.ChangeRegionLinkRequest) (*worldpb.IDResponse, error) {
+	regionLinkID, err := uuid.Parse(payload.Id)
+	if err != nil {
+		return nil, customerrors.ErrRegionLinkNotFound
+	}
+
+	updated, err := s.regionLinkRepo.ChangeRegionLink(ctx, payload)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return nil, customerrors.ErrRegionLinkConflict
+		}
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+			return nil, customerrors.ErrNoSuchRegion
+		}
+		log.Println("got error in patch region link repo, ", err)
+		return nil, customerrors.ErrInternal
+	}
+	if !updated {
+		return nil, customerrors.ErrRegionLinkNotFound
+	}
+
+	return &worldpb.IDResponse{Id: regionLinkID.String()}, nil
 }
 
 func (s *regionLinkService) ListRegionLinks(ctx context.Context) (*worldpb.ListRegionLinksResponse, error) {

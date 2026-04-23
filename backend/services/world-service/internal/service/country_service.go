@@ -14,6 +14,7 @@ import (
 
 type CountryService interface {
 	CreateCountry(ctx context.Context, payload *worldpb.CreateCountryRequest) (*worldpb.IDResponse, error)
+	ChangeCountry(ctx context.Context, payload *worldpb.ChangeCountryRequest) (*worldpb.IDResponse, error)
 	ListCountries(ctx context.Context) (*worldpb.ListCountriesResponse, error)
 	DeleteCountry(ctx context.Context, id string) (*worldpb.IDResponse, error)
 }
@@ -39,6 +40,28 @@ func (s *countryService) CreateCountry(ctx context.Context, payload *worldpb.Cre
 
 	IDResponse := &worldpb.IDResponse{Id: countryID.String()}
 	return IDResponse, nil
+}
+
+func (s *countryService) ChangeCountry(ctx context.Context, payload *worldpb.ChangeCountryRequest) (*worldpb.IDResponse, error) {
+	countryID, err := uuid.Parse(payload.Id)
+	if err != nil {
+		return nil, customerrors.ErrCountryNotFound
+	}
+
+	updated, err := s.countryRepo.ChangeCountry(ctx, payload)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return nil, customerrors.ErrISOConflict
+		}
+		log.Println("got error in patch country repo, ", err)
+		return nil, customerrors.ErrInternal
+	}
+	if !updated {
+		return nil, customerrors.ErrCountryNotFound
+	}
+
+	return &worldpb.IDResponse{Id: countryID.String()}, nil
 }
 
 func (s *countryService) ListCountries(ctx context.Context) (*worldpb.ListCountriesResponse, error) {

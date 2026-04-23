@@ -155,6 +155,128 @@ var _ interface {
 	ErrorName() string
 } = CreateCountryRequestValidationError{}
 
+// Validate checks the field values on ChangeCountryRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ChangeCountryRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ChangeCountryRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ChangeCountryRequestMultiError, or nil if none found.
+func (m *ChangeCountryRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ChangeCountryRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Id
+
+	// no validation rules for Iso
+
+	// no validation rules for LocalName
+
+	// no validation rules for IntlName
+
+	// no validation rules for FlythroughPermissionPrice
+
+	// no validation rules for LandPermissionPrice
+
+	// no validation rules for CorpTaxRate
+
+	// no validation rules for VatRate
+
+	// no validation rules for AircraftTailCode
+
+	// no validation rules for WikipediaLink
+
+	if len(errors) > 0 {
+		return ChangeCountryRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// ChangeCountryRequestMultiError is an error wrapping multiple validation
+// errors returned by ChangeCountryRequest.ValidateAll() if the designated
+// constraints aren't met.
+type ChangeCountryRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ChangeCountryRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ChangeCountryRequestMultiError) AllErrors() []error { return m }
+
+// ChangeCountryRequestValidationError is the validation error returned by
+// ChangeCountryRequest.Validate if the designated constraints aren't met.
+type ChangeCountryRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ChangeCountryRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ChangeCountryRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ChangeCountryRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ChangeCountryRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ChangeCountryRequestValidationError) ErrorName() string {
+	return "ChangeCountryRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ChangeCountryRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sChangeCountryRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ChangeCountryRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ChangeCountryRequestValidationError{}
+
 // Validate checks the field values on ListCountriesRequest with the rules
 // defined in the proto definition for this message. If any rules are
 // violated, the first error encountered is returned, or nil if there are no violations.
@@ -737,6 +859,128 @@ var _ interface {
 	ErrorName() string
 } = CreateRegionRequestValidationError{}
 
+// Validate checks the field values on ChangeRegionRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ChangeRegionRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ChangeRegionRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ChangeRegionRequestMultiError, or nil if none found.
+func (m *ChangeRegionRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ChangeRegionRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Id
+
+	// no validation rules for LocalCode
+
+	// no validation rules for LocalName
+
+	// no validation rules for IntlName
+
+	// no validation rules for CountryId
+
+	// no validation rules for Population
+
+	// no validation rules for GdpPerCapita
+
+	// no validation rules for TourismScore
+
+	// no validation rules for BusinessScore
+
+	// no validation rules for WikipediaLink
+
+	if len(errors) > 0 {
+		return ChangeRegionRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// ChangeRegionRequestMultiError is an error wrapping multiple validation
+// errors returned by ChangeRegionRequest.ValidateAll() if the designated
+// constraints aren't met.
+type ChangeRegionRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ChangeRegionRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ChangeRegionRequestMultiError) AllErrors() []error { return m }
+
+// ChangeRegionRequestValidationError is the validation error returned by
+// ChangeRegionRequest.Validate if the designated constraints aren't met.
+type ChangeRegionRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ChangeRegionRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ChangeRegionRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ChangeRegionRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ChangeRegionRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ChangeRegionRequestValidationError) ErrorName() string {
+	return "ChangeRegionRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ChangeRegionRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sChangeRegionRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ChangeRegionRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ChangeRegionRequestValidationError{}
+
 // Validate checks the field values on ListRegionsRequest with the rules
 // defined in the proto definition for this message. If any rules are
 // violated, the first error encountered is returned, or nil if there are no violations.
@@ -1310,6 +1554,120 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = CreateRegionLinkRequestValidationError{}
+
+// Validate checks the field values on ChangeRegionLinkRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ChangeRegionLinkRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ChangeRegionLinkRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ChangeRegionLinkRequestMultiError, or nil if none found.
+func (m *ChangeRegionLinkRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ChangeRegionLinkRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Id
+
+	// no validation rules for RegionA
+
+	// no validation rules for RegionB
+
+	// no validation rules for Diaspora
+
+	// no validation rules for Business
+
+	// no validation rules for Tourism
+
+	if len(errors) > 0 {
+		return ChangeRegionLinkRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// ChangeRegionLinkRequestMultiError is an error wrapping multiple validation
+// errors returned by ChangeRegionLinkRequest.ValidateAll() if the designated
+// constraints aren't met.
+type ChangeRegionLinkRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ChangeRegionLinkRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ChangeRegionLinkRequestMultiError) AllErrors() []error { return m }
+
+// ChangeRegionLinkRequestValidationError is the validation error returned by
+// ChangeRegionLinkRequest.Validate if the designated constraints aren't met.
+type ChangeRegionLinkRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ChangeRegionLinkRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ChangeRegionLinkRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ChangeRegionLinkRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ChangeRegionLinkRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ChangeRegionLinkRequestValidationError) ErrorName() string {
+	return "ChangeRegionLinkRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ChangeRegionLinkRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sChangeRegionLinkRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ChangeRegionLinkRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ChangeRegionLinkRequestValidationError{}
 
 // Validate checks the field values on ListRegionLinksRequest with the rules
 // defined in the proto definition for this message. If any rules are
@@ -1913,6 +2271,156 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = CreateAirportRequestValidationError{}
+
+// Validate checks the field values on ChangeAirportRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ChangeAirportRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ChangeAirportRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ChangeAirportRequestMultiError, or nil if none found.
+func (m *ChangeAirportRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ChangeAirportRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Id
+
+	// no validation rules for IcaoCode
+
+	// no validation rules for IataCode
+
+	// no validation rules for LocalName
+
+	// no validation rules for IntlName
+
+	// no validation rules for Timezone
+
+	// no validation rules for CountryId
+
+	// no validation rules for RegionId
+
+	// no validation rules for Municipality
+
+	// no validation rules for Continent
+
+	// no validation rules for ElevationFt
+
+	// no validation rules for MaxRunwayLengthM
+
+	// no validation rules for WorksAtNight
+
+	// no validation rules for MaxRunwayUsesPerDay
+
+	// no validation rules for TurnaroundPointPrice
+
+	// no validation rules for MaintenancePointPrice
+
+	// no validation rules for RunwayFee
+
+	// no validation rules for GateFee
+
+	// no validation rules for StandFee
+
+	// no validation rules for FuelPriceMultiplier
+
+	// no validation rules for HomeLink
+
+	// no validation rules for WikipediaLink
+
+	// no validation rules for Geog
+
+	// no validation rules for Geom
+
+	if len(errors) > 0 {
+		return ChangeAirportRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// ChangeAirportRequestMultiError is an error wrapping multiple validation
+// errors returned by ChangeAirportRequest.ValidateAll() if the designated
+// constraints aren't met.
+type ChangeAirportRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ChangeAirportRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ChangeAirportRequestMultiError) AllErrors() []error { return m }
+
+// ChangeAirportRequestValidationError is the validation error returned by
+// ChangeAirportRequest.Validate if the designated constraints aren't met.
+type ChangeAirportRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ChangeAirportRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ChangeAirportRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ChangeAirportRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ChangeAirportRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ChangeAirportRequestValidationError) ErrorName() string {
+	return "ChangeAirportRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ChangeAirportRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sChangeAirportRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ChangeAirportRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ChangeAirportRequestValidationError{}
 
 // Validate checks the field values on ListAirportsRequest with the rules
 // defined in the proto definition for this message. If any rules are

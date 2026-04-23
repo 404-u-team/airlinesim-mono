@@ -10,6 +10,7 @@ import (
 
 type RegionLinkRepository interface {
 	CreateRegionLink(ctx context.Context, payload *worldpb.CreateRegionLinkRequest) (uuid.UUID, error)
+	ChangeRegionLink(ctx context.Context, payload *worldpb.ChangeRegionLinkRequest) (bool, error)
 	ListRegionLinks(ctx context.Context) ([]*worldpb.RegionLink, error)
 	DeleteRegionLink(ctx context.Context, id uuid.UUID) (bool, error)
 }
@@ -37,6 +38,19 @@ func (r *regionLinkRepository) CreateRegionLink(ctx context.Context, payload *wo
 		payload.Diaspora, payload.Business, payload.Tourism).Scan(&regionLinkID)
 
 	return regionLinkID, err
+}
+
+func (r *regionLinkRepository) ChangeRegionLink(ctx context.Context, payload *worldpb.ChangeRegionLinkRequest) (bool, error) {
+	result, err := r.pool.Exec(ctx, `
+		UPDATE region_link
+		SET region_a=$2, region_b=$3, diaspora=$4, business=$5, tourism=$6
+		WHERE id=$1
+	`, payload.Id, payload.RegionA, payload.RegionB, payload.Diaspora, payload.Business, payload.Tourism)
+	if err != nil {
+		return false, err
+	}
+
+	return result.RowsAffected() > 0, nil
 }
 
 func (r *regionLinkRepository) ListRegionLinks(ctx context.Context) ([]*worldpb.RegionLink, error) {

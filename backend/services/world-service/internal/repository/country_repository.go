@@ -10,6 +10,7 @@ import (
 
 type CountryRepository interface {
 	CreateCountry(ctx context.Context, payload *worldpb.CreateCountryRequest) (uuid.UUID, error)
+	ChangeCountry(ctx context.Context, payload *worldpb.ChangeCountryRequest) (bool, error)
 	ListCountries(ctx context.Context) ([]*worldpb.Country, error)
 	DeleteCountry(ctx context.Context, id uuid.UUID) (bool, error)
 }
@@ -39,6 +40,23 @@ func (r *countryRepository) CreateCountry(ctx context.Context, payload *worldpb.
 		payload.WikipediaLink).Scan(&countryID)
 
 	return countryID, err
+}
+
+func (r *countryRepository) ChangeCountry(ctx context.Context, payload *worldpb.ChangeCountryRequest) (bool, error) {
+	result, err := r.pool.Exec(ctx, `
+		UPDATE country
+		SET iso=$2, local_name=$3, intl_name=$4, flythrough_permission_price=$5,
+			land_permission_price=$6, corp_tax_rate=$7, vat_rate=$8, aircraft_tail_code=$9,
+			wikipedia_link=$10
+		WHERE id=$1
+	`, payload.Id, payload.Iso, payload.LocalName, payload.IntlName, payload.FlythroughPermissionPrice,
+		payload.LandPermissionPrice, payload.CorpTaxRate, payload.VatRate, payload.AircraftTailCode,
+		payload.WikipediaLink)
+	if err != nil {
+		return false, err
+	}
+
+	return result.RowsAffected() > 0, nil
 }
 
 func (r *countryRepository) ListCountries(ctx context.Context) ([]*worldpb.Country, error) {

@@ -131,6 +131,122 @@ func (x *CreateCountryRequest) GetWikipediaLink() string {
 	return ""
 }
 
+type ChangeCountryRequest struct {
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	Id                        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Iso                       string                 `protobuf:"bytes,2,opt,name=iso,proto3" json:"iso,omitempty"`
+	LocalName                 string                 `protobuf:"bytes,3,opt,name=local_name,json=localName,proto3" json:"local_name,omitempty"`
+	IntlName                  string                 `protobuf:"bytes,4,opt,name=intl_name,json=intlName,proto3" json:"intl_name,omitempty"`
+	FlythroughPermissionPrice float64                `protobuf:"fixed64,5,opt,name=flythrough_permission_price,json=flythroughPermissionPrice,proto3" json:"flythrough_permission_price,omitempty"`
+	LandPermissionPrice       float64                `protobuf:"fixed64,6,opt,name=land_permission_price,json=landPermissionPrice,proto3" json:"land_permission_price,omitempty"`
+	CorpTaxRate               float64                `protobuf:"fixed64,7,opt,name=corp_tax_rate,json=corpTaxRate,proto3" json:"corp_tax_rate,omitempty"`
+	VatRate                   float64                `protobuf:"fixed64,8,opt,name=vat_rate,json=vatRate,proto3" json:"vat_rate,omitempty"`
+	AircraftTailCode          string                 `protobuf:"bytes,9,opt,name=aircraft_tail_code,json=aircraftTailCode,proto3" json:"aircraft_tail_code,omitempty"`
+	WikipediaLink             string                 `protobuf:"bytes,10,opt,name=wikipedia_link,json=wikipediaLink,proto3" json:"wikipedia_link,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *ChangeCountryRequest) Reset() {
+	*x = ChangeCountryRequest{}
+	mi := &file_world_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangeCountryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangeCountryRequest) ProtoMessage() {}
+
+func (x *ChangeCountryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_world_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangeCountryRequest.ProtoReflect.Descriptor instead.
+func (*ChangeCountryRequest) Descriptor() ([]byte, []int) {
+	return file_world_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ChangeCountryRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ChangeCountryRequest) GetIso() string {
+	if x != nil {
+		return x.Iso
+	}
+	return ""
+}
+
+func (x *ChangeCountryRequest) GetLocalName() string {
+	if x != nil {
+		return x.LocalName
+	}
+	return ""
+}
+
+func (x *ChangeCountryRequest) GetIntlName() string {
+	if x != nil {
+		return x.IntlName
+	}
+	return ""
+}
+
+func (x *ChangeCountryRequest) GetFlythroughPermissionPrice() float64 {
+	if x != nil {
+		return x.FlythroughPermissionPrice
+	}
+	return 0
+}
+
+func (x *ChangeCountryRequest) GetLandPermissionPrice() float64 {
+	if x != nil {
+		return x.LandPermissionPrice
+	}
+	return 0
+}
+
+func (x *ChangeCountryRequest) GetCorpTaxRate() float64 {
+	if x != nil {
+		return x.CorpTaxRate
+	}
+	return 0
+}
+
+func (x *ChangeCountryRequest) GetVatRate() float64 {
+	if x != nil {
+		return x.VatRate
+	}
+	return 0
+}
+
+func (x *ChangeCountryRequest) GetAircraftTailCode() string {
+	if x != nil {
+		return x.AircraftTailCode
+	}
+	return ""
+}
+
+func (x *ChangeCountryRequest) GetWikipediaLink() string {
+	if x != nil {
+		return x.WikipediaLink
+	}
+	return ""
+}
+
 type ListCountriesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -139,7 +255,7 @@ type ListCountriesRequest struct {
 
 func (x *ListCountriesRequest) Reset() {
 	*x = ListCountriesRequest{}
-	mi := &file_world_proto_msgTypes[1]
+	mi := &file_world_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -151,7 +267,7 @@ func (x *ListCountriesRequest) String() string {
 func (*ListCountriesRequest) ProtoMessage() {}
 
 func (x *ListCountriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[1]
+	mi := &file_world_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -164,7 +280,7 @@ func (x *ListCountriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCountriesRequest.ProtoReflect.Descriptor instead.
 func (*ListCountriesRequest) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{1}
+	return file_world_proto_rawDescGZIP(), []int{2}
 }
 
 type Country struct {
@@ -185,7 +301,7 @@ type Country struct {
 
 func (x *Country) Reset() {
 	*x = Country{}
-	mi := &file_world_proto_msgTypes[2]
+	mi := &file_world_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -197,7 +313,7 @@ func (x *Country) String() string {
 func (*Country) ProtoMessage() {}
 
 func (x *Country) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[2]
+	mi := &file_world_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -210,7 +326,7 @@ func (x *Country) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Country.ProtoReflect.Descriptor instead.
 func (*Country) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{2}
+	return file_world_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Country) GetId() string {
@@ -292,7 +408,7 @@ type ListCountriesResponse struct {
 
 func (x *ListCountriesResponse) Reset() {
 	*x = ListCountriesResponse{}
-	mi := &file_world_proto_msgTypes[3]
+	mi := &file_world_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -304,7 +420,7 @@ func (x *ListCountriesResponse) String() string {
 func (*ListCountriesResponse) ProtoMessage() {}
 
 func (x *ListCountriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[3]
+	mi := &file_world_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -317,7 +433,7 @@ func (x *ListCountriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCountriesResponse.ProtoReflect.Descriptor instead.
 func (*ListCountriesResponse) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{3}
+	return file_world_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ListCountriesResponse) GetCountries() []*Country {
@@ -336,7 +452,7 @@ type DeleteCountryRequest struct {
 
 func (x *DeleteCountryRequest) Reset() {
 	*x = DeleteCountryRequest{}
-	mi := &file_world_proto_msgTypes[4]
+	mi := &file_world_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -348,7 +464,7 @@ func (x *DeleteCountryRequest) String() string {
 func (*DeleteCountryRequest) ProtoMessage() {}
 
 func (x *DeleteCountryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[4]
+	mi := &file_world_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -361,7 +477,7 @@ func (x *DeleteCountryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCountryRequest.ProtoReflect.Descriptor instead.
 func (*DeleteCountryRequest) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{4}
+	return file_world_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *DeleteCountryRequest) GetId() string {
@@ -390,7 +506,7 @@ type CreateRegionRequest struct {
 
 func (x *CreateRegionRequest) Reset() {
 	*x = CreateRegionRequest{}
-	mi := &file_world_proto_msgTypes[5]
+	mi := &file_world_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -402,7 +518,7 @@ func (x *CreateRegionRequest) String() string {
 func (*CreateRegionRequest) ProtoMessage() {}
 
 func (x *CreateRegionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[5]
+	mi := &file_world_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -415,7 +531,7 @@ func (x *CreateRegionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRegionRequest.ProtoReflect.Descriptor instead.
 func (*CreateRegionRequest) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{5}
+	return file_world_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CreateRegionRequest) GetId() string {
@@ -488,6 +604,122 @@ func (x *CreateRegionRequest) GetWikipediaLink() string {
 	return ""
 }
 
+type ChangeRegionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	LocalCode     string                 `protobuf:"bytes,2,opt,name=local_code,json=localCode,proto3" json:"local_code,omitempty"`
+	LocalName     string                 `protobuf:"bytes,3,opt,name=local_name,json=localName,proto3" json:"local_name,omitempty"`
+	IntlName      string                 `protobuf:"bytes,4,opt,name=intl_name,json=intlName,proto3" json:"intl_name,omitempty"`
+	CountryId     string                 `protobuf:"bytes,5,opt,name=country_id,json=countryId,proto3" json:"country_id,omitempty"`
+	Population    float64                `protobuf:"fixed64,6,opt,name=population,proto3" json:"population,omitempty"`
+	GdpPerCapita  float64                `protobuf:"fixed64,7,opt,name=gdp_per_capita,json=gdpPerCapita,proto3" json:"gdp_per_capita,omitempty"`
+	TourismScore  float64                `protobuf:"fixed64,8,opt,name=tourism_score,json=tourismScore,proto3" json:"tourism_score,omitempty"`
+	BusinessScore float64                `protobuf:"fixed64,9,opt,name=business_score,json=businessScore,proto3" json:"business_score,omitempty"`
+	WikipediaLink string                 `protobuf:"bytes,10,opt,name=wikipedia_link,json=wikipediaLink,proto3" json:"wikipedia_link,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChangeRegionRequest) Reset() {
+	*x = ChangeRegionRequest{}
+	mi := &file_world_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangeRegionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangeRegionRequest) ProtoMessage() {}
+
+func (x *ChangeRegionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_world_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangeRegionRequest.ProtoReflect.Descriptor instead.
+func (*ChangeRegionRequest) Descriptor() ([]byte, []int) {
+	return file_world_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ChangeRegionRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ChangeRegionRequest) GetLocalCode() string {
+	if x != nil {
+		return x.LocalCode
+	}
+	return ""
+}
+
+func (x *ChangeRegionRequest) GetLocalName() string {
+	if x != nil {
+		return x.LocalName
+	}
+	return ""
+}
+
+func (x *ChangeRegionRequest) GetIntlName() string {
+	if x != nil {
+		return x.IntlName
+	}
+	return ""
+}
+
+func (x *ChangeRegionRequest) GetCountryId() string {
+	if x != nil {
+		return x.CountryId
+	}
+	return ""
+}
+
+func (x *ChangeRegionRequest) GetPopulation() float64 {
+	if x != nil {
+		return x.Population
+	}
+	return 0
+}
+
+func (x *ChangeRegionRequest) GetGdpPerCapita() float64 {
+	if x != nil {
+		return x.GdpPerCapita
+	}
+	return 0
+}
+
+func (x *ChangeRegionRequest) GetTourismScore() float64 {
+	if x != nil {
+		return x.TourismScore
+	}
+	return 0
+}
+
+func (x *ChangeRegionRequest) GetBusinessScore() float64 {
+	if x != nil {
+		return x.BusinessScore
+	}
+	return 0
+}
+
+func (x *ChangeRegionRequest) GetWikipediaLink() string {
+	if x != nil {
+		return x.WikipediaLink
+	}
+	return ""
+}
+
 type ListRegionsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -496,7 +728,7 @@ type ListRegionsRequest struct {
 
 func (x *ListRegionsRequest) Reset() {
 	*x = ListRegionsRequest{}
-	mi := &file_world_proto_msgTypes[6]
+	mi := &file_world_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -508,7 +740,7 @@ func (x *ListRegionsRequest) String() string {
 func (*ListRegionsRequest) ProtoMessage() {}
 
 func (x *ListRegionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[6]
+	mi := &file_world_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -521,7 +753,7 @@ func (x *ListRegionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRegionsRequest.ProtoReflect.Descriptor instead.
 func (*ListRegionsRequest) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{6}
+	return file_world_proto_rawDescGZIP(), []int{8}
 }
 
 type Region struct {
@@ -542,7 +774,7 @@ type Region struct {
 
 func (x *Region) Reset() {
 	*x = Region{}
-	mi := &file_world_proto_msgTypes[7]
+	mi := &file_world_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -554,7 +786,7 @@ func (x *Region) String() string {
 func (*Region) ProtoMessage() {}
 
 func (x *Region) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[7]
+	mi := &file_world_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -567,7 +799,7 @@ func (x *Region) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Region.ProtoReflect.Descriptor instead.
 func (*Region) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{7}
+	return file_world_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Region) GetId() string {
@@ -649,7 +881,7 @@ type ListRegionsResponse struct {
 
 func (x *ListRegionsResponse) Reset() {
 	*x = ListRegionsResponse{}
-	mi := &file_world_proto_msgTypes[8]
+	mi := &file_world_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -661,7 +893,7 @@ func (x *ListRegionsResponse) String() string {
 func (*ListRegionsResponse) ProtoMessage() {}
 
 func (x *ListRegionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[8]
+	mi := &file_world_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -674,7 +906,7 @@ func (x *ListRegionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRegionsResponse.ProtoReflect.Descriptor instead.
 func (*ListRegionsResponse) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{8}
+	return file_world_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListRegionsResponse) GetRegions() []*Region {
@@ -693,7 +925,7 @@ type DeleteRegionRequest struct {
 
 func (x *DeleteRegionRequest) Reset() {
 	*x = DeleteRegionRequest{}
-	mi := &file_world_proto_msgTypes[9]
+	mi := &file_world_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -705,7 +937,7 @@ func (x *DeleteRegionRequest) String() string {
 func (*DeleteRegionRequest) ProtoMessage() {}
 
 func (x *DeleteRegionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[9]
+	mi := &file_world_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -718,7 +950,7 @@ func (x *DeleteRegionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRegionRequest.ProtoReflect.Descriptor instead.
 func (*DeleteRegionRequest) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{9}
+	return file_world_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteRegionRequest) GetId() string {
@@ -743,7 +975,7 @@ type CreateRegionLinkRequest struct {
 
 func (x *CreateRegionLinkRequest) Reset() {
 	*x = CreateRegionLinkRequest{}
-	mi := &file_world_proto_msgTypes[10]
+	mi := &file_world_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -755,7 +987,7 @@ func (x *CreateRegionLinkRequest) String() string {
 func (*CreateRegionLinkRequest) ProtoMessage() {}
 
 func (x *CreateRegionLinkRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[10]
+	mi := &file_world_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -768,7 +1000,7 @@ func (x *CreateRegionLinkRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRegionLinkRequest.ProtoReflect.Descriptor instead.
 func (*CreateRegionLinkRequest) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{10}
+	return file_world_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *CreateRegionLinkRequest) GetId() string {
@@ -813,6 +1045,90 @@ func (x *CreateRegionLinkRequest) GetTourism() float64 {
 	return 0
 }
 
+type ChangeRegionLinkRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	RegionA       string                 `protobuf:"bytes,2,opt,name=region_a,json=regionA,proto3" json:"region_a,omitempty"`
+	RegionB       string                 `protobuf:"bytes,3,opt,name=region_b,json=regionB,proto3" json:"region_b,omitempty"`
+	Diaspora      float64                `protobuf:"fixed64,4,opt,name=diaspora,proto3" json:"diaspora,omitempty"`
+	Business      float64                `protobuf:"fixed64,5,opt,name=business,proto3" json:"business,omitempty"`
+	Tourism       float64                `protobuf:"fixed64,6,opt,name=tourism,proto3" json:"tourism,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChangeRegionLinkRequest) Reset() {
+	*x = ChangeRegionLinkRequest{}
+	mi := &file_world_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangeRegionLinkRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangeRegionLinkRequest) ProtoMessage() {}
+
+func (x *ChangeRegionLinkRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_world_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangeRegionLinkRequest.ProtoReflect.Descriptor instead.
+func (*ChangeRegionLinkRequest) Descriptor() ([]byte, []int) {
+	return file_world_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ChangeRegionLinkRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ChangeRegionLinkRequest) GetRegionA() string {
+	if x != nil {
+		return x.RegionA
+	}
+	return ""
+}
+
+func (x *ChangeRegionLinkRequest) GetRegionB() string {
+	if x != nil {
+		return x.RegionB
+	}
+	return ""
+}
+
+func (x *ChangeRegionLinkRequest) GetDiaspora() float64 {
+	if x != nil {
+		return x.Diaspora
+	}
+	return 0
+}
+
+func (x *ChangeRegionLinkRequest) GetBusiness() float64 {
+	if x != nil {
+		return x.Business
+	}
+	return 0
+}
+
+func (x *ChangeRegionLinkRequest) GetTourism() float64 {
+	if x != nil {
+		return x.Tourism
+	}
+	return 0
+}
+
 type ListRegionLinksRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -821,7 +1137,7 @@ type ListRegionLinksRequest struct {
 
 func (x *ListRegionLinksRequest) Reset() {
 	*x = ListRegionLinksRequest{}
-	mi := &file_world_proto_msgTypes[11]
+	mi := &file_world_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -833,7 +1149,7 @@ func (x *ListRegionLinksRequest) String() string {
 func (*ListRegionLinksRequest) ProtoMessage() {}
 
 func (x *ListRegionLinksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[11]
+	mi := &file_world_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -846,7 +1162,7 @@ func (x *ListRegionLinksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRegionLinksRequest.ProtoReflect.Descriptor instead.
 func (*ListRegionLinksRequest) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{11}
+	return file_world_proto_rawDescGZIP(), []int{14}
 }
 
 type RegionLink struct {
@@ -863,7 +1179,7 @@ type RegionLink struct {
 
 func (x *RegionLink) Reset() {
 	*x = RegionLink{}
-	mi := &file_world_proto_msgTypes[12]
+	mi := &file_world_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -875,7 +1191,7 @@ func (x *RegionLink) String() string {
 func (*RegionLink) ProtoMessage() {}
 
 func (x *RegionLink) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[12]
+	mi := &file_world_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -888,7 +1204,7 @@ func (x *RegionLink) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegionLink.ProtoReflect.Descriptor instead.
 func (*RegionLink) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{12}
+	return file_world_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RegionLink) GetId() string {
@@ -942,7 +1258,7 @@ type ListRegionLinksResponse struct {
 
 func (x *ListRegionLinksResponse) Reset() {
 	*x = ListRegionLinksResponse{}
-	mi := &file_world_proto_msgTypes[13]
+	mi := &file_world_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -954,7 +1270,7 @@ func (x *ListRegionLinksResponse) String() string {
 func (*ListRegionLinksResponse) ProtoMessage() {}
 
 func (x *ListRegionLinksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[13]
+	mi := &file_world_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -967,7 +1283,7 @@ func (x *ListRegionLinksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRegionLinksResponse.ProtoReflect.Descriptor instead.
 func (*ListRegionLinksResponse) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{13}
+	return file_world_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListRegionLinksResponse) GetRegionLinks() []*RegionLink {
@@ -986,7 +1302,7 @@ type DeleteRegionLinkRequest struct {
 
 func (x *DeleteRegionLinkRequest) Reset() {
 	*x = DeleteRegionLinkRequest{}
-	mi := &file_world_proto_msgTypes[14]
+	mi := &file_world_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -998,7 +1314,7 @@ func (x *DeleteRegionLinkRequest) String() string {
 func (*DeleteRegionLinkRequest) ProtoMessage() {}
 
 func (x *DeleteRegionLinkRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[14]
+	mi := &file_world_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1011,7 +1327,7 @@ func (x *DeleteRegionLinkRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRegionLinkRequest.ProtoReflect.Descriptor instead.
 func (*DeleteRegionLinkRequest) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{14}
+	return file_world_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DeleteRegionLinkRequest) GetId() string {
@@ -1054,7 +1370,7 @@ type CreateAirportRequest struct {
 
 func (x *CreateAirportRequest) Reset() {
 	*x = CreateAirportRequest{}
-	mi := &file_world_proto_msgTypes[15]
+	mi := &file_world_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1066,7 +1382,7 @@ func (x *CreateAirportRequest) String() string {
 func (*CreateAirportRequest) ProtoMessage() {}
 
 func (x *CreateAirportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[15]
+	mi := &file_world_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1079,7 +1395,7 @@ func (x *CreateAirportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAirportRequest.ProtoReflect.Descriptor instead.
 func (*CreateAirportRequest) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{15}
+	return file_world_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *CreateAirportRequest) GetId() string {
@@ -1250,6 +1566,234 @@ func (x *CreateAirportRequest) GetGeom() string {
 	return ""
 }
 
+type ChangeAirportRequest struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Id                    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	IcaoCode              string                 `protobuf:"bytes,2,opt,name=icao_code,json=icaoCode,proto3" json:"icao_code,omitempty"`
+	IataCode              string                 `protobuf:"bytes,3,opt,name=iata_code,json=iataCode,proto3" json:"iata_code,omitempty"`
+	LocalName             string                 `protobuf:"bytes,4,opt,name=local_name,json=localName,proto3" json:"local_name,omitempty"`
+	IntlName              string                 `protobuf:"bytes,5,opt,name=intl_name,json=intlName,proto3" json:"intl_name,omitempty"`
+	Timezone              string                 `protobuf:"bytes,6,opt,name=timezone,proto3" json:"timezone,omitempty"`
+	CountryId             string                 `protobuf:"bytes,7,opt,name=country_id,json=countryId,proto3" json:"country_id,omitempty"`
+	RegionId              string                 `protobuf:"bytes,8,opt,name=region_id,json=regionId,proto3" json:"region_id,omitempty"`
+	Municipality          string                 `protobuf:"bytes,9,opt,name=municipality,proto3" json:"municipality,omitempty"`
+	Continent             string                 `protobuf:"bytes,10,opt,name=continent,proto3" json:"continent,omitempty"`
+	ElevationFt           float64                `protobuf:"fixed64,11,opt,name=elevation_ft,json=elevationFt,proto3" json:"elevation_ft,omitempty"`
+	MaxRunwayLengthM      float64                `protobuf:"fixed64,12,opt,name=max_runway_length_m,json=maxRunwayLengthM,proto3" json:"max_runway_length_m,omitempty"`
+	WorksAtNight          bool                   `protobuf:"varint,13,opt,name=works_at_night,json=worksAtNight,proto3" json:"works_at_night,omitempty"`
+	MaxRunwayUsesPerDay   float64                `protobuf:"fixed64,14,opt,name=max_runway_uses_per_day,json=maxRunwayUsesPerDay,proto3" json:"max_runway_uses_per_day,omitempty"`
+	TurnaroundPointPrice  float64                `protobuf:"fixed64,15,opt,name=turnaround_point_price,json=turnaroundPointPrice,proto3" json:"turnaround_point_price,omitempty"`
+	MaintenancePointPrice float64                `protobuf:"fixed64,16,opt,name=maintenance_point_price,json=maintenancePointPrice,proto3" json:"maintenance_point_price,omitempty"`
+	RunwayFee             float64                `protobuf:"fixed64,17,opt,name=runway_fee,json=runwayFee,proto3" json:"runway_fee,omitempty"`
+	GateFee               float64                `protobuf:"fixed64,18,opt,name=gate_fee,json=gateFee,proto3" json:"gate_fee,omitempty"`
+	StandFee              float64                `protobuf:"fixed64,19,opt,name=stand_fee,json=standFee,proto3" json:"stand_fee,omitempty"`
+	FuelPriceMultiplier   float64                `protobuf:"fixed64,20,opt,name=fuel_price_multiplier,json=fuelPriceMultiplier,proto3" json:"fuel_price_multiplier,omitempty"`
+	HomeLink              string                 `protobuf:"bytes,21,opt,name=home_link,json=homeLink,proto3" json:"home_link,omitempty"`
+	WikipediaLink         string                 `protobuf:"bytes,22,opt,name=wikipedia_link,json=wikipediaLink,proto3" json:"wikipedia_link,omitempty"`
+	Geog                  string                 `protobuf:"bytes,23,opt,name=geog,proto3" json:"geog,omitempty"`
+	Geom                  string                 `protobuf:"bytes,24,opt,name=geom,proto3" json:"geom,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *ChangeAirportRequest) Reset() {
+	*x = ChangeAirportRequest{}
+	mi := &file_world_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangeAirportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangeAirportRequest) ProtoMessage() {}
+
+func (x *ChangeAirportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_world_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangeAirportRequest.ProtoReflect.Descriptor instead.
+func (*ChangeAirportRequest) Descriptor() ([]byte, []int) {
+	return file_world_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ChangeAirportRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ChangeAirportRequest) GetIcaoCode() string {
+	if x != nil {
+		return x.IcaoCode
+	}
+	return ""
+}
+
+func (x *ChangeAirportRequest) GetIataCode() string {
+	if x != nil {
+		return x.IataCode
+	}
+	return ""
+}
+
+func (x *ChangeAirportRequest) GetLocalName() string {
+	if x != nil {
+		return x.LocalName
+	}
+	return ""
+}
+
+func (x *ChangeAirportRequest) GetIntlName() string {
+	if x != nil {
+		return x.IntlName
+	}
+	return ""
+}
+
+func (x *ChangeAirportRequest) GetTimezone() string {
+	if x != nil {
+		return x.Timezone
+	}
+	return ""
+}
+
+func (x *ChangeAirportRequest) GetCountryId() string {
+	if x != nil {
+		return x.CountryId
+	}
+	return ""
+}
+
+func (x *ChangeAirportRequest) GetRegionId() string {
+	if x != nil {
+		return x.RegionId
+	}
+	return ""
+}
+
+func (x *ChangeAirportRequest) GetMunicipality() string {
+	if x != nil {
+		return x.Municipality
+	}
+	return ""
+}
+
+func (x *ChangeAirportRequest) GetContinent() string {
+	if x != nil {
+		return x.Continent
+	}
+	return ""
+}
+
+func (x *ChangeAirportRequest) GetElevationFt() float64 {
+	if x != nil {
+		return x.ElevationFt
+	}
+	return 0
+}
+
+func (x *ChangeAirportRequest) GetMaxRunwayLengthM() float64 {
+	if x != nil {
+		return x.MaxRunwayLengthM
+	}
+	return 0
+}
+
+func (x *ChangeAirportRequest) GetWorksAtNight() bool {
+	if x != nil {
+		return x.WorksAtNight
+	}
+	return false
+}
+
+func (x *ChangeAirportRequest) GetMaxRunwayUsesPerDay() float64 {
+	if x != nil {
+		return x.MaxRunwayUsesPerDay
+	}
+	return 0
+}
+
+func (x *ChangeAirportRequest) GetTurnaroundPointPrice() float64 {
+	if x != nil {
+		return x.TurnaroundPointPrice
+	}
+	return 0
+}
+
+func (x *ChangeAirportRequest) GetMaintenancePointPrice() float64 {
+	if x != nil {
+		return x.MaintenancePointPrice
+	}
+	return 0
+}
+
+func (x *ChangeAirportRequest) GetRunwayFee() float64 {
+	if x != nil {
+		return x.RunwayFee
+	}
+	return 0
+}
+
+func (x *ChangeAirportRequest) GetGateFee() float64 {
+	if x != nil {
+		return x.GateFee
+	}
+	return 0
+}
+
+func (x *ChangeAirportRequest) GetStandFee() float64 {
+	if x != nil {
+		return x.StandFee
+	}
+	return 0
+}
+
+func (x *ChangeAirportRequest) GetFuelPriceMultiplier() float64 {
+	if x != nil {
+		return x.FuelPriceMultiplier
+	}
+	return 0
+}
+
+func (x *ChangeAirportRequest) GetHomeLink() string {
+	if x != nil {
+		return x.HomeLink
+	}
+	return ""
+}
+
+func (x *ChangeAirportRequest) GetWikipediaLink() string {
+	if x != nil {
+		return x.WikipediaLink
+	}
+	return ""
+}
+
+func (x *ChangeAirportRequest) GetGeog() string {
+	if x != nil {
+		return x.Geog
+	}
+	return ""
+}
+
+func (x *ChangeAirportRequest) GetGeom() string {
+	if x != nil {
+		return x.Geom
+	}
+	return ""
+}
+
 type ListAirportsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -1258,7 +1802,7 @@ type ListAirportsRequest struct {
 
 func (x *ListAirportsRequest) Reset() {
 	*x = ListAirportsRequest{}
-	mi := &file_world_proto_msgTypes[16]
+	mi := &file_world_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1270,7 +1814,7 @@ func (x *ListAirportsRequest) String() string {
 func (*ListAirportsRequest) ProtoMessage() {}
 
 func (x *ListAirportsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[16]
+	mi := &file_world_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1283,7 +1827,7 @@ func (x *ListAirportsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAirportsRequest.ProtoReflect.Descriptor instead.
 func (*ListAirportsRequest) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{16}
+	return file_world_proto_rawDescGZIP(), []int{20}
 }
 
 type Airport struct {
@@ -1318,7 +1862,7 @@ type Airport struct {
 
 func (x *Airport) Reset() {
 	*x = Airport{}
-	mi := &file_world_proto_msgTypes[17]
+	mi := &file_world_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1330,7 +1874,7 @@ func (x *Airport) String() string {
 func (*Airport) ProtoMessage() {}
 
 func (x *Airport) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[17]
+	mi := &file_world_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1343,7 +1887,7 @@ func (x *Airport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Airport.ProtoReflect.Descriptor instead.
 func (*Airport) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{17}
+	return file_world_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *Airport) GetId() string {
@@ -1523,7 +2067,7 @@ type ListAirportsResponse struct {
 
 func (x *ListAirportsResponse) Reset() {
 	*x = ListAirportsResponse{}
-	mi := &file_world_proto_msgTypes[18]
+	mi := &file_world_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1535,7 +2079,7 @@ func (x *ListAirportsResponse) String() string {
 func (*ListAirportsResponse) ProtoMessage() {}
 
 func (x *ListAirportsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[18]
+	mi := &file_world_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1548,7 +2092,7 @@ func (x *ListAirportsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAirportsResponse.ProtoReflect.Descriptor instead.
 func (*ListAirportsResponse) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{18}
+	return file_world_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ListAirportsResponse) GetAirports() []*Airport {
@@ -1567,7 +2111,7 @@ type DeleteAirportRequest struct {
 
 func (x *DeleteAirportRequest) Reset() {
 	*x = DeleteAirportRequest{}
-	mi := &file_world_proto_msgTypes[19]
+	mi := &file_world_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1579,7 +2123,7 @@ func (x *DeleteAirportRequest) String() string {
 func (*DeleteAirportRequest) ProtoMessage() {}
 
 func (x *DeleteAirportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[19]
+	mi := &file_world_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1592,7 +2136,7 @@ func (x *DeleteAirportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAirportRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAirportRequest) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{19}
+	return file_world_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *DeleteAirportRequest) GetId() string {
@@ -1612,7 +2156,7 @@ type IDResponse struct {
 
 func (x *IDResponse) Reset() {
 	*x = IDResponse{}
-	mi := &file_world_proto_msgTypes[20]
+	mi := &file_world_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1624,7 +2168,7 @@ func (x *IDResponse) String() string {
 func (*IDResponse) ProtoMessage() {}
 
 func (x *IDResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_world_proto_msgTypes[20]
+	mi := &file_world_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1637,7 +2181,7 @@ func (x *IDResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IDResponse.ProtoReflect.Descriptor instead.
 func (*IDResponse) Descriptor() ([]byte, []int) {
-	return file_world_proto_rawDescGZIP(), []int{20}
+	return file_world_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *IDResponse) GetId() string {
@@ -1662,7 +2206,20 @@ const file_world_proto_rawDesc = "" +
 	"\rcorp_tax_rate\x18\x06 \x01(\x01R\vcorpTaxRate\x12\x19\n" +
 	"\bvat_rate\x18\a \x01(\x01R\avatRate\x12,\n" +
 	"\x12aircraft_tail_code\x18\b \x01(\tR\x10aircraftTailCode\x12%\n" +
-	"\x0ewikipedia_link\x18\t \x01(\tR\rwikipediaLink\"\x16\n" +
+	"\x0ewikipedia_link\x18\t \x01(\tR\rwikipediaLink\"\xfc\x02\n" +
+	"\x14ChangeCountryRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
+	"\x03iso\x18\x02 \x01(\tR\x03iso\x12\x1d\n" +
+	"\n" +
+	"local_name\x18\x03 \x01(\tR\tlocalName\x12\x1b\n" +
+	"\tintl_name\x18\x04 \x01(\tR\bintlName\x12>\n" +
+	"\x1bflythrough_permission_price\x18\x05 \x01(\x01R\x19flythroughPermissionPrice\x122\n" +
+	"\x15land_permission_price\x18\x06 \x01(\x01R\x13landPermissionPrice\x12\"\n" +
+	"\rcorp_tax_rate\x18\a \x01(\x01R\vcorpTaxRate\x12\x19\n" +
+	"\bvat_rate\x18\b \x01(\x01R\avatRate\x12,\n" +
+	"\x12aircraft_tail_code\x18\t \x01(\tR\x10aircraftTailCode\x12%\n" +
+	"\x0ewikipedia_link\x18\n" +
+	" \x01(\tR\rwikipediaLink\"\x16\n" +
 	"\x14ListCountriesRequest\"\xef\x02\n" +
 	"\aCountry\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
@@ -1682,6 +2239,23 @@ const file_world_proto_rawDesc = "" +
 	"\x14DeleteCountryRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\xd8\x02\n" +
 	"\x13CreateRegionRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"local_code\x18\x02 \x01(\tR\tlocalCode\x12\x1d\n" +
+	"\n" +
+	"local_name\x18\x03 \x01(\tR\tlocalName\x12\x1b\n" +
+	"\tintl_name\x18\x04 \x01(\tR\bintlName\x12\x1d\n" +
+	"\n" +
+	"country_id\x18\x05 \x01(\tR\tcountryId\x12\x1e\n" +
+	"\n" +
+	"population\x18\x06 \x01(\x01R\n" +
+	"population\x12$\n" +
+	"\x0egdp_per_capita\x18\a \x01(\x01R\fgdpPerCapita\x12#\n" +
+	"\rtourism_score\x18\b \x01(\x01R\ftourismScore\x12%\n" +
+	"\x0ebusiness_score\x18\t \x01(\x01R\rbusinessScore\x12%\n" +
+	"\x0ewikipedia_link\x18\n" +
+	" \x01(\tR\rwikipediaLink\"\xd8\x02\n" +
+	"\x13ChangeRegionRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
 	"local_code\x18\x02 \x01(\tR\tlocalCode\x12\x1d\n" +
@@ -1726,6 +2300,13 @@ const file_world_proto_rawDesc = "" +
 	"\bregion_b\x18\x03 \x01(\tR\aregionB\x12\x1a\n" +
 	"\bdiaspora\x18\x04 \x01(\x01R\bdiaspora\x12\x1a\n" +
 	"\bbusiness\x18\x05 \x01(\x01R\bbusiness\x12\x18\n" +
+	"\atourism\x18\x06 \x01(\x01R\atourism\"\xb1\x01\n" +
+	"\x17ChangeRegionLinkRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
+	"\bregion_a\x18\x02 \x01(\tR\aregionA\x12\x19\n" +
+	"\bregion_b\x18\x03 \x01(\tR\aregionB\x12\x1a\n" +
+	"\bdiaspora\x18\x04 \x01(\x01R\bdiaspora\x12\x1a\n" +
+	"\bbusiness\x18\x05 \x01(\x01R\bbusiness\x12\x18\n" +
 	"\atourism\x18\x06 \x01(\x01R\atourism\"\x18\n" +
 	"\x16ListRegionLinksRequest\"\xa4\x01\n" +
 	"\n" +
@@ -1741,6 +2322,35 @@ const file_world_proto_rawDesc = "" +
 	"\x17DeleteRegionLinkRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\xc9\x06\n" +
 	"\x14CreateAirportRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\ticao_code\x18\x02 \x01(\tR\bicaoCode\x12\x1b\n" +
+	"\tiata_code\x18\x03 \x01(\tR\biataCode\x12\x1d\n" +
+	"\n" +
+	"local_name\x18\x04 \x01(\tR\tlocalName\x12\x1b\n" +
+	"\tintl_name\x18\x05 \x01(\tR\bintlName\x12\x1a\n" +
+	"\btimezone\x18\x06 \x01(\tR\btimezone\x12\x1d\n" +
+	"\n" +
+	"country_id\x18\a \x01(\tR\tcountryId\x12\x1b\n" +
+	"\tregion_id\x18\b \x01(\tR\bregionId\x12\"\n" +
+	"\fmunicipality\x18\t \x01(\tR\fmunicipality\x12\x1c\n" +
+	"\tcontinent\x18\n" +
+	" \x01(\tR\tcontinent\x12!\n" +
+	"\felevation_ft\x18\v \x01(\x01R\velevationFt\x12-\n" +
+	"\x13max_runway_length_m\x18\f \x01(\x01R\x10maxRunwayLengthM\x12$\n" +
+	"\x0eworks_at_night\x18\r \x01(\bR\fworksAtNight\x124\n" +
+	"\x17max_runway_uses_per_day\x18\x0e \x01(\x01R\x13maxRunwayUsesPerDay\x124\n" +
+	"\x16turnaround_point_price\x18\x0f \x01(\x01R\x14turnaroundPointPrice\x126\n" +
+	"\x17maintenance_point_price\x18\x10 \x01(\x01R\x15maintenancePointPrice\x12\x1d\n" +
+	"\n" +
+	"runway_fee\x18\x11 \x01(\x01R\trunwayFee\x12\x19\n" +
+	"\bgate_fee\x18\x12 \x01(\x01R\agateFee\x12\x1b\n" +
+	"\tstand_fee\x18\x13 \x01(\x01R\bstandFee\x122\n" +
+	"\x15fuel_price_multiplier\x18\x14 \x01(\x01R\x13fuelPriceMultiplier\x12\x1b\n" +
+	"\thome_link\x18\x15 \x01(\tR\bhomeLink\x12%\n" +
+	"\x0ewikipedia_link\x18\x16 \x01(\tR\rwikipediaLink\x12\x12\n" +
+	"\x04geog\x18\x17 \x01(\tR\x04geog\x12\x12\n" +
+	"\x04geom\x18\x18 \x01(\tR\x04geom\"\xc9\x06\n" +
+	"\x14ChangeAirportRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ticao_code\x18\x02 \x01(\tR\bicaoCode\x12\x1b\n" +
 	"\tiata_code\x18\x03 \x01(\tR\biataCode\x12\x1d\n" +
@@ -1805,18 +2415,22 @@ const file_world_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x1c\n" +
 	"\n" +
 	"IDResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id2\xfb\x06\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id2\x93\t\n" +
 	"\fWorldService\x12C\n" +
-	"\rCreateCountry\x12\x1d.auth.v1.CreateCountryRequest\x1a\x13.auth.v1.IDResponse\x12N\n" +
+	"\rCreateCountry\x12\x1d.auth.v1.CreateCountryRequest\x1a\x13.auth.v1.IDResponse\x12C\n" +
+	"\rChangeCountry\x12\x1d.auth.v1.ChangeCountryRequest\x1a\x13.auth.v1.IDResponse\x12N\n" +
 	"\rListCountries\x12\x1d.auth.v1.ListCountriesRequest\x1a\x1e.auth.v1.ListCountriesResponse\x12C\n" +
 	"\rDeleteCountry\x12\x1d.auth.v1.DeleteCountryRequest\x1a\x13.auth.v1.IDResponse\x12A\n" +
-	"\fCreateRegion\x12\x1c.auth.v1.CreateRegionRequest\x1a\x13.auth.v1.IDResponse\x12H\n" +
+	"\fCreateRegion\x12\x1c.auth.v1.CreateRegionRequest\x1a\x13.auth.v1.IDResponse\x12A\n" +
+	"\fChangeRegion\x12\x1c.auth.v1.ChangeRegionRequest\x1a\x13.auth.v1.IDResponse\x12H\n" +
 	"\vListRegions\x12\x1b.auth.v1.ListRegionsRequest\x1a\x1c.auth.v1.ListRegionsResponse\x12A\n" +
 	"\fDeleteRegion\x12\x1c.auth.v1.DeleteRegionRequest\x1a\x13.auth.v1.IDResponse\x12I\n" +
-	"\x10CreateRegionLink\x12 .auth.v1.CreateRegionLinkRequest\x1a\x13.auth.v1.IDResponse\x12T\n" +
+	"\x10CreateRegionLink\x12 .auth.v1.CreateRegionLinkRequest\x1a\x13.auth.v1.IDResponse\x12I\n" +
+	"\x10ChangeRegionLink\x12 .auth.v1.ChangeRegionLinkRequest\x1a\x13.auth.v1.IDResponse\x12T\n" +
 	"\x0fListRegionLinks\x12\x1f.auth.v1.ListRegionLinksRequest\x1a .auth.v1.ListRegionLinksResponse\x12I\n" +
 	"\x10DeleteRegionLink\x12 .auth.v1.DeleteRegionLinkRequest\x1a\x13.auth.v1.IDResponse\x12C\n" +
-	"\rCreateAirport\x12\x1d.auth.v1.CreateAirportRequest\x1a\x13.auth.v1.IDResponse\x12K\n" +
+	"\rCreateAirport\x12\x1d.auth.v1.CreateAirportRequest\x1a\x13.auth.v1.IDResponse\x12C\n" +
+	"\rChangeAirport\x12\x1d.auth.v1.ChangeAirportRequest\x1a\x13.auth.v1.IDResponse\x12K\n" +
 	"\fListAirports\x12\x1c.auth.v1.ListAirportsRequest\x1a\x1d.auth.v1.ListAirportsResponse\x12C\n" +
 	"\rDeleteAirport\x12\x1d.auth.v1.DeleteAirportRequest\x1a\x13.auth.v1.IDResponseBWZUgithub.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/world/v1;worldpbb\x06proto3"
 
@@ -1832,61 +2446,73 @@ func file_world_proto_rawDescGZIP() []byte {
 	return file_world_proto_rawDescData
 }
 
-var file_world_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_world_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_world_proto_goTypes = []any{
 	(*CreateCountryRequest)(nil),    // 0: auth.v1.CreateCountryRequest
-	(*ListCountriesRequest)(nil),    // 1: auth.v1.ListCountriesRequest
-	(*Country)(nil),                 // 2: auth.v1.Country
-	(*ListCountriesResponse)(nil),   // 3: auth.v1.ListCountriesResponse
-	(*DeleteCountryRequest)(nil),    // 4: auth.v1.DeleteCountryRequest
-	(*CreateRegionRequest)(nil),     // 5: auth.v1.CreateRegionRequest
-	(*ListRegionsRequest)(nil),      // 6: auth.v1.ListRegionsRequest
-	(*Region)(nil),                  // 7: auth.v1.Region
-	(*ListRegionsResponse)(nil),     // 8: auth.v1.ListRegionsResponse
-	(*DeleteRegionRequest)(nil),     // 9: auth.v1.DeleteRegionRequest
-	(*CreateRegionLinkRequest)(nil), // 10: auth.v1.CreateRegionLinkRequest
-	(*ListRegionLinksRequest)(nil),  // 11: auth.v1.ListRegionLinksRequest
-	(*RegionLink)(nil),              // 12: auth.v1.RegionLink
-	(*ListRegionLinksResponse)(nil), // 13: auth.v1.ListRegionLinksResponse
-	(*DeleteRegionLinkRequest)(nil), // 14: auth.v1.DeleteRegionLinkRequest
-	(*CreateAirportRequest)(nil),    // 15: auth.v1.CreateAirportRequest
-	(*ListAirportsRequest)(nil),     // 16: auth.v1.ListAirportsRequest
-	(*Airport)(nil),                 // 17: auth.v1.Airport
-	(*ListAirportsResponse)(nil),    // 18: auth.v1.ListAirportsResponse
-	(*DeleteAirportRequest)(nil),    // 19: auth.v1.DeleteAirportRequest
-	(*IDResponse)(nil),              // 20: auth.v1.IDResponse
+	(*ChangeCountryRequest)(nil),    // 1: auth.v1.ChangeCountryRequest
+	(*ListCountriesRequest)(nil),    // 2: auth.v1.ListCountriesRequest
+	(*Country)(nil),                 // 3: auth.v1.Country
+	(*ListCountriesResponse)(nil),   // 4: auth.v1.ListCountriesResponse
+	(*DeleteCountryRequest)(nil),    // 5: auth.v1.DeleteCountryRequest
+	(*CreateRegionRequest)(nil),     // 6: auth.v1.CreateRegionRequest
+	(*ChangeRegionRequest)(nil),     // 7: auth.v1.ChangeRegionRequest
+	(*ListRegionsRequest)(nil),      // 8: auth.v1.ListRegionsRequest
+	(*Region)(nil),                  // 9: auth.v1.Region
+	(*ListRegionsResponse)(nil),     // 10: auth.v1.ListRegionsResponse
+	(*DeleteRegionRequest)(nil),     // 11: auth.v1.DeleteRegionRequest
+	(*CreateRegionLinkRequest)(nil), // 12: auth.v1.CreateRegionLinkRequest
+	(*ChangeRegionLinkRequest)(nil), // 13: auth.v1.ChangeRegionLinkRequest
+	(*ListRegionLinksRequest)(nil),  // 14: auth.v1.ListRegionLinksRequest
+	(*RegionLink)(nil),              // 15: auth.v1.RegionLink
+	(*ListRegionLinksResponse)(nil), // 16: auth.v1.ListRegionLinksResponse
+	(*DeleteRegionLinkRequest)(nil), // 17: auth.v1.DeleteRegionLinkRequest
+	(*CreateAirportRequest)(nil),    // 18: auth.v1.CreateAirportRequest
+	(*ChangeAirportRequest)(nil),    // 19: auth.v1.ChangeAirportRequest
+	(*ListAirportsRequest)(nil),     // 20: auth.v1.ListAirportsRequest
+	(*Airport)(nil),                 // 21: auth.v1.Airport
+	(*ListAirportsResponse)(nil),    // 22: auth.v1.ListAirportsResponse
+	(*DeleteAirportRequest)(nil),    // 23: auth.v1.DeleteAirportRequest
+	(*IDResponse)(nil),              // 24: auth.v1.IDResponse
 }
 var file_world_proto_depIdxs = []int32{
-	2,  // 0: auth.v1.ListCountriesResponse.countries:type_name -> auth.v1.Country
-	7,  // 1: auth.v1.ListRegionsResponse.regions:type_name -> auth.v1.Region
-	12, // 2: auth.v1.ListRegionLinksResponse.region_links:type_name -> auth.v1.RegionLink
-	17, // 3: auth.v1.ListAirportsResponse.airports:type_name -> auth.v1.Airport
+	3,  // 0: auth.v1.ListCountriesResponse.countries:type_name -> auth.v1.Country
+	9,  // 1: auth.v1.ListRegionsResponse.regions:type_name -> auth.v1.Region
+	15, // 2: auth.v1.ListRegionLinksResponse.region_links:type_name -> auth.v1.RegionLink
+	21, // 3: auth.v1.ListAirportsResponse.airports:type_name -> auth.v1.Airport
 	0,  // 4: auth.v1.WorldService.CreateCountry:input_type -> auth.v1.CreateCountryRequest
-	1,  // 5: auth.v1.WorldService.ListCountries:input_type -> auth.v1.ListCountriesRequest
-	4,  // 6: auth.v1.WorldService.DeleteCountry:input_type -> auth.v1.DeleteCountryRequest
-	5,  // 7: auth.v1.WorldService.CreateRegion:input_type -> auth.v1.CreateRegionRequest
-	6,  // 8: auth.v1.WorldService.ListRegions:input_type -> auth.v1.ListRegionsRequest
-	9,  // 9: auth.v1.WorldService.DeleteRegion:input_type -> auth.v1.DeleteRegionRequest
-	10, // 10: auth.v1.WorldService.CreateRegionLink:input_type -> auth.v1.CreateRegionLinkRequest
-	11, // 11: auth.v1.WorldService.ListRegionLinks:input_type -> auth.v1.ListRegionLinksRequest
-	14, // 12: auth.v1.WorldService.DeleteRegionLink:input_type -> auth.v1.DeleteRegionLinkRequest
-	15, // 13: auth.v1.WorldService.CreateAirport:input_type -> auth.v1.CreateAirportRequest
-	16, // 14: auth.v1.WorldService.ListAirports:input_type -> auth.v1.ListAirportsRequest
-	19, // 15: auth.v1.WorldService.DeleteAirport:input_type -> auth.v1.DeleteAirportRequest
-	20, // 16: auth.v1.WorldService.CreateCountry:output_type -> auth.v1.IDResponse
-	3,  // 17: auth.v1.WorldService.ListCountries:output_type -> auth.v1.ListCountriesResponse
-	20, // 18: auth.v1.WorldService.DeleteCountry:output_type -> auth.v1.IDResponse
-	20, // 19: auth.v1.WorldService.CreateRegion:output_type -> auth.v1.IDResponse
-	8,  // 20: auth.v1.WorldService.ListRegions:output_type -> auth.v1.ListRegionsResponse
-	20, // 21: auth.v1.WorldService.DeleteRegion:output_type -> auth.v1.IDResponse
-	20, // 22: auth.v1.WorldService.CreateRegionLink:output_type -> auth.v1.IDResponse
-	13, // 23: auth.v1.WorldService.ListRegionLinks:output_type -> auth.v1.ListRegionLinksResponse
-	20, // 24: auth.v1.WorldService.DeleteRegionLink:output_type -> auth.v1.IDResponse
-	20, // 25: auth.v1.WorldService.CreateAirport:output_type -> auth.v1.IDResponse
-	18, // 26: auth.v1.WorldService.ListAirports:output_type -> auth.v1.ListAirportsResponse
-	20, // 27: auth.v1.WorldService.DeleteAirport:output_type -> auth.v1.IDResponse
-	16, // [16:28] is the sub-list for method output_type
-	4,  // [4:16] is the sub-list for method input_type
+	1,  // 5: auth.v1.WorldService.ChangeCountry:input_type -> auth.v1.ChangeCountryRequest
+	2,  // 6: auth.v1.WorldService.ListCountries:input_type -> auth.v1.ListCountriesRequest
+	5,  // 7: auth.v1.WorldService.DeleteCountry:input_type -> auth.v1.DeleteCountryRequest
+	6,  // 8: auth.v1.WorldService.CreateRegion:input_type -> auth.v1.CreateRegionRequest
+	7,  // 9: auth.v1.WorldService.ChangeRegion:input_type -> auth.v1.ChangeRegionRequest
+	8,  // 10: auth.v1.WorldService.ListRegions:input_type -> auth.v1.ListRegionsRequest
+	11, // 11: auth.v1.WorldService.DeleteRegion:input_type -> auth.v1.DeleteRegionRequest
+	12, // 12: auth.v1.WorldService.CreateRegionLink:input_type -> auth.v1.CreateRegionLinkRequest
+	13, // 13: auth.v1.WorldService.ChangeRegionLink:input_type -> auth.v1.ChangeRegionLinkRequest
+	14, // 14: auth.v1.WorldService.ListRegionLinks:input_type -> auth.v1.ListRegionLinksRequest
+	17, // 15: auth.v1.WorldService.DeleteRegionLink:input_type -> auth.v1.DeleteRegionLinkRequest
+	18, // 16: auth.v1.WorldService.CreateAirport:input_type -> auth.v1.CreateAirportRequest
+	19, // 17: auth.v1.WorldService.ChangeAirport:input_type -> auth.v1.ChangeAirportRequest
+	20, // 18: auth.v1.WorldService.ListAirports:input_type -> auth.v1.ListAirportsRequest
+	23, // 19: auth.v1.WorldService.DeleteAirport:input_type -> auth.v1.DeleteAirportRequest
+	24, // 20: auth.v1.WorldService.CreateCountry:output_type -> auth.v1.IDResponse
+	24, // 21: auth.v1.WorldService.ChangeCountry:output_type -> auth.v1.IDResponse
+	4,  // 22: auth.v1.WorldService.ListCountries:output_type -> auth.v1.ListCountriesResponse
+	24, // 23: auth.v1.WorldService.DeleteCountry:output_type -> auth.v1.IDResponse
+	24, // 24: auth.v1.WorldService.CreateRegion:output_type -> auth.v1.IDResponse
+	24, // 25: auth.v1.WorldService.ChangeRegion:output_type -> auth.v1.IDResponse
+	10, // 26: auth.v1.WorldService.ListRegions:output_type -> auth.v1.ListRegionsResponse
+	24, // 27: auth.v1.WorldService.DeleteRegion:output_type -> auth.v1.IDResponse
+	24, // 28: auth.v1.WorldService.CreateRegionLink:output_type -> auth.v1.IDResponse
+	24, // 29: auth.v1.WorldService.ChangeRegionLink:output_type -> auth.v1.IDResponse
+	16, // 30: auth.v1.WorldService.ListRegionLinks:output_type -> auth.v1.ListRegionLinksResponse
+	24, // 31: auth.v1.WorldService.DeleteRegionLink:output_type -> auth.v1.IDResponse
+	24, // 32: auth.v1.WorldService.CreateAirport:output_type -> auth.v1.IDResponse
+	24, // 33: auth.v1.WorldService.ChangeAirport:output_type -> auth.v1.IDResponse
+	22, // 34: auth.v1.WorldService.ListAirports:output_type -> auth.v1.ListAirportsResponse
+	24, // 35: auth.v1.WorldService.DeleteAirport:output_type -> auth.v1.IDResponse
+	20, // [20:36] is the sub-list for method output_type
+	4,  // [4:20] is the sub-list for method input_type
 	4,  // [4:4] is the sub-list for extension type_name
 	4,  // [4:4] is the sub-list for extension extendee
 	0,  // [0:4] is the sub-list for field type_name
@@ -1903,7 +2529,7 @@ func file_world_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_world_proto_rawDesc), len(file_world_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   21,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
