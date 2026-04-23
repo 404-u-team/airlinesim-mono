@@ -8,12 +8,14 @@ import (
 	"github.com/404-u-team/airlinesim-mono/backend/game-service/internal/repository"
 	worldpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/world/v1"
 	"github.com/404-u-team/airlinesim-mono/backend/shared/customerrors"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type RegionLinkService interface {
 	CreateRegionLink(ctx context.Context, payload *worldpb.CreateRegionLinkRequest) (*worldpb.IDResponse, error)
 	ListRegionLinks(ctx context.Context) (*worldpb.ListRegionLinksResponse, error)
+	DeleteRegionLink(ctx context.Context, id string) (*worldpb.IDResponse, error)
 }
 
 type regionLinkService struct {
@@ -53,4 +55,22 @@ func (s *regionLinkService) ListRegionLinks(ctx context.Context) (*worldpb.ListR
 	}
 
 	return &worldpb.ListRegionLinksResponse{RegionLinks: regionLinks}, nil
+}
+
+func (s *regionLinkService) DeleteRegionLink(ctx context.Context, id string) (*worldpb.IDResponse, error) {
+	regionLinkID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, customerrors.ErrRegionLinkNotFound
+	}
+
+	deleted, err := s.regionLinkRepo.DeleteRegionLink(ctx, regionLinkID)
+	if err != nil {
+		log.Println("got error in delete region link repo, ", err)
+		return nil, customerrors.ErrInternal
+	}
+	if !deleted {
+		return nil, customerrors.ErrRegionLinkNotFound
+	}
+
+	return &worldpb.IDResponse{Id: regionLinkID.String()}, nil
 }

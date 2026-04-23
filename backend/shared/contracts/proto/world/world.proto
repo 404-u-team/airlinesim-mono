@@ -20,11 +20,17 @@ service WorldService {
   // list countries
   rpc ListCountries(ListCountriesRequest) returns (ListCountriesResponse);
 
+  // delete country
+  rpc DeleteCountry(DeleteCountryRequest) returns (IDResponse);
+
   // create region, returns id of newly created region
   rpc CreateRegion(CreateRegionRequest) returns (IDResponse);
 
   // list regions
   rpc ListRegions(ListRegionsRequest) returns (ListRegionsResponse);
+
+  // delete region
+  rpc DeleteRegion(DeleteRegionRequest) returns (IDResponse);
 
   // create region link, returns id of newly created region link
   rpc CreateRegionLink(CreateRegionLinkRequest) returns (IDResponse);
@@ -32,11 +38,17 @@ service WorldService {
   // list region links
   rpc ListRegionLinks(ListRegionLinksRequest) returns (ListRegionLinksResponse);
 
+  // delete region link
+  rpc DeleteRegionLink(DeleteRegionLinkRequest) returns (IDResponse);
+
   // create airport, returns id of newly created airport
   rpc CreateAirport(CreateAirportRequest) returns (IDResponse);
 
   // list airports
   rpc ListAirports(ListAirportsRequest) returns (ListAirportsResponse);
+
+  // delete airport
+  rpc DeleteAirport(DeleteAirportRequest) returns (IDResponse);
 }
 
 // TODO: add validation
@@ -72,6 +84,10 @@ message ListCountriesResponse {
   repeated Country countries = 1;
 }
 
+message DeleteCountryRequest {
+  string id = 1;
+}
+
 // request to create region
 message CreateRegionRequest {
   string id = 1;
@@ -105,6 +121,10 @@ message ListRegionsResponse {
   repeated Region regions = 1;
 }
 
+message DeleteRegionRequest {
+  string id = 1;
+}
+
 // request to create region link
 message CreateRegionLinkRequest {
   string id = 1;
@@ -128,6 +148,10 @@ message RegionLink {
 
 message ListRegionLinksResponse {
   repeated RegionLink region_links = 1;
+}
+
+message DeleteRegionLinkRequest {
+  string id = 1;
 }
 
 // request to create airport
@@ -189,6 +213,10 @@ message Airport {
 
 message ListAirportsResponse {
   repeated Airport airports = 1;
+}
+
+message DeleteAirportRequest {
+  string id = 1;
 }
 
 // id of created instance response

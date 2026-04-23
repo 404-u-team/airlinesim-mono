@@ -42,12 +42,20 @@ func (c *WorldClient) ListCountries(ctx context.Context) (*worldpb.ListCountries
 	return c.client.ListCountries(ctx, &worldpb.ListCountriesRequest{})
 }
 
+func (c *WorldClient) DeleteCountry(ctx context.Context, req *worldpb.DeleteCountryRequest) (*worldpb.IDResponse, error) {
+	return c.client.DeleteCountry(ctx, req)
+}
+
 func (c *WorldClient) CreateRegion(ctx context.Context, req *worldpb.CreateRegionRequest) (*worldpb.IDResponse, error) {
 	return c.client.CreateRegion(ctx, req)
 }
 
 func (c *WorldClient) ListRegions(ctx context.Context) (*worldpb.ListRegionsResponse, error) {
 	return c.client.ListRegions(ctx, &worldpb.ListRegionsRequest{})
+}
+
+func (c *WorldClient) DeleteRegion(ctx context.Context, req *worldpb.DeleteRegionRequest) (*worldpb.IDResponse, error) {
+	return c.client.DeleteRegion(ctx, req)
 }
 
 func (c *WorldClient) CreateRegionLink(ctx context.Context, req *worldpb.CreateRegionLinkRequest) (*worldpb.IDResponse, error) {
@@ -58,10 +66,18 @@ func (c *WorldClient) ListRegionLinks(ctx context.Context) (*worldpb.ListRegionL
 	return c.client.ListRegionLinks(ctx, &worldpb.ListRegionLinksRequest{})
 }
 
+func (c *WorldClient) DeleteRegionLink(ctx context.Context, req *worldpb.DeleteRegionLinkRequest) (*worldpb.IDResponse, error) {
+	return c.client.DeleteRegionLink(ctx, req)
+}
+
 func (c *WorldClient) CreateAirport(ctx context.Context, req *worldpb.CreateAirportRequest) (*worldpb.IDResponse, error) {
 	return c.client.CreateAirport(ctx, req)
 }
 
 func (c *WorldClient) ListAirports(ctx context.Context) (*worldpb.ListAirportsResponse, error) {
 	return c.client.ListAirports(ctx, &worldpb.ListAirportsRequest{})
+}
+
+func (c *WorldClient) DeleteAirport(ctx context.Context, req *worldpb.DeleteAirportRequest) (*worldpb.IDResponse, error) {
+	return c.client.DeleteAirport(ctx, req)
 }

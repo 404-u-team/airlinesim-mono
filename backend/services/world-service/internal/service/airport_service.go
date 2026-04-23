@@ -8,12 +8,14 @@ import (
 	"github.com/404-u-team/airlinesim-mono/backend/game-service/internal/repository"
 	worldpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/world/v1"
 	"github.com/404-u-team/airlinesim-mono/backend/shared/customerrors"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type AirportService interface {
 	CreateAirport(ctx context.Context, payload *worldpb.CreateAirportRequest) (*worldpb.IDResponse, error)
 	ListAirports(ctx context.Context) (*worldpb.ListAirportsResponse, error)
+	DeleteAirport(ctx context.Context, id string) (*worldpb.IDResponse, error)
 }
 
 type airportService struct {
@@ -62,4 +64,22 @@ func (s *airportService) ListAirports(ctx context.Context) (*worldpb.ListAirport
 	}
 
 	return &worldpb.ListAirportsResponse{Airports: airports}, nil
+}
+
+func (s *airportService) DeleteAirport(ctx context.Context, id string) (*worldpb.IDResponse, error) {
+	airportID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, customerrors.ErrAirportNotFound
+	}
+
+	deleted, err := s.airportRepo.DeleteAirport(ctx, airportID)
+	if err != nil {
+		log.Println("got error in delete airport repo, ", err)
+		return nil, customerrors.ErrInternal
+	}
+	if !deleted {
+		return nil, customerrors.ErrAirportNotFound
+	}
+
+	return &worldpb.IDResponse{Id: airportID.String()}, nil
 }

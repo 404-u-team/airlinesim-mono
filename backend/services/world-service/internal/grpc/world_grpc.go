@@ -41,6 +41,10 @@ func (s *worldServer) ListCountries(ctx context.Context, _ *worldpb.ListCountrie
 	return s.countryService.ListCountries(ctx)
 }
 
+func (s *worldServer) DeleteCountry(ctx context.Context, payload *worldpb.DeleteCountryRequest) (*worldpb.IDResponse, error) {
+	return s.countryService.DeleteCountry(ctx, payload.Id)
+}
+
 // --- REGION ---
 func (s *worldServer) CreateRegion(ctx context.Context, payload *worldpb.CreateRegionRequest) (*worldpb.IDResponse, error) {
 	IDResponse, err := s.regionService.CreateRegion(ctx, payload)
@@ -53,6 +57,10 @@ func (s *worldServer) CreateRegion(ctx context.Context, payload *worldpb.CreateR
 
 func (s *worldServer) ListRegions(ctx context.Context, _ *worldpb.ListRegionsRequest) (*worldpb.ListRegionsResponse, error) {
 	return s.regionService.ListRegions(ctx)
+}
+
+func (s *worldServer) DeleteRegion(ctx context.Context, payload *worldpb.DeleteRegionRequest) (*worldpb.IDResponse, error) {
+	return s.regionService.DeleteRegion(ctx, payload.Id)
 }
 
 // --- REGION LINK ---
@@ -69,6 +77,10 @@ func (s *worldServer) ListRegionLinks(ctx context.Context, _ *worldpb.ListRegion
 	return s.regionLinkService.ListRegionLinks(ctx)
 }
 
+func (s *worldServer) DeleteRegionLink(ctx context.Context, payload *worldpb.DeleteRegionLinkRequest) (*worldpb.IDResponse, error) {
+	return s.regionLinkService.DeleteRegionLink(ctx, payload.Id)
+}
+
 // --- AIRPORT ---
 func (s *worldServer) CreateAirport(ctx context.Context, payload *worldpb.CreateAirportRequest) (*worldpb.IDResponse, error) {
 	IDResponse, err := s.airportService.CreateAirport(ctx, payload)
@@ -81,4 +93,8 @@ func (s *worldServer) CreateAirport(ctx context.Context, payload *worldpb.Create
 
 func (s *worldServer) ListAirports(ctx context.Context, _ *worldpb.ListAirportsRequest) (*worldpb.ListAirportsResponse, error) {
 	return s.airportService.ListAirports(ctx)
+}
+
+func (s *worldServer) DeleteAirport(ctx context.Context, payload *worldpb.DeleteAirportRequest) (*worldpb.IDResponse, error) {
+	return s.airportService.DeleteAirport(ctx, payload.Id)
 }

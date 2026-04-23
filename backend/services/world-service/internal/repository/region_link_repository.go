@@ -11,6 +11,7 @@ import (
 type RegionLinkRepository interface {
 	CreateRegionLink(ctx context.Context, payload *worldpb.CreateRegionLinkRequest) (uuid.UUID, error)
 	ListRegionLinks(ctx context.Context) ([]*worldpb.RegionLink, error)
+	DeleteRegionLink(ctx context.Context, id uuid.UUID) (bool, error)
 }
 
 type regionLinkRepository struct {
@@ -79,4 +80,13 @@ func (r *regionLinkRepository) ListRegionLinks(ctx context.Context) ([]*worldpb.
 	}
 
 	return regionLinks, nil
+}
+
+func (r *regionLinkRepository) DeleteRegionLink(ctx context.Context, id uuid.UUID) (bool, error) {
+	result, err := r.pool.Exec(ctx, `DELETE FROM region_link WHERE id=$1`, id)
+	if err != nil {
+		return false, err
+	}
+
+	return result.RowsAffected() > 0, nil
 }

@@ -274,3 +274,149 @@ func (h *WorldHandler) ListAirports(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
+
+// DeleteCountry godoc
+// @Summary      Delete country (admin only)
+// @Description  Returns deleted country id
+// @Tags         Country
+// @Produce      json
+// @Param        id path string true "Country ID"
+// @Success      200  {object}  worldpb.IDResponse "Country deleted"
+// @Failure      400  {object}  dto.ErrorResponse "1 - invalid id"
+// @Failure      404  "Country not found"
+// @Failure      409  "Country has dependencies"
+// @Failure      500  "Internal server error"
+// @Router       /country/{id} [delete]
+func (h *WorldHandler) DeleteCountry(c *gin.Context) {
+	countryID := c.Param("id")
+	if countryID == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	response, err := h.worldClient.DeleteCountry(ctx, &worldpb.DeleteCountryRequest{Id: countryID})
+	if err != nil {
+		if errors.Is(err, customerrors.ErrCountryNotFound) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		if errors.Is(err, customerrors.ErrCountryHasDependencies) {
+			c.Status(http.StatusConflict)
+			return
+		}
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// DeleteRegion godoc
+// @Summary      Delete region (admin only)
+// @Description  Returns deleted region id
+// @Tags         Region
+// @Produce      json
+// @Param        id path string true "Region ID"
+// @Success      200  {object}  worldpb.IDResponse "Region deleted"
+// @Failure      400  {object}  dto.ErrorResponse "1 - invalid id"
+// @Failure      404  "Region not found"
+// @Failure      409  "Region has dependencies"
+// @Failure      500  "Internal server error"
+// @Router       /region/{id} [delete]
+func (h *WorldHandler) DeleteRegion(c *gin.Context) {
+	regionID := c.Param("id")
+	if regionID == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	response, err := h.worldClient.DeleteRegion(ctx, &worldpb.DeleteRegionRequest{Id: regionID})
+	if err != nil {
+		if errors.Is(err, customerrors.ErrRegionNotFound) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		if errors.Is(err, customerrors.ErrRegionHasDependencies) {
+			c.Status(http.StatusConflict)
+			return
+		}
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// DeleteRegionLink godoc
+// @Summary      Delete region link (admin only)
+// @Description  Returns deleted region link id
+// @Tags         Region Link
+// @Produce      json
+// @Param        id path string true "Region Link ID"
+// @Success      200  {object}  worldpb.IDResponse "Region link deleted"
+// @Failure      400  {object}  dto.ErrorResponse "1 - invalid id"
+// @Failure      404  "Region link not found"
+// @Failure      500  "Internal server error"
+// @Router       /region-link/{id} [delete]
+func (h *WorldHandler) DeleteRegionLink(c *gin.Context) {
+	regionLinkID := c.Param("id")
+	if regionLinkID == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	response, err := h.worldClient.DeleteRegionLink(ctx, &worldpb.DeleteRegionLinkRequest{Id: regionLinkID})
+	if err != nil {
+		if errors.Is(err, customerrors.ErrRegionLinkNotFound) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// DeleteAirport godoc
+// @Summary      Delete airport (admin only)
+// @Description  Returns deleted airport id
+// @Tags         Airport
+// @Produce      json
+// @Param        id path string true "Airport ID"
+// @Success      200  {object}  worldpb.IDResponse "Airport deleted"
+// @Failure      400  {object}  dto.ErrorResponse "1 - invalid id"
+// @Failure      404  "Airport not found"
+// @Failure      500  "Internal server error"
+// @Router       /airport/{id} [delete]
+func (h *WorldHandler) DeleteAirport(c *gin.Context) {
+	airportID := c.Param("id")
+	if airportID == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	response, err := h.worldClient.DeleteAirport(ctx, &worldpb.DeleteAirportRequest{Id: airportID})
+	if err != nil {
+		if errors.Is(err, customerrors.ErrAirportNotFound) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}

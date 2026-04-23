@@ -511,6 +511,110 @@ var _ interface {
 	ErrorName() string
 } = ListCountriesResponseValidationError{}
 
+// Validate checks the field values on DeleteCountryRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *DeleteCountryRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on DeleteCountryRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// DeleteCountryRequestMultiError, or nil if none found.
+func (m *DeleteCountryRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *DeleteCountryRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Id
+
+	if len(errors) > 0 {
+		return DeleteCountryRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// DeleteCountryRequestMultiError is an error wrapping multiple validation
+// errors returned by DeleteCountryRequest.ValidateAll() if the designated
+// constraints aren't met.
+type DeleteCountryRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m DeleteCountryRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m DeleteCountryRequestMultiError) AllErrors() []error { return m }
+
+// DeleteCountryRequestValidationError is the validation error returned by
+// DeleteCountryRequest.Validate if the designated constraints aren't met.
+type DeleteCountryRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e DeleteCountryRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e DeleteCountryRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e DeleteCountryRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e DeleteCountryRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e DeleteCountryRequestValidationError) ErrorName() string {
+	return "DeleteCountryRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e DeleteCountryRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sDeleteCountryRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = DeleteCountryRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = DeleteCountryRequestValidationError{}
+
 // Validate checks the field values on CreateRegionRequest with the rules
 // defined in the proto definition for this message. If any rules are
 // violated, the first error encountered is returned, or nil if there are no violations.
@@ -989,6 +1093,110 @@ var _ interface {
 	ErrorName() string
 } = ListRegionsResponseValidationError{}
 
+// Validate checks the field values on DeleteRegionRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *DeleteRegionRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on DeleteRegionRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// DeleteRegionRequestMultiError, or nil if none found.
+func (m *DeleteRegionRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *DeleteRegionRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Id
+
+	if len(errors) > 0 {
+		return DeleteRegionRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// DeleteRegionRequestMultiError is an error wrapping multiple validation
+// errors returned by DeleteRegionRequest.ValidateAll() if the designated
+// constraints aren't met.
+type DeleteRegionRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m DeleteRegionRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m DeleteRegionRequestMultiError) AllErrors() []error { return m }
+
+// DeleteRegionRequestValidationError is the validation error returned by
+// DeleteRegionRequest.Validate if the designated constraints aren't met.
+type DeleteRegionRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e DeleteRegionRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e DeleteRegionRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e DeleteRegionRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e DeleteRegionRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e DeleteRegionRequestValidationError) ErrorName() string {
+	return "DeleteRegionRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e DeleteRegionRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sDeleteRegionRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = DeleteRegionRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = DeleteRegionRequestValidationError{}
+
 // Validate checks the field values on CreateRegionLinkRequest with the rules
 // defined in the proto definition for this message. If any rules are
 // violated, the first error encountered is returned, or nil if there are no violations.
@@ -1451,6 +1659,110 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = ListRegionLinksResponseValidationError{}
+
+// Validate checks the field values on DeleteRegionLinkRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *DeleteRegionLinkRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on DeleteRegionLinkRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// DeleteRegionLinkRequestMultiError, or nil if none found.
+func (m *DeleteRegionLinkRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *DeleteRegionLinkRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Id
+
+	if len(errors) > 0 {
+		return DeleteRegionLinkRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// DeleteRegionLinkRequestMultiError is an error wrapping multiple validation
+// errors returned by DeleteRegionLinkRequest.ValidateAll() if the designated
+// constraints aren't met.
+type DeleteRegionLinkRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m DeleteRegionLinkRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m DeleteRegionLinkRequestMultiError) AllErrors() []error { return m }
+
+// DeleteRegionLinkRequestValidationError is the validation error returned by
+// DeleteRegionLinkRequest.Validate if the designated constraints aren't met.
+type DeleteRegionLinkRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e DeleteRegionLinkRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e DeleteRegionLinkRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e DeleteRegionLinkRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e DeleteRegionLinkRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e DeleteRegionLinkRequestValidationError) ErrorName() string {
+	return "DeleteRegionLinkRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e DeleteRegionLinkRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sDeleteRegionLinkRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = DeleteRegionLinkRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = DeleteRegionLinkRequestValidationError{}
 
 // Validate checks the field values on CreateAirportRequest with the rules
 // defined in the proto definition for this message. If any rules are
@@ -1985,6 +2297,110 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = ListAirportsResponseValidationError{}
+
+// Validate checks the field values on DeleteAirportRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *DeleteAirportRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on DeleteAirportRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// DeleteAirportRequestMultiError, or nil if none found.
+func (m *DeleteAirportRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *DeleteAirportRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Id
+
+	if len(errors) > 0 {
+		return DeleteAirportRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// DeleteAirportRequestMultiError is an error wrapping multiple validation
+// errors returned by DeleteAirportRequest.ValidateAll() if the designated
+// constraints aren't met.
+type DeleteAirportRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m DeleteAirportRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m DeleteAirportRequestMultiError) AllErrors() []error { return m }
+
+// DeleteAirportRequestValidationError is the validation error returned by
+// DeleteAirportRequest.Validate if the designated constraints aren't met.
+type DeleteAirportRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e DeleteAirportRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e DeleteAirportRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e DeleteAirportRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e DeleteAirportRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e DeleteAirportRequestValidationError) ErrorName() string {
+	return "DeleteAirportRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e DeleteAirportRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sDeleteAirportRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = DeleteAirportRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = DeleteAirportRequestValidationError{}
 
 // Validate checks the field values on IDResponse with the rules defined in the
 // proto definition for this message. If any rules are violated, the first

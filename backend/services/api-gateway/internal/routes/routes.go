@@ -37,15 +37,19 @@ func SetupRoutes(authClient *grpcclient.AuthClient, worldClient *grpcclient.Worl
 			{
 				adminOnly.POST("/country", worldHandler.CreateCountry)
 				adminOnly.GET("/countries", worldHandler.ListCountries)
+				adminOnly.DELETE("/country/:id", worldHandler.DeleteCountry)
 
 				adminOnly.POST("/region", worldHandler.CreateRegion)
 				adminOnly.GET("/regions", worldHandler.ListRegions)
+				adminOnly.DELETE("/region/:id", worldHandler.DeleteRegion)
 
 				adminOnly.POST("/region-link", worldHandler.CreateRegionLink)
 				adminOnly.GET("/region-links", worldHandler.ListRegionLinks)
+				adminOnly.DELETE("/region-link/:id", worldHandler.DeleteRegionLink)
 
 				adminOnly.POST("/airport", worldHandler.CreateAirport)
 				adminOnly.GET("/airports", worldHandler.ListAirports)
+				adminOnly.DELETE("/airport/:id", worldHandler.DeleteAirport)
 			}
 		}
 	}

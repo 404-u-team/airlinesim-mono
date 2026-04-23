@@ -11,6 +11,7 @@ import (
 type RegionRepository interface {
 	CreateRegion(ctx context.Context, payload *worldpb.CreateRegionRequest) (uuid.UUID, error)
 	ListRegions(ctx context.Context) ([]*worldpb.Region, error)
+	DeleteRegion(ctx context.Context, id uuid.UUID) (bool, error)
 }
 
 type regionRepository struct {
@@ -89,4 +90,13 @@ func (r *regionRepository) ListRegions(ctx context.Context) ([]*worldpb.Region, 
 	}
 
 	return regions, nil
+}
+
+func (r *regionRepository) DeleteRegion(ctx context.Context, id uuid.UUID) (bool, error) {
+	result, err := r.pool.Exec(ctx, `DELETE FROM region WHERE id=$1`, id)
+	if err != nil {
+		return false, err
+	}
+
+	return result.RowsAffected() > 0, nil
 }

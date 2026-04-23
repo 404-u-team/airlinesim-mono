@@ -11,6 +11,7 @@ import (
 type AirportRepository interface {
 	CreateAirport(ctx context.Context, payload *worldpb.CreateAirportRequest) (uuid.UUID, error)
 	ListAirports(ctx context.Context) ([]*worldpb.Airport, error)
+	DeleteAirport(ctx context.Context, id uuid.UUID) (bool, error)
 }
 
 type airportRepository struct {
@@ -149,4 +150,13 @@ func (r *airportRepository) ListAirports(ctx context.Context) ([]*worldpb.Airpor
 	}
 
 	return airports, nil
+}
+
+func (r *airportRepository) DeleteAirport(ctx context.Context, id uuid.UUID) (bool, error) {
+	result, err := r.pool.Exec(ctx, `DELETE FROM airport WHERE id=$1`, id)
+	if err != nil {
+		return false, err
+	}
+
+	return result.RowsAffected() > 0, nil
 }

@@ -11,6 +11,7 @@ import (
 type CountryRepository interface {
 	CreateCountry(ctx context.Context, payload *worldpb.CreateCountryRequest) (uuid.UUID, error)
 	ListCountries(ctx context.Context) ([]*worldpb.Country, error)
+	DeleteCountry(ctx context.Context, id uuid.UUID) (bool, error)
 }
 
 type countryRepository struct {
@@ -89,4 +90,13 @@ func (r *countryRepository) ListCountries(ctx context.Context) ([]*worldpb.Count
 	}
 
 	return countries, nil
+}
+
+func (r *countryRepository) DeleteCountry(ctx context.Context, id uuid.UUID) (bool, error) {
+	result, err := r.pool.Exec(ctx, `DELETE FROM country WHERE id=$1`, id)
+	if err != nil {
+		return false, err
+	}
+
+	return result.RowsAffected() > 0, nil
 }
