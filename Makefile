@@ -5,8 +5,10 @@ SWAGGER_CMD := swag init -g main.go --dir ./,../../internal/handlers,../../inter
 .PHONY: swagger compose-up up
 
 swagger:
-	cd $(GATEWAY_DIR) && $(SWAGGER_CMD) && cd ../../../../.. && git add $(GATEWAY_DIR)/docs/* && git commit -m "Autogenerate swagger docs"
+	cd $(GATEWAY_DIR) && $(SWAGGER_CMD)
 
+swagger-commit:
+		git add $(GATEWAY_DIR)/docs/* && git commit -m "Autogenerate swagger docs"
 compose-up:
 	docker compose -f $(COMPOSE_FILE) up --build
 
@@ -15,4 +17,4 @@ github-push:
 
 up: swagger compose-up
 
-swagger-and-push: swagger github-push
+swagger-and-push: swagger swagger-commit github-push

@@ -6,6 +6,7 @@ RUN apk add --no-cache ca-certificates
 
 COPY backend/services/auth-service/go.mod backend/services/auth-service/go.sum ./
 COPY backend/shared/contracts/proto/auth/go.mod backend/shared/contracts/proto/auth/go.sum /src/backend/shared/contracts/proto/auth/
+COPY backend/shared/customerrors/go.mod backend/shared/customerrors/go.sum /src/backend/shared/customerrors/
 
 RUN --mount=type=cache,target=/go/pkg/mod \
 	--mount=type=cache,target=/root/.cache/go-build \
@@ -13,6 +14,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 COPY backend/services/auth-service/ ./
 COPY backend/shared/contracts/proto/auth/ /src/backend/shared/contracts/proto/auth/
+COPY backend/shared/customerrors/ /src/backend/shared/customerrors/
 
 RUN --mount=type=cache,target=/go/pkg/mod \
 	--mount=type=cache,target=/root/.cache/go-build \
