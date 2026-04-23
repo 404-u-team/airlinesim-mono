@@ -36,10 +36,16 @@ func SetupRoutes(authClient *grpcclient.AuthClient, worldClient *grpcclient.Worl
 			adminOnly.Use(middleware.AuthMiddleware(config.JWTPublicKey, authClient), middleware.AdminMiddleware())
 			{
 				adminOnly.POST("/country", worldHandler.CreateCountry)
+				adminOnly.GET("/countries", worldHandler.ListCountries)
 
 				adminOnly.POST("/region", worldHandler.CreateRegion)
+				adminOnly.GET("/regions", worldHandler.ListRegions)
 
 				adminOnly.POST("/region-link", worldHandler.CreateRegionLink)
+				adminOnly.GET("/region-links", worldHandler.ListRegionLinks)
+
+				adminOnly.POST("/airport", worldHandler.CreateAirport)
+				adminOnly.GET("/airports", worldHandler.ListAirports)
 			}
 		}
 	}

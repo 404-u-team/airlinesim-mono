@@ -38,14 +38,30 @@ func (c *WorldClient) CreateCountry(ctx context.Context, req *worldpb.CreateCoun
 	return c.client.CreateCountry(ctx, req)
 }
 
+func (c *WorldClient) ListCountries(ctx context.Context) (*worldpb.ListCountriesResponse, error) {
+	return c.client.ListCountries(ctx, &worldpb.ListCountriesRequest{})
+}
+
 func (c *WorldClient) CreateRegion(ctx context.Context, req *worldpb.CreateRegionRequest) (*worldpb.IDResponse, error) {
 	return c.client.CreateRegion(ctx, req)
+}
+
+func (c *WorldClient) ListRegions(ctx context.Context) (*worldpb.ListRegionsResponse, error) {
+	return c.client.ListRegions(ctx, &worldpb.ListRegionsRequest{})
 }
 
 func (c *WorldClient) CreateRegionLink(ctx context.Context, req *worldpb.CreateRegionLinkRequest) (*worldpb.IDResponse, error) {
 	return c.client.CreateRegionLink(ctx, req)
 }
 
+func (c *WorldClient) ListRegionLinks(ctx context.Context) (*worldpb.ListRegionLinksResponse, error) {
+	return c.client.ListRegionLinks(ctx, &worldpb.ListRegionLinksRequest{})
+}
+
 func (c *WorldClient) CreateAirport(ctx context.Context, req *worldpb.CreateAirportRequest) (*worldpb.IDResponse, error) {
 	return c.client.CreateAirport(ctx, req)
+}
+
+func (c *WorldClient) ListAirports(ctx context.Context) (*worldpb.ListAirportsResponse, error) {
+	return c.client.ListAirports(ctx, &worldpb.ListAirportsRequest{})
 }

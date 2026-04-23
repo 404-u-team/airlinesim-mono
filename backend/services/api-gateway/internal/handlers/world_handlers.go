@@ -146,3 +146,131 @@ func (h *WorldHandler) CreateRegionLink(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, IDResponse)
 }
+
+// CreateAirport godoc
+// @Summary      Create Airport (admin only)
+// @Description  Returns
+// @Tags         Airport
+// @Accept       json
+// @Produce      json
+// @Param request body worldpb.CreateAirportRequest true "Airport details"
+// @Success      201  {object}  worldpb.IDResponse "Airport created successfully, id returned"
+// @Failure      400  {object}  dto.ErrorResponse "1 - request validation error, 2 - country with such country_id dont exists, 3 - region with such region_id dont exists"
+// @Failure      409  "Airport with such ICAO/IATA already exists"
+// @Failure      500  "Internal server error"
+// @Router       /airport [post]
+func (h *WorldHandler) CreateAirport(c *gin.Context) {
+	var payload worldpb.CreateAirportRequest
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		log.Println("got error when tried to parse, ", err)
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	IDResponse, err := h.worldClient.CreateAirport(ctx, &payload)
+	if err != nil {
+		if errors.Is(err, customerrors.ErrNoSuchCountry) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 2})
+			return
+		}
+		if errors.Is(err, customerrors.ErrNoSuchRegion) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 3})
+			return
+		}
+		if errors.Is(err, customerrors.ErrAirportIcaoConflict) || errors.Is(err, customerrors.ErrAirportIataConflict) {
+			c.Status(http.StatusConflict)
+			return
+		}
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusCreated, IDResponse)
+}
+
+// ListCountries godoc
+// @Summary      List countries
+// @Description  Returns all countries
+// @Tags         Country
+// @Produce      json
+// @Success      200  {object}  worldpb.ListCountriesResponse "Countries list"
+// @Failure      500  "Internal server error"
+// @Router       /countries [get]
+func (h *WorldHandler) ListCountries(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	response, err := h.worldClient.ListCountries(ctx)
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// ListRegions godoc
+// @Summary      List regions
+// @Description  Returns all regions
+// @Tags         Region
+// @Produce      json
+// @Success      200  {object}  worldpb.ListRegionsResponse "Regions list"
+// @Failure      500  "Internal server error"
+// @Router       /regions [get]
+func (h *WorldHandler) ListRegions(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	response, err := h.worldClient.ListRegions(ctx)
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// ListRegionLinks godoc
+// @Summary      List region links
+// @Description  Returns all region links
+// @Tags         Region Link
+// @Produce      json
+// @Success      200  {object}  worldpb.ListRegionLinksResponse "Region links list"
+// @Failure      500  "Internal server error"
+// @Router       /region-links [get]
+func (h *WorldHandler) ListRegionLinks(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	response, err := h.worldClient.ListRegionLinks(ctx)
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// ListAirports godoc
+// @Summary      List airports
+// @Description  Returns all airports
+// @Tags         Airport
+// @Produce      json
+// @Success      200  {object}  worldpb.ListAirportsResponse "Airports list"
+// @Failure      500  "Internal server error"
+// @Router       /airports [get]
+func (h *WorldHandler) ListAirports(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	response, err := h.worldClient.ListAirports(ctx)
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}

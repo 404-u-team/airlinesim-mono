@@ -10,6 +10,7 @@ import (
 
 type RegionRepository interface {
 	CreateRegion(ctx context.Context, payload *worldpb.CreateRegionRequest) (uuid.UUID, error)
+	ListRegions(ctx context.Context) ([]*worldpb.Region, error)
 }
 
 type regionRepository struct {
@@ -37,4 +38,55 @@ func (r *regionRepository) CreateRegion(ctx context.Context, payload *worldpb.Cr
 		payload.WikipediaLink).Scan(&regionID)
 
 	return regionID, err
+}
+
+func (r *regionRepository) ListRegions(ctx context.Context) ([]*worldpb.Region, error) {
+	query := `
+		SELECT
+			id::text,
+			local_code,
+			local_name,
+			intl_name,
+			country_id::text,
+			COALESCE(population, 0),
+			COALESCE(gdp_per_capita, 0),
+			COALESCE(tourism_score, 0),
+			COALESCE(business_score, 0),
+			COALESCE(wikipedia_link, '')
+		FROM region
+		ORDER BY local_name
+	`
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	regions := make([]*worldpb.Region, 0)
+	for rows.Next() {
+		var region worldpb.Region
+		if err := rows.Scan(
+			&region.Id,
+			&region.LocalCode,
+			&region.LocalName,
+			&region.IntlName,
+			&region.CountryId,
+			&region.Population,
+			&region.GdpPerCapita,
+			&region.TourismScore,
+			&region.BusinessScore,
+			&region.WikipediaLink,
+		); err != nil {
+			return nil, err
+		}
+
+		regions = append(regions, &region)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return regions, nil
 }

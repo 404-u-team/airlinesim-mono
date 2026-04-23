@@ -17,14 +17,26 @@ service WorldService {
   // create country, returns id of newly created country
   rpc CreateCountry(CreateCountryRequest) returns (IDResponse);
 
+  // list countries
+  rpc ListCountries(ListCountriesRequest) returns (ListCountriesResponse);
+
   // create region, returns id of newly created region
   rpc CreateRegion(CreateRegionRequest) returns (IDResponse);
+
+  // list regions
+  rpc ListRegions(ListRegionsRequest) returns (ListRegionsResponse);
 
   // create region link, returns id of newly created region link
   rpc CreateRegionLink(CreateRegionLinkRequest) returns (IDResponse);
 
+  // list region links
+  rpc ListRegionLinks(ListRegionLinksRequest) returns (ListRegionLinksResponse);
+
   // create airport, returns id of newly created airport
   rpc CreateAirport(CreateAirportRequest) returns (IDResponse);
+
+  // list airports
+  rpc ListAirports(ListAirportsRequest) returns (ListAirportsResponse);
 }
 
 // TODO: add validation
@@ -41,6 +53,26 @@ message CreateCountryRequest {
   string wikipedia_link = 9;
 }
 
+message ListCountriesRequest {}
+
+message Country {
+  string id = 1;
+  string iso = 2;
+  string local_name = 3;
+  string intl_name = 4;
+  double flythrough_permission_price = 5;
+  double land_permission_price = 6;
+  double corp_tax_rate = 7;
+  double vat_rate = 8;
+  string aircraft_tail_code = 9;
+  string wikipedia_link = 10;
+}
+
+message ListCountriesResponse {
+  repeated Country countries = 1;
+}
+
+// request to create region
 message CreateRegionRequest {
   string id = 1;
   string local_code = 2;
@@ -54,6 +86,26 @@ message CreateRegionRequest {
   string wikipedia_link = 10;
 }
 
+message ListRegionsRequest {}
+
+message Region {
+  string id = 1;
+  string local_code = 2;
+  string local_name = 3;
+  string intl_name = 4;
+  string country_id = 5;
+  double population = 6;
+  double gdp_per_capita = 7;
+  double tourism_score = 8;
+  double business_score = 9;
+  string wikipedia_link = 10;
+}
+
+message ListRegionsResponse {
+  repeated Region regions = 1;
+}
+
+// request to create region link
 message CreateRegionLinkRequest {
   string id = 1;
   string region_a = 2;
@@ -63,6 +115,22 @@ message CreateRegionLinkRequest {
   double tourism = 6;
 }
 
+message ListRegionLinksRequest {}
+
+message RegionLink {
+  string id = 1;
+  string region_a = 2;
+  string region_b = 3;
+  double diaspora = 4;
+  double business = 5;
+  double tourism = 6;
+}
+
+message ListRegionLinksResponse {
+  repeated RegionLink region_links = 1;
+}
+
+// request to create airport
 message CreateAirportRequest {
   string id = 1;
   string icao_code = 2;
@@ -90,6 +158,40 @@ message CreateAirportRequest {
   string geom = 24;
 }
 
+message ListAirportsRequest {}
+
+message Airport {
+  string id = 1;
+  string icao_code = 2;
+  string iata_code = 3;
+  string local_name = 4;
+  string intl_name = 5;
+  string timezone = 6;
+  string country_id = 7;
+  string region_id = 8;
+  string municipality = 9;
+  string continent = 10;
+  double elevation_ft = 11;
+  double max_runway_length_m = 12;
+  bool works_at_night = 13;
+  double max_runway_uses_per_day = 14;
+  double turnaround_point_price = 15;
+  double maintenance_point_price = 16;
+  double runway_fee = 17;
+  double gate_fee = 18;
+  double stand_fee = 19;
+  double fuel_price_multiplier = 20;
+  string home_link = 21;
+  string wikipedia_link = 22;
+  string geog = 23;
+  string geom = 24;
+}
+
+message ListAirportsResponse {
+  repeated Airport airports = 1;
+}
+
+// id of created instance response
 message IDResponse {
   string id = 1;
 }

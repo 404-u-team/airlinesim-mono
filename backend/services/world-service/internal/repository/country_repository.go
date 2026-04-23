@@ -10,6 +10,7 @@ import (
 
 type CountryRepository interface {
 	CreateCountry(ctx context.Context, payload *worldpb.CreateCountryRequest) (uuid.UUID, error)
+	ListCountries(ctx context.Context) ([]*worldpb.Country, error)
 }
 
 type countryRepository struct {
@@ -37,4 +38,55 @@ func (r *countryRepository) CreateCountry(ctx context.Context, payload *worldpb.
 		payload.WikipediaLink).Scan(&countryID)
 
 	return countryID, err
+}
+
+func (r *countryRepository) ListCountries(ctx context.Context) ([]*worldpb.Country, error) {
+	query := `
+		SELECT
+			id::text,
+			iso,
+			local_name,
+			intl_name,
+			COALESCE(flythrough_permission_price, 0),
+			COALESCE(land_permission_price, 0),
+			COALESCE(corp_tax_rate, 0),
+			COALESCE(vat_rate, 0),
+			COALESCE(aircraft_tail_code, ''),
+			COALESCE(wikipedia_link, '')
+		FROM country
+		ORDER BY local_name
+	`
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	countries := make([]*worldpb.Country, 0)
+	for rows.Next() {
+		var country worldpb.Country
+		if err := rows.Scan(
+			&country.Id,
+			&country.Iso,
+			&country.LocalName,
+			&country.IntlName,
+			&country.FlythroughPermissionPrice,
+			&country.LandPermissionPrice,
+			&country.CorpTaxRate,
+			&country.VatRate,
+			&country.AircraftTailCode,
+			&country.WikipediaLink,
+		); err != nil {
+			return nil, err
+		}
+
+		countries = append(countries, &country)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return countries, nil
 }

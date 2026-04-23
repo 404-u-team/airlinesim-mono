@@ -19,3 +19,6 @@ var ErrNoSuchCountry = status.Error(codes.InvalidArgument, "country with such id
 
 var ErrRegionLinkConflict = status.Error(codes.AlreadyExists, "region link with such combination of regions exists")
 var ErrNoSuchRegion = status.Error(codes.InvalidArgument, "no such region exists")
+
+var ErrAirportIcaoConflict = status.Error(codes.AlreadyExists, "icao taken")
+var ErrAirportIataConflict = status.Error(codes.AlreadyExists, "iata taken")

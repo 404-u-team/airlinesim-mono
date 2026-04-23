@@ -13,6 +13,7 @@ import (
 
 type CountryService interface {
 	CreateCountry(ctx context.Context, payload *worldpb.CreateCountryRequest) (*worldpb.IDResponse, error)
+	ListCountries(ctx context.Context) (*worldpb.ListCountriesResponse, error)
 }
 
 type countryService struct {
@@ -36,4 +37,14 @@ func (s *countryService) CreateCountry(ctx context.Context, payload *worldpb.Cre
 
 	IDResponse := &worldpb.IDResponse{Id: countryID.String()}
 	return IDResponse, nil
+}
+
+func (s *countryService) ListCountries(ctx context.Context) (*worldpb.ListCountriesResponse, error) {
+	countries, err := s.countryRepo.ListCountries(ctx)
+	if err != nil {
+		log.Println("got error in list countries repo, ", err)
+		return nil, customerrors.ErrInternal
+	}
+
+	return &worldpb.ListCountriesResponse{Countries: countries}, nil
 }

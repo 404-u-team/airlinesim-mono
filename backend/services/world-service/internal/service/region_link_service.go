@@ -13,6 +13,7 @@ import (
 
 type RegionLinkService interface {
 	CreateRegionLink(ctx context.Context, payload *worldpb.CreateRegionLinkRequest) (*worldpb.IDResponse, error)
+	ListRegionLinks(ctx context.Context) (*worldpb.ListRegionLinksResponse, error)
 }
 
 type regionLinkService struct {
@@ -42,4 +43,14 @@ func (s *regionLinkService) CreateRegionLink(ctx context.Context, payload *world
 
 	IDResponse := &worldpb.IDResponse{Id: regionLinkID.String()}
 	return IDResponse, nil
+}
+
+func (s *regionLinkService) ListRegionLinks(ctx context.Context) (*worldpb.ListRegionLinksResponse, error) {
+	regionLinks, err := s.regionLinkRepo.ListRegionLinks(ctx)
+	if err != nil {
+		log.Println("got error in list region links repo, ", err)
+		return nil, customerrors.ErrInternal
+	}
+
+	return &worldpb.ListRegionLinksResponse{RegionLinks: regionLinks}, nil
 }
