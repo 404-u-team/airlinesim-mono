@@ -46,7 +46,7 @@ definitions:
     - nickname
     - password
     type: object
-  worldpb.Airport:
+  operationspb.Airport:
     properties:
       continent:
         type: string
@@ -97,7 +97,7 @@ definitions:
       works_at_night:
         type: boolean
     type: object
-  worldpb.ChangeAirportRequest:
+  operationspb.ChangeAirportRequest:
     properties:
       continent:
         type: string
@@ -148,7 +148,7 @@ definitions:
       works_at_night:
         type: boolean
     type: object
-  worldpb.ChangeCountryRequest:
+  operationspb.ChangeCountryRequest:
     properties:
       aircraft_tail_code:
         type: string
@@ -171,7 +171,7 @@ definitions:
       wikipedia_link:
         type: string
     type: object
-  worldpb.ChangeRegionLinkRequest:
+  operationspb.ChangeRegionLinkRequest:
     properties:
       business:
         type: number
@@ -186,7 +186,7 @@ definitions:
       tourism:
         type: number
     type: object
-  worldpb.ChangeRegionRequest:
+  operationspb.ChangeRegionRequest:
     properties:
       business_score:
         type: number
@@ -209,7 +209,7 @@ definitions:
       wikipedia_link:
         type: string
     type: object
-  worldpb.Country:
+  operationspb.Country:
     properties:
       aircraft_tail_code:
         type: string
@@ -232,7 +232,7 @@ definitions:
       wikipedia_link:
         type: string
     type: object
-  worldpb.CreateAirportRequest:
+  operationspb.CreateAirportRequest:
     properties:
       continent:
         type: string
@@ -283,7 +283,7 @@ definitions:
       works_at_night:
         type: boolean
     type: object
-  worldpb.CreateCountryRequest:
+  operationspb.CreateCountryRequest:
     properties:
       aircraft_tail_code:
         type: string
@@ -304,7 +304,7 @@ definitions:
       wikipedia_link:
         type: string
     type: object
-  worldpb.CreateRegionLinkRequest:
+  operationspb.CreateRegionLinkRequest:
     properties:
       business:
         type: number
@@ -319,7 +319,7 @@ definitions:
       tourism:
         type: number
     type: object
-  worldpb.CreateRegionRequest:
+  operationspb.CreateRegionRequest:
     properties:
       business_score:
         type: number
@@ -342,40 +342,40 @@ definitions:
       wikipedia_link:
         type: string
     type: object
-  worldpb.IDResponse:
+  operationspb.IDResponse:
     properties:
       id:
         type: string
     type: object
-  worldpb.ListAirportsResponse:
+  operationspb.ListAirportsResponse:
     properties:
       airports:
         items:
-          $ref: '#/definitions/worldpb.Airport'
+          $ref: '#/definitions/operationspb.Airport'
         type: array
     type: object
-  worldpb.ListCountriesResponse:
+  operationspb.ListCountriesResponse:
     properties:
       countries:
         items:
-          $ref: '#/definitions/worldpb.Country'
+          $ref: '#/definitions/operationspb.Country'
         type: array
     type: object
-  worldpb.ListRegionLinksResponse:
+  operationspb.ListRegionLinksResponse:
     properties:
       region_links:
         items:
-          $ref: '#/definitions/worldpb.RegionLink'
+          $ref: '#/definitions/operationspb.RegionLink'
         type: array
     type: object
-  worldpb.ListRegionsResponse:
+  operationspb.ListRegionsResponse:
     properties:
       regions:
         items:
-          $ref: '#/definitions/worldpb.Region'
+          $ref: '#/definitions/operationspb.Region'
         type: array
     type: object
-  worldpb.Region:
+  operationspb.Region:
     properties:
       business_score:
         type: number
@@ -398,7 +398,7 @@ definitions:
       wikipedia_link:
         type: string
     type: object
-  worldpb.RegionLink:
+  operationspb.RegionLink:
     properties:
       business:
         type: number
@@ -433,19 +433,23 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/worldpb.CreateAirportRequest'
+          $ref: '#/definitions/operationspb.CreateAirportRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Airport created successfully, id returned
           schema:
-            $ref: '#/definitions/worldpb.IDResponse'
+            $ref: '#/definitions/operationspb.IDResponse'
         "400":
           description: 1 - request validation error, 2 - country with such country_id
             dont exists, 3 - region with such region_id dont exists
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
         "409":
           description: Airport with such ICAO/IATA already exists
         "500":
@@ -468,11 +472,15 @@ paths:
         "200":
           description: Airport deleted
           schema:
-            $ref: '#/definitions/worldpb.IDResponse'
+            $ref: '#/definitions/operationspb.IDResponse'
         "400":
           description: 1 - invalid id
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
         "404":
           description: Airport not found
         "500":
@@ -495,19 +503,23 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/worldpb.ChangeAirportRequest'
+          $ref: '#/definitions/operationspb.ChangeAirportRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Airport patched successfully
           schema:
-            $ref: '#/definitions/worldpb.IDResponse'
+            $ref: '#/definitions/operationspb.IDResponse'
         "400":
           description: 1 - request validation error, 2 - country not found, 3 - region
             not found
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
         "404":
           description: Airport not found
         "409":
@@ -526,7 +538,11 @@ paths:
         "200":
           description: Airports list
           schema:
-            $ref: '#/definitions/worldpb.ListAirportsResponse'
+            $ref: '#/definitions/operationspb.ListAirportsResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
         "500":
           description: Internal server error
       summary: List airports
@@ -615,7 +631,11 @@ paths:
         "200":
           description: Countries list
           schema:
-            $ref: '#/definitions/worldpb.ListCountriesResponse'
+            $ref: '#/definitions/operationspb.ListCountriesResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
         "500":
           description: Internal server error
       summary: List countries
@@ -632,18 +652,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/worldpb.CreateCountryRequest'
+          $ref: '#/definitions/operationspb.CreateCountryRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Country created successfully, id returned
           schema:
-            $ref: '#/definitions/worldpb.IDResponse'
+            $ref: '#/definitions/operationspb.IDResponse'
         "400":
           description: 1 - request validation error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
         "409":
           description: Country with such ISO already exists
         "500":
@@ -666,11 +690,15 @@ paths:
         "200":
           description: Country deleted
           schema:
-            $ref: '#/definitions/worldpb.IDResponse'
+            $ref: '#/definitions/operationspb.IDResponse'
         "400":
           description: 1 - invalid id
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
         "404":
           description: Country not found
         "409":
@@ -695,18 +723,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/worldpb.ChangeCountryRequest'
+          $ref: '#/definitions/operationspb.ChangeCountryRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Country patched successfully
           schema:
-            $ref: '#/definitions/worldpb.IDResponse'
+            $ref: '#/definitions/operationspb.IDResponse'
         "400":
           description: 1 - request validation error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
         "404":
           description: Country not found
         "409":
@@ -727,7 +759,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/worldpb.CreateRegionRequest'
+          $ref: '#/definitions/operationspb.CreateRegionRequest'
       produces:
       - application/json
       responses:
@@ -740,6 +772,10 @@ paths:
             dont exists
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
         "409":
           description: Region with such local code already exists
         "500":
@@ -758,19 +794,23 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/worldpb.CreateRegionLinkRequest'
+          $ref: '#/definitions/operationspb.CreateRegionLinkRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Region Link created successfully, id returned
           schema:
-            $ref: '#/definitions/worldpb.IDResponse'
+            $ref: '#/definitions/operationspb.IDResponse'
         "400":
           description: 1 - request validation error, 2 - region with such region_id
             dont exists
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
         "409":
           description: Region Link with such regions already exists
         "500":
@@ -793,11 +833,15 @@ paths:
         "200":
           description: Region link deleted
           schema:
-            $ref: '#/definitions/worldpb.IDResponse'
+            $ref: '#/definitions/operationspb.IDResponse'
         "400":
           description: 1 - invalid id
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
         "404":
           description: Region link not found
         "500":
@@ -820,18 +864,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/worldpb.ChangeRegionLinkRequest'
+          $ref: '#/definitions/operationspb.ChangeRegionLinkRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Region link patched successfully
           schema:
-            $ref: '#/definitions/worldpb.IDResponse'
+            $ref: '#/definitions/operationspb.IDResponse'
         "400":
           description: 1 - request validation error, 2 - region not found
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
         "404":
           description: Region link not found
         "409":
@@ -850,7 +898,11 @@ paths:
         "200":
           description: Region links list
           schema:
-            $ref: '#/definitions/worldpb.ListRegionLinksResponse'
+            $ref: '#/definitions/operationspb.ListRegionLinksResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
         "500":
           description: Internal server error
       summary: List region links
@@ -871,11 +923,15 @@ paths:
         "200":
           description: Region deleted
           schema:
-            $ref: '#/definitions/worldpb.IDResponse'
+            $ref: '#/definitions/operationspb.IDResponse'
         "400":
           description: 1 - invalid id
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
         "404":
           description: Region not found
         "409":
@@ -900,18 +956,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/worldpb.ChangeRegionRequest'
+          $ref: '#/definitions/operationspb.ChangeRegionRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Region patched successfully
           schema:
-            $ref: '#/definitions/worldpb.IDResponse'
+            $ref: '#/definitions/operationspb.IDResponse'
         "400":
           description: 1 - request validation error, 2 - country not found
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
         "404":
           description: Region not found
         "409":
@@ -930,7 +990,11 @@ paths:
         "200":
           description: Regions list
           schema:
-            $ref: '#/definitions/worldpb.ListRegionsResponse'
+            $ref: '#/definitions/operationspb.ListRegionsResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
         "500":
           description: Internal server error
       summary: List regions

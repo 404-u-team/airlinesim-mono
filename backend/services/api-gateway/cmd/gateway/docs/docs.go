@@ -39,7 +39,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/worldpb.CreateAirportRequest"
+                            "$ref": "#/definitions/operationspb.CreateAirportRequest"
                         }
                     }
                 ],
@@ -47,7 +47,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Airport created successfully, id returned",
                         "schema": {
-                            "$ref": "#/definitions/worldpb.IDResponse"
+                            "$ref": "#/definitions/operationspb.IDResponse"
                         }
                     },
                     "400": {
@@ -55,6 +55,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "409": {
                         "description": "Airport with such ICAO/IATA already exists"
@@ -92,7 +98,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/worldpb.ChangeAirportRequest"
+                            "$ref": "#/definitions/operationspb.ChangeAirportRequest"
                         }
                     }
                 ],
@@ -100,7 +106,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Airport patched successfully",
                         "schema": {
-                            "$ref": "#/definitions/worldpb.IDResponse"
+                            "$ref": "#/definitions/operationspb.IDResponse"
                         }
                     },
                     "400": {
@@ -108,6 +114,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "404": {
                         "description": "Airport not found"
@@ -142,7 +154,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Airport deleted",
                         "schema": {
-                            "$ref": "#/definitions/worldpb.IDResponse"
+                            "$ref": "#/definitions/operationspb.IDResponse"
                         }
                     },
                     "400": {
@@ -150,6 +162,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "404": {
                         "description": "Airport not found"
@@ -174,8 +192,14 @@ const docTemplate = `{
                     "200": {
                         "description": "Airports list",
                         "schema": {
-                            "$ref": "#/definitions/worldpb.ListAirportsResponse"
+                            "$ref": "#/definitions/operationspb.ListAirportsResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "500": {
                         "description": "Internal server error"
@@ -309,8 +333,14 @@ const docTemplate = `{
                     "200": {
                         "description": "Countries list",
                         "schema": {
-                            "$ref": "#/definitions/worldpb.ListCountriesResponse"
+                            "$ref": "#/definitions/operationspb.ListCountriesResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "500": {
                         "description": "Internal server error"
@@ -338,7 +368,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/worldpb.CreateCountryRequest"
+                            "$ref": "#/definitions/operationspb.CreateCountryRequest"
                         }
                     }
                 ],
@@ -346,7 +376,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Country created successfully, id returned",
                         "schema": {
-                            "$ref": "#/definitions/worldpb.IDResponse"
+                            "$ref": "#/definitions/operationspb.IDResponse"
                         }
                     },
                     "400": {
@@ -354,6 +384,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "409": {
                         "description": "Country with such ISO already exists"
@@ -391,7 +427,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/worldpb.ChangeCountryRequest"
+                            "$ref": "#/definitions/operationspb.ChangeCountryRequest"
                         }
                     }
                 ],
@@ -399,7 +435,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Country patched successfully",
                         "schema": {
-                            "$ref": "#/definitions/worldpb.IDResponse"
+                            "$ref": "#/definitions/operationspb.IDResponse"
                         }
                     },
                     "400": {
@@ -407,6 +443,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "404": {
                         "description": "Country not found"
@@ -441,7 +483,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Country deleted",
                         "schema": {
-                            "$ref": "#/definitions/worldpb.IDResponse"
+                            "$ref": "#/definitions/operationspb.IDResponse"
                         }
                     },
                     "400": {
@@ -449,6 +491,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "404": {
                         "description": "Country not found"
@@ -482,7 +530,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/worldpb.CreateRegionRequest"
+                            "$ref": "#/definitions/operationspb.CreateRegionRequest"
                         }
                     }
                 ],
@@ -498,6 +546,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "409": {
                         "description": "Region with such local code already exists"
@@ -528,7 +582,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/worldpb.CreateRegionLinkRequest"
+                            "$ref": "#/definitions/operationspb.CreateRegionLinkRequest"
                         }
                     }
                 ],
@@ -536,7 +590,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Region Link created successfully, id returned",
                         "schema": {
-                            "$ref": "#/definitions/worldpb.IDResponse"
+                            "$ref": "#/definitions/operationspb.IDResponse"
                         }
                     },
                     "400": {
@@ -544,6 +598,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "409": {
                         "description": "Region Link with such regions already exists"
@@ -581,7 +641,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/worldpb.ChangeRegionLinkRequest"
+                            "$ref": "#/definitions/operationspb.ChangeRegionLinkRequest"
                         }
                     }
                 ],
@@ -589,7 +649,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Region link patched successfully",
                         "schema": {
-                            "$ref": "#/definitions/worldpb.IDResponse"
+                            "$ref": "#/definitions/operationspb.IDResponse"
                         }
                     },
                     "400": {
@@ -597,6 +657,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "404": {
                         "description": "Region link not found"
@@ -631,7 +697,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Region link deleted",
                         "schema": {
-                            "$ref": "#/definitions/worldpb.IDResponse"
+                            "$ref": "#/definitions/operationspb.IDResponse"
                         }
                     },
                     "400": {
@@ -639,6 +705,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "404": {
                         "description": "Region link not found"
@@ -663,8 +735,14 @@ const docTemplate = `{
                     "200": {
                         "description": "Region links list",
                         "schema": {
-                            "$ref": "#/definitions/worldpb.ListRegionLinksResponse"
+                            "$ref": "#/definitions/operationspb.ListRegionLinksResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "500": {
                         "description": "Internal server error"
@@ -699,7 +777,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/worldpb.ChangeRegionRequest"
+                            "$ref": "#/definitions/operationspb.ChangeRegionRequest"
                         }
                     }
                 ],
@@ -707,7 +785,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Region patched successfully",
                         "schema": {
-                            "$ref": "#/definitions/worldpb.IDResponse"
+                            "$ref": "#/definitions/operationspb.IDResponse"
                         }
                     },
                     "400": {
@@ -715,6 +793,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "404": {
                         "description": "Region not found"
@@ -749,7 +833,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Region deleted",
                         "schema": {
-                            "$ref": "#/definitions/worldpb.IDResponse"
+                            "$ref": "#/definitions/operationspb.IDResponse"
                         }
                     },
                     "400": {
@@ -757,6 +841,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "404": {
                         "description": "Region not found"
@@ -784,8 +874,14 @@ const docTemplate = `{
                     "200": {
                         "description": "Regions list",
                         "schema": {
-                            "$ref": "#/definitions/worldpb.ListRegionsResponse"
+                            "$ref": "#/definitions/operationspb.ListRegionsResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     },
                     "500": {
                         "description": "Internal server error"
@@ -862,7 +958,7 @@ const docTemplate = `{
                 }
             }
         },
-        "worldpb.Airport": {
+        "operationspb.Airport": {
             "type": "object",
             "properties": {
                 "continent": {
@@ -939,7 +1035,7 @@ const docTemplate = `{
                 }
             }
         },
-        "worldpb.ChangeAirportRequest": {
+        "operationspb.ChangeAirportRequest": {
             "type": "object",
             "properties": {
                 "continent": {
@@ -1016,7 +1112,7 @@ const docTemplate = `{
                 }
             }
         },
-        "worldpb.ChangeCountryRequest": {
+        "operationspb.ChangeCountryRequest": {
             "type": "object",
             "properties": {
                 "aircraft_tail_code": {
@@ -1051,7 +1147,7 @@ const docTemplate = `{
                 }
             }
         },
-        "worldpb.ChangeRegionLinkRequest": {
+        "operationspb.ChangeRegionLinkRequest": {
             "type": "object",
             "properties": {
                 "business": {
@@ -1074,7 +1170,7 @@ const docTemplate = `{
                 }
             }
         },
-        "worldpb.ChangeRegionRequest": {
+        "operationspb.ChangeRegionRequest": {
             "type": "object",
             "properties": {
                 "business_score": {
@@ -1109,7 +1205,7 @@ const docTemplate = `{
                 }
             }
         },
-        "worldpb.Country": {
+        "operationspb.Country": {
             "type": "object",
             "properties": {
                 "aircraft_tail_code": {
@@ -1144,7 +1240,7 @@ const docTemplate = `{
                 }
             }
         },
-        "worldpb.CreateAirportRequest": {
+        "operationspb.CreateAirportRequest": {
             "type": "object",
             "properties": {
                 "continent": {
@@ -1221,7 +1317,7 @@ const docTemplate = `{
                 }
             }
         },
-        "worldpb.CreateCountryRequest": {
+        "operationspb.CreateCountryRequest": {
             "type": "object",
             "properties": {
                 "aircraft_tail_code": {
@@ -1253,7 +1349,7 @@ const docTemplate = `{
                 }
             }
         },
-        "worldpb.CreateRegionLinkRequest": {
+        "operationspb.CreateRegionLinkRequest": {
             "type": "object",
             "properties": {
                 "business": {
@@ -1276,7 +1372,7 @@ const docTemplate = `{
                 }
             }
         },
-        "worldpb.CreateRegionRequest": {
+        "operationspb.CreateRegionRequest": {
             "type": "object",
             "properties": {
                 "business_score": {
@@ -1311,7 +1407,7 @@ const docTemplate = `{
                 }
             }
         },
-        "worldpb.IDResponse": {
+        "operationspb.IDResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -1319,51 +1415,51 @@ const docTemplate = `{
                 }
             }
         },
-        "worldpb.ListAirportsResponse": {
+        "operationspb.ListAirportsResponse": {
             "type": "object",
             "properties": {
                 "airports": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/worldpb.Airport"
+                        "$ref": "#/definitions/operationspb.Airport"
                     }
                 }
             }
         },
-        "worldpb.ListCountriesResponse": {
+        "operationspb.ListCountriesResponse": {
             "type": "object",
             "properties": {
                 "countries": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/worldpb.Country"
+                        "$ref": "#/definitions/operationspb.Country"
                     }
                 }
             }
         },
-        "worldpb.ListRegionLinksResponse": {
+        "operationspb.ListRegionLinksResponse": {
             "type": "object",
             "properties": {
                 "region_links": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/worldpb.RegionLink"
+                        "$ref": "#/definitions/operationspb.RegionLink"
                     }
                 }
             }
         },
-        "worldpb.ListRegionsResponse": {
+        "operationspb.ListRegionsResponse": {
             "type": "object",
             "properties": {
                 "regions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/worldpb.Region"
+                        "$ref": "#/definitions/operationspb.Region"
                     }
                 }
             }
         },
-        "worldpb.Region": {
+        "operationspb.Region": {
             "type": "object",
             "properties": {
                 "business_score": {
@@ -1398,7 +1494,7 @@ const docTemplate = `{
                 }
             }
         },
-        "worldpb.RegionLink": {
+        "operationspb.RegionLink": {
             "type": "object",
             "properties": {
                 "business": {

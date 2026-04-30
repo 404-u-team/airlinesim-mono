@@ -1,12 +1,11 @@
 # --- Build stage ---
 FROM golang:1.26.2-alpine AS build
 
-WORKDIR /src/backend/services/api-gateway
+WORKDIR /src/backend/services/operations-service
 
 RUN apk add --no-cache ca-certificates
 
-COPY backend/services/api-gateway/go.mod backend/services/api-gateway/go.sum ./
-COPY backend/shared/contracts/proto/auth/go.mod backend/shared/contracts/proto/auth/go.sum /src/backend/shared/contracts/proto/auth/
+COPY backend/services/operations-service/go.mod backend/services/operations-service/go.sum ./
 COPY backend/shared/contracts/proto/operations/go.mod backend/shared/contracts/proto/operations/go.sum /src/backend/shared/contracts/proto/operations/
 COPY backend/shared/customerrors/go.mod backend/shared/customerrors/go.sum /src/backend/shared/customerrors/
 
@@ -15,15 +14,14 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 	--mount=type=cache,target=/root/.cache/go-build \
 	go mod download
 
-COPY backend/services/api-gateway/ ./
-COPY backend/shared/contracts/proto/auth/ /src/backend/shared/contracts/proto/auth/
+COPY backend/services/operations-service/ ./
 COPY backend/shared/contracts/proto/operations/ /src/backend/shared/contracts/proto/operations/
 COPY backend/shared/customerrors/ /src/backend/shared/customerrors/
 
 # building runtime file
 RUN --mount=type=cache,target=/go/pkg/mod \
 	--mount=type=cache,target=/root/.cache/go-build \
-	CGO_ENABLED=0 GOOS=linux go build -o /out/api-gateway ./cmd/gateway
+	CGO_ENABLED=0 GOOS=linux go build -o /out/operations-service ./cmd/server
 
 
 # --- Runtime stage ---
@@ -35,15 +33,16 @@ RUN apk add --no-cache ca-certificates \
 
 WORKDIR /app
 
-COPY --from=build /out/api-gateway ./api-gateway
-COPY --chown=appuser:appgroup backend/services/api-gateway/internal/config/public_key.pem ./public_key.pem
+COPY --from=build /out/operations-service ./operations-service
+COPY --chown=appuser:appgroup backend/services/operations-service/internal/config/public_key.pem ./public_key.pem
+COPY --chown=appuser:appgroup backend/services/operations-service/internal/db/migrations ./migrations
 
 # setting user rights and folder mode
-RUN chmod 755 /app/api-gateway \
+RUN chmod 755 /app/operations-service \
 	&& chown -R appuser:appgroup /app
 
 EXPOSE 8080
 
 USER appuser
 
-ENTRYPOINT ["/app/api-gateway"]
+ENTRYPOINT ["/app/operations-service"]

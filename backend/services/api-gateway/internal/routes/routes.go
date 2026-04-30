@@ -12,11 +12,11 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func SetupRoutes(authClient *grpcclient.AuthClient, worldClient *grpcclient.WorldClient, config *config.Config) *gin.Engine {
+func SetupRoutes(authClient *grpcclient.AuthClient, operationsClient *grpcclient.OperationsClient, config *config.Config) *gin.Engine {
 	router := gin.Default()
 
 	authHandler := handlers.NewAuthHandler(authClient, config)
-	worldHandler := handlers.NewWorldHandler(worldClient, config) // maybe config is extra
+	operationsHandler := handlers.NewOperationsHandler(operationsClient, config) // maybe config is extra
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -35,25 +35,25 @@ func SetupRoutes(authClient *grpcclient.AuthClient, worldClient *grpcclient.Worl
 			adminOnly := api.Group("")
 			adminOnly.Use(middleware.AuthMiddleware(config.JWTPublicKey, authClient), middleware.AdminMiddleware())
 			{
-				adminOnly.POST("/country", worldHandler.CreateCountry)
-				adminOnly.PUT("/country/:id", worldHandler.ChangeCountry)
-				adminOnly.GET("/countries", worldHandler.ListCountries)
-				adminOnly.DELETE("/country/:id", worldHandler.DeleteCountry)
+				adminOnly.POST("/country", operationsHandler.CreateCountry)
+				adminOnly.PUT("/country/:id", operationsHandler.ChangeCountry)
+				adminOnly.GET("/countries", operationsHandler.ListCountries)
+				adminOnly.DELETE("/country/:id", operationsHandler.DeleteCountry)
 
-				adminOnly.POST("/region", worldHandler.CreateRegion)
-				adminOnly.PUT("/region/:id", worldHandler.ChangeRegion)
-				adminOnly.GET("/regions", worldHandler.ListRegions)
-				adminOnly.DELETE("/region/:id", worldHandler.DeleteRegion)
+				adminOnly.POST("/region", operationsHandler.CreateRegion)
+				adminOnly.PUT("/region/:id", operationsHandler.ChangeRegion)
+				adminOnly.GET("/regions", operationsHandler.ListRegions)
+				adminOnly.DELETE("/region/:id", operationsHandler.DeleteRegion)
 
-				adminOnly.POST("/region-link", worldHandler.CreateRegionLink)
-				adminOnly.PUT("/region-link/:id", worldHandler.ChangeRegionLink)
-				adminOnly.GET("/region-links", worldHandler.ListRegionLinks)
-				adminOnly.DELETE("/region-link/:id", worldHandler.DeleteRegionLink)
+				adminOnly.POST("/region-link", operationsHandler.CreateRegionLink)
+				adminOnly.PUT("/region-link/:id", operationsHandler.ChangeRegionLink)
+				adminOnly.GET("/region-links", operationsHandler.ListRegionLinks)
+				adminOnly.DELETE("/region-link/:id", operationsHandler.DeleteRegionLink)
 
-				adminOnly.POST("/airport", worldHandler.CreateAirport)
-				adminOnly.PUT("/airport/:id", worldHandler.ChangeAirport)
-				adminOnly.GET("/airports", worldHandler.ListAirports)
-				adminOnly.DELETE("/airport/:id", worldHandler.DeleteAirport)
+				adminOnly.POST("/airport", operationsHandler.CreateAirport)
+				adminOnly.PUT("/airport/:id", operationsHandler.ChangeAirport)
+				adminOnly.GET("/airports", operationsHandler.ListAirports)
+				adminOnly.DELETE("/airport/:id", operationsHandler.DeleteAirport)
 			}
 		}
 	}

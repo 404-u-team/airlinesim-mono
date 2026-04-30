@@ -1,6 +1,6 @@
 COMPOSE_FILE := backend/infrustructure/docker/docker-compose.yaml
 GATEWAY_DIR := backend/services/api-gateway/cmd/gateway
-SWAGGER_CMD := swag init -g main.go --dir ./,../../internal/handlers,../../internal/dto,../../../../shared/contracts/proto/world
+SWAGGER_CMD := swag init -g main.go --dir ./,../../internal/handlers,../../internal/dto,../../../../shared/contracts/proto/operations
 
 .PHONY: swagger compose-up up
 

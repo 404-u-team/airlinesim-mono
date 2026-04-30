@@ -19,7 +19,7 @@ flowchart LR
         direction TB
         AUTH["Auth Service"]
         AIRLINE["Airline Service<br>самолёты, маршруты, персонал"]
-        WORLD["World Service<br>аэропорты, география"]
+        WORLD["Operations Service<br>аэропорты, география"]
         GAME["Game Service (Simulation Core)<br>tick loop, спрос, экономика"]
         IMPORT["Import Service<br>Импортирует данные из api и wiki и посылает ImportRequested. Потом ждет событие ImportSucceded и отправляет ответ"]
         

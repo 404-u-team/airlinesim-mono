@@ -30,11 +30,11 @@ func main() {
 	}
 	defer authClient.Close()
 
-	// create gRPC client for world service communication
-	worldClient, err := grpcclient.NewWorldClient("world-service:50051")
+	// create gRPC client for operations service communication
+	operationsClient, err := grpcclient.NewOperationsClient("operations-service:50051")
 
 	// setup HTTP server
-	router := routes.SetupRoutes(authClient, worldClient, &config)
+	router := routes.SetupRoutes(authClient, operationsClient, &config)
 
 	log.Println("Server starting on :8080")
 	if err := http.ListenAndServe(":8080", router); err != nil {
