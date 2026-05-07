@@ -1,9 +1,9 @@
 -- +goose Up
 CREATE TABLE airlines (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_id UUID NOT NULL,
+    owner_id UUID NOT NULL UNIQUE,
     starting_airport_id UUID NOT NULL,
-    name TEXT NOT NULL,
+    name TEXT NOT NULL UNIQUE,
     iata_code CHAR(2) NOT NULL UNIQUE CHECK (LENGTH(iata_code) = 2),
     icao_code CHAR(3) NOT NULL UNIQUE CHECK (LENGTH(icao_code) = 3),
     balance NUMERIC(20,2) NOT NULL DEFAULT 1000000,
