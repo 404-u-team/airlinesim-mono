@@ -21,7 +21,7 @@ type AuthService interface {
 	Register(ctx context.Context, payload *authpb.RegisterRequest, config *config.Config) (*authpb.TokenResponse, error)
 	Login(ctx context.Context, payload *authpb.LoginRequest, config *config.Config) (*authpb.TokenResponse, error)
 	RefreshToken(ctx context.Context, payload *authpb.RefreshTokenRequest, config *config.Config) (*authpb.TokenResponse, error)
-	VerifyToken(ctx context.Context, payload *authpb.VerifyTokenRequest, config *config.Config) (*authpb.VerifyTokenResponse, error)
+	VerifyToken(ctx context.Context, payload *authpb.VerifyTokenRequest, config *config.Config) (*authpb.VerifyResponse, error)
 }
 
 type authService struct {
@@ -127,17 +127,17 @@ func (s *authService) RefreshToken(ctx context.Context, payload *authpb.RefreshT
 	return tokenResponse, nil
 }
 
-func (s *authService) VerifyToken(ctx context.Context, payload *authpb.VerifyTokenRequest, config *config.Config) (*authpb.VerifyTokenResponse, error) {
+func (s *authService) VerifyToken(ctx context.Context, payload *authpb.VerifyTokenRequest, config *config.Config) (*authpb.VerifyResponse, error) {
 	_, _, err := auth.VerifyToken(payload.AccessToken, config.JWTPublicKey)
 	if err != nil {
 		if errors.Is(err, customerrors.ErrUserUnauthenticated) {
-			return &authpb.VerifyTokenResponse{Valid: false}, nil
+			return &authpb.VerifyResponse{Valid: false}, nil
 		}
 		log.Println("got error when tried to verify token, ", err)
 		return nil, customerrors.ErrInternal
 	}
 
-	return &authpb.VerifyTokenResponse{Valid: true}, nil
+	return &authpb.VerifyResponse{Valid: true}, nil
 }
 
 // create token response using userID and role

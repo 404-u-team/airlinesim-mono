@@ -1,4 +1,4 @@
-package grpc
+package grpcserver
 
 import (
 	"context"
@@ -13,7 +13,7 @@ type mockAuthService struct {
 	register     func(context.Context, *authpb.RegisterRequest, *config.Config) (*authpb.TokenResponse, error)
 	login        func(context.Context, *authpb.LoginRequest, *config.Config) (*authpb.TokenResponse, error)
 	refreshToken func(context.Context, *authpb.RefreshTokenRequest, *config.Config) (*authpb.TokenResponse, error)
-	verifyToken  func(context.Context, *authpb.VerifyTokenRequest, *config.Config) (*authpb.VerifyTokenResponse, error)
+	verifyToken  func(context.Context, *authpb.VerifyTokenRequest, *config.Config) (*authpb.VerifyResponse, error)
 }
 
 func (m *mockAuthService) Register(ctx context.Context, payload *authpb.RegisterRequest, config *config.Config) (*authpb.TokenResponse, error) {
@@ -28,7 +28,7 @@ func (m *mockAuthService) RefreshToken(ctx context.Context, payload *authpb.Refr
 	return m.refreshToken(ctx, payload, config)
 }
 
-func (m *mockAuthService) VerifyToken(ctx context.Context, payload *authpb.VerifyTokenRequest, config *config.Config) (*authpb.VerifyTokenResponse, error) {
+func (m *mockAuthService) VerifyToken(ctx context.Context, payload *authpb.VerifyTokenRequest, config *config.Config) (*authpb.VerifyResponse, error) {
 	return m.verifyToken(ctx, payload, config)
 }
 

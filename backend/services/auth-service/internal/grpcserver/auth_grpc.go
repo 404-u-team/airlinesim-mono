@@ -1,4 +1,4 @@
-package grpc
+package grpcserver
 
 import (
 	"context"
@@ -46,7 +46,7 @@ func (s *authServer) RefreshToken(ctx context.Context, payload *authpb.RefreshTo
 	return tokenResponse, nil
 }
 
-func (s *authServer) VerifyToken(ctx context.Context, payload *authpb.VerifyTokenRequest) (*authpb.VerifyTokenResponse, error) {
+func (s *authServer) VerifyToken(ctx context.Context, payload *authpb.VerifyTokenRequest) (*authpb.VerifyResponse, error) {
 	verifyTokenResponse, err := s.authService.VerifyToken(ctx, payload, s.config)
 	if err != nil {
 		return nil, err
