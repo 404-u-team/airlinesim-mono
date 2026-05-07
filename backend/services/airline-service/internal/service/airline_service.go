@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/404-u-team/airlinesim-mono/backend/airline-service/internal/config"
-	grpcclient "github.com/404-u-team/airlinesim-mono/backend/airline-service/internal/grpc"
+	"github.com/404-u-team/airlinesim-mono/backend/airline-service/internal/grpcclient"
 	"github.com/404-u-team/airlinesim-mono/backend/airline-service/internal/repository"
 	"github.com/404-u-team/airlinesim-mono/backend/airline-service/internal/utils"
 	airlinepb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/airline/v1"
@@ -15,21 +15,22 @@ import (
 )
 
 type AirlineService interface {
+	CreateAirline(ctx context.Context, payload *airlinepb.CreateAirlineRequest) (*airlinepb.CreateAirlineResponse, error)
 }
 
 type airlineService struct {
-	config          config.Config
+	config          *config.Config
 	airlineRepo     repository.AirlineRepository
 	airportViewRepo repository.AirportViewRepository
 	authClient      grpcclient.AuthClient
 }
 
 func NewAirlineService(
-	config config.Config, airlineRepo repository.AirlineRepository, airportViewRepo repository.AirportViewRepository,
+	config *config.Config, airlineRepo repository.AirlineRepository, airportViewRepo repository.AirportViewRepository,
 	authClient grpcclient.AuthClient,
 ) AirlineService {
 
-	return airlineService{
+	return &airlineService{
 		config: config, airlineRepo: airlineRepo,
 		airportViewRepo: airportViewRepo,
 		authClient:      authClient,

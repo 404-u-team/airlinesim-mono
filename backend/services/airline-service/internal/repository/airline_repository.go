@@ -17,7 +17,7 @@ type airlineRepository struct {
 	pool db.DBConn
 }
 
-func NewAirportRepository(pool db.DBConn) AirlineRepository {
+func NewAirlineRepository(pool db.DBConn) AirlineRepository {
 	return &airlineRepository{pool: pool}
 }
 
