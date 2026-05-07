@@ -7,6 +7,8 @@ import (
 )
 
 func CurrentGameTime(config *config.Config) time.Time {
-	currentGameTimeUnix := (time.Now().Unix()-config.StartRealTime)*config.TimeMultiplier + config.StartGameTime
-	return time.Unix(currentGameTimeUnix, 0)
+	elapsedRealSeconds := time.Now().Unix() - config.StartRealTime
+	elapsedGameSeconds := elapsedRealSeconds * config.TimeMultiplier
+	gameUnixSeconds := config.StartGameTime + elapsedGameSeconds
+	return time.Unix(gameUnixSeconds, 0)
 }
