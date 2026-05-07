@@ -23,10 +23,10 @@ var ErrNoSuchRegion = status.Error(codes.InvalidArgument, "no such region exists
 var ErrCountryNotFound = status.Error(codes.NotFound, "country is not found")
 var ErrRegionNotFound = status.Error(codes.NotFound, "region is not found")
 var ErrRegionLinkNotFound = status.Error(codes.NotFound, "region link is not found")
-var ErrAirportNotFound = status.Error(codes.NotFound, "airport is not found")
 
 var ErrCountryHasDependencies = status.Error(codes.FailedPrecondition, "country has dependent regions")
 var ErrRegionHasDependencies = status.Error(codes.FailedPrecondition, "region has dependent relations")
 
+var ErrAirportNotFound = status.Error(codes.NotFound, "airport is not found")
 var ErrAirportIcaoConflict = status.Error(codes.AlreadyExists, "icao taken")
 var ErrAirportIataConflict = status.Error(codes.AlreadyExists, "iata taken")
