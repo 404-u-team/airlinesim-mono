@@ -28,5 +28,10 @@ var ErrCountryHasDependencies = status.Error(codes.FailedPrecondition, "country 
 var ErrRegionHasDependencies = status.Error(codes.FailedPrecondition, "region has dependent relations")
 
 var ErrAirportNotFound = status.Error(codes.NotFound, "airport is not found")
-var ErrAirportIcaoConflict = status.Error(codes.AlreadyExists, "icao taken")
-var ErrAirportIataConflict = status.Error(codes.AlreadyExists, "iata taken")
+var ErrAirportIcaoConflict = status.Error(codes.AlreadyExists, "icao taken by airport")
+var ErrAirportIataConflict = status.Error(codes.AlreadyExists, "iata taken by airport")
+
+var ErrAirlineNameConflict = status.Error(codes.AlreadyExists, "airline with such name exists")
+var ErrAirlineWithSuchOwnerExists = status.Error(codes.AlreadyExists, "airline by such user exists")
+var ErrAirlineIataConflict = status.Error(codes.AlreadyExists, "iata taken by airline")
+var ErrAirlineIcaoConflict = status.Error(codes.AlreadyExists, "icao taken by airline")
