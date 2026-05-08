@@ -11,6 +11,4 @@ CREATE TABLE airport_view (
 
 
 -- +goose Down
-DROP TABLE IF EXISTS user_view;
-
 DROP TABLE IF EXISTS airport_view;
