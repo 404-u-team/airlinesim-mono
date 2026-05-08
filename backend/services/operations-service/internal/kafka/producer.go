@@ -19,7 +19,6 @@ type FranzProducer struct {
 func NewProducer(brokers []string) (*FranzProducer, error) {
 	client, err := kgo.NewClient(
 		kgo.SeedBrokers(brokers...),
-		kgo.AllowAutoTopicCreation(),
 	)
 	if err != nil {
 		return nil, err

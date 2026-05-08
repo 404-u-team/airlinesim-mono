@@ -7,6 +7,7 @@ import (
 	"github.com/404-u-team/airlinesim-mono/backend/operations-service/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/operations-service/internal/db"
 	operationsgrpc "github.com/404-u-team/airlinesim-mono/backend/operations-service/internal/grpc"
+	"github.com/404-u-team/airlinesim-mono/backend/operations-service/internal/kafka"
 	"github.com/404-u-team/airlinesim-mono/backend/operations-service/internal/repository"
 	"github.com/404-u-team/airlinesim-mono/backend/operations-service/internal/service"
 	operationspb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/operations/v1"
@@ -28,12 +29,13 @@ func main() {
 	}
 
 	// setup Kafka producer
-	// producer, err := kafka.NewProducer(config.KafkaBrokers)
-	// if err != nil {
-	// 	log.Fatalf("got error during Kafka producer initializing, %v", err)
-	// }
-	// defer producer.Close()
+	producer, err := kafka.NewProducer(config.KafkaBrokers)
+	if err != nil {
+		log.Fatalf("got error during Kafka producer initializing, %v", err)
+	}
+	defer producer.Close()
 
+	// setup repositories, services
 	countryRepo := repository.NewCountryRepository(pool)
 	regionRepo := repository.NewRegionRepository(pool)
 	regionLinkRepo := repository.NewRegionLinkRepository(pool)
@@ -42,12 +44,11 @@ func main() {
 	countryService := service.NewCountryService(countryRepo)
 	regionService := service.NewRegionService(regionRepo)
 	regionLinkService := service.NewRegionLinkService(regionLinkRepo)
-	airportService := service.NewAirportService(airportRepo)
+	airportService := service.NewAirportService(airportRepo, producer)
 
+	// create grpc server and run it
 	operationsServer := operationsgrpc.NewOperationsServer(countryService, regionService, regionLinkService, airportService)
-
 	grpcServer := grpc.NewServer()
-
 	operationspb.RegisterOperationsServiceServer(grpcServer, operationsServer)
 
 	log.Print("The Operations gRPC server is listening on :50051")

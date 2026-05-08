@@ -1,6 +1,6 @@
 package kafka
 
 const (
-	TopicImportDataReceived = "import_data_received"
-	TopicGameImportStatus   = "game_import_status"
+	TopicOperationsAirportCreated = "operations_airport_created"
+	TopicOperationsAirportDeleted = "operations_airports_deleted"
 )

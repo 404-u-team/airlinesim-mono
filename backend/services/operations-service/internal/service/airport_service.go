@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 
+	"github.com/404-u-team/airlinesim-mono/backend/operations-service/internal/kafka"
 	"github.com/404-u-team/airlinesim-mono/backend/operations-service/internal/repository"
 	operationspb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/operations/v1"
 	"github.com/404-u-team/airlinesim-mono/backend/shared/customerrors"
@@ -20,14 +22,16 @@ type AirportService interface {
 }
 
 type airportService struct {
-	airportRepo repository.AirportRepository
+	airportRepo   repository.AirportRepository
+	kafkaProducer kafka.Producer
 }
 
-func NewAirportService(airportRepo repository.AirportRepository) AirportService {
-	return &airportService{airportRepo: airportRepo}
+func NewAirportService(airportRepo repository.AirportRepository, kafkaProducer kafka.Producer) AirportService {
+	return &airportService{airportRepo: airportRepo, kafkaProducer: kafkaProducer}
 }
 
 func (s *airportService) CreateAirport(ctx context.Context, payload *operationspb.CreateAirportRequest) (*operationspb.IDResponse, error) {
+	// create airport
 	airportID, err := s.airportRepo.CreateAirport(ctx, payload)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -52,6 +56,18 @@ func (s *airportService) CreateAirport(ctx context.Context, payload *operationsp
 		}
 		log.Println("got error in create airport repo, ", err)
 		return nil, customerrors.ErrInternal
+	}
+
+	// send event "airport created"
+	topic := kafka.TopicOperationsAirportCreated
+	key, err := airportID.MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("got error when tried to marshal binary airportID")
+	}
+
+	err = s.kafkaProducer.Send(ctx, topic, key, nil)
+	if err != nil {
+		return nil, fmt.Errorf("got error when tried to send airport created event: %w", err)
 	}
 
 	return &operationspb.IDResponse{Id: airportID.String()}, nil
@@ -111,6 +127,18 @@ func (s *airportService) DeleteAirport(ctx context.Context, id string) (*operati
 	}
 	if !deleted {
 		return nil, customerrors.ErrAirportNotFound
+	}
+
+	// send event "airport deleted"
+	topic := kafka.TopicOperationsAirportDeleted
+	key, err := airportID.MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("got error when tried to marshal binary airportID")
+	}
+
+	err = s.kafkaProducer.Send(ctx, topic, key, nil)
+	if err != nil {
+		return nil, fmt.Errorf("got error when tried to send airport deleted event: %w", err)
 	}
 
 	return &operationspb.IDResponse{Id: airportID.String()}, nil
