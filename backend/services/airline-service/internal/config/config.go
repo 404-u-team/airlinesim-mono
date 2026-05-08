@@ -5,12 +5,14 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/lpernett/godotenv"
 )
 
 type Config struct {
 	PostgresConnString string
+	KafkaBrokers       []string
 
 	StartRealTime  int64
 	StartGameTime  int64
@@ -34,10 +36,10 @@ func InitConfig() Config {
 
 	return Config{
 		PostgresConnString: postgresConnString,
-
-		StartRealTime:  getEnvAsInt("START_REAL_TIME", 1777971530),
-		StartGameTime:  getEnvAsInt("START_GAME_TIME", 1777971530),
-		TimeMultiplier: getEnvAsInt("TIME_MULTIPLIER", 15),
+		KafkaBrokers:       getEnvAsStrings("KAFKA_BROKERS"),
+		StartRealTime:      getEnvAsInt("START_REAL_TIME", 1777971530),
+		StartGameTime:      getEnvAsInt("START_GAME_TIME", 1777971530),
+		TimeMultiplier:     getEnvAsInt("TIME_MULTIPLIER", 15),
 	}
 }
 
@@ -62,4 +64,13 @@ func getEnvAsInt(key string, fallback int64) int64 {
 
 	log.Printf("cant find env by key: %v, using: %v", key, fallback)
 	return fallback
+}
+
+func getEnvAsStrings(key string) []string {
+	if value, ok := os.LookupEnv(key); ok {
+		return strings.Split(value, ",")
+	}
+
+	log.Printf("cant find env as strings by key: %v, using: nil", key)
+	return nil
 }
