@@ -1,13 +1,17 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
+	"os/signal"
+	"syscall"
 
 	"github.com/404-u-team/airlinesim-mono/backend/airline-service/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/airline-service/internal/db"
 	"github.com/404-u-team/airlinesim-mono/backend/airline-service/internal/grpcclient"
 	"github.com/404-u-team/airlinesim-mono/backend/airline-service/internal/grpcserver"
+	"github.com/404-u-team/airlinesim-mono/backend/airline-service/internal/kafka"
 	"github.com/404-u-team/airlinesim-mono/backend/airline-service/internal/repository"
 	"github.com/404-u-team/airlinesim-mono/backend/airline-service/internal/service"
 	airlinepb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/airline/v1"
@@ -34,6 +38,31 @@ func main() {
 	// create repositories, services and other basic stuff
 	airlineRepo := repository.NewAirlineRepository(pool)
 	airportViewRepo := repository.NewAirportViewRepository(pool)
+
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	// create kafka consumer and run it
+	handlers := kafka.HandlerMap{
+		"operations_airport_created": kafka.NewAirportCreatedHandler(airportViewRepo),
+		"operations_airport_deleted": kafka.NewAirportDeletedHandler(airportViewRepo),
+	}
+	consumer, err := kafka.NewConsumer(
+		config.KafkaBrokers,
+		"airline-service-group",
+		[]string{"operations_airport_created"},
+		handlers,
+	)
+	if err != nil {
+		log.Fatalf("got error during Kafka consumer initializing, %v", err)
+	}
+	defer consumer.Close()
+
+	go func() {
+		if err := consumer.Run(ctx); err != nil && err != context.Canceled {
+			log.Fatalf("got error while running consumer, %v", err)
+		}
+	}()
 
 	airlineService := service.NewAirlineService(&config, airlineRepo, airportViewRepo, *authClient)
 
