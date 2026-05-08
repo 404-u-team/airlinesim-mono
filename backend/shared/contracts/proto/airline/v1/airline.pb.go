@@ -29,7 +29,6 @@ type CreateAirlineRequest struct {
 	Name              string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	IataCode          string                 `protobuf:"bytes,4,opt,name=iata_code,json=iataCode,proto3" json:"iata_code,omitempty"`
 	IcaoCode          string                 `protobuf:"bytes,5,opt,name=icao_code,json=icaoCode,proto3" json:"icao_code,omitempty"`
-	Balance           string                 `protobuf:"bytes,6,opt,name=balance,proto3" json:"balance,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -99,18 +98,11 @@ func (x *CreateAirlineRequest) GetIcaoCode() string {
 	return ""
 }
 
-func (x *CreateAirlineRequest) GetBalance() string {
-	if x != nil {
-		return x.Balance
-	}
-	return ""
-}
-
 // response with id and balance of created entity
 type CreateAirlineResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Balance       int64                  `protobuf:"varint,2,opt,name=balance,proto3" json:"balance,omitempty"`
+	Balance       float64                `protobuf:"fixed64,2,opt,name=balance,proto3" json:"balance,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -152,7 +144,7 @@ func (x *CreateAirlineResponse) GetId() string {
 	return ""
 }
 
-func (x *CreateAirlineResponse) GetBalance() int64 {
+func (x *CreateAirlineResponse) GetBalance() float64 {
 	if x != nil {
 		return x.Balance
 	}
@@ -163,17 +155,16 @@ var File_airline_proto protoreflect.FileDescriptor
 
 const file_airline_proto_rawDesc = "" +
 	"\n" +
-	"\rairline.proto\x12\aauth.v1\"\xc9\x01\n" +
+	"\rairline.proto\x12\aauth.v1\"\xaf\x01\n" +
 	"\x14CreateAirlineRequest\x12\x19\n" +
 	"\bowner_id\x18\x01 \x01(\tR\aownerId\x12.\n" +
 	"\x13starting_airport_id\x18\x02 \x01(\tR\x11startingAirportId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1b\n" +
 	"\tiata_code\x18\x04 \x01(\tR\biataCode\x12\x1b\n" +
-	"\ticao_code\x18\x05 \x01(\tR\bicaoCode\x12\x18\n" +
-	"\abalance\x18\x06 \x01(\tR\abalance\"A\n" +
+	"\ticao_code\x18\x05 \x01(\tR\bicaoCode\"A\n" +
 	"\x15CreateAirlineResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
-	"\abalance\x18\x02 \x01(\x03R\abalance2`\n" +
+	"\abalance\x18\x02 \x01(\x01R\abalance2`\n" +
 	"\x0eAirlineService\x12N\n" +
 	"\rCreateAirline\x12\x1d.auth.v1.CreateAirlineRequest\x1a\x1e.auth.v1.CreateAirlineResponseB[ZYgithub.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/airline/v1;airlinepbb\x06proto3"
 

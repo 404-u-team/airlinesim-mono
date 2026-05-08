@@ -29,6 +29,6 @@ message CreateAirlineRequest {
 // response with id and balance of created entity
 message CreateAirlineResponse {
     string id = 1;
-    int64 balance = 2;
+    double balance = 2;
 }
 
