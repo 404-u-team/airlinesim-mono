@@ -1,0 +1,53 @@
+package repository
+
+import (
+	"context"
+	"time"
+
+	"github.com/404-u-team/airlinesim-mono/backend/tick-service/internal/db"
+)
+
+type GameStateRepository interface {
+	SetLastProcessed15Min(ctx context.Context, newTime time.Time) error
+	SetLastProcessed1Hour(ctx context.Context, newTime time.Time) error
+}
+
+type gameStateRepository struct {
+	pool db.DBConn
+}
+
+func NewGameStateRepository(pool db.DBConn) GameStateRepository {
+	return &gameStateRepository{pool: pool}
+}
+
+func (r *gameStateRepository) SetLastProcessed15Min(ctx context.Context, newTime time.Time) error {
+	query := `
+		INSERT INTO processing_state (id, last_processed_15_min, last_processed_1_hour)
+		VALUES (1, $1, NULL)
+		ON CONFLICT (id) DO UPDATE
+		SET
+			last_processed_15_min = $1
+	`
+	_, err := r.pool.Exec(ctx, query, newTime)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *gameStateRepository) SetLastProcessed1Hour(ctx context.Context, newTime time.Time) error {
+	query := `
+		INSERT INTO processing_state (id, last_processed_15_min, last_processed_1_hour)
+		VALUES (1, NULL, $1)
+		ON CONFLICT (id) DO UPDATE
+		SET
+			last_processed_1_hour = $1
+	`
+	_, err := r.pool.Exec(ctx, query, newTime)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
