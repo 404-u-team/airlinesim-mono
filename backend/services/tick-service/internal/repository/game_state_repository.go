@@ -20,9 +20,27 @@ func NewGameStateRepository(pool db.DBConn) GameStateRepository {
 	return &gameStateRepository{pool: pool}
 }
 
+// returns last_processed_15_min, last_processed_1_hour and error
+func (r *gameStateRepository) GetState(ctx context.Context) (int64, int64, error) {
+	query := `
+		SELECT last_processed_15_min, last_processed_1_hour
+		FROM game_state
+		WHERE id = 1;
+	`
+
+	var lastProccessed15Min int64
+	var lastProccessed1Hour int64
+	err := r.pool.QueryRow(ctx, query).Scan(&lastProccessed15Min, &lastProccessed1Hour)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return lastProccessed15Min, lastProccessed1Hour, nil
+}
+
 func (r *gameStateRepository) SetLastProcessed15Min(ctx context.Context, newTime time.Time) error {
 	query := `
-		INSERT INTO processing_state (id, last_processed_15_min, last_processed_1_hour)
+		INSERT INTO game_state (id, last_processed_15_min, last_processed_1_hour)
 		VALUES (1, $1, NULL)
 		ON CONFLICT (id) DO UPDATE
 		SET
@@ -38,7 +56,7 @@ func (r *gameStateRepository) SetLastProcessed15Min(ctx context.Context, newTime
 
 func (r *gameStateRepository) SetLastProcessed1Hour(ctx context.Context, newTime time.Time) error {
 	query := `
-		INSERT INTO processing_state (id, last_processed_15_min, last_processed_1_hour)
+		INSERT INTO game_state (id, last_processed_15_min, last_processed_1_hour)
 		VALUES (1, NULL, $1)
 		ON CONFLICT (id) DO UPDATE
 		SET
