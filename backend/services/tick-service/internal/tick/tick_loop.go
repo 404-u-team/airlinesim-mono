@@ -30,17 +30,24 @@ func NewTickLoop(kafkaProducer kafka.Producer, gameStateRepo repository.GameStat
 }
 
 func (tl *tickLoop) Run(ctx context.Context) error {
-	// get initial state of game in db
-	lastProccessed15Min, lastProccessed1Hour, err := tl.gameStateRepo.GetState(ctx)
-	if err != nil && err != pgx.ErrNoRows {
-		return fmt.Errorf("got error when tried to get state from repository, %w", err)
-	}
-	if err == pgx.ErrNoRows {
-		tl.lastProccessed15Min = time.Unix(tl.config.StartGameTime, 0)
-		tl.lastProccessed1Hour = time.Unix(tl.config.StartGameTime, 0)
+	if tl.config.ProduceMissedEvents {
+		// get initial state of game in db
+		lastProccessed15Min, lastProccessed1Hour, err := tl.gameStateRepo.GetState(ctx)
+		if err != nil && err != pgx.ErrNoRows {
+			return fmt.Errorf("got error when tried to get state from repository, %w", err)
+		}
+		if err == pgx.ErrNoRows {
+			tl.lastProccessed15Min = time.Unix(tl.config.StartGameTime, 0)
+			tl.lastProccessed1Hour = time.Unix(tl.config.StartGameTime, 0)
+		} else {
+			tl.lastProccessed15Min = lastProccessed15Min
+			tl.lastProccessed1Hour = lastProccessed1Hour
+		}
 	} else {
-		tl.lastProccessed15Min = lastProccessed15Min
-		tl.lastProccessed1Hour = lastProccessed1Hour
+		// set last processed events to current time,
+		// so no events to produce to catch up missed ones
+		tl.lastProccessed15Min = time.Now()
+		tl.lastProccessed1Hour = time.Now()
 	}
 
 	for {

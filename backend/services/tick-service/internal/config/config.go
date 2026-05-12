@@ -16,9 +16,10 @@ type Config struct {
 	KafkaBrokers         []string
 	KafkaConsumerWorkers int
 
-	StartRealTime  int64
-	StartGameTime  int64
-	TimeMultiplier int64
+	StartRealTime       int64
+	StartGameTime       int64
+	TimeMultiplier      int64
+	ProduceMissedEvents bool
 }
 
 func InitConfig() Config {
@@ -34,11 +35,12 @@ func InitConfig() Config {
 	)
 
 	return Config{
-		PostgresConnString: postgresConnString,
-		KafkaBrokers:       strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
-		StartRealTime:      getEnvAsInt("START_REAL_TIME", 1777971530),
-		StartGameTime:      getEnvAsInt("START_GAME_TIME", 1777971530),
-		TimeMultiplier:     getEnvAsInt("TIME_MULTIPLIER", 15),
+		PostgresConnString:  postgresConnString,
+		KafkaBrokers:        strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
+		StartRealTime:       getEnvAsInt("START_REAL_TIME", 1777971530),
+		StartGameTime:       getEnvAsInt("START_GAME_TIME", 1777971530),
+		TimeMultiplier:      getEnvAsInt("TIME_MULTIPLIER", 15),
+		ProduceMissedEvents: getEnvAsBool("PRODUCE_MISSED_EVENTS", false),
 	}
 }
 
@@ -59,6 +61,18 @@ func getEnvAsInt(key string, fallback int64) int64 {
 		}
 
 		return i
+	}
+
+	log.Printf("cant find env by key: %v, using: %v", key, fallback)
+	return fallback
+}
+
+func getEnvAsBool(key string, fallback bool) bool {
+	if value, ok := os.LookupEnv(key); ok {
+		if strings.ToLower(value) == "true" {
+			return true
+		}
+		return false
 	}
 
 	log.Printf("cant find env by key: %v, using: %v", key, fallback)
