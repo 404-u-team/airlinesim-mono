@@ -56,7 +56,7 @@ func (tl *tickLoop) Run(ctx context.Context) error {
 		// check is enough time elapsed (15 min)
 		if currentGameTime.Sub(tl.lastProccessed15Min) > time.Minute*15 {
 			// send event - elapsed 15 min
-			err := tl.kafkaProducer.Send(ctx, kafka.Topic15Min, nil, nil)
+			err := tl.kafkaProducer.Send(ctx, kafka.TopicTick15MinElapsed, nil, nil)
 			if err != nil {
 				return fmt.Errorf("got error when tried to send event using kafka, %w", err)
 			}
@@ -73,7 +73,7 @@ func (tl *tickLoop) Run(ctx context.Context) error {
 		// check is enough time elapsed (1 hour)
 		if currentGameTime.Sub(tl.lastProccessed1Hour) > time.Hour {
 			// send event - elapsed 1 hour
-			err := tl.kafkaProducer.Send(ctx, kafka.Topic1Hour, nil, nil)
+			err := tl.kafkaProducer.Send(ctx, kafka.TopicTick1HourElapsed, nil, nil)
 			if err != nil {
 				return fmt.Errorf("got error when tried to send event using kafka, %w", err)
 			}
