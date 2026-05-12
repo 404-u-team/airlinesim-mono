@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
 	"log"
+	"os/signal"
+	"syscall"
 
 	"github.com/404-u-team/airlinesim-mono/backend/tick-service/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/tick-service/internal/db"
 	"github.com/404-u-team/airlinesim-mono/backend/tick-service/internal/kafka"
+	"github.com/404-u-team/airlinesim-mono/backend/tick-service/internal/repository"
+	"github.com/404-u-team/airlinesim-mono/backend/tick-service/internal/tick"
 )
 
 func main() {
@@ -25,6 +30,16 @@ func main() {
 	}
 	defer producer.Close()
 
-	// setup repositories, services
+	// setup repositories and other stuff
+	gameStateRepo := repository.NewGameStateRepository(pool)
 
+	tickLoop := tick.NewTickLoop(producer, gameStateRepo, &config)
+
+	// run tick loop
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	if err := tickLoop.Run(ctx); err != nil {
+		log.Println("got error when running tick loop, ", err)
+	}
 }

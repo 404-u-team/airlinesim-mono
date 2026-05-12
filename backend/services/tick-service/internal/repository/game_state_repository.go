@@ -8,6 +8,7 @@ import (
 )
 
 type GameStateRepository interface {
+	GetState(ctx context.Context) (time.Time, time.Time, error)
 	SetLastProcessed15Min(ctx context.Context, newTime time.Time) error
 	SetLastProcessed1Hour(ctx context.Context, newTime time.Time) error
 }
@@ -21,18 +22,18 @@ func NewGameStateRepository(pool db.DBConn) GameStateRepository {
 }
 
 // returns last_processed_15_min, last_processed_1_hour and error
-func (r *gameStateRepository) GetState(ctx context.Context) (int64, int64, error) {
+func (r *gameStateRepository) GetState(ctx context.Context) (time.Time, time.Time, error) {
 	query := `
 		SELECT last_processed_15_min, last_processed_1_hour
 		FROM game_state
 		WHERE id = 1;
 	`
 
-	var lastProccessed15Min int64
-	var lastProccessed1Hour int64
+	var lastProccessed15Min time.Time
+	var lastProccessed1Hour time.Time
 	err := r.pool.QueryRow(ctx, query).Scan(&lastProccessed15Min, &lastProccessed1Hour)
 	if err != nil {
-		return 0, 0, err
+		return time.Time{}, time.Time{}, err
 	}
 
 	return lastProccessed15Min, lastProccessed1Hour, nil
