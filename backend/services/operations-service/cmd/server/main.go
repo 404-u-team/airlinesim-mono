@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
+	"os/signal"
+	"syscall"
 
 	"github.com/404-u-team/airlinesim-mono/backend/operations-service/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/operations-service/internal/db"
@@ -46,6 +49,30 @@ func main() {
 	regionLinkService := service.NewRegionLinkService(regionLinkRepo)
 	airportService := service.NewAirportService(airportRepo, producer)
 
+	// create kafka consumer and run it
+	handlers := kafka.HandlerMap{
+		kafka.TopicTick15MinElapsed: kafka.New15MinElapsedHandler(),
+	}
+	consumer, err := kafka.NewConsumer(
+		config.KafkaBrokers,
+		"operations-service-group",
+		[]string{kafka.TopicTick15MinElapsed},
+		handlers,
+	)
+	if err != nil {
+		log.Fatalf("got error during Kafka consumer initializing, %v", err)
+	}
+	defer consumer.Close()
+
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	go func() {
+		if err := consumer.Run(ctx); err != nil && err != context.Canceled {
+			log.Fatalf("got error while running consumer, %v", err)
+		}
+	}()
+
 	// create grpc server and run it
 	operationsServer := operationsgrpc.NewOperationsServer(countryService, regionService, regionLinkService, airportService)
 	grpcServer := grpc.NewServer()
@@ -55,31 +82,4 @@ func main() {
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("got error when serve gRPC, %v", err)
 	}
-
-	// setup Kafka consumer
-
-	// consumerHandler := func(ctx context.Context, record *kgo.Record) error {
-	// 	return importHandler.ImportReceived(ctx, record.Value)
-	// }
-
-	// consumer, err := kafka.NewConsumer(
-	// 	config.KafkaBrokers,
-	// 	"operations-service-group", // Consumer Group ID
-	// 	[]string{kafka.TopicImportDataReceived},
-	// 	consumerHandler,
-	// 	config.KafkaConsumerWorkers,
-	// )
-	// if err != nil {
-	// 	log.Fatalf("got error during Kafka consumer initializing, %v", err)
-	// }
-	// defer consumer.Close()
-
-	// run Kafka Consumer
-	// ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	// defer cancel()
-
-	// log.Println("Starting Kafka consumer...")
-	// if err := consumer.Run(ctx); err != nil {
-	// 	log.Fatalln("got error while running consumer, ", err)
-	// }
 }
