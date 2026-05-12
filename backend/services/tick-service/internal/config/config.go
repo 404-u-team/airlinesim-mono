@@ -1,13 +1,9 @@
 package config
 
 import (
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"log"
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
 
@@ -20,13 +16,15 @@ type Config struct {
 	KafkaBrokers         []string
 	KafkaConsumerWorkers int
 
-	JWTPublicKey *rsa.PublicKey
+	StartRealTime  int64
+	StartGameTime  int64
+	TimeMultiplier int64
 }
 
 func InitConfig() Config {
 	_ = godotenv.Load(".env")
 	_ = godotenv.Load("../../.env")
-	_ = godotenv.Load("backend/services/operations-service/.env")
+	_ = godotenv.Load("backend/services/tick-service/.env")
 
 	postgresConnString := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?sslmode=disable",
 		getEnv("POSTGRES_USER", "postgres"),
@@ -35,16 +33,12 @@ func InitConfig() Config {
 		getEnv("POSTGRES_DB", "db"),
 	)
 
-	publicKey, err := loadPublicKey("./public_key.pem")
-	if err != nil {
-		log.Println("got error when tried to get public key, ", err)
-	}
-
 	return Config{
-		PostgresConnString:   postgresConnString,
-		KafkaBrokers:         strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
-		KafkaConsumerWorkers: int(getEnvAsInt("KAFKA_CONSUMER_WORKERS", int64(runtime.NumCPU()))),
-		JWTPublicKey:         publicKey,
+		PostgresConnString: postgresConnString,
+		KafkaBrokers:       strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
+		StartRealTime:      getEnvAsInt("START_REAL_TIME", 1777971530),
+		StartGameTime:      getEnvAsInt("START_GAME_TIME", 1777971530),
+		TimeMultiplier:     getEnvAsInt("TIME_MULTIPLIER", 15),
 	}
 }
 
@@ -69,27 +63,4 @@ func getEnvAsInt(key string, fallback int64) int64 {
 
 	log.Printf("cant find env by key: %v, using: %v", key, fallback)
 	return fallback
-}
-
-func loadPublicKey(filename string) (*rsa.PublicKey, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	block, _ := pem.Decode(data)
-	if block == nil || block.Type != "PUBLIC KEY" {
-		return nil, fmt.Errorf("failed to decode public key")
-	}
-
-	key, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	rsaPub, ok := key.(*rsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("key is not an RSA public key")
-	}
-	return rsaPub, nil
 }
