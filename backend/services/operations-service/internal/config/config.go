@@ -1,13 +1,9 @@
 package config
 
 import (
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"log"
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
 
@@ -17,10 +13,9 @@ import (
 type Config struct {
 	PostgresConnString string
 
-	KafkaBrokers         []string
-	KafkaConsumerWorkers int
+	KafkaBrokers []string
 
-	JWTPublicKey *rsa.PublicKey
+	StartFuelPrice int64
 }
 
 func InitConfig() Config {
@@ -35,16 +30,10 @@ func InitConfig() Config {
 		getEnv("POSTGRES_DB", "db"),
 	)
 
-	publicKey, err := loadPublicKey("./public_key.pem")
-	if err != nil {
-		log.Println("got error when tried to get public key, ", err)
-	}
-
 	return Config{
-		PostgresConnString:   postgresConnString,
-		KafkaBrokers:         strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
-		KafkaConsumerWorkers: int(getEnvAsInt("KAFKA_CONSUMER_WORKERS", int64(runtime.NumCPU()))),
-		JWTPublicKey:         publicKey,
+		PostgresConnString: postgresConnString,
+		KafkaBrokers:       strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
+		StartFuelPrice:     getEnvAsInt("START_FUEL_PRICE", 100),
 	}
 }
 
@@ -69,27 +58,4 @@ func getEnvAsInt(key string, fallback int64) int64 {
 
 	log.Printf("cant find env by key: %v, using: %v", key, fallback)
 	return fallback
-}
-
-func loadPublicKey(filename string) (*rsa.PublicKey, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	block, _ := pem.Decode(data)
-	if block == nil || block.Type != "PUBLIC KEY" {
-		return nil, fmt.Errorf("failed to decode public key")
-	}
-
-	key, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	rsaPub, ok := key.(*rsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("key is not an RSA public key")
-	}
-	return rsaPub, nil
 }
