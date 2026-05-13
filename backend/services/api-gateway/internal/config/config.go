@@ -8,13 +8,15 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/lpernett/godotenv"
 )
 
 type Config struct {
-	JWTPublicKey *rsa.PublicKey
+	KafkaBrokers []string
 
+	JWTPublicKey              *rsa.PublicKey
 	JWTAccessTokenExpireTime  int64
 	JWTRefreshTokenExpireTime int64
 }
@@ -30,10 +32,20 @@ func InitConfig() Config {
 	}
 
 	return Config{
+		KafkaBrokers:              strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
 		JWTPublicKey:              publicKey,
 		JWTAccessTokenExpireTime:  getEnvAsInt("JWT_ACCESS_TOKEN_EXPIRE_TIME", 900),
 		JWTRefreshTokenExpireTime: getEnvAsInt("JWT_REFRESH_TOKEN_EXPIRE_TIME", 86400),
 	}
+}
+
+func getEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+
+	log.Printf("cant find env by key: %v, using: %v", key, fallback)
+	return fallback
 }
 
 func getEnvAsInt(key string, fallback int64) int64 {
