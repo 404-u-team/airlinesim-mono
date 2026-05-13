@@ -11,6 +11,7 @@ import (
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/config"
 	grpcclient "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/grpc"
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/kafka"
+	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/realtime"
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/routes"
 )
 
@@ -26,6 +27,8 @@ import (
 func main() {
 	// get config from env
 	config := config.InitConfig()
+	socketHub := realtime.NewSocketHub()
+	defer socketHub.Close()
 
 	// create gRPC client for auth service communication
 	authClient, err := grpcclient.NewAuthClient("auth-service:50051")
@@ -36,7 +39,7 @@ func main() {
 
 	// create kafka consumer and run it
 	handlers := kafka.HandlerMap{
-		kafka.TopicOperationsFuelPriceChanged: kafka.NewFuelPriceHandler(),
+		kafka.TopicOperationsFuelPriceChanged: kafka.NewFuelPriceHandler(socketHub),
 	}
 	consumer, err := kafka.NewConsumer(
 		config.KafkaBrokers,
@@ -60,9 +63,12 @@ func main() {
 
 	// create gRPC client for operations service communication
 	operationsClient, err := grpcclient.NewOperationsClient("operations-service:50051")
+	if err != nil {
+		log.Fatalf("got error when tried to connect to gRPC server, %v", err)
+	}
 
 	// setup HTTP server
-	router := routes.SetupRoutes(authClient, operationsClient, &config)
+	router := routes.SetupRoutes(authClient, operationsClient, socketHub, &config)
 
 	log.Println("Server starting on :8080")
 	if err := http.ListenAndServe(":8080", router); err != nil {

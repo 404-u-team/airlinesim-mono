@@ -7,18 +7,21 @@ import (
 	grpcclient "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/grpc"
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/handlers"
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/middleware"
+	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/realtime"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func SetupRoutes(authClient *grpcclient.AuthClient, operationsClient *grpcclient.OperationsClient, config *config.Config) *gin.Engine {
+func SetupRoutes(authClient *grpcclient.AuthClient, operationsClient *grpcclient.OperationsClient, socketHub realtime.Hub, config *config.Config) *gin.Engine {
 	router := gin.Default()
 
 	authHandler := handlers.NewAuthHandler(authClient, config)
 	operationsHandler := handlers.NewOperationsHandler(operationsClient, config) // maybe config is extra
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	router.GET("/socket.io/*any", gin.WrapH(socketHub.Handler()))
+	router.POST("/socket.io/*any", gin.WrapH(socketHub.Handler()))
 
 	api := router.Group("")
 	{
