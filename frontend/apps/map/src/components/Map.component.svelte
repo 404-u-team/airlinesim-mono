@@ -1,7 +1,9 @@
 <script lang="ts">
-    import { onMount, onDestroy } from "svelte";
+    import { onDestroy, onMount } from "svelte";
+
     import { mapManager } from "../map-manager/index.svelte";
     import "maplibre-gl/dist/maplibre-gl.css";
+
     import ControlButton from "./Controls/ControlButton.svelte";
     import ControlDropdown from "./Controls/ControlDropdown.svelte";
 
@@ -14,10 +16,15 @@
     }: {
         controls?: boolean;
         rotation?: boolean;
-        theme?: "light" | "dark";
+        theme?: "dark" | "light";
     } = $props();
 
-    onMount(() => {
+    const styleOptions = mapManager.AvailableStyles.map((style) => ({
+        label: style.name,
+        value: style.name,
+    }));
+
+    onMount((): void => {
         mapManager.init(mapContainer, rotation);
     });
 
@@ -25,7 +32,7 @@
         mapManager.handleThemeChange(theme);
     });
 
-    onDestroy(() => {
+    onDestroy((): void => {
         mapManager.destroy();
     });
 </script>
@@ -41,25 +48,16 @@
             <div
                 class="flex flex-col bg-surface/90 rounded-lg shadow-md overflow-hidden"
             >
-                <ControlButton click={() => mapManager.zoomIn()}
-                    >+</ControlButton
-                >
-                <ControlButton click={() => mapManager.zoomOut()}
-                    >−</ControlButton
-                >
+                <ControlButton click={() => mapManager.zoomIn()}>+</ControlButton>
+                <ControlButton click={() => mapManager.zoomOut()}>−</ControlButton>
             </div>
 
             <div
                 class="flex flex-col bg-surface/90 rounded-lg shadow-md overflow-hidden"
             >
                 <ControlDropdown
-                    options={mapManager.AvailableStyles.map(
-                        (style) => style.name,
-                    )}
-                    values={mapManager.AvailableStyles.map(
-                        (style) => style.name,
-                    )}
-                    change={(e: any) => mapManager.changeStyle(e.target.value)}
+                    options={styleOptions}
+                    change={(styleName) => mapManager.changeStyle(styleName)}
                 />
                 <ControlButton
                     click={() =>

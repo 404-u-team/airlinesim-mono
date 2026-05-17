@@ -1,31 +1,42 @@
-import { mount, unmount, type Component } from 'svelte';
-import MapComponent from './components/Map.component.svelte'
-import ControlButton from './components/Controls/ControlButton.svelte';
-import ControlDropdown from './components/Controls/ControlDropdown.svelte';
-import { mapManager } from './map-manager/index.svelte';
+import { type Component, mount, unmount } from "svelte";
 
-function mountSvelte(SvelteComponent: Component, targetElement: HTMLElement, initialProps = {}) {
-    let propsState = $state({ ...initialProps });
+import MapComponent from "./components/Map.component.svelte";
+import { mapManager } from "./map-manager/index.svelte";
 
-    const mountedComponent = mount(SvelteComponent, {
-        target: targetElement,
-        props: propsState
-    });
+export type RemoteComponentInstance = {
+    destroy: () => Promise<void>;
+    update: (newProps: RemoteComponentProps) => void;
+};
 
-    return {
-        update: (newProps: any) => {
-            Object.assign(propsState, newProps);
-        },
-        destroy: () => unmount(mountedComponent)
-    };
-}
+export type RemoteComponentProps = Record<string, unknown>;
 
-// components export
-
-export function createMap(targetElement: HTMLElement, props = {}) {
+export function createMap(
+    targetElement: HTMLElement,
+    props: RemoteComponentProps = {},
+): RemoteComponentInstance {
     return mountSvelte(MapComponent, targetElement, props);
 }
 
-// managers export
+function mountSvelte(
+    SvelteComponent: Component<RemoteComponentProps>,
+    targetElement: HTMLElement,
+    initialProps: RemoteComponentProps = {},
+): RemoteComponentInstance {
+    const propsState = $state({ ...initialProps });
+
+    const mountedComponent = mount(SvelteComponent, {
+        props: propsState,
+        target: targetElement,
+    });
+
+    return {
+        destroy: async (): Promise<void> => {
+            await unmount(mountedComponent);
+        },
+        update: (newProps: RemoteComponentProps): void => {
+            Object.assign(propsState, newProps);
+        },
+    };
+}
 
 export { mapManager };

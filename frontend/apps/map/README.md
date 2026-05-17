@@ -1,36 +1,27 @@
-# Rsbuild project
+# World Map Remote
 
-## Setup
+`apps/map` - Svelte + Rsbuild remote из схемы `../../docs/FE.png`. Приложение экспортирует карту через Module Federation и подключается в `Shell / Host`.
 
-Install the dependencies:
+## Роль
 
-```bash
-bun install
-```
+- интерактивная карта мира;
+- MapLibre GL стили;
+- Svelte controls поверх карты;
+- 2D/3D projection controls;
+- будущие aircraft/route overlays.
 
-## Get started
+## Место В Архитектуре
 
-Start the dev server, and the app will be available at [http://localhost:3000](http://localhost:3000).
+`World Map` - один из remote-модулей рядом с целевыми `Fleet & Ops`, `Finance & Stock`, `Network Planner`, `Events & News`, `HR & Facilities`. Все remotes должны использовать общие shared libraries: `air-ui`, `game-sdk`, будущий `event-bus`, будущий `api-contracts`.
+
+## Команды
 
 ```bash
 bun run dev
-```
-
-Build the app for production:
-
-```bash
 bun run build
+bun run lint
+bun run lint:fix
+bun run svelte-check
 ```
 
-Preview the production build locally:
-
-```bash
-bun run preview
-```
-
-## Learn more
-
-To learn more about Rsbuild, check out the following resources:
-
-- [Rsbuild documentation](https://rsbuild.rs) - explore Rsbuild features and APIs.
-- [Rsbuild GitHub repository](https://github.com/web-infra-dev/rsbuild) - your feedback and contributions are welcome!
+Dev server работает на `4001`, shell ожидает manifest по `http://localhost:4001/mf-manifest.json`.

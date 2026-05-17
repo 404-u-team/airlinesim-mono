@@ -2,6 +2,7 @@
 
 /* Scan library components for Tailwind class detection */
 @source "../components/**/*.vue";
+@source "../components/**/*.stories.ts";
 
 /* Class-based dark mode: add .dark to <html> */
 @custom-variant dark (&:where(.dark, .dark *));

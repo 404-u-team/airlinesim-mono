@@ -22,6 +22,7 @@
     "noUnusedParameters": true
   },
   "include": [
-    "src"
+    "src",
+    "rsbuild.config.ts"
   ]
 }

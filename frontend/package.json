@@ -8,7 +8,10 @@
     "typescript": "^5"
   },
   "scripts": {
-    "dev": "turbo dev"
+    "check": "turbo lint",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "lint:fix": "turbo run lint:fix --continue=always --force"
   },
   "private": true,
   "type": "module",

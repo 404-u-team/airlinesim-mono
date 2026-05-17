@@ -1,28 +1,39 @@
-// src/map-manager/ThreeLayer.ts
-import maplibregl from 'maplibre-gl';
-import * as THREE from 'three';
+import type {
+    CustomLayerInterface,
+    CustomRenderMethodInput,
+    Map as MapLibreMap,
+} from "maplibre-gl";
 
-export interface AirplaneModel {
-    id: string;
-    lng: number;
-    lat: number;
+import * as THREE from "three";
+
+export type AirplaneModel = {
     altitude: number;
     group: THREE.Group;
-}
+    id: string;
+    lat: number;
+    lng: number;
+};
 
-export class ThreeLayer implements maplibregl.CustomLayerInterface {
-    public id = '3d-models-layer';
-    public type = 'custom' as const;
-    public renderingMode = '3d' as const;
+type ModelMatrixTransform = MapLibreMap["transform"] & {
+    getMatrixForModel: (
+        coordinates: [number, number],
+        altitude: number,
+    ) => number[];
+};
 
-    private map: maplibregl.Map;
-    private scene: THREE.Scene;
-    private camera: THREE.Camera;
-    private renderer: THREE.WebGLRenderer | null = null;
+export class ThreeLayer implements CustomLayerInterface {
+    public id = "3d-models-layer";
+    public renderingMode = "3d" as const;
+    public type = "custom" as const;
 
-    private airplanes: Map<string, AirplaneModel> = new Map();
+    private readonly airplanes = new Map<string, AirplaneModel>();
+    private readonly camera: THREE.Camera;
+    private readonly map: MapLibreMap;
+    private renderer: null | THREE.WebGLRenderer = null;
 
-    constructor(map: maplibregl.Map) {
+    private readonly scene: THREE.Scene;
+
+    constructor(map: MapLibreMap) {
         this.map = map;
         this.scene = new THREE.Scene();
 
@@ -36,7 +47,7 @@ export class ThreeLayer implements maplibregl.CustomLayerInterface {
         this.scene.add(directionalLight);
     }
 
-    public addAirplane(airplane: AirplaneModel) {
+    public addAirplane(airplane: AirplaneModel): void {
         this.airplanes.set(airplane.id, airplane);
         this.scene.add(airplane.group);
 
@@ -45,7 +56,24 @@ export class ThreeLayer implements maplibregl.CustomLayerInterface {
         this.map.triggerRepaint();
     }
 
-    public removeAirplane(id: string) {
+    public onAdd(map: MapLibreMap, gl: WebGLRenderingContext): void {
+        this.renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            canvas: map.getCanvas(),
+            context: gl,
+        });
+        this.renderer.autoClear = false;
+    }
+
+
+    public onRemove(): void {
+        if (this.renderer) {
+            this.renderer.dispose();
+            this.renderer = null;
+        }
+    }
+
+    public removeAirplane(id: string): void {
         const airplane = this.airplanes.get(id);
         if (airplane) {
             this.scene.remove(airplane.group);
@@ -54,37 +82,27 @@ export class ThreeLayer implements maplibregl.CustomLayerInterface {
         }
     }
 
-
-    public onAdd(map: maplibregl.Map, gl: WebGLRenderingContext) {
-        this.renderer = new THREE.WebGLRenderer({
-            canvas: map.getCanvas(),
-            context: gl,
-            antialias: true,
-        });
-        this.renderer.autoClear = false;
-    }
-
-    public onRemove() {
-        if (this.renderer) {
-            this.renderer.dispose();
-            this.renderer = null;
+    public render(
+        _gl: WebGLRenderingContext,
+        args: CustomRenderMethodInput,
+    ): void {
+        if (!this.renderer) {
+            return;
         }
-    }
-
-    public render(gl: WebGLRenderingContext, args: maplibregl.CustomRenderMethodInput) {
-        if (!this.renderer || !this.map) return;
 
         if (this.map.getZoom() < 6) {
             return;
         }
 
-        const mapProjectionMatrix = new THREE.Matrix4().fromArray(args.defaultProjectionData.mainMatrix);
+        const mapProjectionMatrix = new THREE.Matrix4().fromArray(
+            args.defaultProjectionData.mainMatrix,
+        );
         this.camera.projectionMatrix.copy(mapProjectionMatrix);
 
         this.airplanes.forEach((airplane) => {
-            const modelMatrixArray = (this.map.transform as any).getMatrixForModel(
+            const modelMatrixArray = (this.map.transform as ModelMatrixTransform).getMatrixForModel(
                 [airplane.lng, airplane.lat],
-                airplane.altitude
+                airplane.altitude,
             );
 
             airplane.group.matrix.fromArray(modelMatrixArray);

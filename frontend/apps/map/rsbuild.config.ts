@@ -1,23 +1,23 @@
+import { pluginModuleFederation } from '@module-federation/rsbuild-plugin'
 import { defineConfig } from '@rsbuild/core'
 import { pluginSvelte } from '@rsbuild/plugin-svelte'
-import { pluginModuleFederation } from '@module-federation/rsbuild-plugin'
 
 export default defineConfig({
+  output: {
+    assetPrefix: 'http://localhost:4001',
+  },
   plugins: [
     pluginSvelte(),
     pluginModuleFederation({
-      name: 'map',
+      dts: false,
       exposes: {
         './Map': './src/moduleFederationComponents.svelte.ts',
       },
-      dts: false
+      name: 'map'
     }),
   ],
   server: {
-    port: 4001,
     cors: true,
-  },
-  output: {
-    assetPrefix: 'http://localhost:4001',
+    port: 4001,
   },
 })

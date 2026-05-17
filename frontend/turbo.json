@@ -10,9 +10,22 @@
                 "build/**"
             ]
         },
+        "lint": {
+            "dependsOn": [
+                "^lint"
+            ],
+            "outputs": []
+        },
+        "lint:fix": {
+            "cache": false,
+            "dependsOn": [
+                "^lint:fix"
+            ],
+            "outputs": []
+        },
         "dev": {
             "cache": false,
             "persistent": true
-        },
+        }
     }
 }

@@ -1,8 +1,10 @@
 export class AircraftManager {
-    private planesGeoJSON: GeoJSON.FeatureCollection = {
-        type: 'FeatureCollection',
-        features: []
+    public get planes(): GeoJSON.FeatureCollection {
+        return this.planesGeoJSON;
+    }
+
+    private readonly planesGeoJSON: GeoJSON.FeatureCollection = {
+        features: [],
+        type: "FeatureCollection",
     };
-
-
 }

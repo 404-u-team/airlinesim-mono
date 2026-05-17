@@ -20,3 +20,7 @@
 
 ![alt text](images/cartocdn-voyager-map-style.png)
 
+## Architecture Context
+
+Эти стили относятся к remote `World Map` из схемы `../../../docs/FE.png`. Карта подключается в `Shell / Host` рядом с целевыми remotes `Fleet & Ops`, `Finance & Stock`, `Network Planner`, `Events & News`, `HR & Facilities` и должна использовать общую тему из `air-ui`.
+

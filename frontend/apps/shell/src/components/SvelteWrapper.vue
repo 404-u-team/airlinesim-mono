@@ -1,23 +1,23 @@
-<template>
-  <div ref="container" class="svelte-container"></div>
-</template>
-
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 
-const props = defineProps({
-  createFn: { 
-    type: Function, 
-    required: true
+type RemoteSvelteInstance = {
+  destroy?: () => Promise<void>;
+  update?: (props: Record<string, unknown>) => void;
+};
+
+const props = withDefaults(
+  defineProps<{
+    componentProps?: Record<string, unknown>;
+    createFn: (target: HTMLElement, props: Record<string, unknown>) => RemoteSvelteInstance;
+  }>(),
+  {
+    componentProps: () => ({}),
   },
-  componentProps: { 
-    type: Object, 
-    default: () => ({})
-  }
-});
+);
 
 const container = ref<HTMLElement | null>(null);
-let svelteInstance: any = null;
+let svelteInstance: null | RemoteSvelteInstance = null;
 
 onMounted(() => {
   if (container.value) {
@@ -25,18 +25,25 @@ onMounted(() => {
   }
 });
 
-watch(() => props.componentProps, (newProps) => {
-  if (svelteInstance && typeof svelteInstance.update === 'function') {
-    svelteInstance.update(newProps);
-  }
-}, { deep: true });
+watch(
+  () => props.componentProps,
+  (newProps) => {
+    svelteInstance?.update?.(newProps);
+  },
+  { deep: true },
+);
 
 onBeforeUnmount(() => {
-  if (svelteInstance && typeof svelteInstance.destroy === 'function') {
-    svelteInstance.destroy();
-  }
+  void svelteInstance?.destroy?.();
 });
 </script>
+
+<template>
+  <div
+    ref="container"
+    class="svelte-container"
+  />
+</template>
 
 <style scoped>
 .svelte-container {

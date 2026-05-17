@@ -1,5 +1,36 @@
-# Vue 3 + TypeScript + Vite
+# Shell / Host
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+`apps/shell` - Vue 3 + Vite host из схемы `../../docs/FE.png`.
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+## Роль
+
+- общий layout приложения;
+- глобальные состояния;
+- auth surfaces;
+- notifications;
+- i18n;
+- lazy import remote-приложений через Module Federation.
+
+## Remotes
+
+Shell должен подключать все functional remotes со схемы:
+
+- `World Map` - Svelte + MapLibre GL, уже реализован как `apps/map`;
+- `Fleet & Ops` - Vue 3 remote для флота и операций;
+- `Finance & Stock` - Vue remote для финансов и фондового рынка;
+- `Network Planner` - Vue 3 remote для планирования сети;
+- `Events & News` - Vue 3 remote для событий и новостей;
+- `HR & Facilities` - Vue 3 remote для персонала и объектов.
+
+## Shared Libraries
+
+Shell использует `air-ui`, `game-sdk`, будущий `event-bus` и будущий `api-contracts`. Локальные копии UI, API-клиентов и pub/sub логики не добавлять.
+
+## Команды
+
+```bash
+bun run dev
+bun run build
+bun run lint
+bun run lint:fix
+```
