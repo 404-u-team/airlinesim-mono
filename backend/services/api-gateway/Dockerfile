@@ -8,6 +8,7 @@ RUN apk add --no-cache ca-certificates
 COPY backend/services/api-gateway/go.mod backend/services/api-gateway/go.sum ./
 COPY backend/shared/contracts/proto/auth/go.mod backend/shared/contracts/proto/auth/go.sum /src/backend/shared/contracts/proto/auth/
 COPY backend/shared/contracts/proto/world/go.mod backend/shared/contracts/proto/world/go.sum /src/backend/shared/contracts/proto/world/
+COPY backend/shared/customerrors/go.mod backend/shared/customerrors/go.sum /src/backend/shared/customerrors/
 
 # installing packages
 RUN --mount=type=cache,target=/go/pkg/mod \
@@ -17,6 +18,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 COPY backend/services/api-gateway/ ./
 COPY backend/shared/contracts/proto/auth/ /src/backend/shared/contracts/proto/auth/
 COPY backend/shared/contracts/proto/world/ /src/backend/shared/contracts/proto/world/
+COPY backend/shared/customerrors/ /src/backend/shared/customerrors/
 
 # building runtime file
 RUN --mount=type=cache,target=/go/pkg/mod \

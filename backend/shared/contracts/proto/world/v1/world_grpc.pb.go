@@ -20,9 +20,21 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	WorldService_CreateCountry_FullMethodName    = "/auth.v1.WorldService/CreateCountry"
+	WorldService_ChangeCountry_FullMethodName    = "/auth.v1.WorldService/ChangeCountry"
+	WorldService_ListCountries_FullMethodName    = "/auth.v1.WorldService/ListCountries"
+	WorldService_DeleteCountry_FullMethodName    = "/auth.v1.WorldService/DeleteCountry"
 	WorldService_CreateRegion_FullMethodName     = "/auth.v1.WorldService/CreateRegion"
+	WorldService_ChangeRegion_FullMethodName     = "/auth.v1.WorldService/ChangeRegion"
+	WorldService_ListRegions_FullMethodName      = "/auth.v1.WorldService/ListRegions"
+	WorldService_DeleteRegion_FullMethodName     = "/auth.v1.WorldService/DeleteRegion"
 	WorldService_CreateRegionLink_FullMethodName = "/auth.v1.WorldService/CreateRegionLink"
+	WorldService_ChangeRegionLink_FullMethodName = "/auth.v1.WorldService/ChangeRegionLink"
+	WorldService_ListRegionLinks_FullMethodName  = "/auth.v1.WorldService/ListRegionLinks"
+	WorldService_DeleteRegionLink_FullMethodName = "/auth.v1.WorldService/DeleteRegionLink"
 	WorldService_CreateAirport_FullMethodName    = "/auth.v1.WorldService/CreateAirport"
+	WorldService_ChangeAirport_FullMethodName    = "/auth.v1.WorldService/ChangeAirport"
+	WorldService_ListAirports_FullMethodName     = "/auth.v1.WorldService/ListAirports"
+	WorldService_DeleteAirport_FullMethodName    = "/auth.v1.WorldService/DeleteAirport"
 )
 
 // WorldServiceClient is the client API for WorldService service.
@@ -33,12 +45,36 @@ const (
 type WorldServiceClient interface {
 	// create country, returns id of newly created country
 	CreateCountry(ctx context.Context, in *CreateCountryRequest, opts ...grpc.CallOption) (*IDResponse, error)
+	// change country
+	ChangeCountry(ctx context.Context, in *ChangeCountryRequest, opts ...grpc.CallOption) (*IDResponse, error)
+	// list countries
+	ListCountries(ctx context.Context, in *ListCountriesRequest, opts ...grpc.CallOption) (*ListCountriesResponse, error)
+	// delete country
+	DeleteCountry(ctx context.Context, in *DeleteCountryRequest, opts ...grpc.CallOption) (*IDResponse, error)
 	// create region, returns id of newly created region
 	CreateRegion(ctx context.Context, in *CreateRegionRequest, opts ...grpc.CallOption) (*IDResponse, error)
+	// change region
+	ChangeRegion(ctx context.Context, in *ChangeRegionRequest, opts ...grpc.CallOption) (*IDResponse, error)
+	// list regions
+	ListRegions(ctx context.Context, in *ListRegionsRequest, opts ...grpc.CallOption) (*ListRegionsResponse, error)
+	// delete region
+	DeleteRegion(ctx context.Context, in *DeleteRegionRequest, opts ...grpc.CallOption) (*IDResponse, error)
 	// create region link, returns id of newly created region link
 	CreateRegionLink(ctx context.Context, in *CreateRegionLinkRequest, opts ...grpc.CallOption) (*IDResponse, error)
+	// change region link
+	ChangeRegionLink(ctx context.Context, in *ChangeRegionLinkRequest, opts ...grpc.CallOption) (*IDResponse, error)
+	// list region links
+	ListRegionLinks(ctx context.Context, in *ListRegionLinksRequest, opts ...grpc.CallOption) (*ListRegionLinksResponse, error)
+	// delete region link
+	DeleteRegionLink(ctx context.Context, in *DeleteRegionLinkRequest, opts ...grpc.CallOption) (*IDResponse, error)
 	// create airport, returns id of newly created airport
 	CreateAirport(ctx context.Context, in *CreateAirportRequest, opts ...grpc.CallOption) (*IDResponse, error)
+	// change airport
+	ChangeAirport(ctx context.Context, in *ChangeAirportRequest, opts ...grpc.CallOption) (*IDResponse, error)
+	// list airports
+	ListAirports(ctx context.Context, in *ListAirportsRequest, opts ...grpc.CallOption) (*ListAirportsResponse, error)
+	// delete airport
+	DeleteAirport(ctx context.Context, in *DeleteAirportRequest, opts ...grpc.CallOption) (*IDResponse, error)
 }
 
 type worldServiceClient struct {
@@ -59,10 +95,70 @@ func (c *worldServiceClient) CreateCountry(ctx context.Context, in *CreateCountr
 	return out, nil
 }
 
+func (c *worldServiceClient) ChangeCountry(ctx context.Context, in *ChangeCountryRequest, opts ...grpc.CallOption) (*IDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IDResponse)
+	err := c.cc.Invoke(ctx, WorldService_ChangeCountry_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *worldServiceClient) ListCountries(ctx context.Context, in *ListCountriesRequest, opts ...grpc.CallOption) (*ListCountriesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCountriesResponse)
+	err := c.cc.Invoke(ctx, WorldService_ListCountries_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *worldServiceClient) DeleteCountry(ctx context.Context, in *DeleteCountryRequest, opts ...grpc.CallOption) (*IDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IDResponse)
+	err := c.cc.Invoke(ctx, WorldService_DeleteCountry_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *worldServiceClient) CreateRegion(ctx context.Context, in *CreateRegionRequest, opts ...grpc.CallOption) (*IDResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(IDResponse)
 	err := c.cc.Invoke(ctx, WorldService_CreateRegion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *worldServiceClient) ChangeRegion(ctx context.Context, in *ChangeRegionRequest, opts ...grpc.CallOption) (*IDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IDResponse)
+	err := c.cc.Invoke(ctx, WorldService_ChangeRegion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *worldServiceClient) ListRegions(ctx context.Context, in *ListRegionsRequest, opts ...grpc.CallOption) (*ListRegionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRegionsResponse)
+	err := c.cc.Invoke(ctx, WorldService_ListRegions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *worldServiceClient) DeleteRegion(ctx context.Context, in *DeleteRegionRequest, opts ...grpc.CallOption) (*IDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IDResponse)
+	err := c.cc.Invoke(ctx, WorldService_DeleteRegion_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -79,10 +175,70 @@ func (c *worldServiceClient) CreateRegionLink(ctx context.Context, in *CreateReg
 	return out, nil
 }
 
+func (c *worldServiceClient) ChangeRegionLink(ctx context.Context, in *ChangeRegionLinkRequest, opts ...grpc.CallOption) (*IDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IDResponse)
+	err := c.cc.Invoke(ctx, WorldService_ChangeRegionLink_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *worldServiceClient) ListRegionLinks(ctx context.Context, in *ListRegionLinksRequest, opts ...grpc.CallOption) (*ListRegionLinksResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRegionLinksResponse)
+	err := c.cc.Invoke(ctx, WorldService_ListRegionLinks_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *worldServiceClient) DeleteRegionLink(ctx context.Context, in *DeleteRegionLinkRequest, opts ...grpc.CallOption) (*IDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IDResponse)
+	err := c.cc.Invoke(ctx, WorldService_DeleteRegionLink_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *worldServiceClient) CreateAirport(ctx context.Context, in *CreateAirportRequest, opts ...grpc.CallOption) (*IDResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(IDResponse)
 	err := c.cc.Invoke(ctx, WorldService_CreateAirport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *worldServiceClient) ChangeAirport(ctx context.Context, in *ChangeAirportRequest, opts ...grpc.CallOption) (*IDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IDResponse)
+	err := c.cc.Invoke(ctx, WorldService_ChangeAirport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *worldServiceClient) ListAirports(ctx context.Context, in *ListAirportsRequest, opts ...grpc.CallOption) (*ListAirportsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAirportsResponse)
+	err := c.cc.Invoke(ctx, WorldService_ListAirports_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *worldServiceClient) DeleteAirport(ctx context.Context, in *DeleteAirportRequest, opts ...grpc.CallOption) (*IDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IDResponse)
+	err := c.cc.Invoke(ctx, WorldService_DeleteAirport_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -97,12 +253,36 @@ func (c *worldServiceClient) CreateAirport(ctx context.Context, in *CreateAirpor
 type WorldServiceServer interface {
 	// create country, returns id of newly created country
 	CreateCountry(context.Context, *CreateCountryRequest) (*IDResponse, error)
+	// change country
+	ChangeCountry(context.Context, *ChangeCountryRequest) (*IDResponse, error)
+	// list countries
+	ListCountries(context.Context, *ListCountriesRequest) (*ListCountriesResponse, error)
+	// delete country
+	DeleteCountry(context.Context, *DeleteCountryRequest) (*IDResponse, error)
 	// create region, returns id of newly created region
 	CreateRegion(context.Context, *CreateRegionRequest) (*IDResponse, error)
+	// change region
+	ChangeRegion(context.Context, *ChangeRegionRequest) (*IDResponse, error)
+	// list regions
+	ListRegions(context.Context, *ListRegionsRequest) (*ListRegionsResponse, error)
+	// delete region
+	DeleteRegion(context.Context, *DeleteRegionRequest) (*IDResponse, error)
 	// create region link, returns id of newly created region link
 	CreateRegionLink(context.Context, *CreateRegionLinkRequest) (*IDResponse, error)
+	// change region link
+	ChangeRegionLink(context.Context, *ChangeRegionLinkRequest) (*IDResponse, error)
+	// list region links
+	ListRegionLinks(context.Context, *ListRegionLinksRequest) (*ListRegionLinksResponse, error)
+	// delete region link
+	DeleteRegionLink(context.Context, *DeleteRegionLinkRequest) (*IDResponse, error)
 	// create airport, returns id of newly created airport
 	CreateAirport(context.Context, *CreateAirportRequest) (*IDResponse, error)
+	// change airport
+	ChangeAirport(context.Context, *ChangeAirportRequest) (*IDResponse, error)
+	// list airports
+	ListAirports(context.Context, *ListAirportsRequest) (*ListAirportsResponse, error)
+	// delete airport
+	DeleteAirport(context.Context, *DeleteAirportRequest) (*IDResponse, error)
 	mustEmbedUnimplementedWorldServiceServer()
 }
 
@@ -116,14 +296,50 @@ type UnimplementedWorldServiceServer struct{}
 func (UnimplementedWorldServiceServer) CreateCountry(context.Context, *CreateCountryRequest) (*IDResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateCountry not implemented")
 }
+func (UnimplementedWorldServiceServer) ChangeCountry(context.Context, *ChangeCountryRequest) (*IDResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ChangeCountry not implemented")
+}
+func (UnimplementedWorldServiceServer) ListCountries(context.Context, *ListCountriesRequest) (*ListCountriesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCountries not implemented")
+}
+func (UnimplementedWorldServiceServer) DeleteCountry(context.Context, *DeleteCountryRequest) (*IDResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteCountry not implemented")
+}
 func (UnimplementedWorldServiceServer) CreateRegion(context.Context, *CreateRegionRequest) (*IDResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateRegion not implemented")
+}
+func (UnimplementedWorldServiceServer) ChangeRegion(context.Context, *ChangeRegionRequest) (*IDResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ChangeRegion not implemented")
+}
+func (UnimplementedWorldServiceServer) ListRegions(context.Context, *ListRegionsRequest) (*ListRegionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListRegions not implemented")
+}
+func (UnimplementedWorldServiceServer) DeleteRegion(context.Context, *DeleteRegionRequest) (*IDResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteRegion not implemented")
 }
 func (UnimplementedWorldServiceServer) CreateRegionLink(context.Context, *CreateRegionLinkRequest) (*IDResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateRegionLink not implemented")
 }
+func (UnimplementedWorldServiceServer) ChangeRegionLink(context.Context, *ChangeRegionLinkRequest) (*IDResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ChangeRegionLink not implemented")
+}
+func (UnimplementedWorldServiceServer) ListRegionLinks(context.Context, *ListRegionLinksRequest) (*ListRegionLinksResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListRegionLinks not implemented")
+}
+func (UnimplementedWorldServiceServer) DeleteRegionLink(context.Context, *DeleteRegionLinkRequest) (*IDResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteRegionLink not implemented")
+}
 func (UnimplementedWorldServiceServer) CreateAirport(context.Context, *CreateAirportRequest) (*IDResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateAirport not implemented")
+}
+func (UnimplementedWorldServiceServer) ChangeAirport(context.Context, *ChangeAirportRequest) (*IDResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ChangeAirport not implemented")
+}
+func (UnimplementedWorldServiceServer) ListAirports(context.Context, *ListAirportsRequest) (*ListAirportsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAirports not implemented")
+}
+func (UnimplementedWorldServiceServer) DeleteAirport(context.Context, *DeleteAirportRequest) (*IDResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteAirport not implemented")
 }
 func (UnimplementedWorldServiceServer) mustEmbedUnimplementedWorldServiceServer() {}
 func (UnimplementedWorldServiceServer) testEmbeddedByValue()                      {}
@@ -164,6 +380,60 @@ func _WorldService_CreateCountry_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WorldService_ChangeCountry_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChangeCountryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorldServiceServer).ChangeCountry(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorldService_ChangeCountry_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorldServiceServer).ChangeCountry(ctx, req.(*ChangeCountryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorldService_ListCountries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCountriesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorldServiceServer).ListCountries(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorldService_ListCountries_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorldServiceServer).ListCountries(ctx, req.(*ListCountriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorldService_DeleteCountry_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteCountryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorldServiceServer).DeleteCountry(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorldService_DeleteCountry_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorldServiceServer).DeleteCountry(ctx, req.(*DeleteCountryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _WorldService_CreateRegion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateRegionRequest)
 	if err := dec(in); err != nil {
@@ -178,6 +448,60 @@ func _WorldService_CreateRegion_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WorldServiceServer).CreateRegion(ctx, req.(*CreateRegionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorldService_ChangeRegion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChangeRegionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorldServiceServer).ChangeRegion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorldService_ChangeRegion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorldServiceServer).ChangeRegion(ctx, req.(*ChangeRegionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorldService_ListRegions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRegionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorldServiceServer).ListRegions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorldService_ListRegions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorldServiceServer).ListRegions(ctx, req.(*ListRegionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorldService_DeleteRegion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRegionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorldServiceServer).DeleteRegion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorldService_DeleteRegion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorldServiceServer).DeleteRegion(ctx, req.(*DeleteRegionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -200,6 +524,60 @@ func _WorldService_CreateRegionLink_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WorldService_ChangeRegionLink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChangeRegionLinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorldServiceServer).ChangeRegionLink(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorldService_ChangeRegionLink_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorldServiceServer).ChangeRegionLink(ctx, req.(*ChangeRegionLinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorldService_ListRegionLinks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRegionLinksRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorldServiceServer).ListRegionLinks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorldService_ListRegionLinks_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorldServiceServer).ListRegionLinks(ctx, req.(*ListRegionLinksRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorldService_DeleteRegionLink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRegionLinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorldServiceServer).DeleteRegionLink(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorldService_DeleteRegionLink_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorldServiceServer).DeleteRegionLink(ctx, req.(*DeleteRegionLinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _WorldService_CreateAirport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateAirportRequest)
 	if err := dec(in); err != nil {
@@ -218,6 +596,60 @@ func _WorldService_CreateAirport_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WorldService_ChangeAirport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChangeAirportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorldServiceServer).ChangeAirport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorldService_ChangeAirport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorldServiceServer).ChangeAirport(ctx, req.(*ChangeAirportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorldService_ListAirports_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAirportsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorldServiceServer).ListAirports(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorldService_ListAirports_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorldServiceServer).ListAirports(ctx, req.(*ListAirportsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WorldService_DeleteAirport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAirportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorldServiceServer).DeleteAirport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorldService_DeleteAirport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorldServiceServer).DeleteAirport(ctx, req.(*DeleteAirportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // WorldService_ServiceDesc is the grpc.ServiceDesc for WorldService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -230,16 +662,64 @@ var WorldService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _WorldService_CreateCountry_Handler,
 		},
 		{
+			MethodName: "ChangeCountry",
+			Handler:    _WorldService_ChangeCountry_Handler,
+		},
+		{
+			MethodName: "ListCountries",
+			Handler:    _WorldService_ListCountries_Handler,
+		},
+		{
+			MethodName: "DeleteCountry",
+			Handler:    _WorldService_DeleteCountry_Handler,
+		},
+		{
 			MethodName: "CreateRegion",
 			Handler:    _WorldService_CreateRegion_Handler,
+		},
+		{
+			MethodName: "ChangeRegion",
+			Handler:    _WorldService_ChangeRegion_Handler,
+		},
+		{
+			MethodName: "ListRegions",
+			Handler:    _WorldService_ListRegions_Handler,
+		},
+		{
+			MethodName: "DeleteRegion",
+			Handler:    _WorldService_DeleteRegion_Handler,
 		},
 		{
 			MethodName: "CreateRegionLink",
 			Handler:    _WorldService_CreateRegionLink_Handler,
 		},
 		{
+			MethodName: "ChangeRegionLink",
+			Handler:    _WorldService_ChangeRegionLink_Handler,
+		},
+		{
+			MethodName: "ListRegionLinks",
+			Handler:    _WorldService_ListRegionLinks_Handler,
+		},
+		{
+			MethodName: "DeleteRegionLink",
+			Handler:    _WorldService_DeleteRegionLink_Handler,
+		},
+		{
 			MethodName: "CreateAirport",
 			Handler:    _WorldService_CreateAirport_Handler,
+		},
+		{
+			MethodName: "ChangeAirport",
+			Handler:    _WorldService_ChangeAirport_Handler,
+		},
+		{
+			MethodName: "ListAirports",
+			Handler:    _WorldService_ListAirports_Handler,
+		},
+		{
+			MethodName: "DeleteAirport",
+			Handler:    _WorldService_DeleteAirport_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

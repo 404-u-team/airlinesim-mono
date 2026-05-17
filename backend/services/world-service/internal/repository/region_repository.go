@@ -10,6 +10,9 @@ import (
 
 type RegionRepository interface {
 	CreateRegion(ctx context.Context, payload *worldpb.CreateRegionRequest) (uuid.UUID, error)
+	ChangeRegion(ctx context.Context, payload *worldpb.ChangeRegionRequest) (bool, error)
+	ListRegions(ctx context.Context) ([]*worldpb.Region, error)
+	DeleteRegion(ctx context.Context, id uuid.UUID) (bool, error)
 }
 
 type regionRepository struct {
@@ -37,4 +40,81 @@ func (r *regionRepository) CreateRegion(ctx context.Context, payload *worldpb.Cr
 		payload.WikipediaLink).Scan(&regionID)
 
 	return regionID, err
+}
+
+func (r *regionRepository) ChangeRegion(ctx context.Context, payload *worldpb.ChangeRegionRequest) (bool, error) {
+	result, err := r.pool.Exec(ctx, `
+		UPDATE region
+		SET local_code=$2, local_name=$3, intl_name=$4, country_id=$5,
+			population=$6, gdp_per_capita=$7, tourism_score=$8, business_score=$9,
+			wikipedia_link=$10
+		WHERE id=$1
+	`, payload.Id, payload.LocalCode, payload.LocalName, payload.IntlName, payload.CountryId,
+		payload.Population, payload.GdpPerCapita, payload.TourismScore, payload.BusinessScore,
+		payload.WikipediaLink)
+	if err != nil {
+		return false, err
+	}
+
+	return result.RowsAffected() > 0, nil
+}
+
+func (r *regionRepository) ListRegions(ctx context.Context) ([]*worldpb.Region, error) {
+	query := `
+		SELECT
+			id::text,
+			local_code,
+			local_name,
+			intl_name,
+			country_id::text,
+			COALESCE(population, 0),
+			COALESCE(gdp_per_capita, 0),
+			COALESCE(tourism_score, 0),
+			COALESCE(business_score, 0),
+			COALESCE(wikipedia_link, '')
+		FROM region
+		ORDER BY local_name
+	`
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	regions := make([]*worldpb.Region, 0)
+	for rows.Next() {
+		var region worldpb.Region
+		if err := rows.Scan(
+			&region.Id,
+			&region.LocalCode,
+			&region.LocalName,
+			&region.IntlName,
+			&region.CountryId,
+			&region.Population,
+			&region.GdpPerCapita,
+			&region.TourismScore,
+			&region.BusinessScore,
+			&region.WikipediaLink,
+		); err != nil {
+			return nil, err
+		}
+
+		regions = append(regions, &region)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return regions, nil
+}
+
+func (r *regionRepository) DeleteRegion(ctx context.Context, id uuid.UUID) (bool, error) {
+	result, err := r.pool.Exec(ctx, `DELETE FROM region WHERE id=$1`, id)
+	if err != nil {
+		return false, err
+	}
+
+	return result.RowsAffected() > 0, nil
 }

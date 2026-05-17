@@ -37,12 +37,14 @@ func main() {
 	countryRepo := repository.NewCountryRepository(pool)
 	regionRepo := repository.NewRegionRepository(pool)
 	regionLinkRepo := repository.NewRegionLinkRepository(pool)
+	airportRepo := repository.NewAirportRepository(pool)
 
 	countryService := service.NewCountryService(countryRepo)
 	regionService := service.NewRegionService(regionRepo)
 	regionLinkService := service.NewRegionLinkService(regionLinkRepo)
+	airportService := service.NewAirportService(airportRepo)
 
-	worldServer := worldgrpc.NewWorldServer(countryService, regionService, regionLinkService)
+	worldServer := worldgrpc.NewWorldServer(countryService, regionService, regionLinkService, airportService)
 
 	grpcServer := grpc.NewServer()
 
