@@ -1,6 +1,8 @@
 import { pluginModuleFederation } from '@module-federation/rsbuild-plugin'
-import { defineConfig } from '@rsbuild/core'
+import { defineConfig, loadEnv } from '@rsbuild/core'
 import { pluginSvelte } from '@rsbuild/plugin-svelte'
+
+const { publicVars } = loadEnv({ cwd: '../..', prefixes: ['VITE_'] })
 
 export default defineConfig({
   output: {
@@ -34,5 +36,8 @@ export default defineConfig({
       'Access-Control-Allow-Headers': '*',
     },
     port: 4001,
+  },
+  source: {
+    define: publicVars,
   },
 })

@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@airlinesim/api-contracts": "workspace:*",
-    "axios": "^1.15.2"
+    "axios": "^1.15.2",
+    "socket.io-client": "^4.8.1"
   }
 }

@@ -17,9 +17,4 @@ export const MAP__STYLES = [
         theme: "dark",
         url: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
     },
-    {
-        name: "ArcGIS Hybrid",
-        theme: "dark",
-        url: "https://raw.githubusercontent.com/go2garret/maps/main/src/assets/json/arcgis_hybrid.json",
-    },
 ] as const satisfies readonly MapStyle[];

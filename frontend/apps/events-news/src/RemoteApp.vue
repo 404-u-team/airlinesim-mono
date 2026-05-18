@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { AirBadge, AirButton } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
+import { onMounted } from "vue";
+
+onMounted(() => {
+  airlineSimEventBus.emit("mfe:ready", { remoteId: "events-news" });
+});
 
 function notifySelection(): void {
   airlineSimEventBus.emit("notification:created", {

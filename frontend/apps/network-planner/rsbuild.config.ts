@@ -1,6 +1,8 @@
 import { pluginModuleFederation } from "@module-federation/rsbuild-plugin";
-import { defineConfig } from "@rsbuild/core";
+import { defineConfig, loadEnv } from "@rsbuild/core";
 import { pluginVue } from "@rsbuild/plugin-vue";
+
+const { publicVars } = loadEnv({ cwd: "../..", prefixes: ["VITE_"] });
 
 export default defineConfig({
   html: {
@@ -39,6 +41,7 @@ export default defineConfig({
     port: 4004,
   },
   source: {
+    define: publicVars,
     entry: {
       index: "./src/main.ts",
     },

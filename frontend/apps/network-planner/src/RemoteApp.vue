@@ -2,6 +2,11 @@
 import { AirBadge, AirButton } from "@airlinesim/air-ui";
 import { airportSchema } from "@airlinesim/api-contracts";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
+import { onMounted } from "vue";
+
+onMounted(() => {
+  airlineSimEventBus.emit("mfe:ready", { remoteId: "network-planner" });
+});
 
 const hub = airportSchema.safeParse({
   city: "Seoul",

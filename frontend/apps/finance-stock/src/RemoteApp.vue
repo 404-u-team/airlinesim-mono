@@ -3,8 +3,13 @@ import { AirBadge, AirButton } from "@airlinesim/air-ui";
 import { airlineSchema } from "@airlinesim/api-contracts";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
 import { createApiClient } from "@airlinesim/game-sdk";
+import { onMounted } from "vue";
 
-const apiClient = createApiClient({ baseUrl: "http://localhost:8000" });
+const apiClient = createApiClient();
+
+onMounted(() => {
+  airlineSimEventBus.emit("mfe:ready", { remoteId: "finance-stock" });
+});
 const sampleAirline = airlineSchema.safeParse({
   code: "KR",
   id: "00000000-0000-4000-8000-000000000001",
