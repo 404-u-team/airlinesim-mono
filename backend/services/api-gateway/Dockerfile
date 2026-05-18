@@ -37,6 +37,7 @@ WORKDIR /app
 
 COPY --from=build /out/api-gateway ./api-gateway
 COPY --chown=appuser:appgroup backend/services/api-gateway/internal/config/public_key.pem ./public_key.pem
+COPY --chown=appuser:appgroup backend/shared/config/.env /shared/config/.env
 
 # setting user rights and folder mode
 RUN chmod 755 /app/api-gateway \

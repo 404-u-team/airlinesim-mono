@@ -25,6 +25,8 @@ func InitConfig() Config {
 	_ = godotenv.Load(".env")
 	_ = godotenv.Load("../../.env")
 	_ = godotenv.Load("backend/services/api-gateway/.env")
+	_ = godotenv.Load("../../../../../shared/config/.env")
+	_ = godotenv.Load("backend/shared/config.env")
 
 	publicKey, err := loadPublicKey("./public_key.pem")
 	if err != nil {
@@ -32,7 +34,7 @@ func InitConfig() Config {
 	}
 
 	return Config{
-		KafkaBrokers:              strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
+		KafkaBrokers:              strings.Split(getEnv("KAFKA_BROKERS", "kafka:29092"), ","),
 		JWTPublicKey:              publicKey,
 		JWTAccessTokenExpireTime:  getEnvAsInt("JWT_ACCESS_TOKEN_EXPIRE_TIME", 900),
 		JWTRefreshTokenExpireTime: getEnvAsInt("JWT_REFRESH_TOKEN_EXPIRE_TIME", 86400),
