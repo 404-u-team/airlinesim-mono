@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package fleet.v1;
+
+option go_package = "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/fleet/v1;fleetpb";
+
+// Run inside this folder to autogenerate golang grpc
+/*
+protoc --go_out=./v1 --go_opt=paths=source_relative \
+    --go-grpc_out=./v1 --go-grpc_opt=paths=source_relative \
+    --validate_out="lang=go:." \
+  fleet.proto
+*/
+
+// fleet service
+service FleetService {
+}
+
+// TODO: add validation

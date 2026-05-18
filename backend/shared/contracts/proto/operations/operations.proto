@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package auth.v1;
+package operations.v1;
 
 option go_package = "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/operations/v1;operationspb";
 
