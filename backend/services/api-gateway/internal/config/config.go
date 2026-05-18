@@ -15,6 +15,7 @@ import (
 
 type Config struct {
 	KafkaBrokers []string
+	HTTPPort     string
 
 	JWTPublicKey              *rsa.PublicKey
 	JWTAccessTokenExpireTime  int64
@@ -35,6 +36,7 @@ func InitConfig() Config {
 
 	return Config{
 		KafkaBrokers:              strings.Split(getEnv("KAFKA_BROKERS", "kafka:29092"), ","),
+		HTTPPort:                  fmt.Sprintf(":%s", getEnv("HTTP_PORT", "8080")),
 		JWTPublicKey:              publicKey,
 		JWTAccessTokenExpireTime:  getEnvAsInt("JWT_ACCESS_TOKEN_EXPIRE_TIME", 900),
 		JWTRefreshTokenExpireTime: getEnvAsInt("JWT_REFRESH_TOKEN_EXPIRE_TIME", 86400),

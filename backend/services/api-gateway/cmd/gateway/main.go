@@ -70,8 +70,8 @@ func main() {
 	// setup HTTP server
 	router := routes.SetupRoutes(authClient, operationsClient, socketHub, &config)
 
-	log.Println("Server starting on :8080")
-	if err := http.ListenAndServe(":8080", router); err != nil {
+	log.Printf("Server starting on %s", config.HTTPPort)
+	if err := http.ListenAndServe(config.HTTPPort, router); err != nil {
 		log.Fatal(err)
 	}
 }
