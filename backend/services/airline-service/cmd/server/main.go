@@ -39,8 +39,7 @@ func main() {
 	airlineRepo := repository.NewAirlineRepository(pool)
 	airportViewRepo := repository.NewAirportViewRepository(pool)
 
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
+	airlineService := service.NewAirlineService(&config, airlineRepo, airportViewRepo, *authClient)
 
 	// create kafka consumer and run it
 	handlers := kafka.HandlerMap{
@@ -58,13 +57,14 @@ func main() {
 	}
 	defer consumer.Close()
 
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
 	go func() {
 		if err := consumer.Run(ctx); err != nil && err != context.Canceled {
 			log.Fatalf("got error while running consumer, %v", err)
 		}
 	}()
-
-	airlineService := service.NewAirlineService(&config, airlineRepo, airportViewRepo, *authClient)
 
 	// start gRPC server
 	grpcServer := grpc.NewServer()
