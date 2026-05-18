@@ -1,5 +1,5 @@
 -- +goose Up
-CREATE TABLE airlines (
+CREATE TABLE airline (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_id UUID NOT NULL UNIQUE,
     starting_airport_id UUID NOT NULL,
@@ -19,7 +19,7 @@ CREATE TABLE airlines (
 
 CREATE TABLE staff_config (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    airline_id UUID NOT NULL REFERENCES Airline(id) ON DELETE CASCADE,
+    airline_id UUID NOT NULL REFERENCES airline(id) ON DELETE CASCADE,
     staff_type TEXT NOT NULL CHECK (staff_type IN ('pilot', 'cabin', 'technician', 'ground')), -- pilot/cabin/technician/ground
     headcount INTEGER NOT NULL CHECK (headcount >= 0),
     monthly_salary_per_person NUMERIC(10,2) NOT NULL CHECK (monthly_salary_per_person >= 0),
@@ -28,7 +28,7 @@ CREATE TABLE staff_config (
 
 CREATE TABLE airline_to_airport (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    airline_id UUID NOT NULL REFERENCES Airline(id) ON DELETE CASCADE,
+    airline_id UUID NOT NULL REFERENCES airline(id) ON DELETE CASCADE,
     airport_id UUID NOT NULL,
     is_hub BOOLEAN NOT NULL DEFAULT FALSE,
     owned_fuel NUMERIC(12,2) NOT NULL DEFAULT 0,
@@ -42,8 +42,17 @@ CREATE TABLE airline_to_airport (
     UNIQUE (airline_id, airport_id)
 );
 
+CREATE TABLE tariff_class (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    airline_id UUID NOT NULL REFERENCES airline(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    comfort NUMERIC NOT NULL
+);
+
 -- +goose Down
-DROP TABLE IF EXISTS airlines;
+DROP TABLE IF EXISTS tariff_class;
+
+DROP TABLE IF EXISTS airline;
 
 DROP TABLE IF EXISTS staff_config;
 
