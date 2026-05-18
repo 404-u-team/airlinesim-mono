@@ -1,0 +1,550 @@
+
+
+erDiagram
+    %% ============================================================
+    %% БЛОК 1: AUTH & USERS
+    %% ============================================================
+    User {
+        uuid id PK
+        string email UK
+        string nickname UK
+        string password_hash
+        Date created_at
+    }
+
+
+    %% ============================================================
+    %% БЛОК 2: WORLD (география, справочники)
+    %% ============================================================
+    Country {
+        uuid id PK
+        string iso UK "ISO 3166-1"
+        string local_name
+        string intl_name
+        number flythrough_permission_price
+        number land_permission_price
+        number corp_tax_rate "0-100"
+        number vat_rate "0-100"
+        string aircraft_tail_code
+        string wikipedia_link
+    }
+
+
+    Region {
+        uuid id PK
+        string local_code UK "e.g. US-NY"
+        string local_name
+        string intl_name
+        uuid country_id FK
+        number population
+        number gdp_per_capita
+        number tourism_score "0-1"
+        number business_score "0-1"
+        string wikipedia_link
+    }
+    Country ||--o{ Region : contains
+
+
+    RegionLink {
+        uuid id PK
+        uuid region_a FK "CHECK: region_a < region_b"
+        uuid region_b FK
+        number diaspora "0-1, симметрично"
+        number business "0-1, симметрично"
+        number tourism "0-1, симметрично"
+    }
+    Region ||--o{ RegionLink : "linked to"
+
+
+    Airport {
+        uuid id PK
+        ICAO4 icao_code UK
+        IATA3 iata_code UK
+        string local_name
+        string intl_name
+        Timezone timezone "IANA"
+        uuid id_country FK
+        uuid id_region FK
+        string municipality
+        char2 continent "AF,AN,AS,EU,NA,OC,SA"
+        number elevation_ft
+        number max_runway_length_m
+        bool works_at_night
+        number max_runway_uses_per_day "дефолт"
+        number turnaround_point_price "дефолт $/очко"
+        number maintenance_point_price "дефолт $/очко"
+        number runway_fee "дефолт"
+        number gate_fee "дефолт"
+        number stand_fee "дефолт"
+        number fuel_price_multiplier
+        string home_link
+        string wikipedia_link
+        POSTGIS__geography geography
+        POSTGIS__geometry geometry
+    }
+    Airport }o--|| Country : "located in"
+    Airport }o--|| Region : "located in"
+
+
+    GlobalFuelPrice {
+        uuid id PK
+        number price "базовая цена нефти"
+        gDate recorded_at
+    }
+
+
+    %% ============================================================
+    %% БЛОК 3: AIRLINE (авиакомпания, персонал)
+    %% ============================================================
+    Airline {
+        uuid id PK
+        uuid owner_id FK "User"
+        uuid starting_airport FK
+        string name
+        IATA2 iata_code UK
+        ICAO3 icao_code UK
+        number balance
+        number equity_cached "вычислимо; момент пересчёта ниже"
+        gDate equity_cached_at_g
+        number credit_rating "0-100"
+        number safety_rating "0-100"
+        number reputation "0-100"
+        bool is_public "после IPO"
+        bool is_bankrupt
+        gDate created_at_g
+        Date created_at
+    }
+    User ||--o{ Airline : owns
+
+
+    StaffConfig {
+        uuid id PK
+        uuid airline_id FK
+        string staff_type "pilot/cabin/technician/ground"
+        number headcount
+        number monthly_salary_per_person
+        number staff_happiness "0-100"
+    }
+    Airline ||--o{ StaffConfig : configures
+
+
+    AirlineToAirport {
+        uuid id PK
+        uuid airline_id FK
+        uuid airport_id FK
+        bool is_hub
+        number owned_fuel
+        bool has_contract
+        number max_runway_uses_per_day "override, nullable"
+        number turnaround_point_price "override, nullable"
+        number maintenance_point_price "override, nullable"
+        number runway_fee "override, nullable"
+        number gate_fee "override, nullable"
+        number stand_fee "override, nullable"
+    }
+    Airline ||--o{ AirlineToAirport : "contract terms"
+    Airport ||--o{ AirlineToAirport : "contract terms"
+
+
+    %% ============================================================
+    %% БЛОК 4: AIRCRAFT (самолёты, типы, производители, лизинг)
+    %% ============================================================
+    Aircraft_Manufacturer {
+        uuid id PK
+        string name
+        uuid logo_upload_id FK
+        string market_name
+        number production_points_per_week
+    }
+
+
+    Aircraft_Type {
+        uuid id PK
+        uuid manufacturer_id FK
+        string model_name
+        ICAO4 icao_code UK
+        IATA3 iata_code UK
+        uuid image_upload_id FK
+        number max_range_km
+        number cruising_speed_kph
+        number max_planned_seat_capacity
+        number min_runway_length_m
+        number production_points_price "очков на 1 шт"
+        number base_turnaround_points "требуется на turnaround"
+        number base_maintenance_points "максимум очков ТО"
+        number maint_cost_per_takeoff "очков"
+        number maint_cost_per_landing "очков"
+        number maint_cost_per_flight_hour "очков"
+        number d_check_interval_fh
+        number d_check_interval_years
+        number d_check_overdue_multiplier
+        number fuel_consumption_per_hour
+        number mtow_kg
+        number price_per_unit
+        json characteristics "доп. данные, не используются в MVP"
+        Date created_at
+    }
+    Aircraft_Manufacturer ||--o{ Aircraft_Type : owns
+
+
+    Aircraft {
+        uuid id PK
+        uuid type FK
+        uuid current_owner FK "Airline-оператор, кто летает"
+        uuid base_airport FK
+        char16 tail_number UK
+        bool in_service
+        string status "idle/in_flight/turnaround/maintenance/building"
+        number current_maintenance_points
+        number max_maintenance_points_cached "base + сумма модификаций; пересчёт при install/uninstall"
+        number total_flight_hours
+        number fh_since_last_d_check
+        number total_cycles
+        gDate manufactured_g
+        Date created_at
+    }
+    Aircraft_Type ||--o{ Aircraft : "instance of"
+    Airline ||--o{ Aircraft : operates
+
+
+    TariffClass {
+        uuid id PK
+        uuid airline_id FK
+        string name "Economy/Business/..."
+        number comfort "0-2, агрегированный A_c,s для MVP"
+    }
+    Airline ||--o{ TariffClass : defines
+
+
+    AircraftSeat {
+        uuid id PK
+        uuid aircraft_id FK
+        uuid tariff_class_id FK
+        number count
+    }
+    Aircraft ||--o{ AircraftSeat : "seat plan"
+    TariffClass ||--o{ AircraftSeat : "used in"
+
+
+    AircraftModifier {
+        uuid id PK
+        string name
+        string description
+        number install_cost
+        number extra_revenue_per_pax
+        number seats_equivalent
+        number max_maintenance_points_delta "+/- к максимуму очков ТО"
+        number maintenance_consumption_multiplier "множитель расхода очков за рейс, 1.0=нейтрально"
+        number maintenance_points_per_flight_delta "+/- к расходу очков за рейс (аддитивно)"
+        number turnaround_points_delta "+/- к turnaround"
+        json other_effects "резерв"
+    }
+
+
+    AircraftModifierInstance {
+        uuid id PK
+        uuid aircraft_id FK
+        uuid modifier_id FK
+        gDate installed_at_g
+    }
+    Aircraft ||--o{ AircraftModifierInstance : has
+    AircraftModifier ||--o{ AircraftModifierInstance : "instance of"
+
+
+    Aircraft_Order {
+        uuid id PK
+        uuid airline FK
+        uuid manufacturer FK
+        uuid aircraft_type_id FK
+        number count
+        number production_points
+        json configuration "[{tariff_class_id, count}]"
+        string status "queued/in_production/delivered/cancelled"
+        gDate created_at_g
+        Date created_at
+    }
+    Airline ||--o{ Aircraft_Order : opens
+    Aircraft_Manufacturer ||--o{ Aircraft_Order : receives
+    Aircraft_Type ||--o{ Aircraft_Order : "for type"
+
+
+    Lease {
+        uuid id PK
+        uuid aircraft_id FK
+        uuid lessee_airline_id FK "кто арендует"
+        uuid lessor_airline_id FK "nullable; null = NPC-лессор"
+        number monthly_payment
+        gDate start_date_g
+        gDate end_date_g
+        string status "active/ended/defaulted"
+    }
+    Aircraft ||--o{ Lease : "under lease"
+    Airline ||--o{ Lease : "leases in (as lessee)"
+    Airline ||--o{ Lease : "leases out (as lessor)"
+
+
+    %% ============================================================
+    %% БЛОК 5: OPERATIONS (маршруты, расписание, рейсы)
+    %% ============================================================
+    Route {
+        uuid id PK
+        uuid airline_id FK
+        uuid first_airport FK
+        uuid second_airport FK
+        uuid technical_stop_airport FK "nullable"
+        number distance_km
+        number average_flight_time_minutes
+        string status "active/inactive"
+    }
+    Airline ||--o{ Route : manages
+
+
+    RouteTariff {
+        uuid id PK
+        uuid route_id FK
+        uuid tariff_class_id FK
+        number price
+    }
+    Route ||--o{ RouteTariff : "prices per class"
+    TariffClass ||--o{ RouteTariff : "priced on route"
+
+
+    Plane_Schedule {
+        uuid id PK
+        uuid aircraft_id FK "UK"
+        uuid airline_id FK
+        json schedule "недельный шаблон; Flight материализуется на горизонт N дней"
+    }
+    Aircraft ||--|| Plane_Schedule : "has schedule"
+
+
+    Flight {
+        uuid id PK
+        uuid airline_id FK
+        uuid route_id FK
+        uuid plane_id FK
+        uuid schedule_id FK
+        uuid actual_departure_airport_id FK "по умолчанию = route.first_airport"
+        uuid actual_arrival_airport_id FK "по умолчанию = route.second_airport"
+        uuid diversion_cause_event_instance_id FK "nullable; причина диверсии/отмены"
+        gDate departure_utc_planned
+        gDate arrival_utc_planned
+        gDate departure_utc_actual
+        gDate arrival_utc_actual
+        string status "scheduled/boarding/in_flight/landed/cancelled/diverted"
+        string flight_number
+        number load_factor "0-1"
+        number fuel_consumed_liters
+        number total_revenue
+        number total_expenses
+    }
+    Route ||--o{ Flight : "instance of"
+    Aircraft ||--o{ Flight : operates
+    Plane_Schedule ||--o{ Flight : schedules
+    Airport ||--o{ Flight : "actual departure"
+    Airport ||--o{ Flight : "actual arrival"
+
+
+    FlightPassengerLoad {
+        uuid id PK
+        uuid flight_id FK
+        uuid tariff_class_id FK
+        number passenger_count
+        number revenue
+    }
+    Flight ||--o{ FlightPassengerLoad : "by class"
+    TariffClass ||--o{ FlightPassengerLoad : loaded
+
+
+    %% ============================================================
+    %% БЛОК 6: MAINTENANCE & GROUND
+    %% ============================================================
+    Facility {
+        uuid id PK
+        uuid airline_id FK
+        uuid airport_id FK
+        string type "terminal/lounge/hangar/training_center/office/ground_depot"
+        number level
+        number build_cost
+        number monthly_maintenance
+        gDate construction_start_g
+        gDate construction_end_g
+        string status "building/active/demolished"
+        json effects
+    }
+    Airline ||--o{ Facility : owns
+    Airport ||--o{ Facility : hosts
+
+
+    MaintenanceRecord {
+        uuid id PK
+        uuid aircraft_id FK
+        uuid facility_id FK "nullable (свой ангар)"
+        uuid airport_id FK "место проведения"
+        string check_type "regular/d_check/unscheduled"
+        number cost
+        number points_restored
+        gDate started_at_g
+        gDate completed_at_g
+        string status "in_progress/completed/failed"
+    }
+    Aircraft ||--o{ MaintenanceRecord : serviced
+
+
+    %% ============================================================
+    %% БЛОК 7: FINANCE (кредиты, транзакции)
+    %% ============================================================
+    Loan {
+        uuid id PK
+        uuid airline_id FK
+        number principal
+        number remaining
+        number interest_rate
+        number monthly_payment
+        gDate start_date_g
+        gDate end_date_g
+        string status "active/paid/defaulted"
+    }
+    Airline ||--o{ Loan : has
+
+
+    Transaction {
+        uuid id PK
+        uuid airline_id FK
+        string type "revenue/expense/loan/tax/lease"
+        string category "fuel/salary/airport_fee/ticket_sale/..."
+        number amount "+ доход / - расход"
+        string related_entity_type "nullable: flight/lease/loan/maintenance/order/stock_trade/..."
+        uuid related_entity_id "nullable"
+        string description
+        gDate occurred_at_g
+    }
+    Airline ||--o{ Transaction : records
+
+
+    %% ============================================================
+    %% БЛОК 8: STOCK MARKET
+    %% ============================================================
+    StockListing {
+        uuid id PK
+        uuid airline_id FK "UK"
+        gDate ipo_date_g
+        number initial_price
+        number current_price
+        number total_shares
+    }
+    Airline ||--|| StockListing : "listed as"
+
+
+    Shareholding {
+        uuid id PK
+        uuid airline_issuer_id FK "чьи акции"
+        uuid holder_airline_id FK "nullable"
+        number shares_count
+    }
+    Airline ||--o{ Shareholding : "issues"
+    Airline ||--o{ Shareholding : "holds (cross)"
+
+
+    StockTrade {
+        uuid id PK
+        uuid listing_id FK
+        uuid seller_user_id FK "nullable"
+        uuid seller_airline_id FK "nullable"
+        uuid buyer_user_id FK "nullable"
+        uuid buyer_airline_id FK "nullable"
+        number shares_count
+        number price_per_share
+        gDate traded_at_g
+    }
+    StockListing ||--o{ StockTrade : history
+
+
+    %% ============================================================
+    %% БЛОК 9: EVENTS & NOTIFICATIONS
+    %% ============================================================
+    Event {
+        uuid id PK
+        string type
+        string category "economic/weather/technical/political/regulatory/social/environmental/market"
+        string default_scope "global/region/country/airport/airline/route"
+        json default_target_template "шаблон таргетов для генератора"
+        string severity "1-5"
+        bool req_action
+        json name_i18n
+        json description_i18n
+        json news_headline_i18n
+        json news_body_i18n
+        json default_payload
+        json default_modifiers
+        string fade_type "instant/linear/exponential"
+        number fade_rate
+        number priority
+        Date created_at
+        string created_by
+    }
+
+
+    EventAction {
+        uuid id PK
+        uuid event_id FK
+        string action_key
+        json label_i18n
+        json result_modifiers
+        number cost
+        json outcome_description_i18n
+    }
+    Event ||--o{ EventAction : offers
+
+
+    EventInstance {
+        uuid id PK
+        uuid event_id FK "тип события"
+        uuid parent_instance_id FK "nullable; цепочка дочерних ивентов"
+        gDate start_g
+        gDate end_g
+        gDate action_req_by_g "nullable"
+        json resolved_targets "конкретные сущности: airline_ids, airport_ids, region_ids и т.п."
+        json resolved_modifiers "развёрнутые модификаторы"
+        json chosen_action "nullable; что выбрал игрок"
+        string status "active/expired/resolved"
+    }
+    Event ||--o{ EventInstance : "instantiated as"
+    EventInstance ||--o{ EventInstance : "spawns child"
+
+
+    Notification {
+        uuid id PK
+        uuid airline_id FK
+        string type "alert/news/warning/info"
+        string channel "push/in_game/email"
+        json title_i18n
+        json body_i18n
+        uuid related_event_instance_id FK "nullable"
+        bool is_read
+        gDate created_at_g
+    }
+    Airline ||--o{ Notification : receives
+    EventInstance ||--o{ Notification : triggers
+
+
+    %% ============================================================
+    %% БЛОК 10: UPLOADS
+    %% ============================================================
+    Uploads {
+        uuid id PK
+        string name
+        string mime_type
+        string original_name
+        string path
+        uuid uploader_id FK
+        Date store_until "nullable = хранить бессрочно"
+        number size_bytes
+    }
+
+
+
+
+
+
+
