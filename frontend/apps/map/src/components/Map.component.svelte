@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onDestroy, onMount } from "svelte";
+    import { onDestroy, onMount, untrack } from "svelte";
 
     import { mapManager } from "../map-manager/index.svelte";
     import "maplibre-gl/dist/maplibre-gl.css";
@@ -23,13 +23,19 @@
         label: style.name,
         value: style.name,
     }));
+    let appliedTheme: "dark" | "light" | null = null;
 
     onMount((): void => {
         mapManager.init(mapContainer, rotation);
     });
 
     $effect(() => {
-        mapManager.handleThemeChange(theme);
+        const nextTheme = theme;
+
+        if (nextTheme !== appliedTheme) {
+            appliedTheme = nextTheme;
+            untrack(() => mapManager.handleThemeChange(nextTheme));
+        }
     });
 
     onDestroy((): void => {

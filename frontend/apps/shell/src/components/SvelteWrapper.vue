@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 
+type RemoteSvelteFactory = (
+  target: HTMLElement,
+  props: Record<string, unknown>,
+) => Promise<RemoteSvelteInstance> | RemoteSvelteInstance;
+
 type RemoteSvelteInstance = {
   destroy?: () => Promise<void>;
   update?: (props: Record<string, unknown>) => void;
@@ -9,7 +14,7 @@ type RemoteSvelteInstance = {
 const props = withDefaults(
   defineProps<{
     componentProps?: Record<string, unknown>;
-    createFn: (target: HTMLElement, props: Record<string, unknown>) => RemoteSvelteInstance;
+    createFn: RemoteSvelteFactory;
   }>(),
   {
     componentProps: () => ({}),
@@ -19,9 +24,9 @@ const props = withDefaults(
 const container = ref<HTMLElement | null>(null);
 let svelteInstance: null | RemoteSvelteInstance = null;
 
-onMounted(() => {
+onMounted(async () => {
   if (container.value) {
-    svelteInstance = props.createFn(container.value, props.componentProps);
+    svelteInstance = await props.createFn(container.value, props.componentProps);
   }
 });
 

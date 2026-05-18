@@ -8,9 +8,9 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/game-sdk.es.js",
-      "require": "./dist/game-sdk.cjs.js"
+      "default": "./src/index.ts",
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
     }
   },
   "scripts": {
@@ -27,6 +27,7 @@
     "vite-plugin-dts": "^4.5.4"
   },
   "dependencies": {
+    "@airlinesim/api-contracts": "workspace:*",
     "axios": "^1.15.2"
   }
 }

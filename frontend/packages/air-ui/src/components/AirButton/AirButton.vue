@@ -53,7 +53,7 @@ const sizeClasses: Record<ButtonSize, string> = {
 };
 
 const buttonClass = computed(() => [
-  "inline-flex items-center justify-center rounded-lg font-medium leading-none",
+  "inline-flex items-center justify-center rounded-lg text-subtitle leading-none",
   "transition duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2",
   "disabled:cursor-not-allowed disabled:bg-disabled disabled:text-text-muted disabled:opacity-70",
   sizeClasses[props.size],

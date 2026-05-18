@@ -32,6 +32,8 @@
 - Компонент должен экспортироваться из `packages/air-ui/src/index.ts`.
 - Для каждого публичного компонента нужна Storybook story с основными вариантами, disabled/loading/error состояниями, если они применимы.
 - Если компонент содержит интерактивные состояния, они должны быть видны в Storybook.
+- Frontend строится атомарно: primitives (`button`, `icon button`, `select`, `input`, `badge`, `panel`, `control`) живут в `packages/air-ui`, а приложения собирают из них доменные surfaces и не копируют базовую UI-логику локально.
+- Приложения используют шрифты и typography utilities из `@airlinesim/air-ui/styles` (`font-montserrat`, `font-tektur`, `font-source-code`, `text-h*`, `text-body`, `text-caption`). Локальные `font-family`, случайные размеры текста и локальные design tokens не добавляются вне `air-ui`.
 
 ## Подключение в приложениях
 

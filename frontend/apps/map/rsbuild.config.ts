@@ -13,11 +13,26 @@ export default defineConfig({
       exposes: {
         './Map': './src/moduleFederationComponents.svelte.ts',
       },
-      name: 'map'
+      name: 'map',
+      shared: {
+        '@airlinesim/air-ui': { singleton: true },
+        '@airlinesim/api-contracts': { singleton: true },
+        '@airlinesim/event-bus': { singleton: true },
+        '@airlinesim/game-sdk': { singleton: true },
+        svelte: {
+          requiredVersion: '^5.46.1',
+          singleton: true,
+        },
+      },
     }),
   ],
   server: {
-    cors: true,
+    cors: {
+      origin: 'http://localhost:4000',
+    },
+    headers: {
+      'Access-Control-Allow-Headers': '*',
+    },
     port: 4001,
   },
 })

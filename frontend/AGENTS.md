@@ -38,6 +38,10 @@ Shell лениво импортирует `World Map`, `Fleet & Ops`, `Finance &
 
 Все стили строятся через `@airlinesim/air-ui/styles` и Tailwind utilities. Цвета брать из semantic tokens в `packages/air-ui/src/styles/index.css`; локальные hex-цвета допустимы только при расширении самой темы.
 
+Frontend разрабатывать атомарно: переиспользуемые кнопки, inputs, selects, badges, panels, controls и другие UI primitives выносить в `packages/air-ui`, экспортировать из `packages/air-ui/src/index.ts` и использовать в приложениях через `@airlinesim/air-ui`. Локальные компоненты приложения должны содержать композицию и доменную логику, а не дублировать атомарный UI.
+
+Для новых UI-компонентов использовать шрифты, typography utilities и semantic tokens из `@airlinesim/air-ui/styles`. Не задавать локальные font-family, произвольные размеры типографики или hex-цвета в приложениях, если это не расширение темы внутри `air-ui`.
+
 ## Lint
 
 Каждый пакет должен иметь:

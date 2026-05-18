@@ -9,7 +9,7 @@
   },
   "scripts": {
     "check": "turbo lint",
-    "dev": "turbo dev",
+    "dev": "turbo dev --concurrency=12",
     "lint": "turbo lint",
     "lint:fix": "turbo run lint:fix --continue=always --force"
   },
