@@ -1,5 +1,23 @@
 # Backend
 
+---
+
+## Running
+
+From project root folder:
+
+Full backend:
+```
+docker compose -f backend/infrustructure/docker/docker-compose.yaml up --build
+```
+
+Swagger:
+```
+
+```
+
+---
+
 ## Socket.IO Routing
 
 The API gateway exposes Socket.IO on the same host as HTTP.
