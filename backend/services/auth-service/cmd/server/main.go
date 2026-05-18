@@ -29,6 +29,7 @@ func main() {
 		log.Fatalf("got error when tried to listen :50051, %v", err)
 	}
 
+	// setup repositories, services and servers
 	userRepo := repository.NewUserRepository(pool)
 	authService := service.NewAuthService(userRepo)
 	authServer := grpcserver.NewAuthServer(authService)
