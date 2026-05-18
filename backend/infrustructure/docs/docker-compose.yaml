@@ -1,0 +1,13 @@
+services:
+    api-reference:
+        image: scalarapi/api-reference:latest
+        ports:
+            - "${API_REFERENCE_PORT}:8080"
+        volumes:
+            - ../../services/api-gateway/cmd/gateway/docs:/docs
+        environment:
+            API_REFERENCE_CONFIG: |
+                {
+                  "theme": "purple"
+                }
+        restart: unless-stopped

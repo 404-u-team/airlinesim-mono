@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package auth.v1;
+
+option go_package = "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/airline/v1;airlinepb";
+
+// Run inside this folder to autogenerate golang grpc
+/*
+protoc --go_out=./v1 --go_opt=paths=source_relative \
+    --go-grpc_out=./v1 --go-grpc_opt=paths=source_relative \
+  airline.proto
+*/
+
+// airline service
+service AirlineService {
+  // create country, returns id of newly created country
+  rpc CreateAirline(CreateAirlineRequest) returns (CreateAirlineResponse);
+}
+
+// request to create a new airline.
+message CreateAirlineRequest {
+  string owner_id = 1;
+  string starting_airport_id = 2;
+  string name = 3;
+  string iata_code = 4;
+  string icao_code = 5;
+}
+
+// response with id and balance of created entity
+message CreateAirlineResponse {
+    string id = 1;
+    double balance = 2;
+}
+

@@ -23,6 +23,7 @@ const (
 	AuthService_Login_FullMethodName        = "/auth.v1.AuthService/Login"
 	AuthService_RefreshToken_FullMethodName = "/auth.v1.AuthService/RefreshToken"
 	AuthService_VerifyToken_FullMethodName  = "/auth.v1.AuthService/VerifyToken"
+	AuthService_VerifyUser_FullMethodName   = "/auth.v1.AuthService/VerifyUser"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -38,7 +39,8 @@ type AuthServiceClient interface {
 	// validate given token and return new
 	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*TokenResponse, error)
 	// verify token
-	VerifyToken(ctx context.Context, in *VerifyTokenRequest, opts ...grpc.CallOption) (*VerifyTokenResponse, error)
+	VerifyToken(ctx context.Context, in *VerifyTokenRequest, opts ...grpc.CallOption) (*VerifyResponse, error)
+	VerifyUser(ctx context.Context, in *VerifyUserRequest, opts ...grpc.CallOption) (*VerifyResponse, error)
 }
 
 type authServiceClient struct {
@@ -79,10 +81,20 @@ func (c *authServiceClient) RefreshToken(ctx context.Context, in *RefreshTokenRe
 	return out, nil
 }
 
-func (c *authServiceClient) VerifyToken(ctx context.Context, in *VerifyTokenRequest, opts ...grpc.CallOption) (*VerifyTokenResponse, error) {
+func (c *authServiceClient) VerifyToken(ctx context.Context, in *VerifyTokenRequest, opts ...grpc.CallOption) (*VerifyResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(VerifyTokenResponse)
+	out := new(VerifyResponse)
 	err := c.cc.Invoke(ctx, AuthService_VerifyToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) VerifyUser(ctx context.Context, in *VerifyUserRequest, opts ...grpc.CallOption) (*VerifyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VerifyResponse)
+	err := c.cc.Invoke(ctx, AuthService_VerifyUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +114,8 @@ type AuthServiceServer interface {
 	// validate given token and return new
 	RefreshToken(context.Context, *RefreshTokenRequest) (*TokenResponse, error)
 	// verify token
-	VerifyToken(context.Context, *VerifyTokenRequest) (*VerifyTokenResponse, error)
+	VerifyToken(context.Context, *VerifyTokenRequest) (*VerifyResponse, error)
+	VerifyUser(context.Context, *VerifyUserRequest) (*VerifyResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -122,8 +135,11 @@ func (UnimplementedAuthServiceServer) Login(context.Context, *LoginRequest) (*To
 func (UnimplementedAuthServiceServer) RefreshToken(context.Context, *RefreshTokenRequest) (*TokenResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RefreshToken not implemented")
 }
-func (UnimplementedAuthServiceServer) VerifyToken(context.Context, *VerifyTokenRequest) (*VerifyTokenResponse, error) {
+func (UnimplementedAuthServiceServer) VerifyToken(context.Context, *VerifyTokenRequest) (*VerifyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method VerifyToken not implemented")
+}
+func (UnimplementedAuthServiceServer) VerifyUser(context.Context, *VerifyUserRequest) (*VerifyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method VerifyUser not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -218,6 +234,24 @@ func _AuthService_VerifyToken_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_VerifyUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).VerifyUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_VerifyUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).VerifyUser(ctx, req.(*VerifyUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -240,6 +274,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "VerifyToken",
 			Handler:    _AuthService_VerifyToken_Handler,
+		},
+		{
+			MethodName: "VerifyUser",
+			Handler:    _AuthService_VerifyUser_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

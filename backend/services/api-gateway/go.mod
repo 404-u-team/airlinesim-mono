@@ -4,21 +4,23 @@ go 1.26.2
 
 require (
 	github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth v0.0.0-00010101000000-000000000000
-	github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/world v0.0.0-00010101000000-000000000000
+	github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/operations v0.0.0-00010101000000-000000000000
 	github.com/404-u-team/airlinesim-mono/backend/shared/customerrors v0.0.0-00010101000000-000000000000
 	github.com/gin-gonic/gin v1.12.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.6.0
+	github.com/googollee/go-socket.io v1.7.0
 	github.com/lpernett/godotenv v0.0.0-20230527005122-0de1d4c5ef5e
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
+	github.com/twmb/franz-go v1.21.1
 	google.golang.org/grpc v1.80.0
 )
 
 replace github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth => ../../shared/contracts/proto/auth
 
-replace github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/world => ../../shared/contracts/proto/world
+replace github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/operations => ../../shared/contracts/proto/operations
 
 replace github.com/404-u-team/airlinesim-mono/backend/shared/customerrors => ../../shared/customerrors
 
@@ -45,16 +47,22 @@ require (
 	github.com/go-playground/validator/v10 v10.30.1 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
+	github.com/gofrs/uuid v4.0.0+incompatible // indirect
+	github.com/gomodule/redigo v1.8.4 // indirect
+	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
+	github.com/pierrec/lz4/v4 v4.1.26 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
+	github.com/twmb/franz-go/pkg/kmsg v1.13.1 // indirect
 	github.com/ugorji/go/codec v1.3.1 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect

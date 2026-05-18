@@ -1,0 +1,14 @@
+-- +goose Up
+
+-- not sure we need them
+-- CREATE TABLE user_view (
+--     id UUID PRIMARY KEY
+-- );
+
+CREATE TABLE airport_view (
+    id UUID PRIMARY KEY
+);
+
+
+-- +goose Down
+DROP TABLE IF EXISTS airport_view;

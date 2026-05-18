@@ -6,7 +6,7 @@ import (
 
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/db"
-	authgrpc "github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/grpc"
+	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/grpcserver"
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/repository"
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/service"
 	authpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1"
@@ -29,9 +29,10 @@ func main() {
 		log.Fatalf("got error when tried to listen :50051, %v", err)
 	}
 
+	// setup repositories, services and servers
 	userRepo := repository.NewUserRepository(pool)
 	authService := service.NewAuthService(userRepo)
-	authServer := authgrpc.NewAuthServer(authService)
+	authServer := grpcserver.NewAuthServer(authService)
 
 	// create admin user
 	db.CreateDefaultAdmin(userRepo, &config)
