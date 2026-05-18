@@ -34,7 +34,7 @@ RUN apk add --no-cache ca-certificates \
 WORKDIR /app
 
 COPY --from=build /out/operations-service ./operations-service
-COPY --chown=appuser:appgroup backend/services/operations-service/internal/config/public_key.pem ./public_key.pem
+COPY --chown=appuser:appgroup backend/shared/config/.env /shared/config/.env
 COPY --chown=appuser:appgroup backend/services/operations-service/internal/db/migrations ./migrations
 
 # setting user rights and folder mode

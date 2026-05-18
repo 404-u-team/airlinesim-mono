@@ -22,6 +22,8 @@ func InitConfig() Config {
 	_ = godotenv.Load(".env")
 	_ = godotenv.Load("../../.env")
 	_ = godotenv.Load("backend/services/operations-service/.env")
+	_ = godotenv.Load("../../../../../shared/config/.env")
+	_ = godotenv.Load("backend/shared/config.env")
 
 	postgresConnString := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?sslmode=disable",
 		getEnv("POSTGRES_USER", "postgres"),
@@ -32,7 +34,7 @@ func InitConfig() Config {
 
 	return Config{
 		PostgresConnString: postgresConnString,
-		KafkaBrokers:       strings.Split(getEnv("KAFKA_BROKERS", "kafka:9092"), ","),
+		KafkaBrokers:       strings.Split(getEnv("KAFKA_BROKERS", "kafka:29092"), ","),
 		StartFuelPrice:     getEnvAsInt("START_FUEL_PRICE", 100),
 	}
 }
