@@ -3,6 +3,7 @@ package tick
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/404-u-team/airlinesim-mono/backend/tick-service/internal/config"
@@ -46,8 +47,9 @@ func (tl *tickLoop) Run(ctx context.Context) error {
 	} else {
 		// set last processed events to current time,
 		// so no events to produce to catch up missed ones
-		tl.lastProccessed15Min = time.Now()
-		tl.lastProccessed1Hour = time.Now()
+		currentGameTime := utils.CurrentGameTime(tl.config)
+		tl.lastProccessed15Min = currentGameTime
+		tl.lastProccessed1Hour = currentGameTime
 	}
 
 	for {
@@ -60,6 +62,7 @@ func (tl *tickLoop) Run(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("got error when tried to send event using kafka, %w", err)
 			}
+			log.Println("sended event to topic: ", kafka.TopicTick15MinElapsed)
 
 			// put new processed time inside struct and db
 			newLastProcessed15Min := tl.lastProccessed15Min.Add(time.Minute * 15)
@@ -77,6 +80,7 @@ func (tl *tickLoop) Run(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("got error when tried to send event using kafka, %w", err)
 			}
+			log.Println("sended event to topic: ", kafka.TopicTick1HourElapsed)
 
 			// put new processed time inside struct and db
 			newLastProcessed1Hour := tl.lastProccessed1Hour.Add(time.Hour)

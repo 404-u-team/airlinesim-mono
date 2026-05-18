@@ -30,6 +30,7 @@ RUN apk add --no-cache ca-certificates \
 WORKDIR /app
 
 COPY --from=build /out/tick-service ./tick-service
+COPY --chown=appuser:appgroup backend/shared/config/.env /shared/config/.env
 COPY --chown=appuser:appgroup backend/services/tick-service/internal/db/migrations ./migrations
 
 # setting user rights and folder mode
