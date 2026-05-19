@@ -1,4 +1,5 @@
-api-reference:
+services:    
+    api-reference:
         image: scalarapi/api-reference:latest
         container_name: airlinesim-api-reference
         volumes:
