@@ -6,5 +6,8 @@ services:
             - ../../services/api-gateway/cmd/gateway/docs:/docs
         restart: unless-stopped
         networks:
-            - default
             - intranet
+networks:
+    intranet:
+        external: true
+    
