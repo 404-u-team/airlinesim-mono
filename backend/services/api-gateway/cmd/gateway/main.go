@@ -21,8 +21,8 @@ import (
 // @contact.name   Jeno7u
 // @contact.url    https://github.com/Jeno7u
 // @contact.email  lboris201@yandex.ru
-// @host           localhost:8080
-// @schemes        http https
+// @host           api.master.stand.airlinesim.ms0ur.dev
+// @schemes        https
 
 func main() {
 	// get config from env
