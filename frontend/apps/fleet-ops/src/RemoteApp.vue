@@ -4,9 +4,14 @@ import type { FlightStatus } from "@airlinesim/api-contracts";
 import { AirBadge, AirButton } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
 import { createApiClient } from "@airlinesim/game-sdk";
+import { onMounted } from "vue";
 
-const apiClient = createApiClient({ baseUrl: "http://localhost:8000" });
+const apiClient = createApiClient();
 const status: FlightStatus = "scheduled";
+
+onMounted(() => {
+  airlineSimEventBus.emit("mfe:ready", { remoteId: "fleet-ops" });
+});
 
 function notifySelection(): void {
   airlineSimEventBus.emit("navigation:remote-selected", {

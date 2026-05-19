@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export * from "./generated/openapi";
+
 export const airlineSchema = z.object({
   code: z.string().min(2).max(3),
   id: z.uuid(),

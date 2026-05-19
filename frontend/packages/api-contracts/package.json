@@ -15,7 +15,8 @@
   },
   "scripts": {
     "build": "tsc --noEmit && vite build",
-    "dev": "vite build --watch",
+    "dev": "bun --watch run scripts/generate-openapi.ts",
+    "generate": "bun run scripts/generate-openapi.ts",
     "lint": "eslint . --max-warnings=0 && tsc --noEmit",
     "lint:fix": "eslint . --fix"
   },
@@ -27,6 +28,7 @@
     "eslint": "latest",
     "typescript": "~6.0.2",
     "vite": "^8.0.10",
-    "vite-plugin-dts": "^4.5.4"
+    "vite-plugin-dts": "^4.5.4",
+    "yaml": "^2.8.2"
   }
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { airlineSimEventBus } from "@airlinesim/event-bus";
     import { onDestroy, onMount, untrack } from "svelte";
 
     import { mapManager } from "../map-manager/index.svelte";
@@ -27,6 +28,7 @@
 
     onMount((): void => {
         mapManager.init(mapContainer, rotation);
+        airlineSimEventBus.emit("mfe:ready", { remoteId: "map" });
     });
 
     $effect(() => {
