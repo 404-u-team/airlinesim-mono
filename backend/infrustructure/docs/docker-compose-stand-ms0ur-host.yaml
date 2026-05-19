@@ -1,0 +1,14 @@
+api-reference:
+        image: scalarapi/api-reference:latest
+        container_name: airlinesim-api-reference
+        volumes:
+            - ../../services/api-gateway/cmd/gateway/docs:/docs
+        environment:
+            API_REFERENCE_CONFIG: |
+                {
+                  "theme": "purple"
+                }
+        restart: unless-stopped
+        networks:
+            - default
+            - intranet
