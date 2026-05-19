@@ -1,0 +1,13 @@
+services:    
+    api-reference:
+        image: scalarapi/api-reference:latest
+        container_name: airlinesim-api-reference
+        volumes:
+            - ../../services/api-gateway/cmd/gateway/docs:/docs
+        restart: unless-stopped
+        networks:
+            - intranet
+networks:
+    intranet:
+        external: true
+    
