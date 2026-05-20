@@ -1,3 +1,4 @@
+import type { RemoteId } from "@airlinesim/event-bus";
 import type { Component } from "vue";
 
 import {
@@ -21,6 +22,8 @@ import {
   Wrench,
 } from "@lucide/vue";
 
+import { resolveRemoteId } from "./mfe-routing";
+
 export type NavigationChild = {
   label: string;
   path: string;
@@ -33,16 +36,6 @@ export type NavigationSection = {
   path: string;
   remoteId: RemoteId;
 };
-
-export type RemoteId =
-  | "events-news"
-  | "finance-stock"
-  | "fleet-ops"
-  | "hr-facilities"
-  | "map"
-  | "network-planner";
-
-export const defaultRoutePath = "/dashboard";
 
 export const navigationSections: NavigationSection[] = [
   {
@@ -159,19 +152,5 @@ export const quickActions = [
 ];
 
 export function getRemoteIdByPath(path: string): RemoteId | undefined {
-  const normalizedPath = path === "/" ? defaultRoutePath : path;
-
-  // Exact match for dashboard
-  if (normalizedPath === "/dashboard") {
-    return "map";
-  }
-
-  // Check sections and children
-  for (const section of navigationSections) {
-    if (normalizedPath === section.path || normalizedPath.startsWith(`${section.path}/`)) {
-      return section.remoteId;
-    }
-  }
-
-  return undefined;
+  return resolveRemoteId(path);
 }

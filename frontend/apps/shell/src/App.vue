@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { RouterView } from "vue-router";
+import { RouterView, useRoute } from "vue-router";
 
 import AppSidebar from "./components/AppSidebar.vue";
 import AppTopbar from "./components/AppTopbar.vue";
 
 const isSidebarOpen = ref(false);
 const companyName = "Air Avalon";
+const route = useRoute();
 
 function closeSidebar(): void {
   isSidebarOpen.value = false;
@@ -18,7 +19,14 @@ function toggleSidebar(): void {
 </script>
 
 <template>
-  <div class="h-screen overflow-hidden bg-background text-body text-text-primary">
+  <RouterView
+    v-if="route.meta.publicLayout"
+    class="min-h-screen"
+  />
+  <div
+    v-else
+    class="h-screen overflow-hidden bg-background text-body text-text-primary"
+  >
     <div
       v-if="isSidebarOpen"
       class="fixed inset-0 z-30 bg-text-primary/30 lg:hidden"
