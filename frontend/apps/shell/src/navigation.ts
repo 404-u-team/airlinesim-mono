@@ -34,7 +34,7 @@ export type NavigationSection = {
   icon: Component;
   label: string;
   path: string;
-  remoteId: RemoteId;
+  remoteId?: RemoteId;
 };
 
 export const navigationSections: NavigationSection[] = [
@@ -118,6 +118,18 @@ export const navigationSections: NavigationSection[] = [
     label: "Settings",
     path: "/settings",
     remoteId: "events-news",
+  },
+  {
+    children: [
+      { label: "Countries", path: "/admin/countries" },
+      { label: "Regions", path: "/admin/regions" },
+      { label: "Airports", path: "/admin/airports" },
+      { label: "Region links", path: "/admin/region-links" },
+      { label: "To be enabled", path: "/admin/future" },
+    ],
+    icon: ShieldCheck,
+    label: "Admin",
+    path: "/admin",
   },
 ];
 

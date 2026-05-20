@@ -34,6 +34,7 @@
 - `docs/mfe-routing.md` - спецификация маршрутизации между Shell и MFE: источник истины для route registry, порядок портов, события `event-bus`, публичные auth routes и правила навигации remote-приложений.
 - `docs/swagger.yaml` - OpenAPI/Swagger контракт backend API; `docs/swagger.json` лежит рядом как fallback для генерации.
 - `docs/erd.txt` - доменная ERD модель.
+- `docs/to-be-enabled.md` - матрица shell admin страниц: что уже включено по OpenAPI, какие ERD-сущности пока disabled и условия их включения.
 
 ## Архитектура
 
