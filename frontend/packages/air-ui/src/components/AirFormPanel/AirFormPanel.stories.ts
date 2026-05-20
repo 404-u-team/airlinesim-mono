@@ -31,7 +31,7 @@ export const Playground: Story = {
           <template #eyebrow>
             <AirBadge
               class="mb-3"
-              label="AirlineSim Korea"
+              label="AirlineSim"
               variant="primary-soft"
             />
           </template>

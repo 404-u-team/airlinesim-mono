@@ -63,7 +63,7 @@ async function submit(): Promise<void> {
       <template #eyebrow>
         <AirBadge
           class="mb-3"
-          label="AirlineSim Korea"
+          label="AirlineSim"
           variant="primary-soft"
         />
       </template>
