@@ -15,7 +15,7 @@ import (
 
 func SetupRoutes(authClient *grpcclient.AuthClient, operationsClient *grpcclient.OperationsClient, socketHub realtime.Hub, config *config.Config) *gin.Engine {
 	router := gin.Default()
-	router.Use(middleware.CORSMiddleware(config))
+	router.Use(middleware.CORSMiddleware())
 
 	authHandler := handlers.NewAuthHandler(authClient, config)
 	operationsHandler := handlers.NewOperationsHandler(operationsClient, config) // maybe config is extra

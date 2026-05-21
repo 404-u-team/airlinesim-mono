@@ -2,22 +2,26 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 
-	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/config"
 	"github.com/gin-gonic/gin"
 )
 
-func CORSMiddleware(config *config.Config) gin.HandlerFunc {
+func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		origin := c.GetHeader("Origin")
-		if config.CORSAllowAnyOrigin && origin != "" {
+		origin := strings.TrimSpace(c.GetHeader("Origin"))
+		if origin != "" {
 			c.Header("Access-Control-Allow-Origin", origin)
-			c.Header("Vary", "Origin")
+			c.Header("Access-Control-Allow-Credentials", "true")
+			c.Header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
+			allowedHeaders := strings.TrimSpace(c.GetHeader("Access-Control-Request-Headers"))
+			if allowedHeaders == "" {
+				allowedHeaders = "Authorization,Content-Type,Accept,Origin,X-Requested-With,Cache-Control,Pragma"
+			}
+			c.Header("Access-Control-Allow-Headers", allowedHeaders)
+			c.Header("Access-Control-Expose-Headers", "Content-Length,Content-Type")
+			c.Header("Vary", "Origin, Access-Control-Request-Method, Access-Control-Request-Headers")
 		}
-
-		c.Header("Access-Control-Allow-Credentials", "true")
-		c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept")
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 
 		if c.Request.Method == http.MethodOptions {
 			c.AbortWithStatus(http.StatusNoContent)
