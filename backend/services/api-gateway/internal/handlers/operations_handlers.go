@@ -58,6 +58,7 @@ func (h *OperationsHandler) CreateCountry(c *gin.Context) {
 			c.Status(http.StatusConflict)
 			return
 		}
+		log.Println("got error when tried to gRPC create country, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -103,6 +104,7 @@ func (h *OperationsHandler) ChangeCountry(c *gin.Context) {
 			c.Status(http.StatusConflict)
 			return
 		}
+		log.Println("got error when tried to gRPC change country, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -147,6 +149,7 @@ func (h *OperationsHandler) CreateRegion(c *gin.Context) {
 			c.Status(http.StatusConflict)
 			return
 		}
+		log.Println("got error when tried to gRPC create region, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -196,6 +199,7 @@ func (h *OperationsHandler) ChangeRegion(c *gin.Context) {
 			c.Status(http.StatusConflict)
 			return
 		}
+		log.Println("got error when tried to gRPC change region, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -240,6 +244,7 @@ func (h *OperationsHandler) CreateRegionLink(c *gin.Context) {
 		if errors.Is(err, customerrors.ErrRegionLinkConflict) {
 			c.Status(http.StatusConflict)
 		}
+		log.Println("got error when tried to gRPC create region link, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -289,6 +294,7 @@ func (h *OperationsHandler) ChangeRegionLink(c *gin.Context) {
 			c.Status(http.StatusConflict)
 			return
 		}
+		log.Println("got error when tried to gRPC change region link, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -335,6 +341,7 @@ func (h *OperationsHandler) CreateAirport(c *gin.Context) {
 			c.Status(http.StatusConflict)
 			return
 		}
+		log.Println("got error when tried to gRPC create airport, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -388,6 +395,7 @@ func (h *OperationsHandler) ChangeAirport(c *gin.Context) {
 			c.Status(http.StatusConflict)
 			return
 		}
+		log.Println("got error when tried to gRPC change airport, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -411,6 +419,7 @@ func (h *OperationsHandler) ListCountries(c *gin.Context) {
 
 	response, err := h.operationsClient.ListCountries(ctx)
 	if err != nil {
+		log.Println("got error when tried to gRPC list countries, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -434,6 +443,7 @@ func (h *OperationsHandler) ListRegions(c *gin.Context) {
 
 	response, err := h.operationsClient.ListRegions(ctx)
 	if err != nil {
+		log.Println("got error when tried to gRPC list regions, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -457,6 +467,7 @@ func (h *OperationsHandler) ListRegionLinks(c *gin.Context) {
 
 	response, err := h.operationsClient.ListRegionLinks(ctx)
 	if err != nil {
+		log.Println("got error when tried to gRPC list region links, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -480,6 +491,7 @@ func (h *OperationsHandler) ListAirports(c *gin.Context) {
 
 	response, err := h.operationsClient.ListAirports(ctx)
 	if err != nil {
+		log.Println("got error when tried to gRPC list airports, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -521,6 +533,7 @@ func (h *OperationsHandler) DeleteCountry(c *gin.Context) {
 			c.Status(http.StatusConflict)
 			return
 		}
+		log.Println("got error when tried to gRPC delete country, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -562,6 +575,7 @@ func (h *OperationsHandler) DeleteRegion(c *gin.Context) {
 			c.Status(http.StatusConflict)
 			return
 		}
+		log.Println("got error when tried to gRPC delete region, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -598,6 +612,7 @@ func (h *OperationsHandler) DeleteRegionLink(c *gin.Context) {
 			c.Status(http.StatusNotFound)
 			return
 		}
+		log.Println("got error when tried to gRPC delete region link, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -634,6 +649,7 @@ func (h *OperationsHandler) DeleteAirport(c *gin.Context) {
 			c.Status(http.StatusNotFound)
 			return
 		}
+		log.Println("got error when tried to gRPC delete airport, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}

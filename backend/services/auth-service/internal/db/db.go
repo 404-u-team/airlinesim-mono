@@ -11,6 +11,7 @@ import (
 
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/auth"
 	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/config"
+	"github.com/404-u-team/airlinesim-mono/backend/auth-service/internal/dto"
 	authpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -21,6 +22,7 @@ import (
 
 type UserCreator interface {
 	CreateUser(ctx context.Context, payload *authpb.RegisterRequest, role string) (uuid.UUID, error)
+	GetUserByEmail(ctx context.Context, email string) (*dto.User, error)
 }
 
 func NewPostgresPool(postgresConnString string) *pgxpool.Pool {
@@ -77,6 +79,10 @@ func MigrateDatabase(postgresConnString string) {
 }
 
 func CreateDefaultAdmin(repo UserCreator, config *config.Config) {
+	if _, err := repo.GetUserByEmail(context.Background(), config.AdminEmail); err == nil {
+		return
+	}
+
 	hashedPassword, err := auth.HashPassword(config.AdminPassword)
 	if err != nil {
 		log.Println("error when hashing admin password, ", err)
@@ -92,7 +98,7 @@ func CreateDefaultAdmin(repo UserCreator, config *config.Config) {
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			log.Println("admin user is already created")
+			return
 		}
 		log.Println("got error during create user admin, ", err)
 	}
