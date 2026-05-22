@@ -6,9 +6,10 @@ import {
   LOCALE_STORAGE_KEY,
   normalizeLocale,
 } from "@airlinesim/i18n";
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { RouterView, useRoute } from "vue-router";
 
+import { authState } from "./auth";
 import AppSidebar from "./components/AppSidebar.vue";
 import AppTopbar from "./components/AppTopbar.vue";
 
@@ -19,7 +20,7 @@ const THEME_STORAGE_KEY = "airlinesim:theme";
 const isSidebarOpen = ref(false);
 const locale = ref<Locale>("en");
 const theme = ref<AppTheme>("light");
-const companyName = "Air Avalon";
+const companyName = computed(() => authState.airlineName.value);
 const route = useRoute();
 
 function closeSidebar(): void {
@@ -64,10 +65,6 @@ function toggleLocale(): void {
 
 function toggleSidebar(): void {
   isSidebarOpen.value = !isSidebarOpen.value;
-}
-
-function toggleTheme(): void {
-  theme.value = theme.value === "dark" ? "light" : "dark";
 }
 
 onMounted(() => {
@@ -127,10 +124,7 @@ watch(
       <div class="flex h-full min-w-0 flex-col overflow-hidden">
         <AppTopbar
           :app-locale="locale"
-          :theme="theme"
-          @toggle-locale="toggleLocale"
           @toggle-menu="toggleSidebar"
-          @toggle-theme="toggleTheme"
         />
         <RouterView
           class="min-h-0 flex-1 overflow-hidden"

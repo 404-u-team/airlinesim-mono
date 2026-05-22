@@ -1,6 +1,16 @@
 import type { enMessages } from "./en";
 
 export const ruMessages = {
+  "airline.create.description": "Создайте профиль авиакомпании перед входом в симуляцию.",
+  "airline.create.submit": "Создать авиакомпанию",
+  "airline.create.title": "Создать авиакомпанию",
+  "airline.iataCode": "IATA-код",
+  "airline.iataHint": "2 буквы.",
+  "airline.icaoCode": "ICAO-код",
+  "airline.icaoHint": "3 буквы.",
+  "airline.name": "Название авиакомпании",
+  "airline.startingAirportHint": "Опциональный backend id аэропорта.",
+  "airline.startingAirportId": "ID стартового аэропорта",
   "auth.description.login": "Войдите с учетными данными капитана, чтобы продолжить симуляцию.",
   "auth.description.register": "Создайте профиль игрока и начните новую сессию авиакомпании.",
   "auth.email": "Email",

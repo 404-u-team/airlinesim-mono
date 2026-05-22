@@ -31,6 +31,7 @@ bun run check
 
 - `apps/shell` - host-приложение на Vue 3 + Vite. Отвечает за общий layout, глобальные состояния, авторизацию, уведомления, i18n и lazy import remote-модулей.
 - `apps/map` - remote `World Map` на Svelte + MapLibre GL. Экспортирует карту через Module Federation и использует shared UI/SDK.
+- `bff` - Bun backend-for-frontend вне `apps/*`; предназначен для импорта реальных world data и proxy/composition endpoints. Подробнее: [`docs/bff.md`](docs/bff.md).
 
 Диаграмма `docs/FE.png` описывает весь целевой frontend, даже если часть модулей пока не создана физически:
 
@@ -60,6 +61,7 @@ bun run check
 - Backend Socket.IO используется shell и remotes для live events/notifications через общий `event-bus`.
 - UI-компоненты, Tailwind CSS, icons и theme tokens приходят из `air-ui`.
 - I18N-контракт RU/EN описан в [`docs/I18N.md`](docs/I18N.md): shell владеет текущей локалью, remotes получают `appLocale` и событие `i18n:locale-changed`.
+- BFF-контракт описан в [`docs/bff.md`](docs/bff.md): `import` нормализует реальные данные мира, `proxy` добавляет frontend-specific фильтры поверх backend API.
 
 ## Доменная Модель
 

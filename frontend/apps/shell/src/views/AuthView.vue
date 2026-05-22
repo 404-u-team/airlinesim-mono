@@ -5,7 +5,7 @@ import { Languages } from "@lucide/vue";
 import { computed, reactive } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 
-import { authState, login, register } from "../auth";
+import { authState, createMyAirline, login, register } from "../auth";
 import { type ShellMessageKey, shellMessages } from "../i18n/messages";
 import { defaultRoutePath } from "../mfe-routing";
 
@@ -22,23 +22,47 @@ const router = useRouter();
 const { error, isSubmitting } = authState;
 
 const form = reactive({
+  airlineIataCode: "",
+  airlineIcaoCode: "",
+  airlineName: "",
+  airlineStartingAirportId: "",
   email: "",
   login: "",
   nickname: "",
   password: "",
 });
 
+const isCreatingAirline = reactive({
+  value: false,
+});
+
 const isRegister = computed(() => route.name === "register");
 const t = computed(() => (key: ShellMessageKey): string =>
   translate(shellMessages, props.appLocale, key),
 );
-const title = computed(() => (isRegister.value ? t.value("auth.title.register") : t.value("auth.title.login")));
-const description = computed(() =>
-  isRegister.value
+const title = computed(() => {
+  if (isCreatingAirline.value) {
+    return t.value("airline.create.title");
+  }
+
+  return isRegister.value ? t.value("auth.title.register") : t.value("auth.title.login");
+});
+const description = computed(() => {
+  if (isCreatingAirline.value) {
+    return t.value("airline.create.description");
+  }
+
+  return isRegister.value
     ? t.value("auth.description.register")
-    : t.value("auth.description.login"),
-);
-const submitLabel = computed(() => (isRegister.value ? t.value("auth.submit.register") : t.value("auth.signIn")));
+    : t.value("auth.description.login");
+});
+const submitLabel = computed(() => {
+  if (isCreatingAirline.value) {
+    return t.value("airline.create.submit");
+  }
+
+  return isRegister.value ? t.value("auth.submit.register") : t.value("auth.signIn");
+});
 const switchLabel = computed(() =>
   isRegister.value ? t.value("auth.switch.signIn") : t.value("auth.needAccount"),
 );
@@ -54,8 +78,24 @@ const translatedError = computed(() => {
     : error.value;
 });
 
+async function completeAuth(): Promise<void> {
+  const redirect = typeof route.query.redirect === "string" ? route.query.redirect : defaultRoutePath;
+  await router.replace(redirect);
+}
+
 async function submit(): Promise<void> {
   try {
+    if (isCreatingAirline.value) {
+      await createMyAirline({
+        iata_code: form.airlineIataCode,
+        icao_code: form.airlineIcaoCode,
+        name: form.airlineName,
+        starting_airport_id: form.airlineStartingAirportId || undefined,
+      });
+      await completeAuth();
+      return;
+    }
+
     if (isRegister.value) {
       await register({
         email: form.email,
@@ -69,8 +109,13 @@ async function submit(): Promise<void> {
       });
     }
 
-    const redirect = typeof route.query.redirect === "string" ? route.query.redirect : defaultRoutePath;
-    await router.replace(redirect);
+    if (!authState.airline.value) {
+      // eslint-disable-next-line require-atomic-updates
+      isCreatingAirline.value = true;
+      return;
+    }
+
+    await completeAuth();
   } catch {
     // Error state is owned by auth.ts so event-bus receives the same failure.
   }
@@ -109,8 +154,45 @@ async function submit(): Promise<void> {
         class="space-y-4"
         @submit.prevent="submit"
       >
+        <template v-if="isCreatingAirline.value">
+          <AirTextField
+            v-model="form.airlineName"
+            autocomplete="organization"
+            :label="t('airline.name')"
+            name="airlineName"
+            required
+          />
+          <div class="grid gap-4 sm:grid-cols-2">
+            <AirTextField
+              v-model="form.airlineIataCode"
+              autocomplete="off"
+              :hint="t('airline.iataHint')"
+              :label="t('airline.iataCode')"
+              maxlength="2"
+              name="airlineIataCode"
+              required
+            />
+            <AirTextField
+              v-model="form.airlineIcaoCode"
+              autocomplete="off"
+              :hint="t('airline.icaoHint')"
+              :label="t('airline.icaoCode')"
+              maxlength="3"
+              name="airlineIcaoCode"
+              required
+            />
+          </div>
+          <AirTextField
+            v-model="form.airlineStartingAirportId"
+            autocomplete="off"
+            :hint="t('airline.startingAirportHint')"
+            :label="t('airline.startingAirportId')"
+            name="airlineStartingAirportId"
+          />
+        </template>
+
         <AirTextField
-          v-if="isRegister"
+          v-if="isRegister && !isCreatingAirline.value"
           v-model="form.email"
           autocomplete="email"
           :label="t('auth.email')"
@@ -119,7 +201,7 @@ async function submit(): Promise<void> {
           type="email"
         />
         <AirTextField
-          v-if="isRegister"
+          v-if="isRegister && !isCreatingAirline.value"
           v-model="form.nickname"
           autocomplete="username"
           :hint="t('auth.nicknameHint')"
@@ -128,7 +210,7 @@ async function submit(): Promise<void> {
           required
         />
         <AirTextField
-          v-else
+          v-if="!isRegister && !isCreatingAirline.value"
           v-model="form.login"
           autocomplete="username"
           :label="t('auth.login')"
@@ -136,6 +218,7 @@ async function submit(): Promise<void> {
           required
         />
         <AirTextField
+          v-if="!isCreatingAirline.value"
           v-model="form.password"
           :autocomplete="isRegister ? 'new-password' : 'current-password'"
           :hint="t('auth.passwordHint')"
@@ -161,13 +244,15 @@ async function submit(): Promise<void> {
       </form>
 
       <p class="mt-5 text-center text-body text-text-muted">
-        {{ switchLabel }}
-        <RouterLink
-          class="text-link hover:underline"
-          :to="switchRoute"
-        >
-          {{ switchAction }}
-        </RouterLink>
+        <template v-if="!isCreatingAirline.value">
+          {{ switchLabel }}
+          <RouterLink
+            class="text-link hover:underline"
+            :to="switchRoute"
+          >
+            {{ switchAction }}
+          </RouterLink>
+        </template>
       </p>
     </AirFormPanel>
   </main>

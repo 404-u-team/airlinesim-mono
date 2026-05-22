@@ -56,6 +56,48 @@ export type DtoRegisterRequest = {
   "password": string;
 };
 
+export type FleetpbAircraft = {
+  "base_airport_id"?: string;
+  "current_maintenance_points"?: number;
+  "current_owner_id"?: string;
+  "fh_since_last_d_check"?: number;
+  "id"?: string;
+  "in_service"?: boolean;
+  "manufactured_at"?: string;
+  "max_maintenance_points_cached"?: number;
+  "status"?: string;
+  "tail_number"?: string;
+  "total_cycles"?: number;
+  "total_flight_hours"?: number;
+  "type_id"?: string;
+};
+
+export type FleetpbAircraftType = {
+  "base_maintenance_points"?: number;
+  "base_turnaround_points"?: number;
+  "characteristics"?: string;
+  "cruising_speed_kph"?: number;
+  "d_check_interval_fh"?: number;
+  "d_check_interval_years"?: number;
+  "d_check_overdue_multiplier"?: number;
+  "fuel_consumption_per_hour"?: number;
+  "iata_code"?: string;
+  "icao_code"?: string;
+  "id"?: string;
+  "image_upload_id"?: string;
+  "maint_cost_per_flight_hour"?: number;
+  "maint_cost_per_landing"?: number;
+  "maint_cost_per_takeoff"?: number;
+  "manufacturer_id"?: string;
+  "max_planned_seat_capacity"?: number;
+  "max_range_km"?: number;
+  "min_runway_length_m"?: number;
+  "model_name"?: string;
+  "mtow_kg"?: number;
+  "price_per_unit"?: number;
+  "production_points_price"?: number;
+};
+
 export type FleetpbCreateAircraftRequest = {
   "aircraft_type_id"?: string;
   "base_airport_id"?: string;
@@ -65,6 +107,39 @@ export type FleetpbCreateAircraftRequest = {
 
 export type FleetpbCreateAircraftResponse = {
   "id"?: string;
+};
+
+export type FleetpbCreateAircraftTypeRequest = {
+  "base_maintenance_points"?: number;
+  "base_turnaround_points"?: number;
+  "characteristics"?: string;
+  "cruising_speed_kph"?: number;
+  "d_check_interval_fh"?: number;
+  "d_check_interval_years"?: number;
+  "d_check_overdue_multiplier"?: number;
+  "fuel_consumption_per_hour"?: number;
+  "iata_code"?: string;
+  "icao_code"?: string;
+  "image_upload_id"?: string;
+  "maint_cost_per_flight_hour"?: number;
+  "maint_cost_per_landing"?: number;
+  "maint_cost_per_takeoff"?: number;
+  "manufacturer_id"?: string;
+  "max_planned_seat_capacity"?: number;
+  "max_range_km"?: number;
+  "min_runway_length_m"?: number;
+  "model_name"?: string;
+  "mtow_kg"?: number;
+  "price_per_unit"?: number;
+  "production_points_price"?: number;
+};
+
+export type FleetpbListAircraftTypesResponse = {
+  "items"?: Array<FleetpbAircraftType>;
+};
+
+export type FleetpbListAircraftsResponse = {
+  "items"?: Array<FleetpbAircraft>;
 };
 
 export type OperationspbAirport = {
@@ -280,6 +355,42 @@ export const openApiOperations = [
     ]
   },
   {
+    "method": "GET",
+    "operationId": "get__aircraft_types",
+    "path": "/aircraft-types",
+    "summary": "List aircraft types",
+    "tags": [
+      "Aircraft"
+    ]
+  },
+  {
+    "method": "POST",
+    "operationId": "post__aircraft_types",
+    "path": "/aircraft-types",
+    "summary": "Create aircraft type",
+    "tags": [
+      "Aircraft"
+    ]
+  },
+  {
+    "method": "GET",
+    "operationId": "get__aircraft_types__id_",
+    "path": "/aircraft-types/{id}",
+    "summary": "Get aircraft type",
+    "tags": [
+      "Aircraft"
+    ]
+  },
+  {
+    "method": "GET",
+    "operationId": "get__aircrafts",
+    "path": "/aircrafts",
+    "summary": "List aircrafts for airline",
+    "tags": [
+      "Aircraft"
+    ]
+  },
+  {
     "method": "POST",
     "operationId": "post__airline",
     "path": "/airline",
@@ -293,6 +404,15 @@ export const openApiOperations = [
     "operationId": "get__airline__id_",
     "path": "/airline/{id}",
     "summary": "Get airline by id",
+    "tags": [
+      "Airline"
+    ]
+  },
+  {
+    "method": "PATCH",
+    "operationId": "patch__airline__id_",
+    "path": "/airline/{id}",
+    "summary": "Update airline",
     "tags": [
       "Airline"
     ]

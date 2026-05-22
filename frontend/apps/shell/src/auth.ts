@@ -1,6 +1,13 @@
+import type {
+  AirlinepbAirlineResponse,
+  AirlinepbCreateAirlineRequest,
+  AirlinepbCreateAirlineResponse,
+} from "@airlinesim/api-contracts";
+
 import { airlineSimEventBus } from "@airlinesim/event-bus";
 import {
   ApiRequestError,
+  createApiClient,
   createAuthClient,
   type LoginRequest,
   type RegisterRequest,
@@ -8,19 +15,66 @@ import {
 import { computed, reactive } from "vue";
 
 const authClient = createAuthClient();
+const apiClient = createApiClient({
+  getToken: authClient.getAccessToken,
+});
 
 const state = reactive({
   accessToken: authClient.getAccessToken(),
+  airline: null as AirlinepbAirlineResponse | null,
   error: null as null | string,
   isSubmitting: false,
 });
 
 export const authState = {
   accessToken: computed(() => state.accessToken),
+  airline: computed(() => state.airline),
+  airlineName: computed(() => state.airline?.name ?? "AirlineSim"),
   error: computed(() => state.error),
   isAuthenticated: computed(() => Boolean(state.accessToken)),
   isSubmitting: computed(() => state.isSubmitting),
 };
+
+export async function createMyAirline(
+  request: AirlinepbCreateAirlineRequest,
+): Promise<AirlinepbCreateAirlineResponse> {
+  state.isSubmitting = true;
+  state.error = null;
+
+  try {
+    const response = await apiClient.post<AirlinepbCreateAirlineResponse>("/airline", request);
+    await loadMyAirline();
+
+    return response;
+  } catch (error) {
+    state.error = getAuthErrorMessage(error);
+    throw error;
+  } finally {
+    state.isSubmitting = false;
+  }
+}
+
+export async function loadMyAirline(): Promise<AirlinepbAirlineResponse | null> {
+  if (!state.accessToken) {
+    state.airline = null;
+    return null;
+  }
+
+  try {
+    const airline = await apiClient.get<AirlinepbAirlineResponse>("/airline/me");
+    // eslint-disable-next-line require-atomic-updates
+    state.airline = airline;
+
+    return airline;
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.status === 404) {
+      state.airline = null;
+      return null;
+    }
+
+    throw error;
+  }
+}
 
 export async function login(request: LoginRequest): Promise<void> {
   await submitAuth("login", async () => authClient.login(request));
@@ -29,6 +83,7 @@ export async function login(request: LoginRequest): Promise<void> {
 export function logout(reason: "expired" | "manual" = "manual"): void {
   authClient.logout();
   state.accessToken = null;
+  state.airline = null;
   state.error = null;
   airlineSimEventBus.emit("auth:logout", { reason });
 }
@@ -43,6 +98,7 @@ export function restoreAuthSession(): void {
 
   if (accessToken) {
     airlineSimEventBus.emit("auth:session-restored", { accessToken });
+    void loadMyAirline();
   }
 }
 
@@ -68,6 +124,7 @@ async function submitAuth(
   try {
     const session = await action();
     state.accessToken = session.accessToken;
+    await loadMyAirline();
     airlineSimEventBus.emit(
       mode === "login" ? "auth:login-succeeded" : "auth:register-succeeded",
       { accessToken: session.accessToken },

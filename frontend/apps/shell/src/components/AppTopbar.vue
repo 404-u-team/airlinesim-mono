@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { AirIconButton } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
-import { getLocaleLabel, type Locale, translate } from "@airlinesim/i18n";
-import { Bell, Languages, LogOut, Menu, Moon, Search, Sun, UserRound } from "@lucide/vue";
+import { type Locale, translate } from "@airlinesim/i18n";
+import { Bell, LogOut, Menu, Search, UserRound } from "@lucide/vue";
 import { computed } from "vue";
 import { useRouter } from "vue-router";
 
@@ -12,13 +11,10 @@ import { getStatusMetrics } from "../navigation";
 
 const props = defineProps<{
   appLocale: Locale;
-  theme: "dark" | "light";
 }>();
 
 defineEmits<{
-  "toggle-locale": [];
   "toggle-menu": [];
-  "toggle-theme": [];
 }>();
 
 const router = useRouter();
@@ -41,14 +37,15 @@ function signOut(): void {
 
 <template>
   <header class="flex h-14 shrink-0 items-center border-b border-border bg-surface px-3 text-text-primary sm:px-5">
-    <AirIconButton
-      class="lg:hidden"
-      :label="t('topbar.menu')"
-      size="sm"
+    <button
+      type="button"
+      class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-text-primary transition hover:bg-surface-subtle lg:hidden"
+      :aria-label="t('topbar.menu')"
+      :title="t('topbar.menu')"
       @click="$emit('toggle-menu')"
     >
       <Menu :size="20" />
-    </AirIconButton>
+    </button>
 
     <div class="ml-2 hidden min-w-0 items-center gap-6 md:flex">
       <div
@@ -89,30 +86,6 @@ function signOut(): void {
       <div class="hidden whitespace-nowrap text-monospace text-text-muted sm:block">
         14:36 UTC · 03.12.2025
       </div>
-
-      <AirIconButton
-        :label="t('topbar.language')"
-        size="sm"
-        @click="$emit('toggle-locale')"
-      >
-        <Languages :size="18" />
-        <span class="sr-only">{{ getLocaleLabel(props.appLocale) }}</span>
-      </AirIconButton>
-
-      <AirIconButton
-        :label="props.theme === 'dark' ? t('topbar.theme.light') : t('topbar.theme.dark')"
-        size="sm"
-        @click="$emit('toggle-theme')"
-      >
-        <Sun
-          v-if="props.theme === 'dark'"
-          :size="18"
-        />
-        <Moon
-          v-else
-          :size="18"
-        />
-      </AirIconButton>
 
       <button
         class="relative inline-flex size-9 items-center justify-center rounded-lg text-text-muted transition hover:bg-surface-subtle hover:text-text-primary"
