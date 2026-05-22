@@ -63,6 +63,85 @@
                 }
             }
         },
+        "/aircraft-types": {
+            "get": {
+                "description": "Returns a list of available aircraft types",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Aircraft"
+                ],
+                "summary": "List aircraft types",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/fleetpb.ListAircraftTypesResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/aircraft-types/{id}": {
+            "get": {
+                "description": "Returns details for a single aircraft type",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Aircraft"
+                ],
+                "summary": "Get aircraft type",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Aircraft type id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/fleetpb.AircraftType"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/airline": {
             "post": {
                 "description": "Creates an airline for the authenticated user",
@@ -175,6 +254,72 @@
                     },
                     "500": {
                         "description": "Internal server error"
+                    }
+                }
+            },
+            "patch": {
+                "description": "Update airline name and codes (iata, icao). Only owner or admin allowed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Airline"
+                ],
+                "summary": "Update airline",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Airline ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update: name, iata_code, icao_code",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/airlinepb.AirlineResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -1199,6 +1344,80 @@
                 }
             }
         },
+        "fleetpb.AircraftType": {
+            "type": "object",
+            "properties": {
+                "base_maintenance_points": {
+                    "type": "number"
+                },
+                "base_turnaround_points": {
+                    "type": "number"
+                },
+                "characteristics": {
+                    "type": "string"
+                },
+                "cruising_speed_kph": {
+                    "type": "number"
+                },
+                "d_check_interval_fh": {
+                    "type": "number"
+                },
+                "d_check_interval_years": {
+                    "type": "number"
+                },
+                "d_check_overdue_multiplier": {
+                    "type": "number"
+                },
+                "fuel_consumption_per_hour": {
+                    "type": "number"
+                },
+                "iata_code": {
+                    "type": "string"
+                },
+                "icao_code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "image_upload_id": {
+                    "type": "string"
+                },
+                "maint_cost_per_flight_hour": {
+                    "type": "number"
+                },
+                "maint_cost_per_landing": {
+                    "type": "number"
+                },
+                "maint_cost_per_takeoff": {
+                    "type": "number"
+                },
+                "manufacturer_id": {
+                    "type": "string"
+                },
+                "max_planned_seat_capacity": {
+                    "type": "number"
+                },
+                "max_range_km": {
+                    "type": "number"
+                },
+                "min_runway_length_m": {
+                    "type": "number"
+                },
+                "model_name": {
+                    "type": "string"
+                },
+                "mtow_kg": {
+                    "type": "number"
+                },
+                "price_per_unit": {
+                    "type": "number"
+                },
+                "production_points_price": {
+                    "type": "number"
+                }
+            }
+        },
         "fleetpb.CreateAircraftRequest": {
             "type": "object",
             "properties": {
@@ -1221,6 +1440,17 @@
             "properties": {
                 "id": {
                     "type": "string"
+                }
+            }
+        },
+        "fleetpb.ListAircraftTypesResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/fleetpb.AircraftType"
+                    }
                 }
             }
         },
