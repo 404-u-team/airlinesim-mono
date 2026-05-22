@@ -122,8 +122,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 }
 
 // RefreshToken godoc
-// @Summary      Refreshes access and refresh token
-// @Description  Returns access token and sets refresh token into cookie. Doing that by validating refresh token
+// @Summary      Refreshes access and refresh token using refresh token stored in cookies
+// @Description  Returns access token and sets refresh token into cookie
 // @Tags         Auth
 // @Produce      json
 // @Success      200  {object}  dto.AccessTokenResponse "User authenticated"
