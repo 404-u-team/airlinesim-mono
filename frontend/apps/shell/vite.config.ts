@@ -3,6 +3,11 @@ import tailwindcss from '@tailwindcss/vite'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 
+import { getAppDevPorts } from '../../dev-ports'
+
+const appPorts = getAppDevPorts('../..')
+const appOrigin = (port: number): string => `http://localhost:${String(port)}`
+
 // https://vite.dev/config/
 export default defineConfig({
   envDir: '../..',
@@ -14,12 +19,12 @@ export default defineConfig({
       manifest: false,
       name: 'shell',
       remotes: {
-        eventsNews: 'http://localhost:4005/mf-manifest.json',
-        financeStock: 'http://localhost:4003/mf-manifest.json',
-        fleetOps: 'http://localhost:4002/mf-manifest.json',
-        hrFacilities: 'http://localhost:4006/mf-manifest.json',
-        map: 'http://localhost:4001/mf-manifest.json',
-        networkPlanner: 'http://localhost:4004/mf-manifest.json'
+        eventsNews: `${appOrigin(appPorts.eventsNews)}/mf-manifest.json`,
+        financeStock: `${appOrigin(appPorts.financeStock)}/mf-manifest.json`,
+        fleetOps: `${appOrigin(appPorts.fleetOps)}/mf-manifest.json`,
+        hrFacilities: `${appOrigin(appPorts.hrFacilities)}/mf-manifest.json`,
+        map: `${appOrigin(appPorts.map)}/mf-manifest.json`,
+        networkPlanner: `${appOrigin(appPorts.networkPlanner)}/mf-manifest.json`
       },
       shared: {
         '@airlinesim/air-ui': {
@@ -43,6 +48,7 @@ export default defineConfig({
   ],
   server: {
     cors: true,
-    port: 4000,
+    port: appPorts.shell,
+    strictPort: true,
   },
 })

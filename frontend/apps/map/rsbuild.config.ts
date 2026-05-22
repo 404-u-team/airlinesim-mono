@@ -2,11 +2,15 @@ import { pluginModuleFederation } from '@module-federation/rsbuild-plugin'
 import { defineConfig, loadEnv } from '@rsbuild/core'
 import { pluginSvelte } from '@rsbuild/plugin-svelte'
 
+import { getAppDevPorts } from '../../dev-ports'
+
+const appPorts = getAppDevPorts('../..')
+const appOrigin = (port: number): string => `http://localhost:${String(port)}`
 const { publicVars } = loadEnv({ cwd: '../..', prefixes: ['VITE_'] })
 
 export default defineConfig({
   output: {
-    assetPrefix: 'http://localhost:4001',
+    assetPrefix: appOrigin(appPorts.map),
   },
   plugins: [
     pluginSvelte(),
@@ -30,12 +34,13 @@ export default defineConfig({
   ],
   server: {
     cors: {
-      origin: 'http://localhost:4000',
+      origin: appOrigin(appPorts.shell),
     },
     headers: {
       'Access-Control-Allow-Headers': '*',
     },
-    port: 4001,
+    port: appPorts.map,
+    strictPort: true,
   },
   source: {
     define: publicVars,

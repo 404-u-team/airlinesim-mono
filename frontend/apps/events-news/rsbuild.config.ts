@@ -2,6 +2,10 @@ import { pluginModuleFederation } from "@module-federation/rsbuild-plugin";
 import { defineConfig, loadEnv } from "@rsbuild/core";
 import { pluginVue } from "@rsbuild/plugin-vue";
 
+import { getAppDevPorts } from "../../dev-ports";
+
+const appPorts = getAppDevPorts("../..");
+const appOrigin = (port: number): string => `http://localhost:${String(port)}`;
 const { publicVars } = loadEnv({ cwd: "../..", prefixes: ["VITE_"] });
 
 export default defineConfig({
@@ -9,7 +13,7 @@ export default defineConfig({
     template: "./index.html",
   },
   output: {
-    assetPrefix: "http://localhost:4005",
+    assetPrefix: appOrigin(appPorts.eventsNews),
   },
   plugins: [
     pluginVue(),
@@ -33,12 +37,13 @@ export default defineConfig({
   ],
   server: {
     cors: {
-      origin: "http://localhost:4000",
+      origin: appOrigin(appPorts.shell),
     },
     headers: {
       "Access-Control-Allow-Headers": "*",
     },
-    port: 4005,
+    port: appPorts.eventsNews,
+    strictPort: true,
   },
   source: {
     define: publicVars,

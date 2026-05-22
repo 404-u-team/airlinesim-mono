@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { airlineSimEventBus } from "@airlinesim/event-bus";
+import { airlineSimEventBus, type RemoteId } from "@airlinesim/event-bus";
 import { computed, defineAsyncComponent, watch } from "vue";
 import { useRoute } from "vue-router";
 
 import AppLoader from "../components/AppLoader.vue";
 import MapControls from "../components/MapControls.vue";
 import SvelteWrapper from "../components/SvelteWrapper.vue";
-import { getRemoteIdByPath, type RemoteId } from "../navigation";
+import { getRemoteIdByPath } from "../navigation";
 
 const route = useRoute();
 
@@ -52,10 +52,16 @@ const activeVueRemote = computed(() => {
 
 watch(
   () => route.path,
-  (path) => {
+  (path, fromPath) => {
     const remoteId = getRemoteIdByPath(path);
 
     if (remoteId) {
+      airlineSimEventBus.emit("navigation:changed", {
+        fromPath,
+        navigationId: `${Date.now()}:${path}`,
+        path,
+        remoteId,
+      });
       airlineSimEventBus.emit("navigation:remote-selected", {
         path,
         remoteId,
@@ -72,7 +78,7 @@ watch(
       <SvelteWrapper
         :key="activeRemoteId"
         :create-fn="createMap"
-        :component-props="{ controls: false, rotation: false }"
+        :component-props="{ controls: false, remoteId: activeRemoteId, rotation: false, shellPath: route.path }"
       />
       <MapControls />
     </template>
@@ -80,6 +86,8 @@ watch(
       <component
         :is="activeVueRemote"
         :key="activeRemoteId"
+        :remote-id="activeRemoteId"
+        :shell-path="route.path"
       />
       <template #fallback>
         <AppLoader label="Connecting to remote..." />
