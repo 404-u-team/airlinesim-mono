@@ -12,6 +12,8 @@ import (
 type AirlineRepository interface {
 	CreateAirline(ctx context.Context, payload *airlinepb.CreateAirlineRequest) (uuid.UUID, float64, error)
 	AdjustBalance(ctx context.Context, ownerID uuid.UUID, amount float64) (uuid.UUID, float64, error)
+	GetAirlineByID(ctx context.Context, id uuid.UUID) (*airlinepb.AirlineResponse, error)
+	GetAirlineByOwnerID(ctx context.Context, ownerID uuid.UUID) (*airlinepb.AirlineResponse, error)
 }
 
 type airlineRepository struct {
@@ -72,4 +74,60 @@ func (r *airlineRepository) AdjustBalance(ctx context.Context, ownerID uuid.UUID
 	}
 
 	return airlineID, 0, customerrors.ErrAirlineBalanceInsufficient
+}
+
+func (r *airlineRepository) GetAirlineByID(ctx context.Context, id uuid.UUID) (*airlinepb.AirlineResponse, error) {
+	return r.getAirline(ctx, `WHERE id = $1`, id)
+}
+
+func (r *airlineRepository) GetAirlineByOwnerID(ctx context.Context, ownerID uuid.UUID) (*airlinepb.AirlineResponse, error) {
+	return r.getAirline(ctx, `WHERE owner_id = $1`, ownerID)
+}
+
+func (r *airlineRepository) getAirline(ctx context.Context, clause string, id uuid.UUID) (*airlinepb.AirlineResponse, error) {
+	query := `
+		SELECT
+			id::text,
+			owner_id::text,
+			starting_airport_id::text,
+			name,
+			iata_code,
+			substring(icao_code from 1 for 3),
+			balance,
+			COALESCE(equity_cached, 0),
+			COALESCE(equity_cached_at::text, ''),
+			credit_rating,
+			safety_rating,
+			reputation,
+			is_public,
+			is_bankrupt,
+			created_at::text
+		FROM airline
+		` + clause + `
+	`
+
+	var airline airlinepb.AirlineResponse
+	var equityCachedAt string
+	if err := r.pool.QueryRow(ctx, query, id).Scan(
+		&airline.Id,
+		&airline.OwnerId,
+		&airline.StartingAirportId,
+		&airline.Name,
+		&airline.IataCode,
+		&airline.IcaoCode,
+		&airline.Balance,
+		&airline.EquityCached,
+		&equityCachedAt,
+		&airline.CreditRating,
+		&airline.SafetyRating,
+		&airline.Reputation,
+		&airline.IsPublic,
+		&airline.IsBankrupt,
+		&airline.CreatedAt,
+	); err != nil {
+		return nil, err
+	}
+
+	airline.EquityCachedAt = equityCachedAt
+	return &airline, nil
 }

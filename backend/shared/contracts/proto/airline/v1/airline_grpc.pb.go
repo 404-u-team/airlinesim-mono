@@ -19,8 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AirlineService_CreateAirline_FullMethodName = "/auth.v1.AirlineService/CreateAirline"
-	AirlineService_AdjustBalance_FullMethodName = "/auth.v1.AirlineService/AdjustBalance"
+	AirlineService_CreateAirline_FullMethodName       = "/auth.v1.AirlineService/CreateAirline"
+	AirlineService_AdjustBalance_FullMethodName       = "/auth.v1.AirlineService/AdjustBalance"
+	AirlineService_GetAirlineByID_FullMethodName      = "/auth.v1.AirlineService/GetAirlineByID"
+	AirlineService_GetAirlineByOwnerID_FullMethodName = "/auth.v1.AirlineService/GetAirlineByOwnerID"
 )
 
 // AirlineServiceClient is the client API for AirlineService service.
@@ -33,6 +35,10 @@ type AirlineServiceClient interface {
 	CreateAirline(ctx context.Context, in *CreateAirlineRequest, opts ...grpc.CallOption) (*CreateAirlineResponse, error)
 	// adjust airline balance by signed amount
 	AdjustBalance(ctx context.Context, in *AdjustBalanceRequest, opts ...grpc.CallOption) (*AdjustBalanceResponse, error)
+	// get airline by its id
+	GetAirlineByID(ctx context.Context, in *GetAirlineByIDRequest, opts ...grpc.CallOption) (*AirlineResponse, error)
+	// get authenticated user's airline
+	GetAirlineByOwnerID(ctx context.Context, in *GetAirlineByOwnerIDRequest, opts ...grpc.CallOption) (*AirlineResponse, error)
 }
 
 type airlineServiceClient struct {
@@ -63,6 +69,26 @@ func (c *airlineServiceClient) AdjustBalance(ctx context.Context, in *AdjustBala
 	return out, nil
 }
 
+func (c *airlineServiceClient) GetAirlineByID(ctx context.Context, in *GetAirlineByIDRequest, opts ...grpc.CallOption) (*AirlineResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AirlineResponse)
+	err := c.cc.Invoke(ctx, AirlineService_GetAirlineByID_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *airlineServiceClient) GetAirlineByOwnerID(ctx context.Context, in *GetAirlineByOwnerIDRequest, opts ...grpc.CallOption) (*AirlineResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AirlineResponse)
+	err := c.cc.Invoke(ctx, AirlineService_GetAirlineByOwnerID_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AirlineServiceServer is the server API for AirlineService service.
 // All implementations must embed UnimplementedAirlineServiceServer
 // for forward compatibility.
@@ -73,6 +99,10 @@ type AirlineServiceServer interface {
 	CreateAirline(context.Context, *CreateAirlineRequest) (*CreateAirlineResponse, error)
 	// adjust airline balance by signed amount
 	AdjustBalance(context.Context, *AdjustBalanceRequest) (*AdjustBalanceResponse, error)
+	// get airline by its id
+	GetAirlineByID(context.Context, *GetAirlineByIDRequest) (*AirlineResponse, error)
+	// get authenticated user's airline
+	GetAirlineByOwnerID(context.Context, *GetAirlineByOwnerIDRequest) (*AirlineResponse, error)
 	mustEmbedUnimplementedAirlineServiceServer()
 }
 
@@ -88,6 +118,12 @@ func (UnimplementedAirlineServiceServer) CreateAirline(context.Context, *CreateA
 }
 func (UnimplementedAirlineServiceServer) AdjustBalance(context.Context, *AdjustBalanceRequest) (*AdjustBalanceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AdjustBalance not implemented")
+}
+func (UnimplementedAirlineServiceServer) GetAirlineByID(context.Context, *GetAirlineByIDRequest) (*AirlineResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAirlineByID not implemented")
+}
+func (UnimplementedAirlineServiceServer) GetAirlineByOwnerID(context.Context, *GetAirlineByOwnerIDRequest) (*AirlineResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAirlineByOwnerID not implemented")
 }
 func (UnimplementedAirlineServiceServer) mustEmbedUnimplementedAirlineServiceServer() {}
 func (UnimplementedAirlineServiceServer) testEmbeddedByValue()                        {}
@@ -146,6 +182,42 @@ func _AirlineService_AdjustBalance_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AirlineService_GetAirlineByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAirlineByIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AirlineServiceServer).GetAirlineByID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AirlineService_GetAirlineByID_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AirlineServiceServer).GetAirlineByID(ctx, req.(*GetAirlineByIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AirlineService_GetAirlineByOwnerID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAirlineByOwnerIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AirlineServiceServer).GetAirlineByOwnerID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AirlineService_GetAirlineByOwnerID_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AirlineServiceServer).GetAirlineByOwnerID(ctx, req.(*GetAirlineByOwnerIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AirlineService_ServiceDesc is the grpc.ServiceDesc for AirlineService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -160,6 +232,14 @@ var AirlineService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AdjustBalance",
 			Handler:    _AirlineService_AdjustBalance_Handler,
+		},
+		{
+			MethodName: "GetAirlineByID",
+			Handler:    _AirlineService_GetAirlineByID_Handler,
+		},
+		{
+			MethodName: "GetAirlineByOwnerID",
+			Handler:    _AirlineService_GetAirlineByOwnerID_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

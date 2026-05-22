@@ -75,3 +75,72 @@ func (h *AirlineHandler) CreateAirline(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, response)
 }
+
+// GetMyAirline godoc
+// @Summary      Get my airline
+// @Description  Returns full airline information for the authenticated user
+// @Tags         Airline
+// @Produce      json
+// @Success      200  {object}  airlinepb.AirlineResponse "Airline information"
+// @Failure      401  "Unauthorized"
+// @Failure      404  "Airline not found"
+// @Failure      500  "Internal server error"
+// @Router       /airline/me [get]
+func (h *AirlineHandler) GetMyAirline(c *gin.Context) {
+	userID, exists := c.Get(middleware.UserIDKey)
+	if !exists {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	response, err := h.airlineClient.GetAirlineByOwnerID(ctx, &airlinepb.GetAirlineByOwnerIDRequest{OwnerId: userID.(string)})
+	if err != nil {
+		if errors.Is(err, customerrors.ErrAirlineNotFound) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		log.Println("got error when tried to gRPC get my airline, ", err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// GetAirlineByID godoc
+// @Summary      Get airline by id
+// @Description  Returns full airline information by airline id
+// @Tags         Airline
+// @Produce      json
+// @Param       id path string true "Airline ID"
+// @Success      200  {object}  airlinepb.AirlineResponse "Airline information"
+// @Failure      401  "Unauthorized"
+// @Failure      404  "Airline not found"
+// @Failure      500  "Internal server error"
+// @Router       /airline/{id} [get]
+func (h *AirlineHandler) GetAirlineByID(c *gin.Context) {
+	airlineID := c.Param("id")
+	if airlineID == "" {
+		c.Status(http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	response, err := h.airlineClient.GetAirlineByID(ctx, &airlinepb.GetAirlineByIDRequest{Id: airlineID})
+	if err != nil {
+		if errors.Is(err, customerrors.ErrAirlineNotFound) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		log.Println("got error when tried to gRPC get airline by id, ", err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}

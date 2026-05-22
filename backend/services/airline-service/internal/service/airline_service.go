@@ -18,6 +18,8 @@ import (
 type AirlineService interface {
 	CreateAirline(ctx context.Context, payload *airlinepb.CreateAirlineRequest) (*airlinepb.CreateAirlineResponse, error)
 	AdjustBalance(ctx context.Context, payload *airlinepb.AdjustBalanceRequest) (*airlinepb.AdjustBalanceResponse, error)
+	GetAirlineByID(ctx context.Context, payload *airlinepb.GetAirlineByIDRequest) (*airlinepb.AirlineResponse, error)
+	GetAirlineByOwnerID(ctx context.Context, payload *airlinepb.GetAirlineByOwnerIDRequest) (*airlinepb.AirlineResponse, error)
 }
 
 type airlineService struct {
@@ -108,4 +110,32 @@ func (s *airlineService) AdjustBalance(ctx context.Context, payload *airlinepb.A
 	}
 
 	return &airlinepb.AdjustBalanceResponse{AirlineId: airlineID.String(), Balance: balance}, nil
+}
+
+func (s *airlineService) GetAirlineByID(ctx context.Context, payload *airlinepb.GetAirlineByIDRequest) (*airlinepb.AirlineResponse, error) {
+	airlineID, err := uuid.Parse(payload.Id)
+	if err != nil {
+		return nil, customerrors.ErrAirlineNotFound
+	}
+
+	airline, err := s.airlineRepo.GetAirlineByID(ctx, airlineID)
+	if err != nil {
+		return nil, customerrors.ErrAirlineNotFound
+	}
+
+	return airline, nil
+}
+
+func (s *airlineService) GetAirlineByOwnerID(ctx context.Context, payload *airlinepb.GetAirlineByOwnerIDRequest) (*airlinepb.AirlineResponse, error) {
+	ownerID, err := uuid.Parse(payload.OwnerId)
+	if err != nil {
+		return nil, customerrors.ErrAirlineNotFound
+	}
+
+	airline, err := s.airlineRepo.GetAirlineByOwnerID(ctx, ownerID)
+	if err != nil {
+		return nil, customerrors.ErrAirlineNotFound
+	}
+
+	return airline, nil
 }

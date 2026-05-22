@@ -257,6 +257,250 @@ func (x *AdjustBalanceResponse) GetBalance() float64 {
 	return 0
 }
 
+type GetAirlineByIDRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAirlineByIDRequest) Reset() {
+	*x = GetAirlineByIDRequest{}
+	mi := &file_airline_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAirlineByIDRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAirlineByIDRequest) ProtoMessage() {}
+
+func (x *GetAirlineByIDRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_airline_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAirlineByIDRequest.ProtoReflect.Descriptor instead.
+func (*GetAirlineByIDRequest) Descriptor() ([]byte, []int) {
+	return file_airline_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetAirlineByIDRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type GetAirlineByOwnerIDRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OwnerId       string                 `protobuf:"bytes,1,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAirlineByOwnerIDRequest) Reset() {
+	*x = GetAirlineByOwnerIDRequest{}
+	mi := &file_airline_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAirlineByOwnerIDRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAirlineByOwnerIDRequest) ProtoMessage() {}
+
+func (x *GetAirlineByOwnerIDRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_airline_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAirlineByOwnerIDRequest.ProtoReflect.Descriptor instead.
+func (*GetAirlineByOwnerIDRequest) Descriptor() ([]byte, []int) {
+	return file_airline_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetAirlineByOwnerIDRequest) GetOwnerId() string {
+	if x != nil {
+		return x.OwnerId
+	}
+	return ""
+}
+
+type AirlineResponse struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	OwnerId           string                 `protobuf:"bytes,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	StartingAirportId string                 `protobuf:"bytes,3,opt,name=starting_airport_id,json=startingAirportId,proto3" json:"starting_airport_id,omitempty"`
+	Name              string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	IataCode          string                 `protobuf:"bytes,5,opt,name=iata_code,json=iataCode,proto3" json:"iata_code,omitempty"`
+	IcaoCode          string                 `protobuf:"bytes,6,opt,name=icao_code,json=icaoCode,proto3" json:"icao_code,omitempty"`
+	Balance           float64                `protobuf:"fixed64,7,opt,name=balance,proto3" json:"balance,omitempty"`
+	EquityCached      float64                `protobuf:"fixed64,8,opt,name=equity_cached,json=equityCached,proto3" json:"equity_cached,omitempty"`
+	EquityCachedAt    string                 `protobuf:"bytes,9,opt,name=equity_cached_at,json=equityCachedAt,proto3" json:"equity_cached_at,omitempty"`
+	CreditRating      int32                  `protobuf:"varint,10,opt,name=credit_rating,json=creditRating,proto3" json:"credit_rating,omitempty"`
+	SafetyRating      int32                  `protobuf:"varint,11,opt,name=safety_rating,json=safetyRating,proto3" json:"safety_rating,omitempty"`
+	Reputation        int32                  `protobuf:"varint,12,opt,name=reputation,proto3" json:"reputation,omitempty"`
+	IsPublic          bool                   `protobuf:"varint,13,opt,name=is_public,json=isPublic,proto3" json:"is_public,omitempty"`
+	IsBankrupt        bool                   `protobuf:"varint,14,opt,name=is_bankrupt,json=isBankrupt,proto3" json:"is_bankrupt,omitempty"`
+	CreatedAt         string                 `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *AirlineResponse) Reset() {
+	*x = AirlineResponse{}
+	mi := &file_airline_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AirlineResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AirlineResponse) ProtoMessage() {}
+
+func (x *AirlineResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_airline_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AirlineResponse.ProtoReflect.Descriptor instead.
+func (*AirlineResponse) Descriptor() ([]byte, []int) {
+	return file_airline_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *AirlineResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AirlineResponse) GetOwnerId() string {
+	if x != nil {
+		return x.OwnerId
+	}
+	return ""
+}
+
+func (x *AirlineResponse) GetStartingAirportId() string {
+	if x != nil {
+		return x.StartingAirportId
+	}
+	return ""
+}
+
+func (x *AirlineResponse) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *AirlineResponse) GetIataCode() string {
+	if x != nil {
+		return x.IataCode
+	}
+	return ""
+}
+
+func (x *AirlineResponse) GetIcaoCode() string {
+	if x != nil {
+		return x.IcaoCode
+	}
+	return ""
+}
+
+func (x *AirlineResponse) GetBalance() float64 {
+	if x != nil {
+		return x.Balance
+	}
+	return 0
+}
+
+func (x *AirlineResponse) GetEquityCached() float64 {
+	if x != nil {
+		return x.EquityCached
+	}
+	return 0
+}
+
+func (x *AirlineResponse) GetEquityCachedAt() string {
+	if x != nil {
+		return x.EquityCachedAt
+	}
+	return ""
+}
+
+func (x *AirlineResponse) GetCreditRating() int32 {
+	if x != nil {
+		return x.CreditRating
+	}
+	return 0
+}
+
+func (x *AirlineResponse) GetSafetyRating() int32 {
+	if x != nil {
+		return x.SafetyRating
+	}
+	return 0
+}
+
+func (x *AirlineResponse) GetReputation() int32 {
+	if x != nil {
+		return x.Reputation
+	}
+	return 0
+}
+
+func (x *AirlineResponse) GetIsPublic() bool {
+	if x != nil {
+		return x.IsPublic
+	}
+	return false
+}
+
+func (x *AirlineResponse) GetIsBankrupt() bool {
+	if x != nil {
+		return x.IsBankrupt
+	}
+	return false
+}
+
+func (x *AirlineResponse) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
 var File_airline_proto protoreflect.FileDescriptor
 
 const file_airline_proto_rawDesc = "" +
@@ -277,10 +521,37 @@ const file_airline_proto_rawDesc = "" +
 	"\x15AdjustBalanceResponse\x12\x1d\n" +
 	"\n" +
 	"airline_id\x18\x01 \x01(\tR\tairlineId\x12\x18\n" +
-	"\abalance\x18\x02 \x01(\x01R\abalance2\xb0\x01\n" +
+	"\abalance\x18\x02 \x01(\x01R\abalance\"'\n" +
+	"\x15GetAirlineByIDRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"7\n" +
+	"\x1aGetAirlineByOwnerIDRequest\x12\x19\n" +
+	"\bowner_id\x18\x01 \x01(\tR\aownerId\"\xea\x03\n" +
+	"\x0fAirlineResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
+	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12.\n" +
+	"\x13starting_airport_id\x18\x03 \x01(\tR\x11startingAirportId\x12\x12\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\x12\x1b\n" +
+	"\tiata_code\x18\x05 \x01(\tR\biataCode\x12\x1b\n" +
+	"\ticao_code\x18\x06 \x01(\tR\bicaoCode\x12\x18\n" +
+	"\abalance\x18\a \x01(\x01R\abalance\x12#\n" +
+	"\requity_cached\x18\b \x01(\x01R\fequityCached\x12(\n" +
+	"\x10equity_cached_at\x18\t \x01(\tR\x0eequityCachedAt\x12#\n" +
+	"\rcredit_rating\x18\n" +
+	" \x01(\x05R\fcreditRating\x12#\n" +
+	"\rsafety_rating\x18\v \x01(\x05R\fsafetyRating\x12\x1e\n" +
+	"\n" +
+	"reputation\x18\f \x01(\x05R\n" +
+	"reputation\x12\x1b\n" +
+	"\tis_public\x18\r \x01(\bR\bisPublic\x12\x1f\n" +
+	"\vis_bankrupt\x18\x0e \x01(\bR\n" +
+	"isBankrupt\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x0f \x01(\tR\tcreatedAt2\xd2\x02\n" +
 	"\x0eAirlineService\x12N\n" +
 	"\rCreateAirline\x12\x1d.auth.v1.CreateAirlineRequest\x1a\x1e.auth.v1.CreateAirlineResponse\x12N\n" +
-	"\rAdjustBalance\x12\x1d.auth.v1.AdjustBalanceRequest\x1a\x1e.auth.v1.AdjustBalanceResponseB[ZYgithub.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/airline/v1;airlinepbb\x06proto3"
+	"\rAdjustBalance\x12\x1d.auth.v1.AdjustBalanceRequest\x1a\x1e.auth.v1.AdjustBalanceResponse\x12J\n" +
+	"\x0eGetAirlineByID\x12\x1e.auth.v1.GetAirlineByIDRequest\x1a\x18.auth.v1.AirlineResponse\x12T\n" +
+	"\x13GetAirlineByOwnerID\x12#.auth.v1.GetAirlineByOwnerIDRequest\x1a\x18.auth.v1.AirlineResponseB[ZYgithub.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/airline/v1;airlinepbb\x06proto3"
 
 var (
 	file_airline_proto_rawDescOnce sync.Once
@@ -294,20 +565,27 @@ func file_airline_proto_rawDescGZIP() []byte {
 	return file_airline_proto_rawDescData
 }
 
-var file_airline_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_airline_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_airline_proto_goTypes = []any{
-	(*CreateAirlineRequest)(nil),  // 0: auth.v1.CreateAirlineRequest
-	(*CreateAirlineResponse)(nil), // 1: auth.v1.CreateAirlineResponse
-	(*AdjustBalanceRequest)(nil),  // 2: auth.v1.AdjustBalanceRequest
-	(*AdjustBalanceResponse)(nil), // 3: auth.v1.AdjustBalanceResponse
+	(*CreateAirlineRequest)(nil),       // 0: auth.v1.CreateAirlineRequest
+	(*CreateAirlineResponse)(nil),      // 1: auth.v1.CreateAirlineResponse
+	(*AdjustBalanceRequest)(nil),       // 2: auth.v1.AdjustBalanceRequest
+	(*AdjustBalanceResponse)(nil),      // 3: auth.v1.AdjustBalanceResponse
+	(*GetAirlineByIDRequest)(nil),      // 4: auth.v1.GetAirlineByIDRequest
+	(*GetAirlineByOwnerIDRequest)(nil), // 5: auth.v1.GetAirlineByOwnerIDRequest
+	(*AirlineResponse)(nil),            // 6: auth.v1.AirlineResponse
 }
 var file_airline_proto_depIdxs = []int32{
 	0, // 0: auth.v1.AirlineService.CreateAirline:input_type -> auth.v1.CreateAirlineRequest
 	2, // 1: auth.v1.AirlineService.AdjustBalance:input_type -> auth.v1.AdjustBalanceRequest
-	1, // 2: auth.v1.AirlineService.CreateAirline:output_type -> auth.v1.CreateAirlineResponse
-	3, // 3: auth.v1.AirlineService.AdjustBalance:output_type -> auth.v1.AdjustBalanceResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
+	4, // 2: auth.v1.AirlineService.GetAirlineByID:input_type -> auth.v1.GetAirlineByIDRequest
+	5, // 3: auth.v1.AirlineService.GetAirlineByOwnerID:input_type -> auth.v1.GetAirlineByOwnerIDRequest
+	1, // 4: auth.v1.AirlineService.CreateAirline:output_type -> auth.v1.CreateAirlineResponse
+	3, // 5: auth.v1.AirlineService.AdjustBalance:output_type -> auth.v1.AdjustBalanceResponse
+	6, // 6: auth.v1.AirlineService.GetAirlineByID:output_type -> auth.v1.AirlineResponse
+	6, // 7: auth.v1.AirlineService.GetAirlineByOwnerID:output_type -> auth.v1.AirlineResponse
+	4, // [4:8] is the sub-list for method output_type
+	0, // [0:4] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -324,7 +602,7 @@ func file_airline_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_airline_proto_rawDesc), len(file_airline_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -33,3 +33,11 @@ func (c *AirlineClient) Close() {
 func (c *AirlineClient) CreateAirline(ctx context.Context, req *airlinepb.CreateAirlineRequest) (*airlinepb.CreateAirlineResponse, error) {
 	return c.client.CreateAirline(ctx, req)
 }
+
+func (c *AirlineClient) GetAirlineByID(ctx context.Context, req *airlinepb.GetAirlineByIDRequest) (*airlinepb.AirlineResponse, error) {
+	return c.client.GetAirlineByID(ctx, req)
+}
+
+func (c *AirlineClient) GetAirlineByOwnerID(ctx context.Context, req *airlinepb.GetAirlineByOwnerIDRequest) (*airlinepb.AirlineResponse, error) {
+	return c.client.GetAirlineByOwnerID(ctx, req)
+}

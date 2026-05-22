@@ -37,6 +37,8 @@ func SetupRoutes(authClient *grpcclient.AuthClient, operationsClient *grpcclient
 		protected := api.Group("")
 		protected.Use(middleware.AuthMiddleware(config.JWTPublicKey, authClient))
 		{
+			protected.GET("/airline/me", airlineHandler.GetMyAirline)
+			protected.GET("/airline/:id", airlineHandler.GetAirlineByID)
 			protected.POST("/airline", airlineHandler.CreateAirline)
 			protected.POST("/aircraft", fleetHandler.PurchaseAircraft)
 

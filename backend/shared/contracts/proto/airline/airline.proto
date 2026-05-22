@@ -15,9 +15,15 @@ protoc --go_out=./v1 --go_opt=paths=source_relative \
 service AirlineService {
   // create country, returns id of newly created country
   rpc CreateAirline(CreateAirlineRequest) returns (CreateAirlineResponse);
-  
+
   // adjust airline balance by signed amount
   rpc AdjustBalance(AdjustBalanceRequest) returns (AdjustBalanceResponse);
+
+  // get airline by its id
+  rpc GetAirlineByID(GetAirlineByIDRequest) returns (AirlineResponse);
+
+  // get authenticated user's airline
+  rpc GetAirlineByOwnerID(GetAirlineByOwnerIDRequest) returns (AirlineResponse);
 }
 
 // request to create a new airline.
@@ -45,5 +51,31 @@ message AdjustBalanceRequest {
 message AdjustBalanceResponse {
   string airline_id = 1;
   double balance = 2;
+}
+
+message GetAirlineByIDRequest {
+  string id = 1;
+}
+
+message GetAirlineByOwnerIDRequest {
+  string owner_id = 1;
+}
+
+message AirlineResponse {
+  string id = 1;
+  string owner_id = 2;
+  string starting_airport_id = 3;
+  string name = 4;
+  string iata_code = 5;
+  string icao_code = 6;
+  double balance = 7;
+  double equity_cached = 8;
+  string equity_cached_at = 9;
+  int32 credit_rating = 10;
+  int32 safety_rating = 11;
+  int32 reputation = 12;
+  bool is_public = 13;
+  bool is_bankrupt = 14;
+  string created_at = 15;
 }
 

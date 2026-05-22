@@ -117,6 +117,73 @@ const docTemplate = `{
                 }
             }
         },
+        "/airline/me": {
+            "get": {
+                "description": "Returns full airline information for the authenticated user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Airline"
+                ],
+                "summary": "Get my airline",
+                "responses": {
+                    "200": {
+                        "description": "Airline information",
+                        "schema": {
+                            "$ref": "#/definitions/airlinepb.AirlineResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Airline not found"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/airline/{id}": {
+            "get": {
+                "description": "Returns full airline information by airline id",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Airline"
+                ],
+                "summary": "Get airline by id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Airline ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Airline information",
+                        "schema": {
+                            "$ref": "#/definitions/airlinepb.AirlineResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Airline not found"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
         "/airport": {
             "post": {
                 "description": "Returns",
@@ -989,6 +1056,56 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "airlinepb.AirlineResponse": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "credit_rating": {
+                    "type": "integer"
+                },
+                "equity_cached": {
+                    "type": "number"
+                },
+                "equity_cached_at": {
+                    "type": "string"
+                },
+                "iata_code": {
+                    "type": "string"
+                },
+                "icao_code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_bankrupt": {
+                    "type": "boolean"
+                },
+                "is_public": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "reputation": {
+                    "type": "integer"
+                },
+                "safety_rating": {
+                    "type": "integer"
+                },
+                "starting_airport_id": {
+                    "type": "string"
+                }
+            }
+        },
         "airlinepb.CreateAirlineRequest": {
             "type": "object",
             "properties": {

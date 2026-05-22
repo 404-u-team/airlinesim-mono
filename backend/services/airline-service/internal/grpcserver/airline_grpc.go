@@ -33,3 +33,21 @@ func (s *airlineServer) AdjustBalance(ctx context.Context, payload *airlinepb.Ad
 
 	return response, nil
 }
+
+func (s *airlineServer) GetAirlineByID(ctx context.Context, payload *airlinepb.GetAirlineByIDRequest) (*airlinepb.AirlineResponse, error) {
+	response, err := s.airlineService.GetAirlineByID(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+func (s *airlineServer) GetAirlineByOwnerID(ctx context.Context, payload *airlinepb.GetAirlineByOwnerIDRequest) (*airlinepb.AirlineResponse, error) {
+	response, err := s.airlineService.GetAirlineByOwnerID(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}

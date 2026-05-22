@@ -1,4 +1,37 @@
 definitions:
+  airlinepb.AirlineResponse:
+    properties:
+      balance:
+        type: number
+      created_at:
+        type: string
+      credit_rating:
+        type: integer
+      equity_cached:
+        type: number
+      equity_cached_at:
+        type: string
+      iata_code:
+        type: string
+      icao_code:
+        type: string
+      id:
+        type: string
+      is_bankrupt:
+        type: boolean
+      is_public:
+        type: boolean
+      name:
+        type: string
+      owner_id:
+        type: string
+      reputation:
+        type: integer
+      safety_rating:
+        type: integer
+      starting_airport_id:
+        type: string
+    type: object
   airlinepb.CreateAirlineRequest:
     properties:
       iata_code:
@@ -516,6 +549,50 @@ paths:
         "500":
           description: Internal server error
       summary: Create airline
+      tags:
+      - Airline
+  /airline/{id}:
+    get:
+      description: Returns full airline information by airline id
+      parameters:
+      - description: Airline ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Airline information
+          schema:
+            $ref: '#/definitions/airlinepb.AirlineResponse'
+        "401":
+          description: Unauthorized
+        "404":
+          description: Airline not found
+        "500":
+          description: Internal server error
+      summary: Get airline by id
+      tags:
+      - Airline
+  /airline/me:
+    get:
+      description: Returns full airline information for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Airline information
+          schema:
+            $ref: '#/definitions/airlinepb.AirlineResponse'
+        "401":
+          description: Unauthorized
+        "404":
+          description: Airline not found
+        "500":
+          description: Internal server error
+      summary: Get my airline
       tags:
       - Airline
   /airport:
