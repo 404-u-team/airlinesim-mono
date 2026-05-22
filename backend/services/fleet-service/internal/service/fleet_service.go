@@ -23,6 +23,8 @@ type FleetService interface {
 	ListAircraftTypes(ctx context.Context) (*fleetpb.ListAircraftTypesResponse, error)
 	GetAircraftType(ctx context.Context, id string) (*fleetpb.AircraftType, error)
 	ListAircrafts(ctx context.Context, ownerID string) (*fleetpb.ListAircraftsResponse, error)
+	GetAircraft(ctx context.Context, id string) (*fleetpb.Aircraft, error)
+	UpdateAircraft(ctx context.Context, id string, tailNumber string) (*fleetpb.Aircraft, error)
 }
 
 type fleetService struct {
@@ -269,4 +271,92 @@ func (s *fleetService) ListAircrafts(ctx context.Context, ownerID string) (*flee
 	}
 
 	return &fleetpb.ListAircraftsResponse{Items: res}, nil
+}
+
+func (s *fleetService) GetAircraft(ctx context.Context, id string) (*fleetpb.Aircraft, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, customerrors.ErrInternal
+	}
+
+	a, err := s.repo.GetAircraftByID(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+
+	var currentOwnerId string
+	if a.CurrentOwnerID != nil {
+		currentOwnerId = a.CurrentOwnerID.String()
+	}
+	var baseAirportId string
+	if a.BaseAirportID != nil {
+		baseAirportId = a.BaseAirportID.String()
+	}
+	var manufacturedAt string
+	if a.ManufacturedAt != nil {
+		manufacturedAt = a.ManufacturedAt.Format(time.RFC3339)
+	}
+
+	return &fleetpb.Aircraft{
+		Id:                         a.ID.String(),
+		TypeId:                     a.TypeID.String(),
+		CurrentOwnerId:             currentOwnerId,
+		BaseAirportId:              baseAirportId,
+		TailNumber:                 a.TailNumber,
+		InService:                  a.InService,
+		Status:                     a.Status,
+		CurrentMaintenancePoints:   a.CurrentMaintenancePoints,
+		MaxMaintenancePointsCached: a.MaxMaintenancePointsCached,
+		TotalFlightHours:           a.TotalFlightHours,
+		FhSinceLastDCheck:          a.FHSinceLastDCheck,
+		TotalCycles:                a.TotalCycles,
+		ManufacturedAt:             manufacturedAt,
+	}, nil
+}
+
+func (s *fleetService) UpdateAircraft(ctx context.Context, id string, tailNumber string) (*fleetpb.Aircraft, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, customerrors.ErrInternal
+	}
+
+	updated, err := s.repo.UpdateAircraftTailNumber(ctx, uid, tailNumber)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return nil, customerrors.ErrAircraftTailNumberConflict
+			}
+		}
+		return nil, err
+	}
+
+	var currentOwnerId string
+	if updated.CurrentOwnerID != nil {
+		currentOwnerId = updated.CurrentOwnerID.String()
+	}
+	var baseAirportId string
+	if updated.BaseAirportID != nil {
+		baseAirportId = updated.BaseAirportID.String()
+	}
+	var manufacturedAt string
+	if updated.ManufacturedAt != nil {
+		manufacturedAt = updated.ManufacturedAt.Format(time.RFC3339)
+	}
+
+	return &fleetpb.Aircraft{
+		Id:                         updated.ID.String(),
+		TypeId:                     updated.TypeID.String(),
+		CurrentOwnerId:             currentOwnerId,
+		BaseAirportId:              baseAirportId,
+		TailNumber:                 updated.TailNumber,
+		InService:                  updated.InService,
+		Status:                     updated.Status,
+		CurrentMaintenancePoints:   updated.CurrentMaintenancePoints,
+		MaxMaintenancePointsCached: updated.MaxMaintenancePointsCached,
+		TotalFlightHours:           updated.TotalFlightHours,
+		FhSinceLastDCheck:          updated.FHSinceLastDCheck,
+		TotalCycles:                updated.TotalCycles,
+		ManufacturedAt:             manufacturedAt,
+	}, nil
 }

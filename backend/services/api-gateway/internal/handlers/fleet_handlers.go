@@ -193,3 +193,83 @@ func (h *FleetHandler) ListAircrafts(c *gin.Context) {
 
 	c.JSON(http.StatusOK, resp)
 }
+
+// GetAircraft godoc
+// @Summary      Get aircraft
+// @Description  Returns details for a single aircraft owned by the airline
+// @Tags         Aircraft
+// @Accept       json
+// @Produce      json
+// @Param id path string true "Aircraft id"
+// @Success      200  {object}  fleetpb.Aircraft
+// @Failure      400  {object}  dto.ErrorResponse
+// @Failure      401  "Unauthorized"
+// @Failure      404  {object}  dto.ErrorResponse
+// @Failure      500  {object}  dto.ErrorResponse
+// @Router       /aircraft/{id} [get]
+func (h *FleetHandler) GetAircraft(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+	defer cancel()
+
+	resp, err := h.fleetClient.GetAircraft(ctx, id)
+	if err != nil {
+		log.Println("got error when tried to get aircraft via gRPC, ", err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+// UpdateAircraft godoc
+// @Summary      Update aircraft tail number
+// @Description  Update aircraft tail number (owner only)
+// @Tags         Aircraft
+// @Accept       json
+// @Produce      json
+// @Param id path string true "Aircraft id"
+// @Param request body object true "{\"tail_number\": \"ABC123\"}"
+// @Success      200  {object}  fleetpb.Aircraft
+// @Failure      400  {object}  dto.ErrorResponse
+// @Failure      401  "Unauthorized"
+// @Failure      409  "Tail number conflict"
+// @Failure      500  {object}  dto.ErrorResponse
+// @Router       /aircraft/{id} [patch]
+func (h *FleetHandler) UpdateAircraft(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	var body struct {
+		TailNumber string `json:"tail_number"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		log.Println("got error when tried to parse update aircraft payload, ", err)
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	resp, err := h.fleetClient.UpdateAircraft(ctx, id, body.TailNumber)
+	if err != nil {
+		if errors.Is(err, customerrors.ErrAircraftTailNumberConflict) {
+			c.Status(http.StatusConflict)
+			return
+		}
+		log.Println("got error when tried to update aircraft via gRPC, ", err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}

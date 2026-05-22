@@ -24,6 +24,10 @@ service FleetService {
   rpc GetAircraftType(GetAircraftTypeRequest) returns (AircraftType);
   // list aircrafts owned by airline
   rpc ListAircrafts(ListAircraftsRequest) returns (ListAircraftsResponse);
+  // get aircraft by id
+  rpc GetAircraft(GetAircraftRequest) returns (Aircraft);
+  // update aircraft (patch)
+  rpc UpdateAircraft(UpdateAircraftRequest) returns (Aircraft);
 }
 
 message CreateAircraftRequest {
@@ -118,4 +122,13 @@ message ListAircraftsRequest {
 
 message ListAircraftsResponse {
   repeated Aircraft items = 1;
+}
+
+message GetAircraftRequest {
+  string id = 1;
+}
+
+message UpdateAircraftRequest {
+  string id = 1;
+  string tail_number = 2;
 }

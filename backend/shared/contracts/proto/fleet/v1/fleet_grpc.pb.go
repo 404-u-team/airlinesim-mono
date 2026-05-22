@@ -25,6 +25,8 @@ const (
 	FleetService_ListAircraftTypes_FullMethodName  = "/fleet.v1.FleetService/ListAircraftTypes"
 	FleetService_GetAircraftType_FullMethodName    = "/fleet.v1.FleetService/GetAircraftType"
 	FleetService_ListAircrafts_FullMethodName      = "/fleet.v1.FleetService/ListAircrafts"
+	FleetService_GetAircraft_FullMethodName        = "/fleet.v1.FleetService/GetAircraft"
+	FleetService_UpdateAircraft_FullMethodName     = "/fleet.v1.FleetService/UpdateAircraft"
 )
 
 // FleetServiceClient is the client API for FleetService service.
@@ -43,6 +45,10 @@ type FleetServiceClient interface {
 	GetAircraftType(ctx context.Context, in *GetAircraftTypeRequest, opts ...grpc.CallOption) (*AircraftType, error)
 	// list aircrafts owned by airline
 	ListAircrafts(ctx context.Context, in *ListAircraftsRequest, opts ...grpc.CallOption) (*ListAircraftsResponse, error)
+	// get aircraft by id
+	GetAircraft(ctx context.Context, in *GetAircraftRequest, opts ...grpc.CallOption) (*Aircraft, error)
+	// update aircraft (patch)
+	UpdateAircraft(ctx context.Context, in *UpdateAircraftRequest, opts ...grpc.CallOption) (*Aircraft, error)
 }
 
 type fleetServiceClient struct {
@@ -103,6 +109,26 @@ func (c *fleetServiceClient) ListAircrafts(ctx context.Context, in *ListAircraft
 	return out, nil
 }
 
+func (c *fleetServiceClient) GetAircraft(ctx context.Context, in *GetAircraftRequest, opts ...grpc.CallOption) (*Aircraft, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Aircraft)
+	err := c.cc.Invoke(ctx, FleetService_GetAircraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fleetServiceClient) UpdateAircraft(ctx context.Context, in *UpdateAircraftRequest, opts ...grpc.CallOption) (*Aircraft, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Aircraft)
+	err := c.cc.Invoke(ctx, FleetService_UpdateAircraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FleetServiceServer is the server API for FleetService service.
 // All implementations must embed UnimplementedFleetServiceServer
 // for forward compatibility.
@@ -119,6 +145,10 @@ type FleetServiceServer interface {
 	GetAircraftType(context.Context, *GetAircraftTypeRequest) (*AircraftType, error)
 	// list aircrafts owned by airline
 	ListAircrafts(context.Context, *ListAircraftsRequest) (*ListAircraftsResponse, error)
+	// get aircraft by id
+	GetAircraft(context.Context, *GetAircraftRequest) (*Aircraft, error)
+	// update aircraft (patch)
+	UpdateAircraft(context.Context, *UpdateAircraftRequest) (*Aircraft, error)
 	mustEmbedUnimplementedFleetServiceServer()
 }
 
@@ -143,6 +173,12 @@ func (UnimplementedFleetServiceServer) GetAircraftType(context.Context, *GetAirc
 }
 func (UnimplementedFleetServiceServer) ListAircrafts(context.Context, *ListAircraftsRequest) (*ListAircraftsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAircrafts not implemented")
+}
+func (UnimplementedFleetServiceServer) GetAircraft(context.Context, *GetAircraftRequest) (*Aircraft, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAircraft not implemented")
+}
+func (UnimplementedFleetServiceServer) UpdateAircraft(context.Context, *UpdateAircraftRequest) (*Aircraft, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateAircraft not implemented")
 }
 func (UnimplementedFleetServiceServer) mustEmbedUnimplementedFleetServiceServer() {}
 func (UnimplementedFleetServiceServer) testEmbeddedByValue()                      {}
@@ -255,6 +291,42 @@ func _FleetService_ListAircrafts_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FleetService_GetAircraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAircraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FleetServiceServer).GetAircraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FleetService_GetAircraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FleetServiceServer).GetAircraft(ctx, req.(*GetAircraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FleetService_UpdateAircraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateAircraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FleetServiceServer).UpdateAircraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FleetService_UpdateAircraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FleetServiceServer).UpdateAircraft(ctx, req.(*UpdateAircraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FleetService_ServiceDesc is the grpc.ServiceDesc for FleetService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -281,6 +353,14 @@ var FleetService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAircrafts",
 			Handler:    _FleetService_ListAircrafts_Handler,
+		},
+		{
+			MethodName: "GetAircraft",
+			Handler:    _FleetService_GetAircraft_Handler,
+		},
+		{
+			MethodName: "UpdateAircraft",
+			Handler:    _FleetService_UpdateAircraft_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

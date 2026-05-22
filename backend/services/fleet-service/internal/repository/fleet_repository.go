@@ -14,6 +14,8 @@ type FleetRepository interface {
 	CreateAircraft(ctx context.Context, payload *fleetpb.CreateAircraftRequest) (uuid.UUID, error)
 	CreateAircraftType(ctx context.Context, payload *fleetpb.CreateAircraftTypeRequest) (dto.AircraftType, error)
 	ListAircraftsByOwner(ctx context.Context, ownerID uuid.UUID) ([]dto.Aircraft, error)
+	GetAircraftByID(ctx context.Context, id uuid.UUID) (*dto.Aircraft, error)
+	UpdateAircraftTailNumber(ctx context.Context, id uuid.UUID, tailNumber string) (*dto.Aircraft, error)
 	GetAircraftTypePrice(ctx context.Context, aircraftTypeID uuid.UUID) (float64, error)
 	ListAircraftTypes(ctx context.Context) ([]dto.AircraftType, error)
 	GetAircraftTypeByID(ctx context.Context, id uuid.UUID) (*dto.AircraftType, error)
@@ -222,4 +224,47 @@ func (r *fleetRepository) ListAircraftsByOwner(ctx context.Context, ownerID uuid
 		res = append(res, a)
 	}
 	return res, nil
+}
+
+func (r *fleetRepository) GetAircraftByID(ctx context.Context, id uuid.UUID) (*dto.Aircraft, error) {
+	query := `SELECT id, type_id, current_owner_id, base_airport_id, tail_number, in_service, status,
+		current_maintenance_points, max_maintenance_points_cached, total_flight_hours, fh_since_last_d_check,
+		total_cycles, manufactured_at FROM aircraft WHERE id = $1 LIMIT 1`
+	row := r.pool.QueryRow(ctx, query, id)
+	var a dto.Aircraft
+	var currentOwnerID *uuid.UUID
+	var baseAirportID *uuid.UUID
+	var manufacturedAt *time.Time
+	err := row.Scan(&a.ID, &a.TypeID, &currentOwnerID, &baseAirportID, &a.TailNumber, &a.InService, &a.Status,
+		&a.CurrentMaintenancePoints, &a.MaxMaintenancePointsCached, &a.TotalFlightHours, &a.FHSinceLastDCheck,
+		&a.TotalCycles, &manufacturedAt)
+	if err != nil {
+		return nil, err
+	}
+	a.CurrentOwnerID = currentOwnerID
+	a.BaseAirportID = baseAirportID
+	a.ManufacturedAt = manufacturedAt
+	return &a, nil
+}
+
+func (r *fleetRepository) UpdateAircraftTailNumber(ctx context.Context, id uuid.UUID, tailNumber string) (*dto.Aircraft, error) {
+	query := `UPDATE aircraft SET tail_number = $2 WHERE id = $1 RETURNING id, type_id, current_owner_id, base_airport_id, tail_number, in_service, status,
+		current_maintenance_points, max_maintenance_points_cached, total_flight_hours, fh_since_last_d_check,
+		total_cycles, manufactured_at`
+
+	row := r.pool.QueryRow(ctx, query, id, tailNumber)
+	var a dto.Aircraft
+	var currentOwnerID *uuid.UUID
+	var baseAirportID *uuid.UUID
+	var manufacturedAt *time.Time
+	err := row.Scan(&a.ID, &a.TypeID, &currentOwnerID, &baseAirportID, &a.TailNumber, &a.InService, &a.Status,
+		&a.CurrentMaintenancePoints, &a.MaxMaintenancePointsCached, &a.TotalFlightHours, &a.FHSinceLastDCheck,
+		&a.TotalCycles, &manufacturedAt)
+	if err != nil {
+		return nil, err
+	}
+	a.CurrentOwnerID = currentOwnerID
+	a.BaseAirportID = baseAirportID
+	a.ManufacturedAt = manufacturedAt
+	return &a, nil
 }

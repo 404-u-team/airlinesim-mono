@@ -36,3 +36,11 @@ func (s *FleetServer) ListAircraftTypes(ctx context.Context, _ *emptypb.Empty) (
 func (s *FleetServer) GetAircraftType(ctx context.Context, payload *fleetpb.GetAircraftTypeRequest) (*fleetpb.AircraftType, error) {
 	return s.fleetService.GetAircraftType(ctx, payload.Id)
 }
+
+func (s *FleetServer) GetAircraft(ctx context.Context, payload *fleetpb.GetAircraftRequest) (*fleetpb.Aircraft, error) {
+	return s.fleetService.GetAircraft(ctx, payload.Id)
+}
+
+func (s *FleetServer) UpdateAircraft(ctx context.Context, payload *fleetpb.UpdateAircraftRequest) (*fleetpb.Aircraft, error) {
+	return s.fleetService.UpdateAircraft(ctx, payload.Id, payload.TailNumber)
+}

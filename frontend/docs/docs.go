@@ -194,6 +194,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/aircrafts": {
+            "get": {
+                "description": "Returns list of aircrafts owned by the authenticated airline",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Aircraft"
+                ],
+                "summary": "List aircrafts for airline",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/fleetpb.ListAircraftsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/airline": {
             "post": {
                 "description": "Creates an airline for the authenticated user",
@@ -1396,6 +1428,50 @@ const docTemplate = `{
                 }
             }
         },
+        "fleetpb.Aircraft": {
+            "type": "object",
+            "properties": {
+                "base_airport_id": {
+                    "type": "string"
+                },
+                "current_maintenance_points": {
+                    "type": "number"
+                },
+                "current_owner_id": {
+                    "type": "string"
+                },
+                "fh_since_last_d_check": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "in_service": {
+                    "type": "boolean"
+                },
+                "manufactured_at": {
+                    "type": "string"
+                },
+                "max_maintenance_points_cached": {
+                    "type": "number"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tail_number": {
+                    "type": "string"
+                },
+                "total_cycles": {
+                    "type": "number"
+                },
+                "total_flight_hours": {
+                    "type": "number"
+                },
+                "type_id": {
+                    "type": "string"
+                }
+            }
+        },
         "fleetpb.AircraftType": {
             "type": "object",
             "properties": {
@@ -1573,6 +1649,17 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/fleetpb.AircraftType"
+                    }
+                }
+            }
+        },
+        "fleetpb.ListAircraftsResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/fleetpb.Aircraft"
                     }
                 }
             }

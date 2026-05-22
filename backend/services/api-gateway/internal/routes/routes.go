@@ -42,6 +42,8 @@ func SetupRoutes(authClient *grpcclient.AuthClient, operationsClient *grpcclient
 			protected.POST("/airline", airlineHandler.CreateAirline)
 			protected.PATCH("/airline/:id", airlineHandler.UpdateAirline)
 			protected.POST("/aircraft", fleetHandler.PurchaseAircraft)
+			protected.GET("/aircraft/:id", fleetHandler.GetAircraft)
+			protected.PATCH("/aircraft/:id", fleetHandler.UpdateAircraft)
 			protected.GET("/aircrafts", fleetHandler.ListAircrafts)
 			protected.GET("/aircraft-types", fleetHandler.ListAircraftTypes)
 			protected.GET("/aircraft-types/:id", fleetHandler.GetAircraftType)

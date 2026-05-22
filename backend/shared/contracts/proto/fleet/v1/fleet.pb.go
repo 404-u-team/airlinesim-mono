@@ -882,6 +882,102 @@ func (x *ListAircraftsResponse) GetItems() []*Aircraft {
 	return nil
 }
 
+type GetAircraftRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAircraftRequest) Reset() {
+	*x = GetAircraftRequest{}
+	mi := &file_fleet_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAircraftRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAircraftRequest) ProtoMessage() {}
+
+func (x *GetAircraftRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_fleet_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAircraftRequest.ProtoReflect.Descriptor instead.
+func (*GetAircraftRequest) Descriptor() ([]byte, []int) {
+	return file_fleet_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *GetAircraftRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type UpdateAircraftRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TailNumber    string                 `protobuf:"bytes,2,opt,name=tail_number,json=tailNumber,proto3" json:"tail_number,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateAircraftRequest) Reset() {
+	*x = UpdateAircraftRequest{}
+	mi := &file_fleet_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateAircraftRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateAircraftRequest) ProtoMessage() {}
+
+func (x *UpdateAircraftRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_fleet_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateAircraftRequest.ProtoReflect.Descriptor instead.
+func (*UpdateAircraftRequest) Descriptor() ([]byte, []int) {
+	return file_fleet_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *UpdateAircraftRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpdateAircraftRequest) GetTailNumber() string {
+	if x != nil {
+		return x.TailNumber
+	}
+	return ""
+}
+
 var File_fleet_proto protoreflect.FileDescriptor
 
 const file_fleet_proto_rawDesc = "" +
@@ -972,13 +1068,21 @@ const file_fleet_proto_rawDesc = "" +
 	"\x14ListAircraftsRequest\x12\x19\n" +
 	"\bowner_id\x18\x01 \x01(\tR\aownerId\"A\n" +
 	"\x15ListAircraftsResponse\x12(\n" +
-	"\x05items\x18\x01 \x03(\v2\x12.fleet.v1.AircraftR\x05items2\xa7\x03\n" +
+	"\x05items\x18\x01 \x03(\v2\x12.fleet.v1.AircraftR\x05items\"$\n" +
+	"\x12GetAircraftRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"H\n" +
+	"\x15UpdateAircraftRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtail_number\x18\x02 \x01(\tR\n" +
+	"tailNumber2\xaf\x04\n" +
 	"\fFleetService\x12S\n" +
 	"\x0eCreateAircraft\x12\x1f.fleet.v1.CreateAircraftRequest\x1a .fleet.v1.CreateAircraftResponse\x12Q\n" +
 	"\x12CreateAircraftType\x12#.fleet.v1.CreateAircraftTypeRequest\x1a\x16.fleet.v1.AircraftType\x12P\n" +
 	"\x11ListAircraftTypes\x12\x16.google.protobuf.Empty\x1a#.fleet.v1.ListAircraftTypesResponse\x12K\n" +
 	"\x0fGetAircraftType\x12 .fleet.v1.GetAircraftTypeRequest\x1a\x16.fleet.v1.AircraftType\x12P\n" +
-	"\rListAircrafts\x12\x1e.fleet.v1.ListAircraftsRequest\x1a\x1f.fleet.v1.ListAircraftsResponseBWZUgithub.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/fleet/v1;fleetpbb\x06proto3"
+	"\rListAircrafts\x12\x1e.fleet.v1.ListAircraftsRequest\x1a\x1f.fleet.v1.ListAircraftsResponse\x12?\n" +
+	"\vGetAircraft\x12\x1c.fleet.v1.GetAircraftRequest\x1a\x12.fleet.v1.Aircraft\x12E\n" +
+	"\x0eUpdateAircraft\x12\x1f.fleet.v1.UpdateAircraftRequest\x1a\x12.fleet.v1.AircraftBWZUgithub.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/fleet/v1;fleetpbb\x06proto3"
 
 var (
 	file_fleet_proto_rawDescOnce sync.Once
@@ -992,7 +1096,7 @@ func file_fleet_proto_rawDescGZIP() []byte {
 	return file_fleet_proto_rawDescData
 }
 
-var file_fleet_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_fleet_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_fleet_proto_goTypes = []any{
 	(*CreateAircraftRequest)(nil),     // 0: fleet.v1.CreateAircraftRequest
 	(*CreateAircraftResponse)(nil),    // 1: fleet.v1.CreateAircraftResponse
@@ -1003,26 +1107,32 @@ var file_fleet_proto_goTypes = []any{
 	(*Aircraft)(nil),                  // 6: fleet.v1.Aircraft
 	(*ListAircraftsRequest)(nil),      // 7: fleet.v1.ListAircraftsRequest
 	(*ListAircraftsResponse)(nil),     // 8: fleet.v1.ListAircraftsResponse
-	(*emptypb.Empty)(nil),             // 9: google.protobuf.Empty
+	(*GetAircraftRequest)(nil),        // 9: fleet.v1.GetAircraftRequest
+	(*UpdateAircraftRequest)(nil),     // 10: fleet.v1.UpdateAircraftRequest
+	(*emptypb.Empty)(nil),             // 11: google.protobuf.Empty
 }
 var file_fleet_proto_depIdxs = []int32{
-	3, // 0: fleet.v1.ListAircraftTypesResponse.items:type_name -> fleet.v1.AircraftType
-	6, // 1: fleet.v1.ListAircraftsResponse.items:type_name -> fleet.v1.Aircraft
-	0, // 2: fleet.v1.FleetService.CreateAircraft:input_type -> fleet.v1.CreateAircraftRequest
-	2, // 3: fleet.v1.FleetService.CreateAircraftType:input_type -> fleet.v1.CreateAircraftTypeRequest
-	9, // 4: fleet.v1.FleetService.ListAircraftTypes:input_type -> google.protobuf.Empty
-	5, // 5: fleet.v1.FleetService.GetAircraftType:input_type -> fleet.v1.GetAircraftTypeRequest
-	7, // 6: fleet.v1.FleetService.ListAircrafts:input_type -> fleet.v1.ListAircraftsRequest
-	1, // 7: fleet.v1.FleetService.CreateAircraft:output_type -> fleet.v1.CreateAircraftResponse
-	3, // 8: fleet.v1.FleetService.CreateAircraftType:output_type -> fleet.v1.AircraftType
-	4, // 9: fleet.v1.FleetService.ListAircraftTypes:output_type -> fleet.v1.ListAircraftTypesResponse
-	3, // 10: fleet.v1.FleetService.GetAircraftType:output_type -> fleet.v1.AircraftType
-	8, // 11: fleet.v1.FleetService.ListAircrafts:output_type -> fleet.v1.ListAircraftsResponse
-	7, // [7:12] is the sub-list for method output_type
-	2, // [2:7] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	3,  // 0: fleet.v1.ListAircraftTypesResponse.items:type_name -> fleet.v1.AircraftType
+	6,  // 1: fleet.v1.ListAircraftsResponse.items:type_name -> fleet.v1.Aircraft
+	0,  // 2: fleet.v1.FleetService.CreateAircraft:input_type -> fleet.v1.CreateAircraftRequest
+	2,  // 3: fleet.v1.FleetService.CreateAircraftType:input_type -> fleet.v1.CreateAircraftTypeRequest
+	11, // 4: fleet.v1.FleetService.ListAircraftTypes:input_type -> google.protobuf.Empty
+	5,  // 5: fleet.v1.FleetService.GetAircraftType:input_type -> fleet.v1.GetAircraftTypeRequest
+	7,  // 6: fleet.v1.FleetService.ListAircrafts:input_type -> fleet.v1.ListAircraftsRequest
+	9,  // 7: fleet.v1.FleetService.GetAircraft:input_type -> fleet.v1.GetAircraftRequest
+	10, // 8: fleet.v1.FleetService.UpdateAircraft:input_type -> fleet.v1.UpdateAircraftRequest
+	1,  // 9: fleet.v1.FleetService.CreateAircraft:output_type -> fleet.v1.CreateAircraftResponse
+	3,  // 10: fleet.v1.FleetService.CreateAircraftType:output_type -> fleet.v1.AircraftType
+	4,  // 11: fleet.v1.FleetService.ListAircraftTypes:output_type -> fleet.v1.ListAircraftTypesResponse
+	3,  // 12: fleet.v1.FleetService.GetAircraftType:output_type -> fleet.v1.AircraftType
+	8,  // 13: fleet.v1.FleetService.ListAircrafts:output_type -> fleet.v1.ListAircraftsResponse
+	6,  // 14: fleet.v1.FleetService.GetAircraft:output_type -> fleet.v1.Aircraft
+	6,  // 15: fleet.v1.FleetService.UpdateAircraft:output_type -> fleet.v1.Aircraft
+	9,  // [9:16] is the sub-list for method output_type
+	2,  // [2:9] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_fleet_proto_init() }
@@ -1036,7 +1146,7 @@ func file_fleet_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_fleet_proto_rawDesc), len(file_fleet_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

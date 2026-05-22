@@ -53,3 +53,11 @@ func (c *FleetClient) CreateAircraftType(ctx context.Context, req *fleetpb.Creat
 func (c *FleetClient) ListAircrafts(ctx context.Context, ownerID string) (*fleetpb.ListAircraftsResponse, error) {
 	return c.client.ListAircrafts(ctx, &fleetpb.ListAircraftsRequest{OwnerId: ownerID})
 }
+
+func (c *FleetClient) GetAircraft(ctx context.Context, id string) (*fleetpb.Aircraft, error) {
+	return c.client.GetAircraft(ctx, &fleetpb.GetAircraftRequest{Id: id})
+}
+
+func (c *FleetClient) UpdateAircraft(ctx context.Context, id string, tailNumber string) (*fleetpb.Aircraft, error) {
+	return c.client.UpdateAircraft(ctx, &fleetpb.UpdateAircraftRequest{Id: id, TailNumber: tailNumber})
+}
