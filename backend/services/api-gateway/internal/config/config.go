@@ -16,9 +16,7 @@ import (
 type Config struct {
 	KafkaBrokers []string
 	HTTPPort     string
-
-	CORSAllowAnyOrigin bool
-
+	
 	JWTPublicKey              *rsa.PublicKey
 	JWTAccessTokenExpireTime  int64
 	JWTRefreshTokenExpireTime int64
@@ -37,7 +35,6 @@ func InitConfig() Config {
 	}
 
 	return Config{
-		CORSAllowAnyOrigin:        getEnvAsBool("CORS_ALLOW_ANY_ORIGIN", false),
 		KafkaBrokers:              strings.Split(getEnv("KAFKA_BROKERS", "kafka:29092"), ","),
 		HTTPPort:                  fmt.Sprintf(":%s", getEnv("HTTP_PORT", "8080")),
 		JWTPublicKey:              publicKey,
@@ -49,20 +46,6 @@ func InitConfig() Config {
 func getEnv(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
 		return value
-	}
-
-	log.Printf("cant find env by key: %v, using: %v", key, fallback)
-	return fallback
-}
-
-func getEnvAsBool(key string, fallback bool) bool {
-	if value, ok := os.LookupEnv(key); ok {
-		parsedValue, err := strconv.ParseBool(value)
-		if err != nil {
-			return fallback
-		}
-
-		return parsedValue
 	}
 
 	log.Printf("cant find env by key: %v, using: %v", key, fallback)
