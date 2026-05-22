@@ -16,6 +16,7 @@ import (
 type Config struct {
 	KafkaBrokers []string
 	HTTPPort     string
+
 	JWTPublicKey              *rsa.PublicKey
 	JWTAccessTokenExpireTime  int64
 	JWTRefreshTokenExpireTime int64
