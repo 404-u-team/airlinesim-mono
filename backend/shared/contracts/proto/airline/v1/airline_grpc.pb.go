@@ -8,7 +8,6 @@ package airlinepb
 
 import (
 	context "context"
-
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -41,7 +40,7 @@ type AirlineServiceClient interface {
 	GetAirlineByID(ctx context.Context, in *GetAirlineByIDRequest, opts ...grpc.CallOption) (*AirlineResponse, error)
 	// get authenticated user's airline
 	GetAirlineByOwnerID(ctx context.Context, in *GetAirlineByOwnerIDRequest, opts ...grpc.CallOption) (*AirlineResponse, error)
-	// update airline fields
+	// update airline fields (name, iata_code, icao_code)
 	UpdateAirline(ctx context.Context, in *UpdateAirlineRequest, opts ...grpc.CallOption) (*AirlineResponse, error)
 }
 
@@ -117,7 +116,7 @@ type AirlineServiceServer interface {
 	GetAirlineByID(context.Context, *GetAirlineByIDRequest) (*AirlineResponse, error)
 	// get authenticated user's airline
 	GetAirlineByOwnerID(context.Context, *GetAirlineByOwnerIDRequest) (*AirlineResponse, error)
-	// update airline fields
+	// update airline fields (name, iata_code, icao_code)
 	UpdateAirline(context.Context, *UpdateAirlineRequest) (*AirlineResponse, error)
 	mustEmbedUnimplementedAirlineServiceServer()
 }

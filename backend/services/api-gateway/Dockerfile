@@ -8,6 +8,8 @@ RUN apk add --no-cache ca-certificates
 COPY backend/services/api-gateway/go.mod backend/services/api-gateway/go.sum ./
 COPY backend/shared/contracts/proto/auth/go.mod backend/shared/contracts/proto/auth/go.sum /src/backend/shared/contracts/proto/auth/
 COPY backend/shared/contracts/proto/operations/go.mod backend/shared/contracts/proto/operations/go.sum /src/backend/shared/contracts/proto/operations/
+COPY backend/shared/contracts/proto/airline/go.mod backend/shared/contracts/proto/airline/go.sum /src/backend/shared/contracts/proto/airline/
+COPY backend/shared/contracts/proto/fleet/go.mod backend/shared/contracts/proto/fleet/go.sum /src/backend/shared/contracts/proto/fleet/
 COPY backend/shared/customerrors/go.mod backend/shared/customerrors/go.sum /src/backend/shared/customerrors/
 
 # installing packages
@@ -19,6 +21,8 @@ COPY backend/services/api-gateway/ ./
 COPY backend/shared/contracts/proto/auth/ /src/backend/shared/contracts/proto/auth/
 COPY backend/shared/contracts/proto/operations/ /src/backend/shared/contracts/proto/operations/
 COPY backend/shared/customerrors/ /src/backend/shared/customerrors/
+COPY backend/shared/contracts/proto/airline/ /src/backend/shared/contracts/proto/airline/
+COPY backend/shared/contracts/proto/fleet/ /src/backend/shared/contracts/proto/fleet/
 
 # building runtime file
 RUN --mount=type=cache,target=/go/pkg/mod \

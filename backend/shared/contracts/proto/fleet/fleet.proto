@@ -16,6 +16,8 @@ protoc --go_out=./v1 --go_opt=paths=source_relative \
 service FleetService {
   // create aircraft from selected aircraft type
   rpc CreateAircraft(CreateAircraftRequest) returns (CreateAircraftResponse);
+  // create new aircraft type (admin only)
+  rpc CreateAircraftType(CreateAircraftTypeRequest) returns (AircraftType);
   // list available aircraft types
   rpc ListAircraftTypes(google.protobuf.Empty) returns (ListAircraftTypesResponse);
   // get aircraft type by id
@@ -31,6 +33,31 @@ message CreateAircraftRequest {
 
 message CreateAircraftResponse {
   string id = 1;
+}
+
+message CreateAircraftTypeRequest {
+  string manufacturer_id = 1;
+  string model_name = 2;
+  string icao_code = 3;
+  string iata_code = 4;
+  string image_upload_id = 5;
+  double max_range_km = 6;
+  double cruising_speed_kph = 7;
+  double max_planned_seat_capacity = 8;
+  double min_runway_length_m = 9;
+  double production_points_price = 10;
+  double base_turnaround_points = 11;
+  double base_maintenance_points = 12;
+  double maint_cost_per_takeoff = 13;
+  double maint_cost_per_landing = 14;
+  double maint_cost_per_flight_hour = 15;
+  double d_check_interval_fh = 16;
+  double d_check_interval_years = 17;
+  double d_check_overdue_multiplier = 18;
+  double fuel_consumption_per_hour = 19;
+  double mtow_kg = 20;
+  double price_per_unit = 21;
+  string characteristics = 22;
 }
 
 message AircraftType {

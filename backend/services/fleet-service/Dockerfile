@@ -6,6 +6,9 @@ WORKDIR /src/backend/services/fleet-service
 RUN apk add --no-cache ca-certificates
 
 COPY backend/services/fleet-service/go.mod backend/services/fleet-service/go.sum ./
+COPY backend/shared/contracts/proto/airline/go.mod backend/shared/contracts/proto/airline/go.sum /src/backend/shared/contracts/proto/airline/
+COPY backend/shared/contracts/proto/fleet/go.mod backend/shared/contracts/proto/fleet/go.sum /src/backend/shared/contracts/proto/fleet/
+COPY backend/shared/customerrors/go.mod backend/shared/customerrors/go.sum /src/backend/shared/customerrors/
 
 # installing packages
 RUN --mount=type=cache,target=/go/pkg/mod \
@@ -13,6 +16,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 	go mod download
 
 COPY backend/services/fleet-service/ ./
+COPY backend/shared/contracts/proto/airline/ /src/backend/shared/contracts/proto/airline/
+COPY backend/shared/contracts/proto/fleet/ /src/backend/shared/contracts/proto/fleet/
+COPY backend/shared/customerrors/ /src/backend/shared/customerrors/
 
 # building runtime file
 RUN --mount=type=cache,target=/go/pkg/mod \

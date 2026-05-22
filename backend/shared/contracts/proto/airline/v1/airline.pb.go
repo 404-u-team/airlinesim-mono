@@ -7,12 +7,11 @@
 package airlinepb
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -346,72 +345,6 @@ func (x *GetAirlineByOwnerIDRequest) GetOwnerId() string {
 	return ""
 }
 
-type UpdateAirlineRequest struct {
-	state         protoimpl.MessageState
-	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	IataCode      string `protobuf:"bytes,3,opt,name=iata_code,json=iataCode,proto3" json:"iata_code,omitempty"`
-	IcaoCode      string `protobuf:"bytes,4,opt,name=icao_code,json=icaoCode,proto3" json:"icao_code,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateAirlineRequest) Reset() {
-	*x = UpdateAirlineRequest{}
-	mi := &file_airline_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateAirlineRequest) String() string { return protoimpl.X.MessageStringOf(x) }
-
-func (*UpdateAirlineRequest) ProtoMessage() {}
-
-func (x *UpdateAirlineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_airline_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateAirlineRequest.ProtoReflect.Descriptor instead.
-func (*UpdateAirlineRequest) Descriptor() ([]byte, []int) {
-	return file_airline_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *UpdateAirlineRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *UpdateAirlineRequest) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *UpdateAirlineRequest) GetIataCode() string {
-	if x != nil {
-		return x.IataCode
-	}
-	return ""
-}
-
-func (x *UpdateAirlineRequest) GetIcaoCode() string {
-	if x != nil {
-		return x.IcaoCode
-	}
-	return ""
-}
-
 type AirlineResponse struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -568,6 +501,74 @@ func (x *AirlineResponse) GetCreatedAt() string {
 	return ""
 }
 
+type UpdateAirlineRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	IataCode      string                 `protobuf:"bytes,3,opt,name=iata_code,json=iataCode,proto3" json:"iata_code,omitempty"`
+	IcaoCode      string                 `protobuf:"bytes,4,opt,name=icao_code,json=icaoCode,proto3" json:"icao_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateAirlineRequest) Reset() {
+	*x = UpdateAirlineRequest{}
+	mi := &file_airline_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateAirlineRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateAirlineRequest) ProtoMessage() {}
+
+func (x *UpdateAirlineRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_airline_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateAirlineRequest.ProtoReflect.Descriptor instead.
+func (*UpdateAirlineRequest) Descriptor() ([]byte, []int) {
+	return file_airline_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *UpdateAirlineRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpdateAirlineRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UpdateAirlineRequest) GetIataCode() string {
+	if x != nil {
+		return x.IataCode
+	}
+	return ""
+}
+
+func (x *UpdateAirlineRequest) GetIcaoCode() string {
+	if x != nil {
+		return x.IcaoCode
+	}
+	return ""
+}
+
 var File_airline_proto protoreflect.FileDescriptor
 
 const file_airline_proto_rawDesc = "" +
@@ -613,12 +614,18 @@ const file_airline_proto_rawDesc = "" +
 	"\vis_bankrupt\x18\x0e \x01(\bR\n" +
 	"isBankrupt\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x0f \x01(\tR\tcreatedAt2\xd2\x02\n" +
+	"created_at\x18\x0f \x01(\tR\tcreatedAt\"t\n" +
+	"\x14UpdateAirlineRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
+	"\tiata_code\x18\x03 \x01(\tR\biataCode\x12\x1b\n" +
+	"\ticao_code\x18\x04 \x01(\tR\bicaoCode2\x9c\x03\n" +
 	"\x0eAirlineService\x12N\n" +
 	"\rCreateAirline\x12\x1d.auth.v1.CreateAirlineRequest\x1a\x1e.auth.v1.CreateAirlineResponse\x12N\n" +
 	"\rAdjustBalance\x12\x1d.auth.v1.AdjustBalanceRequest\x1a\x1e.auth.v1.AdjustBalanceResponse\x12J\n" +
 	"\x0eGetAirlineByID\x12\x1e.auth.v1.GetAirlineByIDRequest\x1a\x18.auth.v1.AirlineResponse\x12T\n" +
-	"\x13GetAirlineByOwnerID\x12#.auth.v1.GetAirlineByOwnerIDRequest\x1a\x18.auth.v1.AirlineResponseB[ZYgithub.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/airline/v1;airlinepbb\x06proto3"
+	"\x13GetAirlineByOwnerID\x12#.auth.v1.GetAirlineByOwnerIDRequest\x1a\x18.auth.v1.AirlineResponse\x12H\n" +
+	"\rUpdateAirline\x12\x1d.auth.v1.UpdateAirlineRequest\x1a\x18.auth.v1.AirlineResponseB[ZYgithub.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/airline/v1;airlinepbb\x06proto3"
 
 var (
 	file_airline_proto_rawDescOnce sync.Once

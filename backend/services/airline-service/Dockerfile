@@ -7,6 +7,7 @@ RUN apk add --no-cache ca-certificates
 
 COPY backend/services/airline-service/go.mod backend/services/airline-service/go.sum ./
 COPY backend/shared/contracts/proto/airline/go.mod backend/shared/contracts/proto/airline/go.sum /src/backend/shared/contracts/proto/airline/
+COPY backend/shared/contracts/proto/fleet/go.mod backend/shared/contracts/proto/fleet/go.sum /src/backend/shared/contracts/proto/fleet/
 COPY backend/shared/contracts/proto/auth/go.mod backend/shared/contracts/proto/auth/go.sum /src/backend/shared/contracts/proto/auth/
 COPY backend/shared/customerrors/go.mod backend/shared/customerrors/go.sum /src/backend/shared/customerrors/
 
@@ -17,6 +18,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 COPY backend/services/airline-service/ ./
 COPY backend/shared/contracts/proto/airline/ /src/backend/shared/contracts/proto/airline/
+COPY backend/shared/contracts/proto/fleet/ /src/backend/shared/contracts/proto/fleet/
 COPY backend/shared/contracts/proto/auth/ /src/backend/shared/contracts/proto/auth/
 COPY backend/shared/customerrors/ /src/backend/shared/customerrors/
 

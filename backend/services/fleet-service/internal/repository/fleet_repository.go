@@ -11,6 +11,7 @@ import (
 
 type FleetRepository interface {
 	CreateAircraft(ctx context.Context, payload *fleetpb.CreateAircraftRequest) (uuid.UUID, error)
+	CreateAircraftType(ctx context.Context, payload *fleetpb.CreateAircraftTypeRequest) (dto.AircraftType, error)
 	GetAircraftTypePrice(ctx context.Context, aircraftTypeID uuid.UUID) (float64, error)
 	ListAircraftTypes(ctx context.Context) ([]dto.AircraftType, error)
 	GetAircraftTypeByID(ctx context.Context, id uuid.UUID) (*dto.AircraftType, error)
@@ -140,4 +141,51 @@ func (r *fleetRepository) GetAircraftTypeByID(ctx context.Context, id uuid.UUID)
 	a.ImageUploadID = imageUploadID
 	a.Characteristics = characteristics
 	return &a, nil
+}
+
+func (r *fleetRepository) CreateAircraftType(ctx context.Context, payload *fleetpb.CreateAircraftTypeRequest) (dto.AircraftType, error) {
+	query := `INSERT INTO aircraft_type (
+		manufacturer_id, model_name, icao_code, iata_code, image_upload_id,
+		max_range_km, cruising_speed_kph, max_planned_seat_capacity, min_runway_length_m,
+		production_points_price, base_turnaround_points, base_maintenance_points,
+		maint_cost_per_takeoff, maint_cost_per_landing, maint_cost_per_flight_hour,
+		d_check_interval_fh, d_check_interval_years, d_check_overdue_multiplier,
+		fuel_consumption_per_hour, mtow_kg, price_per_unit, characteristics
+	) VALUES (
+		NULLIF($1, '')::uuid, $2, $3, $4, NULLIF($5, '')::uuid,
+		$6, $7, $8, $9,
+		$10, $11, $12,
+		$13, $14, $15,
+		$16, $17, $18,
+		$19, $20, $21, $22
+	) RETURNING id, manufacturer_id, model_name, icao_code, iata_code, image_upload_id,
+		max_range_km, cruising_speed_kph, max_planned_seat_capacity, min_runway_length_m,
+		production_points_price, base_turnaround_points, base_maintenance_points,
+		maint_cost_per_takeoff, maint_cost_per_landing, maint_cost_per_flight_hour,
+		d_check_interval_fh, d_check_interval_years, d_check_overdue_multiplier,
+		fuel_consumption_per_hour, mtow_kg, price_per_unit, characteristics`
+
+	var a dto.AircraftType
+	var imageUploadID *uuid.UUID
+	var characteristics []byte
+
+	err := r.pool.QueryRow(ctx, query,
+		payload.ManufacturerId, payload.ModelName, payload.IcaoCode, payload.IataCode, payload.ImageUploadId,
+		payload.MaxRangeKm, payload.CruisingSpeedKph, payload.MaxPlannedSeatCapacity, payload.MinRunwayLengthM,
+		payload.ProductionPointsPrice, payload.BaseTurnaroundPoints, payload.BaseMaintenancePoints,
+		payload.MaintCostPerTakeoff, payload.MaintCostPerLanding, payload.MaintCostPerFlightHour,
+		payload.DCheckIntervalFh, payload.DCheckIntervalYears, payload.DCheckOverdueMultiplier,
+		payload.FuelConsumptionPerHour, payload.MtowKg, payload.PricePerUnit, payload.Characteristics,
+	).Scan(&a.ID, &a.ManufacturerID, &a.ModelName, &a.IcaoCode, &a.IataCode, &imageUploadID,
+		&a.MaxRangeKm, &a.CruisingSpeedKph, &a.MaxPlannedSeatCapacity, &a.MinRunwayLengthM,
+		&a.ProductionPointsPrice, &a.BaseTurnaroundPoints, &a.BaseMaintenancePoints,
+		&a.MaintCostPerTakeoff, &a.MaintCostPerLanding, &a.MaintCostPerFlightHour,
+		&a.DCheckIntervalFH, &a.DCheckIntervalYears, &a.DCheckOverdueMultiplier,
+		&a.FuelConsumptionPerHour, &a.MTOWKG, &a.PricePerUnit, &characteristics)
+	if err != nil {
+		return dto.AircraftType{}, err
+	}
+	a.ImageUploadID = imageUploadID
+	a.Characteristics = characteristics
+	return a, nil
 }

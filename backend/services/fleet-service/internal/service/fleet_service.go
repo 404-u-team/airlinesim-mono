@@ -18,6 +18,7 @@ import (
 
 type FleetService interface {
 	CreateAircraft(ctx context.Context, payload *fleetpb.CreateAircraftRequest) (*fleetpb.CreateAircraftResponse, error)
+	CreateAircraftType(ctx context.Context, payload *fleetpb.CreateAircraftTypeRequest) (*fleetpb.AircraftType, error)
 	ListAircraftTypes(ctx context.Context) (*fleetpb.ListAircraftTypesResponse, error)
 	GetAircraftType(ctx context.Context, id string) (*fleetpb.AircraftType, error)
 }
@@ -173,5 +174,52 @@ func (s *fleetService) GetAircraftType(ctx context.Context, id string) (*fleetpb
 		MtowKg:                  t.MTOWKG,
 		PricePerUnit:            t.PricePerUnit,
 		Characteristics:         string(t.Characteristics),
+	}, nil
+}
+
+func (s *fleetService) CreateAircraftType(ctx context.Context, payload *fleetpb.CreateAircraftTypeRequest) (*fleetpb.AircraftType, error) {
+	created, err := s.repo.CreateAircraftType(ctx, payload)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return nil, customerrors.ErrInternal
+			}
+			if pgErr.Code == "23503" {
+				return nil, customerrors.ErrInternal
+			}
+		}
+		return nil, err
+	}
+
+	var imageID string
+	if created.ImageUploadID != nil {
+		imageID = created.ImageUploadID.String()
+	}
+
+	return &fleetpb.AircraftType{
+		Id:                      created.ID.String(),
+		ManufacturerId:          created.ManufacturerID.String(),
+		ModelName:               created.ModelName,
+		IcaoCode:                created.IcaoCode,
+		IataCode:                created.IataCode,
+		ImageUploadId:           imageID,
+		MaxRangeKm:              created.MaxRangeKm,
+		CruisingSpeedKph:        created.CruisingSpeedKph,
+		MaxPlannedSeatCapacity:  created.MaxPlannedSeatCapacity,
+		MinRunwayLengthM:        created.MinRunwayLengthM,
+		ProductionPointsPrice:   created.ProductionPointsPrice,
+		BaseTurnaroundPoints:    created.BaseTurnaroundPoints,
+		BaseMaintenancePoints:   created.BaseMaintenancePoints,
+		MaintCostPerTakeoff:     created.MaintCostPerTakeoff,
+		MaintCostPerLanding:     created.MaintCostPerLanding,
+		MaintCostPerFlightHour:  created.MaintCostPerFlightHour,
+		DCheckIntervalFh:        created.DCheckIntervalFH,
+		DCheckIntervalYears:     created.DCheckIntervalYears,
+		DCheckOverdueMultiplier: created.DCheckOverdueMultiplier,
+		FuelConsumptionPerHour:  created.FuelConsumptionPerHour,
+		MtowKg:                  created.MTOWKG,
+		PricePerUnit:            created.PricePerUnit,
+		Characteristics:         string(created.Characteristics),
 	}, nil
 }

@@ -130,3 +130,36 @@ func (h *FleetHandler) GetAircraftType(c *gin.Context) {
 
 	c.JSON(http.StatusOK, resp)
 }
+
+// CreateAircraftType godoc
+// @Summary      Create aircraft type
+// @Description  Create a new aircraft type (admin only)
+// @Tags         Aircraft
+// @Accept       json
+// @Produce      json
+// @Param request body fleetpb.CreateAircraftTypeRequest true "Aircraft type details"
+// @Success      201  {object}  fleetpb.AircraftType
+// @Failure      400  {object}  dto.ErrorResponse
+// @Failure      401  "Unauthorized"
+// @Failure      500  {object}  dto.ErrorResponse
+// @Router       /aircraft-types [post]
+func (h *FleetHandler) CreateAircraftType(c *gin.Context) {
+	var payload fleetpb.CreateAircraftTypeRequest
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		log.Println("got error when tried to parse create aircraft type payload, ", err)
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	resp, err := h.fleetClient.CreateAircraftType(ctx, &payload)
+	if err != nil {
+		log.Println("got error when tried to create aircraft type via gRPC, ", err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	c.JSON(http.StatusCreated, resp)
+}
