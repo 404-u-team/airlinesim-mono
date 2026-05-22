@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { airlineSimEventBus, type RemoteId } from "@airlinesim/event-bus";
+import { type Locale, translate } from "@airlinesim/i18n";
 import { computed, defineAsyncComponent, watch } from "vue";
 import { useRoute } from "vue-router";
 
 import AppLoader from "../components/AppLoader.vue";
 import MapControls from "../components/MapControls.vue";
 import SvelteWrapper from "../components/SvelteWrapper.vue";
+import { type ShellMessageKey, shellMessages } from "../i18n/messages";
 import { getRemoteIdByPath } from "../navigation";
+
+const props = defineProps<{
+  appLocale: Locale;
+  appTheme: "dark" | "light";
+}>();
 
 const route = useRoute();
 
@@ -49,6 +56,9 @@ const activeVueRemote = computed(() => {
 
   return remoteComponents[activeRemoteId.value];
 });
+const t = computed(() => (key: ShellMessageKey): string =>
+  translate(shellMessages, props.appLocale, key),
+);
 
 watch(
   () => route.path,
@@ -78,19 +88,20 @@ watch(
       <SvelteWrapper
         :key="activeRemoteId"
         :create-fn="createMap"
-        :component-props="{ controls: false, remoteId: activeRemoteId, rotation: false, shellPath: route.path }"
+        :component-props="{ appLocale: props.appLocale, controls: false, remoteId: activeRemoteId, rotation: false, shellPath: route.path, theme: props.appTheme }"
       />
-      <MapControls />
+      <MapControls :app-locale="props.appLocale" />
     </template>
     <Suspense v-else-if="activeRemoteId">
       <component
         :is="activeVueRemote"
         :key="activeRemoteId"
         :remote-id="activeRemoteId"
+        :app-locale="props.appLocale"
         :shell-path="route.path"
       />
       <template #fallback>
-        <AppLoader label="Connecting to remote..." />
+        <AppLoader :label="t('remote.loading')" />
       </template>
     </Suspense>
     <div
@@ -99,10 +110,10 @@ watch(
     >
       <div class="max-w-md">
         <h2 class="text-h3 text-text-primary">
-          Empty Section
+          {{ t("empty.title") }}
         </h2>
         <p class="mt-2 text-body text-text-muted">
-          This route ({{ route.path }}) has no MFE assigned yet.
+          {{ t("empty.description").replace("{path}", route.path) }}
         </p>
       </div>
     </div>

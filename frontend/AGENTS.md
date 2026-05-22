@@ -12,6 +12,7 @@
 - Для изменений запускать применимые проверки: минимум `bun run lint` из `frontend`, а при наличии/добавлении более точечных тестов или storybook-проверок запускать соответствующие package scripts.
 - Для workspace-скриптов полагаться на Turborepo.
 - Любой frontend UI обязан поддерживать адаптивность и разные размеры экранов: desktop, tablet, mobile, узкие sidebar/topbar состояния и отсутствие горизонтального overflow.
+- Любой новый пользовательский текст должен добавляться на двух языках (`en`, `ru`) в словарь приложения/feature, которая владеет этим UI. Shell-строки разделены по файлам `apps/shell/src/i18n/en.ts` и `apps/shell/src/i18n/ru.ts`, а `apps/shell/src/i18n/messages.ts` только собирает локали и экспортирует тип ключей. Shared контракт локалей и helper `translate` лежат в `packages/i18n`. Подробности и MFE-контракт: `docs/I18N.md`.
 - При создании сложного корневого функционала, который меняет архитектурные правила или общий контракт между приложениями/пакетами, нужно создать отдельную понятную документацию в `docs/` на русском языке и добавить ссылку на нее в этот `AGENTS.md`. Документация должна объяснять контекст, источник истины, основные сценарии и правила для будущих агентов и людей.
 
 ## Структура
@@ -32,6 +33,7 @@
 - `docs/MFE-MF-CONNECT-EXAMPLE.png` - последовательность навигации Shell -> Vue Router -> Module Federation runtime -> remote app, включая кеширование remoteEntry и событие `mfe:ready`.
 - `docs/MFE_EXAMPLE.png` - пример cross-MFE сценария через singleton `event-bus`: выбор рейса/самолета на карте, обработка в Shell и подготовка виджета Fleet & Ops.
 - `docs/mfe-routing.md` - спецификация маршрутизации между Shell и MFE: источник истины для route registry, порядок портов, события `event-bus`, публичные auth routes и правила навигации remote-приложений.
+- `docs/I18N.md` - спецификация мультиязычности RU/EN: источник локали, хранение строк, fallback и контракт Shell -> MFE.
 - `docs/swagger.yaml` - OpenAPI/Swagger контракт backend API; `docs/swagger.json` лежит рядом как fallback для генерации.
 - `docs/erd.txt` - доменная ERD модель.
 - `docs/to-be-enabled.md` - матрица shell admin страниц: что уже включено по OpenAPI, какие ERD-сущности пока disabled и условия их включения.

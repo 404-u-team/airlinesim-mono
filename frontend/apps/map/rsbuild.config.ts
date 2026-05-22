@@ -25,6 +25,7 @@ export default defineConfig({
         '@airlinesim/api-contracts': { singleton: true },
         '@airlinesim/event-bus': { singleton: true },
         '@airlinesim/game-sdk': { singleton: true },
+        '@airlinesim/i18n': { singleton: true },
         svelte: {
           requiredVersion: '^5.46.1',
           singleton: true,

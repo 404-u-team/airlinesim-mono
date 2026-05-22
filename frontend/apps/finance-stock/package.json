@@ -15,6 +15,7 @@
     "@airlinesim/api-contracts": "workspace:*",
     "@airlinesim/event-bus": "workspace:*",
     "@airlinesim/game-sdk": "workspace:*",
+    "@airlinesim/i18n": "workspace:*",
     "tailwindcss": "^4.2.2",
     "vue": "^3.5.32"
   },

@@ -1,17 +1,31 @@
 <script setup lang="ts">
 import { AirIconButton } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
-import { Bell, LogOut, Menu, Search, UserRound } from "@lucide/vue";
+import { getLocaleLabel, type Locale, translate } from "@airlinesim/i18n";
+import { Bell, Languages, LogOut, Menu, Moon, Search, Sun, UserRound } from "@lucide/vue";
+import { computed } from "vue";
 import { useRouter } from "vue-router";
 
 import { logout } from "../auth";
-import { statusMetrics } from "../navigation";
+import { type ShellMessageKey, shellMessages } from "../i18n/messages";
+import { getStatusMetrics } from "../navigation";
+
+const props = defineProps<{
+  appLocale: Locale;
+  theme: "dark" | "light";
+}>();
 
 defineEmits<{
+  "toggle-locale": [];
   "toggle-menu": [];
+  "toggle-theme": [];
 }>();
 
 const router = useRouter();
+const t = computed(() => (key: ShellMessageKey): string =>
+  translate(shellMessages, props.appLocale, key),
+);
+const statusMetrics = computed(() => getStatusMetrics(t.value));
 
 function requestPanel(panel: "notifications" | "profile"): void {
   airlineSimEventBus.emit("shell:panel-requested", {
@@ -29,7 +43,7 @@ function signOut(): void {
   <header class="flex h-14 shrink-0 items-center border-b border-border bg-surface px-3 text-text-primary sm:px-5">
     <AirIconButton
       class="lg:hidden"
-      label="Open menu"
+      :label="t('topbar.menu')"
       size="sm"
       @click="$emit('toggle-menu')"
     >
@@ -64,7 +78,7 @@ function signOut(): void {
         />
         <input
           class="min-w-0 flex-1 bg-transparent text-body text-text-primary outline-none placeholder:text-text-muted"
-          placeholder="Search aircraft, routes, airport..."
+          :placeholder="t('search.placeholder')"
           type="search"
         />
         <kbd class="rounded border border-border bg-surface px-1.5 py-0.5 text-caption text-text-muted">
@@ -76,11 +90,35 @@ function signOut(): void {
         14:36 UTC · 03.12.2025
       </div>
 
+      <AirIconButton
+        :label="t('topbar.language')"
+        size="sm"
+        @click="$emit('toggle-locale')"
+      >
+        <Languages :size="18" />
+        <span class="sr-only">{{ getLocaleLabel(props.appLocale) }}</span>
+      </AirIconButton>
+
+      <AirIconButton
+        :label="props.theme === 'dark' ? t('topbar.theme.light') : t('topbar.theme.dark')"
+        size="sm"
+        @click="$emit('toggle-theme')"
+      >
+        <Sun
+          v-if="props.theme === 'dark'"
+          :size="18"
+        />
+        <Moon
+          v-else
+          :size="18"
+        />
+      </AirIconButton>
+
       <button
         class="relative inline-flex size-9 items-center justify-center rounded-lg text-text-muted transition hover:bg-surface-subtle hover:text-text-primary"
         type="button"
-        aria-label="Notifications"
-        title="Notifications"
+        :aria-label="t('topbar.notifications')"
+        :title="t('topbar.notifications')"
         @click="requestPanel('notifications')"
       >
         <Bell :size="18" />
@@ -90,8 +128,8 @@ function signOut(): void {
       <button
         class="inline-flex size-9 items-center justify-center rounded-lg text-text-muted transition hover:bg-surface-subtle hover:text-text-primary"
         type="button"
-        aria-label="Profile"
-        title="Profile"
+        :aria-label="t('topbar.profile')"
+        :title="t('topbar.profile')"
         @click="requestPanel('profile')"
       >
         <UserRound :size="18" />
@@ -100,8 +138,8 @@ function signOut(): void {
       <button
         class="inline-flex size-9 items-center justify-center rounded-lg text-text-muted transition hover:bg-surface-subtle hover:text-text-primary"
         type="button"
-        aria-label="Sign out"
-        title="Sign out"
+        :aria-label="t('topbar.signOut')"
+        :title="t('topbar.signOut')"
         @click="signOut"
       >
         <LogOut :size="18" />

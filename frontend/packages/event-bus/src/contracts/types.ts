@@ -21,6 +21,9 @@ export type AirlineSimEvents = {
     flightId: string;
     source: "fleet-ops" | "map" | "shell";
   };
+  "i18n:locale-changed": {
+    locale: Locale;
+  };
   "mfe:ready": {
     remoteId: RemoteId;
   };
@@ -39,6 +42,8 @@ export type AirlineSimEvents = {
     payload?: Record<string, unknown>;
   };
 };
+
+export type Locale = "en" | "ru";
 
 export type NavigationChangedEvent = {
   fromPath?: string;

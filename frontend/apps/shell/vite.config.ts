@@ -39,6 +39,9 @@ export default defineConfig({
         '@airlinesim/game-sdk': {
           singleton: true
         },
+        '@airlinesim/i18n': {
+          singleton: true
+        },
         'vue': {
           requiredVersion: '^3.5.32',
           singleton: true

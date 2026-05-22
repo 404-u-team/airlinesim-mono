@@ -22,6 +22,8 @@ import {
   Wrench,
 } from "@lucide/vue";
 
+import type { ShellMessageKey } from "./i18n/messages";
+
 import { resolveRemoteId } from "./mfe-routing";
 
 export type NavigationChild = {
@@ -35,6 +37,12 @@ export type NavigationSection = {
   label: string;
   path: string;
   remoteId?: RemoteId;
+};
+
+export type StatusMetric = {
+  icon: Component;
+  label: string;
+  value: string;
 };
 
 export const navigationSections: NavigationSection[] = [
@@ -113,6 +121,7 @@ export const navigationSections: NavigationSection[] = [
       { label: "Company", path: "/settings/company" },
       { label: "Access", path: "/settings/access" },
       { label: "Notifications", path: "/settings/notifications" },
+      { label: "System", path: "/settings/system" },
     ],
     icon: Settings,
     label: "Settings",
@@ -133,23 +142,25 @@ export const navigationSections: NavigationSection[] = [
   },
 ];
 
-export const statusMetrics = [
-  {
-    icon: CircleDollarSign,
-    label: "Account",
-    value: "$50,000,000",
-  },
-  {
-    icon: Fuel,
-    label: "Fuel",
-    value: "30,000 t",
-  },
-  {
-    icon: PlaneTakeoff,
-    label: "Planes",
-    value: "122",
-  },
-];
+export function getStatusMetrics(t: (key: ShellMessageKey) => string): StatusMetric[] {
+  return [
+    {
+      icon: CircleDollarSign,
+      label: t("status.account"),
+      value: "$50,000,000",
+    },
+    {
+      icon: Fuel,
+      label: t("status.fuel"),
+      value: "30,000 t",
+    },
+    {
+      icon: PlaneTakeoff,
+      label: t("status.planes"),
+      value: "122",
+    },
+  ];
+}
 
 export const quickActions = [
   { icon: RadioTower, label: "Live ops" },

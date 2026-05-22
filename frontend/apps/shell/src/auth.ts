@@ -49,13 +49,13 @@ export function restoreAuthSession(): void {
 function getAuthErrorMessage(error: unknown): string {
   if (error instanceof ApiRequestError) {
     if (error.status === 400) {
-      return "Check credentials and try again.";
+      return "auth.error.invalidCredentials";
     }
 
     return error.message;
   }
 
-  return "Authentication failed. Try again later.";
+  return "auth.error.default";
 }
 
 async function submitAuth(

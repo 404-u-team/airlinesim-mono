@@ -59,6 +59,7 @@ bun run check
 - Backend REST API используется через `game-sdk` и будущий `api-contracts`.
 - Backend Socket.IO используется shell и remotes для live events/notifications через общий `event-bus`.
 - UI-компоненты, Tailwind CSS, icons и theme tokens приходят из `air-ui`.
+- I18N-контракт RU/EN описан в [`docs/I18N.md`](docs/I18N.md): shell владеет текущей локалью, remotes получают `appLocale` и событие `i18n:locale-changed`.
 
 ## Доменная Модель
 

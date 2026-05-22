@@ -16,6 +16,7 @@
     "@airlinesim/api-contracts": "workspace:*",
     "@airlinesim/event-bus": "workspace:*",
     "@airlinesim/game-sdk": "workspace:*",
+    "@airlinesim/i18n": "workspace:*",
     "@turf/turf": "^7.3.4",
     "@types/three": "^0.183.1",
     "maplibre-gl": "^5.23.0",

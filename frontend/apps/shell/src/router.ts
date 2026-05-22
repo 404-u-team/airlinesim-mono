@@ -5,6 +5,7 @@ import { authState } from "./auth";
 import { createMfeRouteRecords, defaultRoutePath, resolveMfeRoute } from "./mfe-routing";
 import AuthView from "./views/AuthView.vue";
 import ShellRemoteView from "./views/ShellRemoteView.vue";
+import SystemSettingsView from "./views/SystemSettingsView.vue";
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -44,6 +45,11 @@ export const router = createRouter({
       component: AdminView,
       name: "admin",
       path: "/admin/:entity",
+    },
+    {
+      component: SystemSettingsView,
+      name: "system",
+      path: "/settings/system",
     },
     ...createMfeRouteRecords(ShellRemoteView),
     {
