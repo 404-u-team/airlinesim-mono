@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/404-u-team/airlinesim-mono/backend/fleet-service/internal/db"
+	"github.com/404-u-team/airlinesim-mono/backend/fleet-service/internal/dto"
 	fleetpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/fleet/v1"
 	"github.com/google/uuid"
 )
@@ -11,6 +12,7 @@ import (
 type FleetRepository interface {
 	CreateAircraft(ctx context.Context, payload *fleetpb.CreateAircraftRequest) (uuid.UUID, error)
 	GetAircraftTypePrice(ctx context.Context, aircraftTypeID uuid.UUID) (float64, error)
+	ListAircraftTypes(ctx context.Context) ([]dto.AircraftType, error)
 }
 
 type fleetRepository struct {
@@ -69,4 +71,43 @@ func (r *fleetRepository) GetAircraftTypePrice(ctx context.Context, aircraftType
 	}
 
 	return price, nil
+}
+
+func (r *fleetRepository) ListAircraftTypes(ctx context.Context) ([]dto.AircraftType, error) {
+	query := `SELECT
+		at.id, at.manufacturer_id, at.model_name, at.icao_code, at.iata_code, at.image_upload_id,
+		at.max_range_km, at.cruising_speed_kph, at.max_planned_seat_capacity, at.min_runway_length_m,
+		at.production_points_price, at.base_turnaround_points, at.base_maintenance_points,
+		at.maint_cost_per_takeoff, at.maint_cost_per_landing, at.maint_cost_per_flight_hour,
+		at.d_check_interval_fh, at.d_check_interval_years, at.d_check_overdue_multiplier,
+		at.fuel_consumption_per_hour, at.mtow_kg, at.price_per_unit, at.characteristics
+	FROM aircraft_type at
+	ORDER BY at.model_name ASC`
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var res []dto.AircraftType
+	for rows.Next() {
+		var a dto.AircraftType
+		var imageUploadID *uuid.UUID
+		var characteristics []byte
+		err = rows.Scan(&a.ID, &a.ManufacturerID, &a.ModelName, &a.IcaoCode, &a.IataCode, &imageUploadID,
+			&a.MaxRangeKm, &a.CruisingSpeedKph, &a.MaxPlannedSeatCapacity, &a.MinRunwayLengthM,
+			&a.ProductionPointsPrice, &a.BaseTurnaroundPoints, &a.BaseMaintenancePoints,
+			&a.MaintCostPerTakeoff, &a.MaintCostPerLanding, &a.MaintCostPerFlightHour,
+			&a.DCheckIntervalFH, &a.DCheckIntervalYears, &a.DCheckOverdueMultiplier,
+			&a.FuelConsumptionPerHour, &a.MTOWKG, &a.PricePerUnit, &characteristics)
+		if err != nil {
+			return nil, err
+		}
+		a.ImageUploadID = imageUploadID
+		a.Characteristics = characteristics
+		res = append(res, a)
+	}
+
+	return res, nil
 }

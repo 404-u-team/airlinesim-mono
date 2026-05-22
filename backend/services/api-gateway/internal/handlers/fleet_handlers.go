@@ -71,3 +71,26 @@ func (h *FleetHandler) PurchaseAircraft(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, response)
 }
+
+// ListAircraftTypes godoc
+// @Summary      List aircraft types
+// @Description  Returns a list of available aircraft types
+// @Tags         Aircraft
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  fleetpb.ListAircraftTypesResponse
+// @Failure      500  {object}  dto.ErrorResponse
+// @Router       /aircraft-types [get]
+func (h *FleetHandler) ListAircraftTypes(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+	defer cancel()
+
+	resp, err := h.fleetClient.ListAircraftTypes(ctx)
+	if err != nil {
+		log.Println("got error when tried to list aircraft types, ", err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}

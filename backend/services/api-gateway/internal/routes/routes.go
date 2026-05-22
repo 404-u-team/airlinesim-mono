@@ -41,6 +41,7 @@ func SetupRoutes(authClient *grpcclient.AuthClient, operationsClient *grpcclient
 			protected.GET("/airline/:id", airlineHandler.GetAirlineByID)
 			protected.POST("/airline", airlineHandler.CreateAirline)
 			protected.POST("/aircraft", fleetHandler.PurchaseAircraft)
+			protected.GET("/aircraft-types", fleetHandler.ListAircraftTypes)
 
 			// admin only
 			adminOnly := api.Group("")

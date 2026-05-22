@@ -5,6 +5,7 @@ import (
 
 	"github.com/404-u-team/airlinesim-mono/backend/fleet-service/internal/service"
 	fleetpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/fleet/v1"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type FleetServer struct {
@@ -18,4 +19,8 @@ func NewFleetServer(fleetService service.FleetService) *FleetServer {
 
 func (s *FleetServer) CreateAircraft(ctx context.Context, payload *fleetpb.CreateAircraftRequest) (*fleetpb.CreateAircraftResponse, error) {
 	return s.fleetService.CreateAircraft(ctx, payload)
+}
+
+func (s *FleetServer) ListAircraftTypes(ctx context.Context, _ *emptypb.Empty) (*fleetpb.ListAircraftTypesResponse, error) {
+	return s.fleetService.ListAircraftTypes(ctx)
 }

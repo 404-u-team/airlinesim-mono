@@ -7,6 +7,7 @@ import (
 	fleetpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/fleet/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type FleetClient struct {
@@ -35,4 +36,8 @@ func (c *FleetClient) Close() {
 
 func (c *FleetClient) CreateAircraft(ctx context.Context, req *fleetpb.CreateAircraftRequest) (*fleetpb.CreateAircraftResponse, error) {
 	return c.client.CreateAircraft(ctx, req)
+}
+
+func (c *FleetClient) ListAircraftTypes(ctx context.Context) (*fleetpb.ListAircraftTypesResponse, error) {
+	return c.client.ListAircraftTypes(ctx, &emptypb.Empty{})
 }

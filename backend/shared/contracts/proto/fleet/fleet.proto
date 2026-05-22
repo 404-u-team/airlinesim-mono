@@ -3,6 +3,7 @@ syntax = "proto3";
 package fleet.v1;
 
 option go_package = "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/fleet/v1;fleetpb";
+import "google/protobuf/empty.proto";
 
 // Run inside this folder to autogenerate golang grpc
 /*
@@ -15,6 +16,8 @@ protoc --go_out=./v1 --go_opt=paths=source_relative \
 service FleetService {
   // create aircraft from selected aircraft type
   rpc CreateAircraft(CreateAircraftRequest) returns (CreateAircraftResponse);
+  // list available aircraft types
+  rpc ListAircraftTypes(google.protobuf.Empty) returns (ListAircraftTypesResponse);
 }
 
 message CreateAircraftRequest {
@@ -26,4 +29,34 @@ message CreateAircraftRequest {
 
 message CreateAircraftResponse {
   string id = 1;
+}
+
+message AircraftType {
+  string id = 1;
+  string manufacturer_id = 2;
+  string model_name = 3;
+  string icao_code = 4;
+  string iata_code = 5;
+  string image_upload_id = 6;
+  double max_range_km = 7;
+  double cruising_speed_kph = 8;
+  double max_planned_seat_capacity = 9;
+  double min_runway_length_m = 10;
+  double production_points_price = 11;
+  double base_turnaround_points = 12;
+  double base_maintenance_points = 13;
+  double maint_cost_per_takeoff = 14;
+  double maint_cost_per_landing = 15;
+  double maint_cost_per_flight_hour = 16;
+  double d_check_interval_fh = 17;
+  double d_check_interval_years = 18;
+  double d_check_overdue_multiplier = 19;
+  double fuel_consumption_per_hour = 20;
+  double mtow_kg = 21;
+  double price_per_unit = 22;
+  string characteristics = 23;
+}
+
+message ListAircraftTypesResponse {
+  repeated AircraftType items = 1;
 }

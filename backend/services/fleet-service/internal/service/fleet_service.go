@@ -18,6 +18,7 @@ import (
 
 type FleetService interface {
 	CreateAircraft(ctx context.Context, payload *fleetpb.CreateAircraftRequest) (*fleetpb.CreateAircraftResponse, error)
+	ListAircraftTypes(ctx context.Context) (*fleetpb.ListAircraftTypesResponse, error)
 }
 
 type fleetService struct {
@@ -86,4 +87,47 @@ func (s *fleetService) CreateAircraft(ctx context.Context, payload *fleetpb.Crea
 	_ = ownerBalanceResponse
 
 	return &fleetpb.CreateAircraftResponse{Id: aircraftID.String()}, nil
+}
+
+func (s *fleetService) ListAircraftTypes(ctx context.Context) (*fleetpb.ListAircraftTypesResponse, error) {
+	types, err := s.repo.ListAircraftTypes(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var items []*fleetpb.AircraftType
+	for _, t := range types {
+		var imageID string
+		if t.ImageUploadID != nil {
+			imageID = t.ImageUploadID.String()
+		}
+
+		items = append(items, &fleetpb.AircraftType{
+			Id:                      t.ID.String(),
+			ManufacturerId:          t.ManufacturerID.String(),
+			ModelName:               t.ModelName,
+			IcaoCode:                t.IcaoCode,
+			IataCode:                t.IataCode,
+			ImageUploadId:           imageID,
+			MaxRangeKm:              t.MaxRangeKm,
+			CruisingSpeedKph:        t.CruisingSpeedKph,
+			MaxPlannedSeatCapacity:  t.MaxPlannedSeatCapacity,
+			MinRunwayLengthM:        t.MinRunwayLengthM,
+			ProductionPointsPrice:   t.ProductionPointsPrice,
+			BaseTurnaroundPoints:    t.BaseTurnaroundPoints,
+			BaseMaintenancePoints:   t.BaseMaintenancePoints,
+			MaintCostPerTakeoff:     t.MaintCostPerTakeoff,
+			MaintCostPerLanding:     t.MaintCostPerLanding,
+			MaintCostPerFlightHour:  t.MaintCostPerFlightHour,
+			DCheckIntervalFh:        t.DCheckIntervalFH,
+			DCheckIntervalYears:     t.DCheckIntervalYears,
+			DCheckOverdueMultiplier: t.DCheckOverdueMultiplier,
+			FuelConsumptionPerHour:  t.FuelConsumptionPerHour,
+			MtowKg:                  t.MTOWKG,
+			PricePerUnit:            t.PricePerUnit,
+			Characteristics:         string(t.Characteristics),
+		})
+	}
+
+	return &fleetpb.ListAircraftTypesResponse{Items: items}, nil
 }

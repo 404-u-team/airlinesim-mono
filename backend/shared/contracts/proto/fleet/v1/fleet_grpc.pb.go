@@ -8,9 +8,11 @@ package fleetpb
 
 import (
 	context "context"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -19,7 +21,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	FleetService_CreateAircraft_FullMethodName = "/fleet.v1.FleetService/CreateAircraft"
+	FleetService_CreateAircraft_FullMethodName    = "/fleet.v1.FleetService/CreateAircraft"
+	FleetService_ListAircraftTypes_FullMethodName = "/fleet.v1.FleetService/ListAircraftTypes"
 )
 
 // FleetServiceClient is the client API for FleetService service.
@@ -30,6 +33,8 @@ const (
 type FleetServiceClient interface {
 	// create aircraft from selected aircraft type
 	CreateAircraft(ctx context.Context, in *CreateAircraftRequest, opts ...grpc.CallOption) (*CreateAircraftResponse, error)
+	// list available aircraft types
+	ListAircraftTypes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListAircraftTypesResponse, error)
 }
 
 type fleetServiceClient struct {
@@ -50,6 +55,16 @@ func (c *fleetServiceClient) CreateAircraft(ctx context.Context, in *CreateAircr
 	return out, nil
 }
 
+func (c *fleetServiceClient) ListAircraftTypes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListAircraftTypesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAircraftTypesResponse)
+	err := c.cc.Invoke(ctx, FleetService_ListAircraftTypes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FleetServiceServer is the server API for FleetService service.
 // All implementations must embed UnimplementedFleetServiceServer
 // for forward compatibility.
@@ -58,6 +73,8 @@ func (c *fleetServiceClient) CreateAircraft(ctx context.Context, in *CreateAircr
 type FleetServiceServer interface {
 	// create aircraft from selected aircraft type
 	CreateAircraft(context.Context, *CreateAircraftRequest) (*CreateAircraftResponse, error)
+	// list available aircraft types
+	ListAircraftTypes(context.Context, *emptypb.Empty) (*ListAircraftTypesResponse, error)
 	mustEmbedUnimplementedFleetServiceServer()
 }
 
@@ -70,6 +87,9 @@ type UnimplementedFleetServiceServer struct{}
 
 func (UnimplementedFleetServiceServer) CreateAircraft(context.Context, *CreateAircraftRequest) (*CreateAircraftResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateAircraft not implemented")
+}
+func (UnimplementedFleetServiceServer) ListAircraftTypes(context.Context, *emptypb.Empty) (*ListAircraftTypesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAircraftTypes not implemented")
 }
 func (UnimplementedFleetServiceServer) mustEmbedUnimplementedFleetServiceServer() {}
 func (UnimplementedFleetServiceServer) testEmbeddedByValue()                      {}
@@ -110,6 +130,24 @@ func _FleetService_CreateAircraft_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FleetService_ListAircraftTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FleetServiceServer).ListAircraftTypes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FleetService_ListAircraftTypes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FleetServiceServer).ListAircraftTypes(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FleetService_ServiceDesc is the grpc.ServiceDesc for FleetService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -120,6 +158,10 @@ var FleetService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateAircraft",
 			Handler:    _FleetService_CreateAircraft_Handler,
+		},
+		{
+			MethodName: "ListAircraftTypes",
+			Handler:    _FleetService_ListAircraftTypes_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

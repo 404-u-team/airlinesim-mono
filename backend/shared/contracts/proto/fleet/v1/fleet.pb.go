@@ -7,11 +7,13 @@
 package fleetpb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 const (
@@ -96,6 +98,256 @@ type CreateAircraftResponse struct {
 	sizeCache     protoimpl.SizeCache
 }
 
+type AircraftType struct {
+	state                   protoimpl.MessageState
+	Id                      string  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ManufacturerId          string  `protobuf:"bytes,2,opt,name=manufacturer_id,json=manufacturerId,proto3" json:"manufacturer_id,omitempty"`
+	ModelName               string  `protobuf:"bytes,3,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`
+	IcaoCode                string  `protobuf:"bytes,4,opt,name=icao_code,json=icaoCode,proto3" json:"icao_code,omitempty"`
+	IataCode                string  `protobuf:"bytes,5,opt,name=iata_code,json=iataCode,proto3" json:"iata_code,omitempty"`
+	ImageUploadId           string  `protobuf:"bytes,6,opt,name=image_upload_id,json=imageUploadId,proto3" json:"image_upload_id,omitempty"`
+	MaxRangeKm              float64 `protobuf:"fixed64,7,opt,name=max_range_km,json=maxRangeKm,proto3" json:"max_range_km,omitempty"`
+	CruisingSpeedKph        float64 `protobuf:"fixed64,8,opt,name=cruising_speed_kph,json=cruisingSpeedKph,proto3" json:"cruising_speed_kph,omitempty"`
+	MaxPlannedSeatCapacity  float64 `protobuf:"fixed64,9,opt,name=max_planned_seat_capacity,json=maxPlannedSeatCapacity,proto3" json:"max_planned_seat_capacity,omitempty"`
+	MinRunwayLengthM        float64 `protobuf:"fixed64,10,opt,name=min_runway_length_m,json=minRunwayLengthM,proto3" json:"min_runway_length_m,omitempty"`
+	ProductionPointsPrice   float64 `protobuf:"fixed64,11,opt,name=production_points_price,json=productionPointsPrice,proto3" json:"production_points_price,omitempty"`
+	BaseTurnaroundPoints    float64 `protobuf:"fixed64,12,opt,name=base_turnaround_points,json=baseTurnaroundPoints,proto3" json:"base_turnaround_points,omitempty"`
+	BaseMaintenancePoints   float64 `protobuf:"fixed64,13,opt,name=base_maintenance_points,json=baseMaintenancePoints,proto3" json:"base_maintenance_points,omitempty"`
+	MaintCostPerTakeoff     float64 `protobuf:"fixed64,14,opt,name=maint_cost_per_takeoff,json=maintCostPerTakeoff,proto3" json:"maint_cost_per_takeoff,omitempty"`
+	MaintCostPerLanding     float64 `protobuf:"fixed64,15,opt,name=maint_cost_per_landing,json=maintCostPerLanding,proto3" json:"maint_cost_per_landing,omitempty"`
+	MaintCostPerFlightHour  float64 `protobuf:"fixed64,16,opt,name=maint_cost_per_flight_hour,json=maintCostPerFlightHour,proto3" json:"maint_cost_per_flight_hour,omitempty"`
+	DCheckIntervalFh        float64 `protobuf:"fixed64,17,opt,name=d_check_interval_fh,json=dCheckIntervalFh,proto3" json:"d_check_interval_fh,omitempty"`
+	DCheckIntervalYears     float64 `protobuf:"fixed64,18,opt,name=d_check_interval_years,json=dCheckIntervalYears,proto3" json:"d_check_interval_years,omitempty"`
+	DCheckOverdueMultiplier float64 `protobuf:"fixed64,19,opt,name=d_check_overdue_multiplier,json=dCheckOverdueMultiplier,proto3" json:"d_check_overdue_multiplier,omitempty"`
+	FuelConsumptionPerHour  float64 `protobuf:"fixed64,20,opt,name=fuel_consumption_per_hour,json=fuelConsumptionPerHour,proto3" json:"fuel_consumption_per_hour,omitempty"`
+	MtowKg                  float64 `protobuf:"fixed64,21,opt,name=mtow_kg,json=mtowKg,proto3" json:"mtow_kg,omitempty"`
+	PricePerUnit            float64 `protobuf:"fixed64,22,opt,name=price_per_unit,json=pricePerUnit,proto3" json:"price_per_unit,omitempty"`
+	Characteristics         string  `protobuf:"bytes,23,opt,name=characteristics,proto3" json:"characteristics,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *AircraftType) Reset() { *x = AircraftType{} }
+
+func (x *AircraftType) String() string { return protoimpl.X.MessageStringOf(x) }
+
+func (*AircraftType) ProtoMessage() {}
+
+func (x *AircraftType) ProtoReflect() protoreflect.Message {
+	mi := &file_fleet_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AircraftType.ProtoReflect.Descriptor instead.
+func (*AircraftType) Descriptor() ([]byte, []int) {
+	return file_fleet_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *AircraftType) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AircraftType) GetManufacturerId() string {
+	if x != nil {
+		return x.ManufacturerId
+	}
+	return ""
+}
+
+func (x *AircraftType) GetModelName() string {
+	if x != nil {
+		return x.ModelName
+	}
+	return ""
+}
+
+func (x *AircraftType) GetIcaoCode() string {
+	if x != nil {
+		return x.IcaoCode
+	}
+	return ""
+}
+
+func (x *AircraftType) GetIataCode() string {
+	if x != nil {
+		return x.IataCode
+	}
+	return ""
+}
+
+func (x *AircraftType) GetImageUploadId() string {
+	if x != nil {
+		return x.ImageUploadId
+	}
+	return ""
+}
+
+func (x *AircraftType) GetMaxRangeKm() float64 {
+	if x != nil {
+		return x.MaxRangeKm
+	}
+	return 0
+}
+
+func (x *AircraftType) GetCruisingSpeedKph() float64 {
+	if x != nil {
+		return x.CruisingSpeedKph
+	}
+	return 0
+}
+
+func (x *AircraftType) GetMaxPlannedSeatCapacity() float64 {
+	if x != nil {
+		return x.MaxPlannedSeatCapacity
+	}
+	return 0
+}
+
+func (x *AircraftType) GetMinRunwayLengthM() float64 {
+	if x != nil {
+		return x.MinRunwayLengthM
+	}
+	return 0
+}
+
+func (x *AircraftType) GetProductionPointsPrice() float64 {
+	if x != nil {
+		return x.ProductionPointsPrice
+	}
+	return 0
+}
+
+func (x *AircraftType) GetBaseTurnaroundPoints() float64 {
+	if x != nil {
+		return x.BaseTurnaroundPoints
+	}
+	return 0
+}
+
+func (x *AircraftType) GetBaseMaintenancePoints() float64 {
+	if x != nil {
+		return x.BaseMaintenancePoints
+	}
+	return 0
+}
+
+func (x *AircraftType) GetMaintCostPerTakeoff() float64 {
+	if x != nil {
+		return x.MaintCostPerTakeoff
+	}
+	return 0
+}
+
+func (x *AircraftType) GetMaintCostPerLanding() float64 {
+	if x != nil {
+		return x.MaintCostPerLanding
+	}
+	return 0
+}
+
+func (x *AircraftType) GetMaintCostPerFlightHour() float64 {
+	if x != nil {
+		return x.MaintCostPerFlightHour
+	}
+	return 0
+}
+
+func (x *AircraftType) GetDCheckIntervalFh() float64 {
+	if x != nil {
+		return x.DCheckIntervalFh
+	}
+	return 0
+}
+
+func (x *AircraftType) GetDCheckIntervalYears() float64 {
+	if x != nil {
+		return x.DCheckIntervalYears
+	}
+	return 0
+}
+
+func (x *AircraftType) GetDCheckOverdueMultiplier() float64 {
+	if x != nil {
+		return x.DCheckOverdueMultiplier
+	}
+	return 0
+}
+
+func (x *AircraftType) GetFuelConsumptionPerHour() float64 {
+	if x != nil {
+		return x.FuelConsumptionPerHour
+	}
+	return 0
+}
+
+func (x *AircraftType) GetMtowKg() float64 {
+	if x != nil {
+		return x.MtowKg
+	}
+	return 0
+}
+
+func (x *AircraftType) GetPricePerUnit() float64 {
+	if x != nil {
+		return x.PricePerUnit
+	}
+	return 0
+}
+
+func (x *AircraftType) GetCharacteristics() string {
+	if x != nil {
+		return x.Characteristics
+	}
+	return ""
+}
+
+type ListAircraftTypesResponse struct {
+	state         protoimpl.MessageState
+	Items         []*AircraftType `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAircraftTypesResponse) Reset() { *x = ListAircraftTypesResponse{} }
+
+func (x *ListAircraftTypesResponse) String() string { return protoimpl.X.MessageStringOf(x) }
+
+func (*ListAircraftTypesResponse) ProtoMessage() {}
+
+func (x *ListAircraftTypesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_fleet_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAircraftTypesResponse.ProtoReflect.Descriptor instead.
+func (*ListAircraftTypesResponse) Descriptor() ([]byte, []int) {
+	return file_fleet_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListAircraftTypesResponse) GetItems() []*AircraftType {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
 func (x *CreateAircraftResponse) Reset() {
 	*x = CreateAircraftResponse{}
 	mi := &file_fleet_proto_msgTypes[1]
@@ -161,16 +413,21 @@ func file_fleet_proto_rawDescGZIP() []byte {
 	return file_fleet_proto_rawDescData
 }
 
-var file_fleet_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_fleet_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_fleet_proto_goTypes = []any{
-	(*CreateAircraftRequest)(nil),  // 0: fleet.v1.CreateAircraftRequest
-	(*CreateAircraftResponse)(nil), // 1: fleet.v1.CreateAircraftResponse
+	(*CreateAircraftRequest)(nil),     // 0: fleet.v1.CreateAircraftRequest
+	(*CreateAircraftResponse)(nil),    // 1: fleet.v1.CreateAircraftResponse
+	(*AircraftType)(nil),              // 2: fleet.v1.AircraftType
+	(*ListAircraftTypesResponse)(nil), // 3: fleet.v1.ListAircraftTypesResponse
+	(*emptypb.Empty)(nil),             // 4: google.protobuf.Empty
 }
 var file_fleet_proto_depIdxs = []int32{
 	0, // 0: fleet.v1.FleetService.CreateAircraft:input_type -> fleet.v1.CreateAircraftRequest
 	1, // 1: fleet.v1.FleetService.CreateAircraft:output_type -> fleet.v1.CreateAircraftResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	4, // 2: fleet.v1.FleetService.ListAircraftTypes:input_type -> google.protobuf.Empty
+	3, // 3: fleet.v1.FleetService.ListAircraftTypes:output_type -> fleet.v1.ListAircraftTypesResponse
+	1, // [4:5] is the sub-list for method output_type
+	0, // [0:4] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -187,7 +444,7 @@ func file_fleet_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_fleet_proto_rawDesc), len(file_fleet_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
