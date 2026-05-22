@@ -299,6 +299,16 @@ PublishScripts/
 *.snupkg
 # The packages folder can be ignored because of Package Restore
 **/[Pp]ackages/*
+!frontend/packages/
+!frontend/packages/*/
+!frontend/packages/*/.gitignore
+!frontend/packages/*/README.md
+!frontend/packages/*/eslint.config.js
+!frontend/packages/*/package.json
+!frontend/packages/*/src/
+!frontend/packages/*/src/**
+!frontend/packages/*/tsconfig.json
+!frontend/packages/*/vite.config.ts
 # except build/, which is used as an MSBuild target.
 !**/[Pp]ackages/build/
 # Uncomment if necessary however generally it will be regenerated when needed

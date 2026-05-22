@@ -1,18 +1,27 @@
 <script setup lang="ts">
 import { AirIconButton } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
-import { Bell, Menu, Search, UserRound } from "@lucide/vue";
+import { Bell, LogOut, Menu, Search, UserRound } from "@lucide/vue";
+import { useRouter } from "vue-router";
 
+import { logout } from "../auth";
 import { statusMetrics } from "../navigation";
 
 defineEmits<{
   "toggle-menu": [];
 }>();
 
+const router = useRouter();
+
 function requestPanel(panel: "notifications" | "profile"): void {
   airlineSimEventBus.emit("shell:panel-requested", {
     panel,
   });
+}
+
+function signOut(): void {
+  logout("manual");
+  void router.replace("/login");
 }
 </script>
 
@@ -86,6 +95,16 @@ function requestPanel(panel: "notifications" | "profile"): void {
         @click="requestPanel('profile')"
       >
         <UserRound :size="18" />
+      </button>
+
+      <button
+        class="inline-flex size-9 items-center justify-center rounded-lg text-text-muted transition hover:bg-surface-subtle hover:text-text-primary"
+        type="button"
+        aria-label="Sign out"
+        title="Sign out"
+        @click="signOut"
+      >
+        <LogOut :size="18" />
       </button>
     </div>
   </header>
