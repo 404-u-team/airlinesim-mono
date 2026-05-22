@@ -66,6 +66,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 3})
 			return
 		}
+		log.Println("got error when tried to gRPC register, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -112,6 +113,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 2})
 			return
 		}
+		log.Println("got error when tried to gRPC login, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -122,8 +124,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 }
 
 // RefreshToken godoc
-// @Summary      Refreshes access and refresh token using refresh token stored in cookies
-// @Description  Returns access token and sets refresh token into cookie
+// @Summary      Refreshes access and refresh token
+// @Description  Returns access token and sets refresh token into cookie. Doing that by validating refresh token
 // @Tags         Auth
 // @Produce      json
 // @Success      200  {object}  dto.AccessTokenResponse "User authenticated"
@@ -149,6 +151,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 			c.Status(http.StatusUnauthorized)
 			return
 		}
+		log.Println("got error when tried to gRPC refresh token, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}

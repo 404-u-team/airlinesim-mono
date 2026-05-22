@@ -13,11 +13,14 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func SetupRoutes(authClient *grpcclient.AuthClient, operationsClient *grpcclient.OperationsClient, socketHub realtime.Hub, config *config.Config) *gin.Engine {
+func SetupRoutes(authClient *grpcclient.AuthClient, operationsClient *grpcclient.OperationsClient, fleetClient *grpcclient.FleetClient, airlineClient *grpcclient.AirlineClient, socketHub realtime.Hub, config *config.Config) *gin.Engine {
 	router := gin.Default()
+	router.Use(middleware.CORSMiddleware())
 
 	authHandler := handlers.NewAuthHandler(authClient, config)
+	airlineHandler := handlers.NewAirlineHandler(airlineClient)
 	operationsHandler := handlers.NewOperationsHandler(operationsClient, config) // maybe config is extra
+	fleetHandler := handlers.NewFleetHandler(fleetClient)
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	router.GET("/socket.io/*any", gin.WrapH(socketHub.Handler()))
@@ -34,6 +37,11 @@ func SetupRoutes(authClient *grpcclient.AuthClient, operationsClient *grpcclient
 		protected := api.Group("")
 		protected.Use(middleware.AuthMiddleware(config.JWTPublicKey, authClient))
 		{
+			protected.GET("/airline/me", airlineHandler.GetMyAirline)
+			protected.GET("/airline/:id", airlineHandler.GetAirlineByID)
+			protected.POST("/airline", airlineHandler.CreateAirline)
+			protected.POST("/aircraft", fleetHandler.PurchaseAircraft)
+
 			// admin only
 			adminOnly := api.Group("")
 			adminOnly.Use(middleware.AuthMiddleware(config.JWTPublicKey, authClient), middleware.AdminMiddleware())
