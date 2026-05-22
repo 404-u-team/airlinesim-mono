@@ -43,20 +43,26 @@ func main() {
 	regionRepo := repository.NewRegionRepository(pool)
 	regionLinkRepo := repository.NewRegionLinkRepository(pool)
 	airportRepo := repository.NewAirportRepository(pool)
+	fuelRepo := repository.NewFuelRepository(pool)
 
 	countryService := service.NewCountryService(countryRepo)
 	regionService := service.NewRegionService(regionRepo)
 	regionLinkService := service.NewRegionLinkService(regionLinkRepo)
+	fuelService, err := service.NewFuelService(context.Background(), fuelRepo, producer, float64(config.StartFuelPrice))
+	if err != nil {
+		log.Fatalf("got error during fuel service initializing, %v", err)
+	}
 	airportService := service.NewAirportService(airportRepo, producer)
 
 	// create kafka consumer and run it
 	handlers := kafka.HandlerMap{
 		kafka.TopicTick15MinElapsed: kafka.New15MinElapsedHandler(),
+		kafka.TopicTick1HourElapsed: kafka.New1HourElapsedHandler(fuelService),
 	}
 	consumer, err := kafka.NewConsumer(
 		config.KafkaBrokers,
 		"operations-service-group",
-		[]string{kafka.TopicTick15MinElapsed},
+		[]string{kafka.TopicTick15MinElapsed, kafka.TopicTick1HourElapsed},
 		handlers,
 	)
 	if err != nil {

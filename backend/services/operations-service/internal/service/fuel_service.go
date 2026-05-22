@@ -2,27 +2,37 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand/v2"
 	"time"
 
+	"github.com/404-u-team/airlinesim-mono/backend/operations-service/internal/kafka"
 	"github.com/404-u-team/airlinesim-mono/backend/operations-service/internal/repository"
+	"github.com/jackc/pgx/v5"
 )
 
-type FuelService interface{}
+type FuelService interface {
+	SetNewFuelPrice(ctx context.Context) (float64, time.Time, error)
+}
 
 type fuelService struct {
 	lastPrice float64
 	fuelRepo  repository.FuelRepository
+	producer  kafka.Producer
 }
 
-func NewFuelService(fuelRepo repository.FuelRepository) (FuelService, error) {
-	// creating service
-	service := fuelService{fuelRepo: fuelRepo}
+func NewFuelService(ctx context.Context, fuelRepo repository.FuelRepository, producer kafka.Producer, startPrice float64) (FuelService, error) {
+	service := &fuelService{fuelRepo: fuelRepo, producer: producer, lastPrice: startPrice}
 
-	// setting start price
+	lastPrice, err := fuelRepo.GetLastFuelPrice(ctx)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("got error when tried to get last fuel price, %w", err)
+	}
+	if err == nil {
+		service.lastPrice = lastPrice
+	}
 
-	// returning service
 	return service, nil
 }
 
@@ -33,6 +43,13 @@ func (s *fuelService) SetNewFuelPrice(ctx context.Context) (float64, time.Time, 
 	if err != nil {
 		return 0, time.Time{}, fmt.Errorf("got error when tried to set new fuel price, %w", err)
 	}
+
+	event := kafka.FuelPriceChangedEvent{Price: newPrice, RecordedAt: recordedAt}
+	if err := s.producer.Send(ctx, kafka.TopicOperationsFuelPriceChanged, nil, event); err != nil {
+		return 0, time.Time{}, fmt.Errorf("got error when tried to send fuel price changed event, %w", err)
+	}
+
+	s.lastPrice = newPrice
 
 	return newPrice, recordedAt, nil
 }

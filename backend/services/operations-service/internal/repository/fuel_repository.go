@@ -8,6 +8,7 @@ import (
 )
 
 type FuelRepository interface {
+	GetLastFuelPrice(ctx context.Context) (float64, error)
 	SetNewFuelPrice(ctx context.Context, price float64) (time.Time, error)
 }
 
@@ -17,6 +18,23 @@ type fuelRepository struct {
 
 func NewFuelRepository(pool db.DBConn) FuelRepository {
 	return &fuelRepository{pool: pool}
+}
+
+func (r *fuelRepository) GetLastFuelPrice(ctx context.Context) (float64, error) {
+	query := `
+		SELECT price
+		FROM global_fuel_price
+		ORDER BY recorded_at DESC
+		LIMIT 1
+	`
+
+	var price float64
+	err := r.pool.QueryRow(ctx, query).Scan(&price)
+	if err != nil {
+		return 0, err
+	}
+
+	return price, nil
 }
 
 // returns recorded_at and error
