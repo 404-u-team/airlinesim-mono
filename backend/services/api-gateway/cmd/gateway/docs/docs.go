@@ -68,6 +68,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/airline": {
+            "post": {
+                "description": "Creates an airline for the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Airline"
+                ],
+                "summary": "Create airline",
+                "parameters": [
+                    {
+                        "description": "Airline details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/airlinepb.CreateAirlineRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Airline created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/airlinepb.CreateAirlineResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "1 - request validation error, 2 - airport not found, 3 - user not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "409": {
+                        "description": "Airline conflict"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
         "/airport": {
             "post": {
                 "description": "Returns",
@@ -940,6 +989,37 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "airlinepb.CreateAirlineRequest": {
+            "type": "object",
+            "properties": {
+                "iata_code": {
+                    "type": "string"
+                },
+                "icao_code": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "starting_airport_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "airlinepb.CreateAirlineResponse": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.AccessTokenResponse": {
             "type": "object",
             "properties": {
@@ -1347,9 +1427,6 @@ const docTemplate = `{
                 "icao_code": {
                     "type": "string"
                 },
-                "id": {
-                    "type": "string"
-                },
                 "intl_name": {
                     "type": "string"
                 },
@@ -1432,9 +1509,6 @@ const docTemplate = `{
                 "diaspora": {
                     "type": "number"
                 },
-                "id": {
-                    "type": "string"
-                },
                 "region_a": {
                     "type": "string"
                 },
@@ -1457,9 +1531,6 @@ const docTemplate = `{
                 },
                 "gdp_per_capita": {
                     "type": "number"
-                },
-                "id": {
-                    "type": "string"
                 },
                 "intl_name": {
                     "type": "string"

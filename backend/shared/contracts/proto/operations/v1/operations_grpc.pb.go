@@ -19,22 +19,22 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OperationsService_CreateCountry_FullMethodName    = "/auth.v1.OperationsService/CreateCountry"
-	OperationsService_ChangeCountry_FullMethodName    = "/auth.v1.OperationsService/ChangeCountry"
-	OperationsService_ListCountries_FullMethodName    = "/auth.v1.OperationsService/ListCountries"
-	OperationsService_DeleteCountry_FullMethodName    = "/auth.v1.OperationsService/DeleteCountry"
-	OperationsService_CreateRegion_FullMethodName     = "/auth.v1.OperationsService/CreateRegion"
-	OperationsService_ChangeRegion_FullMethodName     = "/auth.v1.OperationsService/ChangeRegion"
-	OperationsService_ListRegions_FullMethodName      = "/auth.v1.OperationsService/ListRegions"
-	OperationsService_DeleteRegion_FullMethodName     = "/auth.v1.OperationsService/DeleteRegion"
-	OperationsService_CreateRegionLink_FullMethodName = "/auth.v1.OperationsService/CreateRegionLink"
-	OperationsService_ChangeRegionLink_FullMethodName = "/auth.v1.OperationsService/ChangeRegionLink"
-	OperationsService_ListRegionLinks_FullMethodName  = "/auth.v1.OperationsService/ListRegionLinks"
-	OperationsService_DeleteRegionLink_FullMethodName = "/auth.v1.OperationsService/DeleteRegionLink"
-	OperationsService_CreateAirport_FullMethodName    = "/auth.v1.OperationsService/CreateAirport"
-	OperationsService_ChangeAirport_FullMethodName    = "/auth.v1.OperationsService/ChangeAirport"
-	OperationsService_ListAirports_FullMethodName     = "/auth.v1.OperationsService/ListAirports"
-	OperationsService_DeleteAirport_FullMethodName    = "/auth.v1.OperationsService/DeleteAirport"
+	OperationsService_CreateCountry_FullMethodName    = "/operations.v1.OperationsService/CreateCountry"
+	OperationsService_ChangeCountry_FullMethodName    = "/operations.v1.OperationsService/ChangeCountry"
+	OperationsService_ListCountries_FullMethodName    = "/operations.v1.OperationsService/ListCountries"
+	OperationsService_DeleteCountry_FullMethodName    = "/operations.v1.OperationsService/DeleteCountry"
+	OperationsService_CreateRegion_FullMethodName     = "/operations.v1.OperationsService/CreateRegion"
+	OperationsService_ChangeRegion_FullMethodName     = "/operations.v1.OperationsService/ChangeRegion"
+	OperationsService_ListRegions_FullMethodName      = "/operations.v1.OperationsService/ListRegions"
+	OperationsService_DeleteRegion_FullMethodName     = "/operations.v1.OperationsService/DeleteRegion"
+	OperationsService_CreateRegionLink_FullMethodName = "/operations.v1.OperationsService/CreateRegionLink"
+	OperationsService_ChangeRegionLink_FullMethodName = "/operations.v1.OperationsService/ChangeRegionLink"
+	OperationsService_ListRegionLinks_FullMethodName  = "/operations.v1.OperationsService/ListRegionLinks"
+	OperationsService_DeleteRegionLink_FullMethodName = "/operations.v1.OperationsService/DeleteRegionLink"
+	OperationsService_CreateAirport_FullMethodName    = "/operations.v1.OperationsService/CreateAirport"
+	OperationsService_ChangeAirport_FullMethodName    = "/operations.v1.OperationsService/ChangeAirport"
+	OperationsService_ListAirports_FullMethodName     = "/operations.v1.OperationsService/ListAirports"
+	OperationsService_DeleteAirport_FullMethodName    = "/operations.v1.OperationsService/DeleteAirport"
 )
 
 // OperationsServiceClient is the client API for OperationsService service.
@@ -654,7 +654,7 @@ func _OperationsService_DeleteAirport_Handler(srv interface{}, ctx context.Conte
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var OperationsService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "auth.v1.OperationsService",
+	ServiceName: "operations.v1.OperationsService",
 	HandlerType: (*OperationsServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

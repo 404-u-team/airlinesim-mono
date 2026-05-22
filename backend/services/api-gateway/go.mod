@@ -4,6 +4,7 @@ go 1.26.2
 
 require (
 	github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth v0.0.0-00010101000000-000000000000
+	github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/airline v0.0.0-00010101000000-000000000000
 	github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/fleet v0.0.0-00010101000000-000000000000
 	github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/operations v0.0.0-00010101000000-000000000000
 	github.com/404-u-team/airlinesim-mono/backend/shared/customerrors v0.0.0-00010101000000-000000000000
@@ -20,6 +21,8 @@ require (
 )
 
 replace github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth => ../../shared/contracts/proto/auth
+
+replace github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/airline => ../../shared/contracts/proto/airline
 
 replace github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/fleet => ../../shared/contracts/proto/fleet
 

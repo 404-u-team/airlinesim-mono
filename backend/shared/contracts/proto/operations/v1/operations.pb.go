@@ -490,16 +490,15 @@ func (x *DeleteCountryRequest) GetId() string {
 // request to create region
 type CreateRegionRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	LocalCode     string                 `protobuf:"bytes,2,opt,name=local_code,json=localCode,proto3" json:"local_code,omitempty"`
-	LocalName     string                 `protobuf:"bytes,3,opt,name=local_name,json=localName,proto3" json:"local_name,omitempty"`
-	IntlName      string                 `protobuf:"bytes,4,opt,name=intl_name,json=intlName,proto3" json:"intl_name,omitempty"`
-	CountryId     string                 `protobuf:"bytes,5,opt,name=country_id,json=countryId,proto3" json:"country_id,omitempty"`
-	Population    float64                `protobuf:"fixed64,6,opt,name=population,proto3" json:"population,omitempty"`
-	GdpPerCapita  float64                `protobuf:"fixed64,7,opt,name=gdp_per_capita,json=gdpPerCapita,proto3" json:"gdp_per_capita,omitempty"`
-	TourismScore  float64                `protobuf:"fixed64,8,opt,name=tourism_score,json=tourismScore,proto3" json:"tourism_score,omitempty"`
-	BusinessScore float64                `protobuf:"fixed64,9,opt,name=business_score,json=businessScore,proto3" json:"business_score,omitempty"`
-	WikipediaLink string                 `protobuf:"bytes,10,opt,name=wikipedia_link,json=wikipediaLink,proto3" json:"wikipedia_link,omitempty"`
+	LocalCode     string                 `protobuf:"bytes,1,opt,name=local_code,json=localCode,proto3" json:"local_code,omitempty"`
+	LocalName     string                 `protobuf:"bytes,2,opt,name=local_name,json=localName,proto3" json:"local_name,omitempty"`
+	IntlName      string                 `protobuf:"bytes,3,opt,name=intl_name,json=intlName,proto3" json:"intl_name,omitempty"`
+	CountryId     string                 `protobuf:"bytes,4,opt,name=country_id,json=countryId,proto3" json:"country_id,omitempty"`
+	Population    float64                `protobuf:"fixed64,5,opt,name=population,proto3" json:"population,omitempty"`
+	GdpPerCapita  float64                `protobuf:"fixed64,6,opt,name=gdp_per_capita,json=gdpPerCapita,proto3" json:"gdp_per_capita,omitempty"`
+	TourismScore  float64                `protobuf:"fixed64,7,opt,name=tourism_score,json=tourismScore,proto3" json:"tourism_score,omitempty"`
+	BusinessScore float64                `protobuf:"fixed64,8,opt,name=business_score,json=businessScore,proto3" json:"business_score,omitempty"`
+	WikipediaLink string                 `protobuf:"bytes,9,opt,name=wikipedia_link,json=wikipediaLink,proto3" json:"wikipedia_link,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -532,13 +531,6 @@ func (x *CreateRegionRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use CreateRegionRequest.ProtoReflect.Descriptor instead.
 func (*CreateRegionRequest) Descriptor() ([]byte, []int) {
 	return file_operations_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *CreateRegionRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
 }
 
 func (x *CreateRegionRequest) GetLocalCode() string {
@@ -963,12 +955,11 @@ func (x *DeleteRegionRequest) GetId() string {
 // request to create region link
 type CreateRegionLinkRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	RegionA       string                 `protobuf:"bytes,2,opt,name=region_a,json=regionA,proto3" json:"region_a,omitempty"`
-	RegionB       string                 `protobuf:"bytes,3,opt,name=region_b,json=regionB,proto3" json:"region_b,omitempty"`
-	Diaspora      float64                `protobuf:"fixed64,4,opt,name=diaspora,proto3" json:"diaspora,omitempty"`
-	Business      float64                `protobuf:"fixed64,5,opt,name=business,proto3" json:"business,omitempty"`
-	Tourism       float64                `protobuf:"fixed64,6,opt,name=tourism,proto3" json:"tourism,omitempty"`
+	RegionA       string                 `protobuf:"bytes,1,opt,name=region_a,json=regionA,proto3" json:"region_a,omitempty"`
+	RegionB       string                 `protobuf:"bytes,2,opt,name=region_b,json=regionB,proto3" json:"region_b,omitempty"`
+	Diaspora      float64                `protobuf:"fixed64,3,opt,name=diaspora,proto3" json:"diaspora,omitempty"`
+	Business      float64                `protobuf:"fixed64,4,opt,name=business,proto3" json:"business,omitempty"`
+	Tourism       float64                `protobuf:"fixed64,5,opt,name=tourism,proto3" json:"tourism,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1001,13 +992,6 @@ func (x *CreateRegionLinkRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use CreateRegionLinkRequest.ProtoReflect.Descriptor instead.
 func (*CreateRegionLinkRequest) Descriptor() ([]byte, []int) {
 	return file_operations_proto_rawDescGZIP(), []int{12}
-}
-
-func (x *CreateRegionLinkRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
 }
 
 func (x *CreateRegionLinkRequest) GetRegionA() string {
@@ -1340,30 +1324,29 @@ func (x *DeleteRegionLinkRequest) GetId() string {
 // request to create airport
 type CreateAirportRequest struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
-	Id                    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	IcaoCode              string                 `protobuf:"bytes,2,opt,name=icao_code,json=icaoCode,proto3" json:"icao_code,omitempty"`
-	IataCode              string                 `protobuf:"bytes,3,opt,name=iata_code,json=iataCode,proto3" json:"iata_code,omitempty"`
-	LocalName             string                 `protobuf:"bytes,4,opt,name=local_name,json=localName,proto3" json:"local_name,omitempty"`
-	IntlName              string                 `protobuf:"bytes,5,opt,name=intl_name,json=intlName,proto3" json:"intl_name,omitempty"`
-	Timezone              string                 `protobuf:"bytes,6,opt,name=timezone,proto3" json:"timezone,omitempty"`
-	CountryId             string                 `protobuf:"bytes,7,opt,name=country_id,json=countryId,proto3" json:"country_id,omitempty"`
-	RegionId              string                 `protobuf:"bytes,8,opt,name=region_id,json=regionId,proto3" json:"region_id,omitempty"`
-	Municipality          string                 `protobuf:"bytes,9,opt,name=municipality,proto3" json:"municipality,omitempty"`
-	Continent             string                 `protobuf:"bytes,10,opt,name=continent,proto3" json:"continent,omitempty"`
-	ElevationFt           float64                `protobuf:"fixed64,11,opt,name=elevation_ft,json=elevationFt,proto3" json:"elevation_ft,omitempty"`
-	MaxRunwayLengthM      float64                `protobuf:"fixed64,12,opt,name=max_runway_length_m,json=maxRunwayLengthM,proto3" json:"max_runway_length_m,omitempty"`
-	WorksAtNight          bool                   `protobuf:"varint,13,opt,name=works_at_night,json=worksAtNight,proto3" json:"works_at_night,omitempty"`
-	MaxRunwayUsesPerDay   float64                `protobuf:"fixed64,14,opt,name=max_runway_uses_per_day,json=maxRunwayUsesPerDay,proto3" json:"max_runway_uses_per_day,omitempty"`
-	TurnaroundPointPrice  float64                `protobuf:"fixed64,15,opt,name=turnaround_point_price,json=turnaroundPointPrice,proto3" json:"turnaround_point_price,omitempty"`
-	MaintenancePointPrice float64                `protobuf:"fixed64,16,opt,name=maintenance_point_price,json=maintenancePointPrice,proto3" json:"maintenance_point_price,omitempty"`
-	RunwayFee             float64                `protobuf:"fixed64,17,opt,name=runway_fee,json=runwayFee,proto3" json:"runway_fee,omitempty"`
-	GateFee               float64                `protobuf:"fixed64,18,opt,name=gate_fee,json=gateFee,proto3" json:"gate_fee,omitempty"`
-	StandFee              float64                `protobuf:"fixed64,19,opt,name=stand_fee,json=standFee,proto3" json:"stand_fee,omitempty"`
-	FuelPriceMultiplier   float64                `protobuf:"fixed64,20,opt,name=fuel_price_multiplier,json=fuelPriceMultiplier,proto3" json:"fuel_price_multiplier,omitempty"`
-	HomeLink              string                 `protobuf:"bytes,21,opt,name=home_link,json=homeLink,proto3" json:"home_link,omitempty"`
-	WikipediaLink         string                 `protobuf:"bytes,22,opt,name=wikipedia_link,json=wikipediaLink,proto3" json:"wikipedia_link,omitempty"`
-	Geog                  string                 `protobuf:"bytes,23,opt,name=geog,proto3" json:"geog,omitempty"`
-	Geom                  string                 `protobuf:"bytes,24,opt,name=geom,proto3" json:"geom,omitempty"`
+	IcaoCode              string                 `protobuf:"bytes,1,opt,name=icao_code,json=icaoCode,proto3" json:"icao_code,omitempty"`
+	IataCode              string                 `protobuf:"bytes,2,opt,name=iata_code,json=iataCode,proto3" json:"iata_code,omitempty"`
+	LocalName             string                 `protobuf:"bytes,3,opt,name=local_name,json=localName,proto3" json:"local_name,omitempty"`
+	IntlName              string                 `protobuf:"bytes,4,opt,name=intl_name,json=intlName,proto3" json:"intl_name,omitempty"`
+	Timezone              string                 `protobuf:"bytes,5,opt,name=timezone,proto3" json:"timezone,omitempty"`
+	CountryId             string                 `protobuf:"bytes,6,opt,name=country_id,json=countryId,proto3" json:"country_id,omitempty"`
+	RegionId              string                 `protobuf:"bytes,7,opt,name=region_id,json=regionId,proto3" json:"region_id,omitempty"`
+	Municipality          string                 `protobuf:"bytes,8,opt,name=municipality,proto3" json:"municipality,omitempty"`
+	Continent             string                 `protobuf:"bytes,9,opt,name=continent,proto3" json:"continent,omitempty"`
+	ElevationFt           float64                `protobuf:"fixed64,10,opt,name=elevation_ft,json=elevationFt,proto3" json:"elevation_ft,omitempty"`
+	MaxRunwayLengthM      float64                `protobuf:"fixed64,11,opt,name=max_runway_length_m,json=maxRunwayLengthM,proto3" json:"max_runway_length_m,omitempty"`
+	WorksAtNight          bool                   `protobuf:"varint,12,opt,name=works_at_night,json=worksAtNight,proto3" json:"works_at_night,omitempty"`
+	MaxRunwayUsesPerDay   float64                `protobuf:"fixed64,13,opt,name=max_runway_uses_per_day,json=maxRunwayUsesPerDay,proto3" json:"max_runway_uses_per_day,omitempty"`
+	TurnaroundPointPrice  float64                `protobuf:"fixed64,14,opt,name=turnaround_point_price,json=turnaroundPointPrice,proto3" json:"turnaround_point_price,omitempty"`
+	MaintenancePointPrice float64                `protobuf:"fixed64,15,opt,name=maintenance_point_price,json=maintenancePointPrice,proto3" json:"maintenance_point_price,omitempty"`
+	RunwayFee             float64                `protobuf:"fixed64,16,opt,name=runway_fee,json=runwayFee,proto3" json:"runway_fee,omitempty"`
+	GateFee               float64                `protobuf:"fixed64,17,opt,name=gate_fee,json=gateFee,proto3" json:"gate_fee,omitempty"`
+	StandFee              float64                `protobuf:"fixed64,18,opt,name=stand_fee,json=standFee,proto3" json:"stand_fee,omitempty"`
+	FuelPriceMultiplier   float64                `protobuf:"fixed64,19,opt,name=fuel_price_multiplier,json=fuelPriceMultiplier,proto3" json:"fuel_price_multiplier,omitempty"`
+	HomeLink              string                 `protobuf:"bytes,20,opt,name=home_link,json=homeLink,proto3" json:"home_link,omitempty"`
+	WikipediaLink         string                 `protobuf:"bytes,21,opt,name=wikipedia_link,json=wikipediaLink,proto3" json:"wikipedia_link,omitempty"`
+	Geog                  string                 `protobuf:"bytes,22,opt,name=geog,proto3" json:"geog,omitempty"`
+	Geom                  string                 `protobuf:"bytes,23,opt,name=geom,proto3" json:"geom,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -1396,13 +1379,6 @@ func (x *CreateAirportRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use CreateAirportRequest.ProtoReflect.Descriptor instead.
 func (*CreateAirportRequest) Descriptor() ([]byte, []int) {
 	return file_operations_proto_rawDescGZIP(), []int{18}
-}
-
-func (x *CreateAirportRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
 }
 
 func (x *CreateAirportRequest) GetIcaoCode() string {
@@ -2195,7 +2171,7 @@ var File_operations_proto protoreflect.FileDescriptor
 
 const file_operations_proto_rawDesc = "" +
 	"\n" +
-	"\x10operations.proto\x12\aauth.v1\"\xec\x02\n" +
+	"\x10operations.proto\x12\roperations.v1\"\xec\x02\n" +
 	"\x14CreateCountryRequest\x12\x10\n" +
 	"\x03iso\x18\x01 \x01(\tR\x03iso\x12\x1d\n" +
 	"\n" +
@@ -2233,28 +2209,26 @@ const file_operations_proto_rawDesc = "" +
 	"\bvat_rate\x18\b \x01(\x01R\avatRate\x12,\n" +
 	"\x12aircraft_tail_code\x18\t \x01(\tR\x10aircraftTailCode\x12%\n" +
 	"\x0ewikipedia_link\x18\n" +
-	" \x01(\tR\rwikipediaLink\"G\n" +
-	"\x15ListCountriesResponse\x12.\n" +
-	"\tcountries\x18\x01 \x03(\v2\x10.auth.v1.CountryR\tcountries\"&\n" +
+	" \x01(\tR\rwikipediaLink\"M\n" +
+	"\x15ListCountriesResponse\x124\n" +
+	"\tcountries\x18\x01 \x03(\v2\x16.operations.v1.CountryR\tcountries\"&\n" +
 	"\x14DeleteCountryRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xd8\x02\n" +
-	"\x13CreateRegionRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xc8\x02\n" +
+	"\x13CreateRegionRequest\x12\x1d\n" +
 	"\n" +
-	"local_code\x18\x02 \x01(\tR\tlocalCode\x12\x1d\n" +
+	"local_code\x18\x01 \x01(\tR\tlocalCode\x12\x1d\n" +
 	"\n" +
-	"local_name\x18\x03 \x01(\tR\tlocalName\x12\x1b\n" +
-	"\tintl_name\x18\x04 \x01(\tR\bintlName\x12\x1d\n" +
+	"local_name\x18\x02 \x01(\tR\tlocalName\x12\x1b\n" +
+	"\tintl_name\x18\x03 \x01(\tR\bintlName\x12\x1d\n" +
 	"\n" +
-	"country_id\x18\x05 \x01(\tR\tcountryId\x12\x1e\n" +
+	"country_id\x18\x04 \x01(\tR\tcountryId\x12\x1e\n" +
 	"\n" +
-	"population\x18\x06 \x01(\x01R\n" +
+	"population\x18\x05 \x01(\x01R\n" +
 	"population\x12$\n" +
-	"\x0egdp_per_capita\x18\a \x01(\x01R\fgdpPerCapita\x12#\n" +
-	"\rtourism_score\x18\b \x01(\x01R\ftourismScore\x12%\n" +
-	"\x0ebusiness_score\x18\t \x01(\x01R\rbusinessScore\x12%\n" +
-	"\x0ewikipedia_link\x18\n" +
-	" \x01(\tR\rwikipediaLink\"\xd8\x02\n" +
+	"\x0egdp_per_capita\x18\x06 \x01(\x01R\fgdpPerCapita\x12#\n" +
+	"\rtourism_score\x18\a \x01(\x01R\ftourismScore\x12%\n" +
+	"\x0ebusiness_score\x18\b \x01(\x01R\rbusinessScore\x12%\n" +
+	"\x0ewikipedia_link\x18\t \x01(\tR\rwikipediaLink\"\xd8\x02\n" +
 	"\x13ChangeRegionRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -2289,18 +2263,17 @@ const file_operations_proto_rawDesc = "" +
 	"\rtourism_score\x18\b \x01(\x01R\ftourismScore\x12%\n" +
 	"\x0ebusiness_score\x18\t \x01(\x01R\rbusinessScore\x12%\n" +
 	"\x0ewikipedia_link\x18\n" +
-	" \x01(\tR\rwikipediaLink\"@\n" +
-	"\x13ListRegionsResponse\x12)\n" +
-	"\aregions\x18\x01 \x03(\v2\x0f.auth.v1.RegionR\aregions\"%\n" +
+	" \x01(\tR\rwikipediaLink\"F\n" +
+	"\x13ListRegionsResponse\x12/\n" +
+	"\aregions\x18\x01 \x03(\v2\x15.operations.v1.RegionR\aregions\"%\n" +
 	"\x13DeleteRegionRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xb1\x01\n" +
-	"\x17CreateRegionLinkRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
-	"\bregion_a\x18\x02 \x01(\tR\aregionA\x12\x19\n" +
-	"\bregion_b\x18\x03 \x01(\tR\aregionB\x12\x1a\n" +
-	"\bdiaspora\x18\x04 \x01(\x01R\bdiaspora\x12\x1a\n" +
-	"\bbusiness\x18\x05 \x01(\x01R\bbusiness\x12\x18\n" +
-	"\atourism\x18\x06 \x01(\x01R\atourism\"\xb1\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xa1\x01\n" +
+	"\x17CreateRegionLinkRequest\x12\x19\n" +
+	"\bregion_a\x18\x01 \x01(\tR\aregionA\x12\x19\n" +
+	"\bregion_b\x18\x02 \x01(\tR\aregionB\x12\x1a\n" +
+	"\bdiaspora\x18\x03 \x01(\x01R\bdiaspora\x12\x1a\n" +
+	"\bbusiness\x18\x04 \x01(\x01R\bbusiness\x12\x18\n" +
+	"\atourism\x18\x05 \x01(\x01R\atourism\"\xb1\x01\n" +
 	"\x17ChangeRegionLinkRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bregion_a\x18\x02 \x01(\tR\aregionA\x12\x19\n" +
@@ -2316,40 +2289,39 @@ const file_operations_proto_rawDesc = "" +
 	"\bregion_b\x18\x03 \x01(\tR\aregionB\x12\x1a\n" +
 	"\bdiaspora\x18\x04 \x01(\x01R\bdiaspora\x12\x1a\n" +
 	"\bbusiness\x18\x05 \x01(\x01R\bbusiness\x12\x18\n" +
-	"\atourism\x18\x06 \x01(\x01R\atourism\"Q\n" +
-	"\x17ListRegionLinksResponse\x126\n" +
-	"\fregion_links\x18\x01 \x03(\v2\x13.auth.v1.RegionLinkR\vregionLinks\")\n" +
+	"\atourism\x18\x06 \x01(\x01R\atourism\"W\n" +
+	"\x17ListRegionLinksResponse\x12<\n" +
+	"\fregion_links\x18\x01 \x03(\v2\x19.operations.v1.RegionLinkR\vregionLinks\")\n" +
 	"\x17DeleteRegionLinkRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xc9\x06\n" +
-	"\x14CreateAirportRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
-	"\ticao_code\x18\x02 \x01(\tR\bicaoCode\x12\x1b\n" +
-	"\tiata_code\x18\x03 \x01(\tR\biataCode\x12\x1d\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xb9\x06\n" +
+	"\x14CreateAirportRequest\x12\x1b\n" +
+	"\ticao_code\x18\x01 \x01(\tR\bicaoCode\x12\x1b\n" +
+	"\tiata_code\x18\x02 \x01(\tR\biataCode\x12\x1d\n" +
 	"\n" +
-	"local_name\x18\x04 \x01(\tR\tlocalName\x12\x1b\n" +
-	"\tintl_name\x18\x05 \x01(\tR\bintlName\x12\x1a\n" +
-	"\btimezone\x18\x06 \x01(\tR\btimezone\x12\x1d\n" +
+	"local_name\x18\x03 \x01(\tR\tlocalName\x12\x1b\n" +
+	"\tintl_name\x18\x04 \x01(\tR\bintlName\x12\x1a\n" +
+	"\btimezone\x18\x05 \x01(\tR\btimezone\x12\x1d\n" +
 	"\n" +
-	"country_id\x18\a \x01(\tR\tcountryId\x12\x1b\n" +
-	"\tregion_id\x18\b \x01(\tR\bregionId\x12\"\n" +
-	"\fmunicipality\x18\t \x01(\tR\fmunicipality\x12\x1c\n" +
-	"\tcontinent\x18\n" +
-	" \x01(\tR\tcontinent\x12!\n" +
-	"\felevation_ft\x18\v \x01(\x01R\velevationFt\x12-\n" +
-	"\x13max_runway_length_m\x18\f \x01(\x01R\x10maxRunwayLengthM\x12$\n" +
-	"\x0eworks_at_night\x18\r \x01(\bR\fworksAtNight\x124\n" +
-	"\x17max_runway_uses_per_day\x18\x0e \x01(\x01R\x13maxRunwayUsesPerDay\x124\n" +
-	"\x16turnaround_point_price\x18\x0f \x01(\x01R\x14turnaroundPointPrice\x126\n" +
-	"\x17maintenance_point_price\x18\x10 \x01(\x01R\x15maintenancePointPrice\x12\x1d\n" +
+	"country_id\x18\x06 \x01(\tR\tcountryId\x12\x1b\n" +
+	"\tregion_id\x18\a \x01(\tR\bregionId\x12\"\n" +
+	"\fmunicipality\x18\b \x01(\tR\fmunicipality\x12\x1c\n" +
+	"\tcontinent\x18\t \x01(\tR\tcontinent\x12!\n" +
+	"\felevation_ft\x18\n" +
+	" \x01(\x01R\velevationFt\x12-\n" +
+	"\x13max_runway_length_m\x18\v \x01(\x01R\x10maxRunwayLengthM\x12$\n" +
+	"\x0eworks_at_night\x18\f \x01(\bR\fworksAtNight\x124\n" +
+	"\x17max_runway_uses_per_day\x18\r \x01(\x01R\x13maxRunwayUsesPerDay\x124\n" +
+	"\x16turnaround_point_price\x18\x0e \x01(\x01R\x14turnaroundPointPrice\x126\n" +
+	"\x17maintenance_point_price\x18\x0f \x01(\x01R\x15maintenancePointPrice\x12\x1d\n" +
 	"\n" +
-	"runway_fee\x18\x11 \x01(\x01R\trunwayFee\x12\x19\n" +
-	"\bgate_fee\x18\x12 \x01(\x01R\agateFee\x12\x1b\n" +
-	"\tstand_fee\x18\x13 \x01(\x01R\bstandFee\x122\n" +
-	"\x15fuel_price_multiplier\x18\x14 \x01(\x01R\x13fuelPriceMultiplier\x12\x1b\n" +
-	"\thome_link\x18\x15 \x01(\tR\bhomeLink\x12%\n" +
-	"\x0ewikipedia_link\x18\x16 \x01(\tR\rwikipediaLink\x12\x12\n" +
-	"\x04geog\x18\x17 \x01(\tR\x04geog\x12\x12\n" +
-	"\x04geom\x18\x18 \x01(\tR\x04geom\"\xc9\x06\n" +
+	"runway_fee\x18\x10 \x01(\x01R\trunwayFee\x12\x19\n" +
+	"\bgate_fee\x18\x11 \x01(\x01R\agateFee\x12\x1b\n" +
+	"\tstand_fee\x18\x12 \x01(\x01R\bstandFee\x122\n" +
+	"\x15fuel_price_multiplier\x18\x13 \x01(\x01R\x13fuelPriceMultiplier\x12\x1b\n" +
+	"\thome_link\x18\x14 \x01(\tR\bhomeLink\x12%\n" +
+	"\x0ewikipedia_link\x18\x15 \x01(\tR\rwikipediaLink\x12\x12\n" +
+	"\x04geog\x18\x16 \x01(\tR\x04geog\x12\x12\n" +
+	"\x04geom\x18\x17 \x01(\tR\x04geom\"\xc9\x06\n" +
 	"\x14ChangeAirportRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ticao_code\x18\x02 \x01(\tR\bicaoCode\x12\x1b\n" +
@@ -2408,31 +2380,32 @@ const file_operations_proto_rawDesc = "" +
 	"\thome_link\x18\x15 \x01(\tR\bhomeLink\x12%\n" +
 	"\x0ewikipedia_link\x18\x16 \x01(\tR\rwikipediaLink\x12\x12\n" +
 	"\x04geog\x18\x17 \x01(\tR\x04geog\x12\x12\n" +
-	"\x04geom\x18\x18 \x01(\tR\x04geom\"D\n" +
-	"\x14ListAirportsResponse\x12,\n" +
-	"\bairports\x18\x01 \x03(\v2\x10.auth.v1.AirportR\bairports\"&\n" +
+	"\x04geom\x18\x18 \x01(\tR\x04geom\"J\n" +
+	"\x14ListAirportsResponse\x122\n" +
+	"\bairports\x18\x01 \x03(\v2\x16.operations.v1.AirportR\bairports\"&\n" +
 	"\x14DeleteAirportRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x1c\n" +
 	"\n" +
 	"IDResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id2\x98\t\n" +
-	"\x11OperationsService\x12C\n" +
-	"\rCreateCountry\x12\x1d.auth.v1.CreateCountryRequest\x1a\x13.auth.v1.IDResponse\x12C\n" +
-	"\rChangeCountry\x12\x1d.auth.v1.ChangeCountryRequest\x1a\x13.auth.v1.IDResponse\x12N\n" +
-	"\rListCountries\x12\x1d.auth.v1.ListCountriesRequest\x1a\x1e.auth.v1.ListCountriesResponse\x12C\n" +
-	"\rDeleteCountry\x12\x1d.auth.v1.DeleteCountryRequest\x1a\x13.auth.v1.IDResponse\x12A\n" +
-	"\fCreateRegion\x12\x1c.auth.v1.CreateRegionRequest\x1a\x13.auth.v1.IDResponse\x12A\n" +
-	"\fChangeRegion\x12\x1c.auth.v1.ChangeRegionRequest\x1a\x13.auth.v1.IDResponse\x12H\n" +
-	"\vListRegions\x12\x1b.auth.v1.ListRegionsRequest\x1a\x1c.auth.v1.ListRegionsResponse\x12A\n" +
-	"\fDeleteRegion\x12\x1c.auth.v1.DeleteRegionRequest\x1a\x13.auth.v1.IDResponse\x12I\n" +
-	"\x10CreateRegionLink\x12 .auth.v1.CreateRegionLinkRequest\x1a\x13.auth.v1.IDResponse\x12I\n" +
-	"\x10ChangeRegionLink\x12 .auth.v1.ChangeRegionLinkRequest\x1a\x13.auth.v1.IDResponse\x12T\n" +
-	"\x0fListRegionLinks\x12\x1f.auth.v1.ListRegionLinksRequest\x1a .auth.v1.ListRegionLinksResponse\x12I\n" +
-	"\x10DeleteRegionLink\x12 .auth.v1.DeleteRegionLinkRequest\x1a\x13.auth.v1.IDResponse\x12C\n" +
-	"\rCreateAirport\x12\x1d.auth.v1.CreateAirportRequest\x1a\x13.auth.v1.IDResponse\x12C\n" +
-	"\rChangeAirport\x12\x1d.auth.v1.ChangeAirportRequest\x1a\x13.auth.v1.IDResponse\x12K\n" +
-	"\fListAirports\x12\x1c.auth.v1.ListAirportsRequest\x1a\x1d.auth.v1.ListAirportsResponse\x12C\n" +
-	"\rDeleteAirport\x12\x1d.auth.v1.DeleteAirportRequest\x1a\x13.auth.v1.IDResponseBaZ_github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/operations/v1;operationspbb\x06proto3"
+	"\x02id\x18\x01 \x01(\tR\x02id2\xd8\n" +
+	"\n" +
+	"\x11OperationsService\x12O\n" +
+	"\rCreateCountry\x12#.operations.v1.CreateCountryRequest\x1a\x19.operations.v1.IDResponse\x12O\n" +
+	"\rChangeCountry\x12#.operations.v1.ChangeCountryRequest\x1a\x19.operations.v1.IDResponse\x12Z\n" +
+	"\rListCountries\x12#.operations.v1.ListCountriesRequest\x1a$.operations.v1.ListCountriesResponse\x12O\n" +
+	"\rDeleteCountry\x12#.operations.v1.DeleteCountryRequest\x1a\x19.operations.v1.IDResponse\x12M\n" +
+	"\fCreateRegion\x12\".operations.v1.CreateRegionRequest\x1a\x19.operations.v1.IDResponse\x12M\n" +
+	"\fChangeRegion\x12\".operations.v1.ChangeRegionRequest\x1a\x19.operations.v1.IDResponse\x12T\n" +
+	"\vListRegions\x12!.operations.v1.ListRegionsRequest\x1a\".operations.v1.ListRegionsResponse\x12M\n" +
+	"\fDeleteRegion\x12\".operations.v1.DeleteRegionRequest\x1a\x19.operations.v1.IDResponse\x12U\n" +
+	"\x10CreateRegionLink\x12&.operations.v1.CreateRegionLinkRequest\x1a\x19.operations.v1.IDResponse\x12U\n" +
+	"\x10ChangeRegionLink\x12&.operations.v1.ChangeRegionLinkRequest\x1a\x19.operations.v1.IDResponse\x12`\n" +
+	"\x0fListRegionLinks\x12%.operations.v1.ListRegionLinksRequest\x1a&.operations.v1.ListRegionLinksResponse\x12U\n" +
+	"\x10DeleteRegionLink\x12&.operations.v1.DeleteRegionLinkRequest\x1a\x19.operations.v1.IDResponse\x12O\n" +
+	"\rCreateAirport\x12#.operations.v1.CreateAirportRequest\x1a\x19.operations.v1.IDResponse\x12O\n" +
+	"\rChangeAirport\x12#.operations.v1.ChangeAirportRequest\x1a\x19.operations.v1.IDResponse\x12W\n" +
+	"\fListAirports\x12\".operations.v1.ListAirportsRequest\x1a#.operations.v1.ListAirportsResponse\x12O\n" +
+	"\rDeleteAirport\x12#.operations.v1.DeleteAirportRequest\x1a\x19.operations.v1.IDResponseBaZ_github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/operations/v1;operationspbb\x06proto3"
 
 var (
 	file_operations_proto_rawDescOnce sync.Once
@@ -2448,69 +2421,69 @@ func file_operations_proto_rawDescGZIP() []byte {
 
 var file_operations_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_operations_proto_goTypes = []any{
-	(*CreateCountryRequest)(nil),    // 0: auth.v1.CreateCountryRequest
-	(*ChangeCountryRequest)(nil),    // 1: auth.v1.ChangeCountryRequest
-	(*ListCountriesRequest)(nil),    // 2: auth.v1.ListCountriesRequest
-	(*Country)(nil),                 // 3: auth.v1.Country
-	(*ListCountriesResponse)(nil),   // 4: auth.v1.ListCountriesResponse
-	(*DeleteCountryRequest)(nil),    // 5: auth.v1.DeleteCountryRequest
-	(*CreateRegionRequest)(nil),     // 6: auth.v1.CreateRegionRequest
-	(*ChangeRegionRequest)(nil),     // 7: auth.v1.ChangeRegionRequest
-	(*ListRegionsRequest)(nil),      // 8: auth.v1.ListRegionsRequest
-	(*Region)(nil),                  // 9: auth.v1.Region
-	(*ListRegionsResponse)(nil),     // 10: auth.v1.ListRegionsResponse
-	(*DeleteRegionRequest)(nil),     // 11: auth.v1.DeleteRegionRequest
-	(*CreateRegionLinkRequest)(nil), // 12: auth.v1.CreateRegionLinkRequest
-	(*ChangeRegionLinkRequest)(nil), // 13: auth.v1.ChangeRegionLinkRequest
-	(*ListRegionLinksRequest)(nil),  // 14: auth.v1.ListRegionLinksRequest
-	(*RegionLink)(nil),              // 15: auth.v1.RegionLink
-	(*ListRegionLinksResponse)(nil), // 16: auth.v1.ListRegionLinksResponse
-	(*DeleteRegionLinkRequest)(nil), // 17: auth.v1.DeleteRegionLinkRequest
-	(*CreateAirportRequest)(nil),    // 18: auth.v1.CreateAirportRequest
-	(*ChangeAirportRequest)(nil),    // 19: auth.v1.ChangeAirportRequest
-	(*ListAirportsRequest)(nil),     // 20: auth.v1.ListAirportsRequest
-	(*Airport)(nil),                 // 21: auth.v1.Airport
-	(*ListAirportsResponse)(nil),    // 22: auth.v1.ListAirportsResponse
-	(*DeleteAirportRequest)(nil),    // 23: auth.v1.DeleteAirportRequest
-	(*IDResponse)(nil),              // 24: auth.v1.IDResponse
+	(*CreateCountryRequest)(nil),    // 0: operations.v1.CreateCountryRequest
+	(*ChangeCountryRequest)(nil),    // 1: operations.v1.ChangeCountryRequest
+	(*ListCountriesRequest)(nil),    // 2: operations.v1.ListCountriesRequest
+	(*Country)(nil),                 // 3: operations.v1.Country
+	(*ListCountriesResponse)(nil),   // 4: operations.v1.ListCountriesResponse
+	(*DeleteCountryRequest)(nil),    // 5: operations.v1.DeleteCountryRequest
+	(*CreateRegionRequest)(nil),     // 6: operations.v1.CreateRegionRequest
+	(*ChangeRegionRequest)(nil),     // 7: operations.v1.ChangeRegionRequest
+	(*ListRegionsRequest)(nil),      // 8: operations.v1.ListRegionsRequest
+	(*Region)(nil),                  // 9: operations.v1.Region
+	(*ListRegionsResponse)(nil),     // 10: operations.v1.ListRegionsResponse
+	(*DeleteRegionRequest)(nil),     // 11: operations.v1.DeleteRegionRequest
+	(*CreateRegionLinkRequest)(nil), // 12: operations.v1.CreateRegionLinkRequest
+	(*ChangeRegionLinkRequest)(nil), // 13: operations.v1.ChangeRegionLinkRequest
+	(*ListRegionLinksRequest)(nil),  // 14: operations.v1.ListRegionLinksRequest
+	(*RegionLink)(nil),              // 15: operations.v1.RegionLink
+	(*ListRegionLinksResponse)(nil), // 16: operations.v1.ListRegionLinksResponse
+	(*DeleteRegionLinkRequest)(nil), // 17: operations.v1.DeleteRegionLinkRequest
+	(*CreateAirportRequest)(nil),    // 18: operations.v1.CreateAirportRequest
+	(*ChangeAirportRequest)(nil),    // 19: operations.v1.ChangeAirportRequest
+	(*ListAirportsRequest)(nil),     // 20: operations.v1.ListAirportsRequest
+	(*Airport)(nil),                 // 21: operations.v1.Airport
+	(*ListAirportsResponse)(nil),    // 22: operations.v1.ListAirportsResponse
+	(*DeleteAirportRequest)(nil),    // 23: operations.v1.DeleteAirportRequest
+	(*IDResponse)(nil),              // 24: operations.v1.IDResponse
 }
 var file_operations_proto_depIdxs = []int32{
-	3,  // 0: auth.v1.ListCountriesResponse.countries:type_name -> auth.v1.Country
-	9,  // 1: auth.v1.ListRegionsResponse.regions:type_name -> auth.v1.Region
-	15, // 2: auth.v1.ListRegionLinksResponse.region_links:type_name -> auth.v1.RegionLink
-	21, // 3: auth.v1.ListAirportsResponse.airports:type_name -> auth.v1.Airport
-	0,  // 4: auth.v1.OperationsService.CreateCountry:input_type -> auth.v1.CreateCountryRequest
-	1,  // 5: auth.v1.OperationsService.ChangeCountry:input_type -> auth.v1.ChangeCountryRequest
-	2,  // 6: auth.v1.OperationsService.ListCountries:input_type -> auth.v1.ListCountriesRequest
-	5,  // 7: auth.v1.OperationsService.DeleteCountry:input_type -> auth.v1.DeleteCountryRequest
-	6,  // 8: auth.v1.OperationsService.CreateRegion:input_type -> auth.v1.CreateRegionRequest
-	7,  // 9: auth.v1.OperationsService.ChangeRegion:input_type -> auth.v1.ChangeRegionRequest
-	8,  // 10: auth.v1.OperationsService.ListRegions:input_type -> auth.v1.ListRegionsRequest
-	11, // 11: auth.v1.OperationsService.DeleteRegion:input_type -> auth.v1.DeleteRegionRequest
-	12, // 12: auth.v1.OperationsService.CreateRegionLink:input_type -> auth.v1.CreateRegionLinkRequest
-	13, // 13: auth.v1.OperationsService.ChangeRegionLink:input_type -> auth.v1.ChangeRegionLinkRequest
-	14, // 14: auth.v1.OperationsService.ListRegionLinks:input_type -> auth.v1.ListRegionLinksRequest
-	17, // 15: auth.v1.OperationsService.DeleteRegionLink:input_type -> auth.v1.DeleteRegionLinkRequest
-	18, // 16: auth.v1.OperationsService.CreateAirport:input_type -> auth.v1.CreateAirportRequest
-	19, // 17: auth.v1.OperationsService.ChangeAirport:input_type -> auth.v1.ChangeAirportRequest
-	20, // 18: auth.v1.OperationsService.ListAirports:input_type -> auth.v1.ListAirportsRequest
-	23, // 19: auth.v1.OperationsService.DeleteAirport:input_type -> auth.v1.DeleteAirportRequest
-	24, // 20: auth.v1.OperationsService.CreateCountry:output_type -> auth.v1.IDResponse
-	24, // 21: auth.v1.OperationsService.ChangeCountry:output_type -> auth.v1.IDResponse
-	4,  // 22: auth.v1.OperationsService.ListCountries:output_type -> auth.v1.ListCountriesResponse
-	24, // 23: auth.v1.OperationsService.DeleteCountry:output_type -> auth.v1.IDResponse
-	24, // 24: auth.v1.OperationsService.CreateRegion:output_type -> auth.v1.IDResponse
-	24, // 25: auth.v1.OperationsService.ChangeRegion:output_type -> auth.v1.IDResponse
-	10, // 26: auth.v1.OperationsService.ListRegions:output_type -> auth.v1.ListRegionsResponse
-	24, // 27: auth.v1.OperationsService.DeleteRegion:output_type -> auth.v1.IDResponse
-	24, // 28: auth.v1.OperationsService.CreateRegionLink:output_type -> auth.v1.IDResponse
-	24, // 29: auth.v1.OperationsService.ChangeRegionLink:output_type -> auth.v1.IDResponse
-	16, // 30: auth.v1.OperationsService.ListRegionLinks:output_type -> auth.v1.ListRegionLinksResponse
-	24, // 31: auth.v1.OperationsService.DeleteRegionLink:output_type -> auth.v1.IDResponse
-	24, // 32: auth.v1.OperationsService.CreateAirport:output_type -> auth.v1.IDResponse
-	24, // 33: auth.v1.OperationsService.ChangeAirport:output_type -> auth.v1.IDResponse
-	22, // 34: auth.v1.OperationsService.ListAirports:output_type -> auth.v1.ListAirportsResponse
-	24, // 35: auth.v1.OperationsService.DeleteAirport:output_type -> auth.v1.IDResponse
+	3,  // 0: operations.v1.ListCountriesResponse.countries:type_name -> operations.v1.Country
+	9,  // 1: operations.v1.ListRegionsResponse.regions:type_name -> operations.v1.Region
+	15, // 2: operations.v1.ListRegionLinksResponse.region_links:type_name -> operations.v1.RegionLink
+	21, // 3: operations.v1.ListAirportsResponse.airports:type_name -> operations.v1.Airport
+	0,  // 4: operations.v1.OperationsService.CreateCountry:input_type -> operations.v1.CreateCountryRequest
+	1,  // 5: operations.v1.OperationsService.ChangeCountry:input_type -> operations.v1.ChangeCountryRequest
+	2,  // 6: operations.v1.OperationsService.ListCountries:input_type -> operations.v1.ListCountriesRequest
+	5,  // 7: operations.v1.OperationsService.DeleteCountry:input_type -> operations.v1.DeleteCountryRequest
+	6,  // 8: operations.v1.OperationsService.CreateRegion:input_type -> operations.v1.CreateRegionRequest
+	7,  // 9: operations.v1.OperationsService.ChangeRegion:input_type -> operations.v1.ChangeRegionRequest
+	8,  // 10: operations.v1.OperationsService.ListRegions:input_type -> operations.v1.ListRegionsRequest
+	11, // 11: operations.v1.OperationsService.DeleteRegion:input_type -> operations.v1.DeleteRegionRequest
+	12, // 12: operations.v1.OperationsService.CreateRegionLink:input_type -> operations.v1.CreateRegionLinkRequest
+	13, // 13: operations.v1.OperationsService.ChangeRegionLink:input_type -> operations.v1.ChangeRegionLinkRequest
+	14, // 14: operations.v1.OperationsService.ListRegionLinks:input_type -> operations.v1.ListRegionLinksRequest
+	17, // 15: operations.v1.OperationsService.DeleteRegionLink:input_type -> operations.v1.DeleteRegionLinkRequest
+	18, // 16: operations.v1.OperationsService.CreateAirport:input_type -> operations.v1.CreateAirportRequest
+	19, // 17: operations.v1.OperationsService.ChangeAirport:input_type -> operations.v1.ChangeAirportRequest
+	20, // 18: operations.v1.OperationsService.ListAirports:input_type -> operations.v1.ListAirportsRequest
+	23, // 19: operations.v1.OperationsService.DeleteAirport:input_type -> operations.v1.DeleteAirportRequest
+	24, // 20: operations.v1.OperationsService.CreateCountry:output_type -> operations.v1.IDResponse
+	24, // 21: operations.v1.OperationsService.ChangeCountry:output_type -> operations.v1.IDResponse
+	4,  // 22: operations.v1.OperationsService.ListCountries:output_type -> operations.v1.ListCountriesResponse
+	24, // 23: operations.v1.OperationsService.DeleteCountry:output_type -> operations.v1.IDResponse
+	24, // 24: operations.v1.OperationsService.CreateRegion:output_type -> operations.v1.IDResponse
+	24, // 25: operations.v1.OperationsService.ChangeRegion:output_type -> operations.v1.IDResponse
+	10, // 26: operations.v1.OperationsService.ListRegions:output_type -> operations.v1.ListRegionsResponse
+	24, // 27: operations.v1.OperationsService.DeleteRegion:output_type -> operations.v1.IDResponse
+	24, // 28: operations.v1.OperationsService.CreateRegionLink:output_type -> operations.v1.IDResponse
+	24, // 29: operations.v1.OperationsService.ChangeRegionLink:output_type -> operations.v1.IDResponse
+	16, // 30: operations.v1.OperationsService.ListRegionLinks:output_type -> operations.v1.ListRegionLinksResponse
+	24, // 31: operations.v1.OperationsService.DeleteRegionLink:output_type -> operations.v1.IDResponse
+	24, // 32: operations.v1.OperationsService.CreateAirport:output_type -> operations.v1.IDResponse
+	24, // 33: operations.v1.OperationsService.ChangeAirport:output_type -> operations.v1.IDResponse
+	22, // 34: operations.v1.OperationsService.ListAirports:output_type -> operations.v1.ListAirportsResponse
+	24, // 35: operations.v1.OperationsService.DeleteAirport:output_type -> operations.v1.IDResponse
 	20, // [20:36] is the sub-list for method output_type
 	4,  // [4:20] is the sub-list for method input_type
 	4,  // [4:4] is the sub-list for extension type_name
