@@ -8,6 +8,8 @@ import (
 	"log"
 	"os"
 	"strconv"
+
+	"github.com/lpernett/godotenv"
 )
 
 type Config struct {
@@ -25,6 +27,10 @@ type Config struct {
 }
 
 func InitConfig() Config {
+	_ = godotenv.Load(".env")
+	_ = godotenv.Load("../../.env")
+	_ = godotenv.Load("backend/services/auth-service/.env")
+
 	postgresConnString := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?sslmode=disable",
 		getEnv("POSTGRES_USER", "postgres"),
 		getEnv("POSTGRES_PASSWORD", "password"),
