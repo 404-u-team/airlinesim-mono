@@ -13,6 +13,7 @@ type FleetRepository interface {
 	CreateAircraft(ctx context.Context, payload *fleetpb.CreateAircraftRequest) (uuid.UUID, error)
 	GetAircraftTypePrice(ctx context.Context, aircraftTypeID uuid.UUID) (float64, error)
 	ListAircraftTypes(ctx context.Context) ([]dto.AircraftType, error)
+	GetAircraftTypeByID(ctx context.Context, id uuid.UUID) (*dto.AircraftType, error)
 }
 
 type fleetRepository struct {
@@ -110,4 +111,33 @@ func (r *fleetRepository) ListAircraftTypes(ctx context.Context) ([]dto.Aircraft
 	}
 
 	return res, nil
+}
+
+func (r *fleetRepository) GetAircraftTypeByID(ctx context.Context, id uuid.UUID) (*dto.AircraftType, error) {
+	query := `SELECT
+		at.id, at.manufacturer_id, at.model_name, at.icao_code, at.iata_code, at.image_upload_id,
+		at.max_range_km, at.cruising_speed_kph, at.max_planned_seat_capacity, at.min_runway_length_m,
+		at.production_points_price, at.base_turnaround_points, at.base_maintenance_points,
+		at.maint_cost_per_takeoff, at.maint_cost_per_landing, at.maint_cost_per_flight_hour,
+		at.d_check_interval_fh, at.d_check_interval_years, at.d_check_overdue_multiplier,
+		at.fuel_consumption_per_hour, at.mtow_kg, at.price_per_unit, at.characteristics
+	FROM aircraft_type at
+	WHERE at.id = $1 LIMIT 1`
+
+	row := r.pool.QueryRow(ctx, query, id)
+	var a dto.AircraftType
+	var imageUploadID *uuid.UUID
+	var characteristics []byte
+	err := row.Scan(&a.ID, &a.ManufacturerID, &a.ModelName, &a.IcaoCode, &a.IataCode, &imageUploadID,
+		&a.MaxRangeKm, &a.CruisingSpeedKph, &a.MaxPlannedSeatCapacity, &a.MinRunwayLengthM,
+		&a.ProductionPointsPrice, &a.BaseTurnaroundPoints, &a.BaseMaintenancePoints,
+		&a.MaintCostPerTakeoff, &a.MaintCostPerLanding, &a.MaintCostPerFlightHour,
+		&a.DCheckIntervalFH, &a.DCheckIntervalYears, &a.DCheckOverdueMultiplier,
+		&a.FuelConsumptionPerHour, &a.MTOWKG, &a.PricePerUnit, &characteristics)
+	if err != nil {
+		return nil, err
+	}
+	a.ImageUploadID = imageUploadID
+	a.Characteristics = characteristics
+	return &a, nil
 }

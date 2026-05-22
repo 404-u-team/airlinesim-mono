@@ -18,6 +18,8 @@ service FleetService {
   rpc CreateAircraft(CreateAircraftRequest) returns (CreateAircraftResponse);
   // list available aircraft types
   rpc ListAircraftTypes(google.protobuf.Empty) returns (ListAircraftTypesResponse);
+  // get aircraft type by id
+  rpc GetAircraftType(GetAircraftTypeRequest) returns (AircraftType);
 }
 
 message CreateAircraftRequest {
@@ -59,4 +61,8 @@ message AircraftType {
 
 message ListAircraftTypesResponse {
   repeated AircraftType items = 1;
+}
+
+message GetAircraftTypeRequest {
+  string id = 1;
 }

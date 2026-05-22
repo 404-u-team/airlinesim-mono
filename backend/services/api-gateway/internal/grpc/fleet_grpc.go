@@ -41,3 +41,7 @@ func (c *FleetClient) CreateAircraft(ctx context.Context, req *fleetpb.CreateAir
 func (c *FleetClient) ListAircraftTypes(ctx context.Context) (*fleetpb.ListAircraftTypesResponse, error) {
 	return c.client.ListAircraftTypes(ctx, &emptypb.Empty{})
 }
+
+func (c *FleetClient) GetAircraftType(ctx context.Context, id string) (*fleetpb.AircraftType, error) {
+	return c.client.GetAircraftType(ctx, &fleetpb.GetAircraftTypeRequest{Id: id})
+}

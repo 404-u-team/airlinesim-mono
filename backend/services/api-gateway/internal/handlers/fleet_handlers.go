@@ -94,3 +94,39 @@ func (h *FleetHandler) ListAircraftTypes(c *gin.Context) {
 
 	c.JSON(http.StatusOK, resp)
 }
+
+// GetAircraftType godoc
+// @Summary      Get aircraft type
+// @Description  Returns details for a single aircraft type
+// @Tags         Aircraft
+// @Accept       json
+// @Produce      json
+// @Param id path string true "Aircraft type id"
+// @Success      200  {object}  fleetpb.AircraftType
+// @Failure      400  {object}  dto.ErrorResponse
+// @Failure      404  {object}  dto.ErrorResponse
+// @Failure      500  {object}  dto.ErrorResponse
+// @Router       /aircraft-types/{id} [get]
+func (h *FleetHandler) GetAircraftType(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+	defer cancel()
+
+	resp, err := h.fleetClient.GetAircraftType(ctx, id)
+	if err != nil {
+		if errors.Is(err, customerrors.ErrAircraftTypeNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{ErrorCode: 2})
+			return
+		}
+		log.Println("got error when tried to get aircraft type, ", err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
