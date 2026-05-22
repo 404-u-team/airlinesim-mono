@@ -14,6 +14,7 @@ type AirlineRepository interface {
 	AdjustBalance(ctx context.Context, ownerID uuid.UUID, amount float64) (uuid.UUID, float64, error)
 	GetAirlineByID(ctx context.Context, id uuid.UUID) (*airlinepb.AirlineResponse, error)
 	GetAirlineByOwnerID(ctx context.Context, ownerID uuid.UUID) (*airlinepb.AirlineResponse, error)
+	UpdateAirline(ctx context.Context, id uuid.UUID, name, iataCode, icaoCode string) error
 }
 
 type airlineRepository struct {
@@ -130,4 +131,17 @@ func (r *airlineRepository) getAirline(ctx context.Context, clause string, id uu
 
 	airline.EquityCachedAt = equityCachedAt
 	return &airline, nil
+}
+
+func (r *airlineRepository) UpdateAirline(ctx context.Context, id uuid.UUID, name, iataCode, icaoCode string) error {
+	query := `
+		UPDATE airline
+		SET name = $2,
+			iata_code = $3,
+			icao_code = $4
+		WHERE id = $1
+	`
+
+	_, err := r.pool.Exec(ctx, query, id, name, iataCode, icaoCode)
+	return err
 }

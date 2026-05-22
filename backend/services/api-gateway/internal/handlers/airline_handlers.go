@@ -144,3 +144,84 @@ func (h *AirlineHandler) GetAirlineByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
+
+// UpdateAirline godoc
+// @Summary      Update airline
+// @Description  Update airline name and codes (iata, icao). Only owner or admin allowed.
+// @Tags         Airline
+// @Accept       json
+// @Produce      json
+// @Param id path string true "Airline ID"
+// @Param request body object true "Fields to update: name, iata_code, icao_code"
+// @Success      200  {object}  airlinepb.AirlineResponse
+// @Failure      400  {object}  dto.ErrorResponse
+// @Failure      401  "Unauthorized"
+// @Failure      403  "Forbidden"
+// @Failure      404  {object}  dto.ErrorResponse
+// @Failure      409  "Conflict"
+// @Failure      500  {object}  dto.ErrorResponse
+// @Router       /airline/{id} [patch]
+func (h *AirlineHandler) UpdateAirline(c *gin.Context) {
+	airlineID := c.Param("id")
+	if airlineID == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	var payload struct {
+		Name     string `json:"name"`
+		IataCode string `json:"iata_code"`
+		IcaoCode string `json:"icao_code"`
+	}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	userID, exists := c.Get(middleware.UserIDKey)
+	if !exists {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	role, _ := c.Get(middleware.RoleKey)
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	// Ensure owner or admin
+	existing, err := h.airlineClient.GetAirlineByID(ctx, &airlinepb.GetAirlineByIDRequest{Id: airlineID})
+	if err != nil {
+		if errors.Is(err, customerrors.ErrAirlineNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{ErrorCode: 2})
+			return
+		}
+		log.Println("got error when tried to gRPC get airline by id before update, ", err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	if role != "admin" && existing.OwnerId != userID.(string) {
+		c.Status(http.StatusForbidden)
+		return
+	}
+
+	// Call update
+	updateReq := &airlinepb.UpdateAirlineRequest{Id: airlineID, Name: payload.Name, IataCode: payload.IataCode, IcaoCode: payload.IcaoCode}
+	resp, err := h.airlineClient.UpdateAirline(ctx, updateReq)
+	if err != nil {
+		if errors.Is(err, customerrors.ErrAirlineNameConflict) || errors.Is(err, customerrors.ErrAirlineIataConflict) || errors.Is(err, customerrors.ErrAirlineIcaoConflict) {
+			c.Status(http.StatusConflict)
+			return
+		}
+		if errors.Is(err, customerrors.ErrAirlineNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{ErrorCode: 2})
+			return
+		}
+		log.Println("got error when tried to gRPC update airline, ", err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}

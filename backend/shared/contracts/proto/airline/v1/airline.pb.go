@@ -7,11 +7,12 @@
 package airlinepb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -345,6 +346,72 @@ func (x *GetAirlineByOwnerIDRequest) GetOwnerId() string {
 	return ""
 }
 
+type UpdateAirlineRequest struct {
+	state         protoimpl.MessageState
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	IataCode      string `protobuf:"bytes,3,opt,name=iata_code,json=iataCode,proto3" json:"iata_code,omitempty"`
+	IcaoCode      string `protobuf:"bytes,4,opt,name=icao_code,json=icaoCode,proto3" json:"icao_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateAirlineRequest) Reset() {
+	*x = UpdateAirlineRequest{}
+	mi := &file_airline_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateAirlineRequest) String() string { return protoimpl.X.MessageStringOf(x) }
+
+func (*UpdateAirlineRequest) ProtoMessage() {}
+
+func (x *UpdateAirlineRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_airline_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateAirlineRequest.ProtoReflect.Descriptor instead.
+func (*UpdateAirlineRequest) Descriptor() ([]byte, []int) {
+	return file_airline_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *UpdateAirlineRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpdateAirlineRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UpdateAirlineRequest) GetIataCode() string {
+	if x != nil {
+		return x.IataCode
+	}
+	return ""
+}
+
+func (x *UpdateAirlineRequest) GetIcaoCode() string {
+	if x != nil {
+		return x.IcaoCode
+	}
+	return ""
+}
+
 type AirlineResponse struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -565,7 +632,7 @@ func file_airline_proto_rawDescGZIP() []byte {
 	return file_airline_proto_rawDescData
 }
 
-var file_airline_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_airline_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_airline_proto_goTypes = []any{
 	(*CreateAirlineRequest)(nil),       // 0: auth.v1.CreateAirlineRequest
 	(*CreateAirlineResponse)(nil),      // 1: auth.v1.CreateAirlineResponse
@@ -574,18 +641,21 @@ var file_airline_proto_goTypes = []any{
 	(*GetAirlineByIDRequest)(nil),      // 4: auth.v1.GetAirlineByIDRequest
 	(*GetAirlineByOwnerIDRequest)(nil), // 5: auth.v1.GetAirlineByOwnerIDRequest
 	(*AirlineResponse)(nil),            // 6: auth.v1.AirlineResponse
+	(*UpdateAirlineRequest)(nil),       // 7: auth.v1.UpdateAirlineRequest
 }
 var file_airline_proto_depIdxs = []int32{
 	0, // 0: auth.v1.AirlineService.CreateAirline:input_type -> auth.v1.CreateAirlineRequest
 	2, // 1: auth.v1.AirlineService.AdjustBalance:input_type -> auth.v1.AdjustBalanceRequest
 	4, // 2: auth.v1.AirlineService.GetAirlineByID:input_type -> auth.v1.GetAirlineByIDRequest
 	5, // 3: auth.v1.AirlineService.GetAirlineByOwnerID:input_type -> auth.v1.GetAirlineByOwnerIDRequest
-	1, // 4: auth.v1.AirlineService.CreateAirline:output_type -> auth.v1.CreateAirlineResponse
-	3, // 5: auth.v1.AirlineService.AdjustBalance:output_type -> auth.v1.AdjustBalanceResponse
-	6, // 6: auth.v1.AirlineService.GetAirlineByID:output_type -> auth.v1.AirlineResponse
-	6, // 7: auth.v1.AirlineService.GetAirlineByOwnerID:output_type -> auth.v1.AirlineResponse
-	4, // [4:8] is the sub-list for method output_type
-	0, // [0:4] is the sub-list for method input_type
+	7, // 4: auth.v1.AirlineService.UpdateAirline:input_type -> auth.v1.UpdateAirlineRequest
+	1, // 5: auth.v1.AirlineService.CreateAirline:output_type -> auth.v1.CreateAirlineResponse
+	3, // 6: auth.v1.AirlineService.AdjustBalance:output_type -> auth.v1.AdjustBalanceResponse
+	6, // 7: auth.v1.AirlineService.GetAirlineByID:output_type -> auth.v1.AirlineResponse
+	6, // 8: auth.v1.AirlineService.GetAirlineByOwnerID:output_type -> auth.v1.AirlineResponse
+	6, // 9: auth.v1.AirlineService.UpdateAirline:output_type -> auth.v1.AirlineResponse
+	5, // [5:10] is the sub-list for method output_type
+	0, // [0:5] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -602,7 +672,7 @@ func file_airline_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_airline_proto_rawDesc), len(file_airline_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

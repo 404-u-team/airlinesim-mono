@@ -20,6 +20,7 @@ type AirlineService interface {
 	AdjustBalance(ctx context.Context, payload *airlinepb.AdjustBalanceRequest) (*airlinepb.AdjustBalanceResponse, error)
 	GetAirlineByID(ctx context.Context, payload *airlinepb.GetAirlineByIDRequest) (*airlinepb.AirlineResponse, error)
 	GetAirlineByOwnerID(ctx context.Context, payload *airlinepb.GetAirlineByOwnerIDRequest) (*airlinepb.AirlineResponse, error)
+	UpdateAirline(ctx context.Context, payload *airlinepb.UpdateAirlineRequest) (*airlinepb.AirlineResponse, error)
 }
 
 type airlineService struct {
@@ -138,4 +139,31 @@ func (s *airlineService) GetAirlineByOwnerID(ctx context.Context, payload *airli
 	}
 
 	return airline, nil
+}
+
+func (s *airlineService) UpdateAirline(ctx context.Context, payload *airlinepb.UpdateAirlineRequest) (*airlinepb.AirlineResponse, error) {
+	airlineID, err := uuid.Parse(payload.Id)
+	if err != nil {
+		return nil, customerrors.ErrAirlineNotFound
+	}
+
+	// Attempt to update
+	if err := s.airlineRepo.UpdateAirline(ctx, airlineID, payload.Name, payload.IataCode, payload.IcaoCode); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			if pgErr.ConstraintName == "airlines_name_key" {
+				return nil, customerrors.ErrAirlineNameConflict
+			}
+			if pgErr.ConstraintName == "airlines_iata_code_key" {
+				return nil, customerrors.ErrAirlineIataConflict
+			}
+			if pgErr.ConstraintName == "airlines_icao_code_key" {
+				return nil, customerrors.ErrAirlineIcaoConflict
+			}
+		}
+		return nil, err
+	}
+
+	// Return updated airline
+	return s.GetAirlineByID(ctx, &airlinepb.GetAirlineByIDRequest{Id: payload.Id})
 }

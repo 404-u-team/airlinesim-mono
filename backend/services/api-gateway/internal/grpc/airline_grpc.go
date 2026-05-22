@@ -41,3 +41,7 @@ func (c *AirlineClient) GetAirlineByID(ctx context.Context, req *airlinepb.GetAi
 func (c *AirlineClient) GetAirlineByOwnerID(ctx context.Context, req *airlinepb.GetAirlineByOwnerIDRequest) (*airlinepb.AirlineResponse, error) {
 	return c.client.GetAirlineByOwnerID(ctx, req)
 }
+
+func (c *AirlineClient) UpdateAirline(ctx context.Context, req *airlinepb.UpdateAirlineRequest) (*airlinepb.AirlineResponse, error) {
+	return c.client.UpdateAirline(ctx, req)
+}

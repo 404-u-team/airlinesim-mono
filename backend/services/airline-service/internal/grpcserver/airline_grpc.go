@@ -51,3 +51,12 @@ func (s *airlineServer) GetAirlineByOwnerID(ctx context.Context, payload *airlin
 
 	return response, nil
 }
+
+func (s *airlineServer) UpdateAirline(ctx context.Context, payload *airlinepb.UpdateAirlineRequest) (*airlinepb.AirlineResponse, error) {
+	response, err := s.airlineService.UpdateAirline(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}

@@ -24,6 +24,8 @@ service AirlineService {
 
   // get authenticated user's airline
   rpc GetAirlineByOwnerID(GetAirlineByOwnerIDRequest) returns (AirlineResponse);
+  // update airline fields (name, iata_code, icao_code)
+  rpc UpdateAirline(UpdateAirlineRequest) returns (AirlineResponse);
 }
 
 // request to create a new airline.
@@ -77,5 +79,12 @@ message AirlineResponse {
   bool is_public = 13;
   bool is_bankrupt = 14;
   string created_at = 15;
+}
+
+message UpdateAirlineRequest {
+  string id = 1;
+  string name = 2;
+  string iata_code = 3;
+  string icao_code = 4;
 }
 

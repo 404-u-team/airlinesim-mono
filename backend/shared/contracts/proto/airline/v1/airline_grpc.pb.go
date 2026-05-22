@@ -8,6 +8,7 @@ package airlinepb
 
 import (
 	context "context"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -23,6 +24,7 @@ const (
 	AirlineService_AdjustBalance_FullMethodName       = "/auth.v1.AirlineService/AdjustBalance"
 	AirlineService_GetAirlineByID_FullMethodName      = "/auth.v1.AirlineService/GetAirlineByID"
 	AirlineService_GetAirlineByOwnerID_FullMethodName = "/auth.v1.AirlineService/GetAirlineByOwnerID"
+	AirlineService_UpdateAirline_FullMethodName       = "/auth.v1.AirlineService/UpdateAirline"
 )
 
 // AirlineServiceClient is the client API for AirlineService service.
@@ -39,6 +41,8 @@ type AirlineServiceClient interface {
 	GetAirlineByID(ctx context.Context, in *GetAirlineByIDRequest, opts ...grpc.CallOption) (*AirlineResponse, error)
 	// get authenticated user's airline
 	GetAirlineByOwnerID(ctx context.Context, in *GetAirlineByOwnerIDRequest, opts ...grpc.CallOption) (*AirlineResponse, error)
+	// update airline fields
+	UpdateAirline(ctx context.Context, in *UpdateAirlineRequest, opts ...grpc.CallOption) (*AirlineResponse, error)
 }
 
 type airlineServiceClient struct {
@@ -89,6 +93,16 @@ func (c *airlineServiceClient) GetAirlineByOwnerID(ctx context.Context, in *GetA
 	return out, nil
 }
 
+func (c *airlineServiceClient) UpdateAirline(ctx context.Context, in *UpdateAirlineRequest, opts ...grpc.CallOption) (*AirlineResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AirlineResponse)
+	err := c.cc.Invoke(ctx, AirlineService_UpdateAirline_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AirlineServiceServer is the server API for AirlineService service.
 // All implementations must embed UnimplementedAirlineServiceServer
 // for forward compatibility.
@@ -103,6 +117,8 @@ type AirlineServiceServer interface {
 	GetAirlineByID(context.Context, *GetAirlineByIDRequest) (*AirlineResponse, error)
 	// get authenticated user's airline
 	GetAirlineByOwnerID(context.Context, *GetAirlineByOwnerIDRequest) (*AirlineResponse, error)
+	// update airline fields
+	UpdateAirline(context.Context, *UpdateAirlineRequest) (*AirlineResponse, error)
 	mustEmbedUnimplementedAirlineServiceServer()
 }
 
@@ -124,6 +140,9 @@ func (UnimplementedAirlineServiceServer) GetAirlineByID(context.Context, *GetAir
 }
 func (UnimplementedAirlineServiceServer) GetAirlineByOwnerID(context.Context, *GetAirlineByOwnerIDRequest) (*AirlineResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAirlineByOwnerID not implemented")
+}
+func (UnimplementedAirlineServiceServer) UpdateAirline(context.Context, *UpdateAirlineRequest) (*AirlineResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateAirline not implemented")
 }
 func (UnimplementedAirlineServiceServer) mustEmbedUnimplementedAirlineServiceServer() {}
 func (UnimplementedAirlineServiceServer) testEmbeddedByValue()                        {}
@@ -218,6 +237,24 @@ func _AirlineService_GetAirlineByOwnerID_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AirlineService_UpdateAirline_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateAirlineRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AirlineServiceServer).UpdateAirline(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AirlineService_UpdateAirline_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AirlineServiceServer).UpdateAirline(ctx, req.(*UpdateAirlineRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AirlineService_ServiceDesc is the grpc.ServiceDesc for AirlineService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -240,6 +277,10 @@ var AirlineService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAirlineByOwnerID",
 			Handler:    _AirlineService_GetAirlineByOwnerID_Handler,
+		},
+		{
+			MethodName: "UpdateAirline",
+			Handler:    _AirlineService_UpdateAirline_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
