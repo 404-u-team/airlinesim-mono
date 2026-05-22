@@ -654,6 +654,234 @@ func (x *GetAircraftTypeRequest) GetId() string {
 	return ""
 }
 
+type Aircraft struct {
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	Id                         string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TypeId                     string                 `protobuf:"bytes,2,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
+	CurrentOwnerId             string                 `protobuf:"bytes,3,opt,name=current_owner_id,json=currentOwnerId,proto3" json:"current_owner_id,omitempty"`
+	BaseAirportId              string                 `protobuf:"bytes,4,opt,name=base_airport_id,json=baseAirportId,proto3" json:"base_airport_id,omitempty"`
+	TailNumber                 string                 `protobuf:"bytes,5,opt,name=tail_number,json=tailNumber,proto3" json:"tail_number,omitempty"`
+	InService                  bool                   `protobuf:"varint,6,opt,name=in_service,json=inService,proto3" json:"in_service,omitempty"`
+	Status                     string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
+	CurrentMaintenancePoints   float64                `protobuf:"fixed64,8,opt,name=current_maintenance_points,json=currentMaintenancePoints,proto3" json:"current_maintenance_points,omitempty"`
+	MaxMaintenancePointsCached float64                `protobuf:"fixed64,9,opt,name=max_maintenance_points_cached,json=maxMaintenancePointsCached,proto3" json:"max_maintenance_points_cached,omitempty"`
+	TotalFlightHours           float64                `protobuf:"fixed64,10,opt,name=total_flight_hours,json=totalFlightHours,proto3" json:"total_flight_hours,omitempty"`
+	FhSinceLastDCheck          float64                `protobuf:"fixed64,11,opt,name=fh_since_last_d_check,json=fhSinceLastDCheck,proto3" json:"fh_since_last_d_check,omitempty"`
+	TotalCycles                float64                `protobuf:"fixed64,12,opt,name=total_cycles,json=totalCycles,proto3" json:"total_cycles,omitempty"`
+	ManufacturedAt             string                 `protobuf:"bytes,13,opt,name=manufactured_at,json=manufacturedAt,proto3" json:"manufactured_at,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *Aircraft) Reset() {
+	*x = Aircraft{}
+	mi := &file_fleet_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Aircraft) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Aircraft) ProtoMessage() {}
+
+func (x *Aircraft) ProtoReflect() protoreflect.Message {
+	mi := &file_fleet_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Aircraft.ProtoReflect.Descriptor instead.
+func (*Aircraft) Descriptor() ([]byte, []int) {
+	return file_fleet_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *Aircraft) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Aircraft) GetTypeId() string {
+	if x != nil {
+		return x.TypeId
+	}
+	return ""
+}
+
+func (x *Aircraft) GetCurrentOwnerId() string {
+	if x != nil {
+		return x.CurrentOwnerId
+	}
+	return ""
+}
+
+func (x *Aircraft) GetBaseAirportId() string {
+	if x != nil {
+		return x.BaseAirportId
+	}
+	return ""
+}
+
+func (x *Aircraft) GetTailNumber() string {
+	if x != nil {
+		return x.TailNumber
+	}
+	return ""
+}
+
+func (x *Aircraft) GetInService() bool {
+	if x != nil {
+		return x.InService
+	}
+	return false
+}
+
+func (x *Aircraft) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Aircraft) GetCurrentMaintenancePoints() float64 {
+	if x != nil {
+		return x.CurrentMaintenancePoints
+	}
+	return 0
+}
+
+func (x *Aircraft) GetMaxMaintenancePointsCached() float64 {
+	if x != nil {
+		return x.MaxMaintenancePointsCached
+	}
+	return 0
+}
+
+func (x *Aircraft) GetTotalFlightHours() float64 {
+	if x != nil {
+		return x.TotalFlightHours
+	}
+	return 0
+}
+
+func (x *Aircraft) GetFhSinceLastDCheck() float64 {
+	if x != nil {
+		return x.FhSinceLastDCheck
+	}
+	return 0
+}
+
+func (x *Aircraft) GetTotalCycles() float64 {
+	if x != nil {
+		return x.TotalCycles
+	}
+	return 0
+}
+
+func (x *Aircraft) GetManufacturedAt() string {
+	if x != nil {
+		return x.ManufacturedAt
+	}
+	return ""
+}
+
+type ListAircraftsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OwnerId       string                 `protobuf:"bytes,1,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAircraftsRequest) Reset() {
+	*x = ListAircraftsRequest{}
+	mi := &file_fleet_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAircraftsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAircraftsRequest) ProtoMessage() {}
+
+func (x *ListAircraftsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_fleet_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAircraftsRequest.ProtoReflect.Descriptor instead.
+func (*ListAircraftsRequest) Descriptor() ([]byte, []int) {
+	return file_fleet_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ListAircraftsRequest) GetOwnerId() string {
+	if x != nil {
+		return x.OwnerId
+	}
+	return ""
+}
+
+type ListAircraftsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*Aircraft            `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAircraftsResponse) Reset() {
+	*x = ListAircraftsResponse{}
+	mi := &file_fleet_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAircraftsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAircraftsResponse) ProtoMessage() {}
+
+func (x *ListAircraftsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_fleet_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAircraftsResponse.ProtoReflect.Descriptor instead.
+func (*ListAircraftsResponse) Descriptor() ([]byte, []int) {
+	return file_fleet_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ListAircraftsResponse) GetItems() []*Aircraft {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
 var File_fleet_proto protoreflect.FileDescriptor
 
 const file_fleet_proto_rawDesc = "" +
@@ -723,12 +951,34 @@ const file_fleet_proto_rawDesc = "" +
 	"\x19ListAircraftTypesResponse\x12,\n" +
 	"\x05items\x18\x01 \x03(\v2\x16.fleet.v1.AircraftTypeR\x05items\"(\n" +
 	"\x16GetAircraftTypeRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id2\xd5\x02\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x8a\x04\n" +
+	"\bAircraft\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
+	"\atype_id\x18\x02 \x01(\tR\x06typeId\x12(\n" +
+	"\x10current_owner_id\x18\x03 \x01(\tR\x0ecurrentOwnerId\x12&\n" +
+	"\x0fbase_airport_id\x18\x04 \x01(\tR\rbaseAirportId\x12\x1f\n" +
+	"\vtail_number\x18\x05 \x01(\tR\n" +
+	"tailNumber\x12\x1d\n" +
+	"\n" +
+	"in_service\x18\x06 \x01(\bR\tinService\x12\x16\n" +
+	"\x06status\x18\a \x01(\tR\x06status\x12<\n" +
+	"\x1acurrent_maintenance_points\x18\b \x01(\x01R\x18currentMaintenancePoints\x12A\n" +
+	"\x1dmax_maintenance_points_cached\x18\t \x01(\x01R\x1amaxMaintenancePointsCached\x12,\n" +
+	"\x12total_flight_hours\x18\n" +
+	" \x01(\x01R\x10totalFlightHours\x120\n" +
+	"\x15fh_since_last_d_check\x18\v \x01(\x01R\x11fhSinceLastDCheck\x12!\n" +
+	"\ftotal_cycles\x18\f \x01(\x01R\vtotalCycles\x12'\n" +
+	"\x0fmanufactured_at\x18\r \x01(\tR\x0emanufacturedAt\"1\n" +
+	"\x14ListAircraftsRequest\x12\x19\n" +
+	"\bowner_id\x18\x01 \x01(\tR\aownerId\"A\n" +
+	"\x15ListAircraftsResponse\x12(\n" +
+	"\x05items\x18\x01 \x03(\v2\x12.fleet.v1.AircraftR\x05items2\xa7\x03\n" +
 	"\fFleetService\x12S\n" +
 	"\x0eCreateAircraft\x12\x1f.fleet.v1.CreateAircraftRequest\x1a .fleet.v1.CreateAircraftResponse\x12Q\n" +
 	"\x12CreateAircraftType\x12#.fleet.v1.CreateAircraftTypeRequest\x1a\x16.fleet.v1.AircraftType\x12P\n" +
 	"\x11ListAircraftTypes\x12\x16.google.protobuf.Empty\x1a#.fleet.v1.ListAircraftTypesResponse\x12K\n" +
-	"\x0fGetAircraftType\x12 .fleet.v1.GetAircraftTypeRequest\x1a\x16.fleet.v1.AircraftTypeBWZUgithub.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/fleet/v1;fleetpbb\x06proto3"
+	"\x0fGetAircraftType\x12 .fleet.v1.GetAircraftTypeRequest\x1a\x16.fleet.v1.AircraftType\x12P\n" +
+	"\rListAircrafts\x12\x1e.fleet.v1.ListAircraftsRequest\x1a\x1f.fleet.v1.ListAircraftsResponseBWZUgithub.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/fleet/v1;fleetpbb\x06proto3"
 
 var (
 	file_fleet_proto_rawDescOnce sync.Once
@@ -742,7 +992,7 @@ func file_fleet_proto_rawDescGZIP() []byte {
 	return file_fleet_proto_rawDescData
 }
 
-var file_fleet_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_fleet_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_fleet_proto_goTypes = []any{
 	(*CreateAircraftRequest)(nil),     // 0: fleet.v1.CreateAircraftRequest
 	(*CreateAircraftResponse)(nil),    // 1: fleet.v1.CreateAircraftResponse
@@ -750,23 +1000,29 @@ var file_fleet_proto_goTypes = []any{
 	(*AircraftType)(nil),              // 3: fleet.v1.AircraftType
 	(*ListAircraftTypesResponse)(nil), // 4: fleet.v1.ListAircraftTypesResponse
 	(*GetAircraftTypeRequest)(nil),    // 5: fleet.v1.GetAircraftTypeRequest
-	(*emptypb.Empty)(nil),             // 6: google.protobuf.Empty
+	(*Aircraft)(nil),                  // 6: fleet.v1.Aircraft
+	(*ListAircraftsRequest)(nil),      // 7: fleet.v1.ListAircraftsRequest
+	(*ListAircraftsResponse)(nil),     // 8: fleet.v1.ListAircraftsResponse
+	(*emptypb.Empty)(nil),             // 9: google.protobuf.Empty
 }
 var file_fleet_proto_depIdxs = []int32{
 	3, // 0: fleet.v1.ListAircraftTypesResponse.items:type_name -> fleet.v1.AircraftType
-	0, // 1: fleet.v1.FleetService.CreateAircraft:input_type -> fleet.v1.CreateAircraftRequest
-	2, // 2: fleet.v1.FleetService.CreateAircraftType:input_type -> fleet.v1.CreateAircraftTypeRequest
-	6, // 3: fleet.v1.FleetService.ListAircraftTypes:input_type -> google.protobuf.Empty
-	5, // 4: fleet.v1.FleetService.GetAircraftType:input_type -> fleet.v1.GetAircraftTypeRequest
-	1, // 5: fleet.v1.FleetService.CreateAircraft:output_type -> fleet.v1.CreateAircraftResponse
-	3, // 6: fleet.v1.FleetService.CreateAircraftType:output_type -> fleet.v1.AircraftType
-	4, // 7: fleet.v1.FleetService.ListAircraftTypes:output_type -> fleet.v1.ListAircraftTypesResponse
-	3, // 8: fleet.v1.FleetService.GetAircraftType:output_type -> fleet.v1.AircraftType
-	5, // [5:9] is the sub-list for method output_type
-	1, // [1:5] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	6, // 1: fleet.v1.ListAircraftsResponse.items:type_name -> fleet.v1.Aircraft
+	0, // 2: fleet.v1.FleetService.CreateAircraft:input_type -> fleet.v1.CreateAircraftRequest
+	2, // 3: fleet.v1.FleetService.CreateAircraftType:input_type -> fleet.v1.CreateAircraftTypeRequest
+	9, // 4: fleet.v1.FleetService.ListAircraftTypes:input_type -> google.protobuf.Empty
+	5, // 5: fleet.v1.FleetService.GetAircraftType:input_type -> fleet.v1.GetAircraftTypeRequest
+	7, // 6: fleet.v1.FleetService.ListAircrafts:input_type -> fleet.v1.ListAircraftsRequest
+	1, // 7: fleet.v1.FleetService.CreateAircraft:output_type -> fleet.v1.CreateAircraftResponse
+	3, // 8: fleet.v1.FleetService.CreateAircraftType:output_type -> fleet.v1.AircraftType
+	4, // 9: fleet.v1.FleetService.ListAircraftTypes:output_type -> fleet.v1.ListAircraftTypesResponse
+	3, // 10: fleet.v1.FleetService.GetAircraftType:output_type -> fleet.v1.AircraftType
+	8, // 11: fleet.v1.FleetService.ListAircrafts:output_type -> fleet.v1.ListAircraftsResponse
+	7, // [7:12] is the sub-list for method output_type
+	2, // [2:7] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_fleet_proto_init() }
@@ -780,7 +1036,7 @@ func file_fleet_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_fleet_proto_rawDesc), len(file_fleet_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

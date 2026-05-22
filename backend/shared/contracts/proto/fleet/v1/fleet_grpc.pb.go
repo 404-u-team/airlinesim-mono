@@ -24,6 +24,7 @@ const (
 	FleetService_CreateAircraftType_FullMethodName = "/fleet.v1.FleetService/CreateAircraftType"
 	FleetService_ListAircraftTypes_FullMethodName  = "/fleet.v1.FleetService/ListAircraftTypes"
 	FleetService_GetAircraftType_FullMethodName    = "/fleet.v1.FleetService/GetAircraftType"
+	FleetService_ListAircrafts_FullMethodName      = "/fleet.v1.FleetService/ListAircrafts"
 )
 
 // FleetServiceClient is the client API for FleetService service.
@@ -40,6 +41,8 @@ type FleetServiceClient interface {
 	ListAircraftTypes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListAircraftTypesResponse, error)
 	// get aircraft type by id
 	GetAircraftType(ctx context.Context, in *GetAircraftTypeRequest, opts ...grpc.CallOption) (*AircraftType, error)
+	// list aircrafts owned by airline
+	ListAircrafts(ctx context.Context, in *ListAircraftsRequest, opts ...grpc.CallOption) (*ListAircraftsResponse, error)
 }
 
 type fleetServiceClient struct {
@@ -90,6 +93,16 @@ func (c *fleetServiceClient) GetAircraftType(ctx context.Context, in *GetAircraf
 	return out, nil
 }
 
+func (c *fleetServiceClient) ListAircrafts(ctx context.Context, in *ListAircraftsRequest, opts ...grpc.CallOption) (*ListAircraftsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAircraftsResponse)
+	err := c.cc.Invoke(ctx, FleetService_ListAircrafts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FleetServiceServer is the server API for FleetService service.
 // All implementations must embed UnimplementedFleetServiceServer
 // for forward compatibility.
@@ -104,6 +117,8 @@ type FleetServiceServer interface {
 	ListAircraftTypes(context.Context, *emptypb.Empty) (*ListAircraftTypesResponse, error)
 	// get aircraft type by id
 	GetAircraftType(context.Context, *GetAircraftTypeRequest) (*AircraftType, error)
+	// list aircrafts owned by airline
+	ListAircrafts(context.Context, *ListAircraftsRequest) (*ListAircraftsResponse, error)
 	mustEmbedUnimplementedFleetServiceServer()
 }
 
@@ -125,6 +140,9 @@ func (UnimplementedFleetServiceServer) ListAircraftTypes(context.Context, *empty
 }
 func (UnimplementedFleetServiceServer) GetAircraftType(context.Context, *GetAircraftTypeRequest) (*AircraftType, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAircraftType not implemented")
+}
+func (UnimplementedFleetServiceServer) ListAircrafts(context.Context, *ListAircraftsRequest) (*ListAircraftsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAircrafts not implemented")
 }
 func (UnimplementedFleetServiceServer) mustEmbedUnimplementedFleetServiceServer() {}
 func (UnimplementedFleetServiceServer) testEmbeddedByValue()                      {}
@@ -219,6 +237,24 @@ func _FleetService_GetAircraftType_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FleetService_ListAircrafts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAircraftsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FleetServiceServer).ListAircrafts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FleetService_ListAircrafts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FleetServiceServer).ListAircrafts(ctx, req.(*ListAircraftsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FleetService_ServiceDesc is the grpc.ServiceDesc for FleetService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -241,6 +277,10 @@ var FleetService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAircraftType",
 			Handler:    _FleetService_GetAircraftType_Handler,
+		},
+		{
+			MethodName: "ListAircrafts",
+			Handler:    _FleetService_ListAircrafts_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

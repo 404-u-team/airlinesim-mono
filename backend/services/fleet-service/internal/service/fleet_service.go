@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -21,6 +22,7 @@ type FleetService interface {
 	CreateAircraftType(ctx context.Context, payload *fleetpb.CreateAircraftTypeRequest) (*fleetpb.AircraftType, error)
 	ListAircraftTypes(ctx context.Context) (*fleetpb.ListAircraftTypesResponse, error)
 	GetAircraftType(ctx context.Context, id string) (*fleetpb.AircraftType, error)
+	ListAircrafts(ctx context.Context, ownerID string) (*fleetpb.ListAircraftsResponse, error)
 }
 
 type fleetService struct {
@@ -222,4 +224,49 @@ func (s *fleetService) CreateAircraftType(ctx context.Context, payload *fleetpb.
 		PricePerUnit:            created.PricePerUnit,
 		Characteristics:         string(created.Characteristics),
 	}, nil
+}
+
+func (s *fleetService) ListAircrafts(ctx context.Context, ownerID string) (*fleetpb.ListAircraftsResponse, error) {
+	uid, err := uuid.Parse(ownerID)
+	if err != nil {
+		return nil, customerrors.ErrAircraftTypeNotFound
+	}
+
+	items, err := s.repo.ListAircraftsByOwner(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+
+	var res []*fleetpb.Aircraft
+	for _, a := range items {
+		var currentOwnerId string
+		if a.CurrentOwnerID != nil {
+			currentOwnerId = a.CurrentOwnerID.String()
+		}
+		var baseAirportId string
+		if a.BaseAirportID != nil {
+			baseAirportId = a.BaseAirportID.String()
+		}
+		var manufacturedAt string
+		if a.ManufacturedAt != nil {
+			manufacturedAt = a.ManufacturedAt.Format(time.RFC3339)
+		}
+		res = append(res, &fleetpb.Aircraft{
+			Id:                         a.ID.String(),
+			TypeId:                     a.TypeID.String(),
+			CurrentOwnerId:             currentOwnerId,
+			BaseAirportId:              baseAirportId,
+			TailNumber:                 a.TailNumber,
+			InService:                  a.InService,
+			Status:                     a.Status,
+			CurrentMaintenancePoints:   a.CurrentMaintenancePoints,
+			MaxMaintenancePointsCached: a.MaxMaintenancePointsCached,
+			TotalFlightHours:           a.TotalFlightHours,
+			FhSinceLastDCheck:          a.FHSinceLastDCheck,
+			TotalCycles:                a.TotalCycles,
+			ManufacturedAt:             manufacturedAt,
+		})
+	}
+
+	return &fleetpb.ListAircraftsResponse{Items: res}, nil
 }

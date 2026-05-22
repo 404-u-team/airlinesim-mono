@@ -22,6 +22,8 @@ service FleetService {
   rpc ListAircraftTypes(google.protobuf.Empty) returns (ListAircraftTypesResponse);
   // get aircraft type by id
   rpc GetAircraftType(GetAircraftTypeRequest) returns (AircraftType);
+  // list aircrafts owned by airline
+  rpc ListAircrafts(ListAircraftsRequest) returns (ListAircraftsResponse);
 }
 
 message CreateAircraftRequest {
@@ -92,4 +94,28 @@ message ListAircraftTypesResponse {
 
 message GetAircraftTypeRequest {
   string id = 1;
+}
+
+message Aircraft {
+  string id = 1;
+  string type_id = 2;
+  string current_owner_id = 3;
+  string base_airport_id = 4;
+  string tail_number = 5;
+  bool in_service = 6;
+  string status = 7;
+  double current_maintenance_points = 8;
+  double max_maintenance_points_cached = 9;
+  double total_flight_hours = 10;
+  double fh_since_last_d_check = 11;
+  double total_cycles = 12;
+  string manufactured_at = 13;
+}
+
+message ListAircraftsRequest {
+  string owner_id = 1;
+}
+
+message ListAircraftsResponse {
+  repeated Aircraft items = 1;
 }

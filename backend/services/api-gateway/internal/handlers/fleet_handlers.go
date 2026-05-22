@@ -163,3 +163,33 @@ func (h *FleetHandler) CreateAircraftType(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, resp)
 }
+
+// ListAircrafts godoc
+// @Summary      List aircrafts for airline
+// @Description  Returns list of aircrafts owned by the authenticated airline
+// @Tags         Aircraft
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  fleetpb.ListAircraftsResponse
+// @Failure      401  "Unauthorized"
+// @Failure      500  {object}  dto.ErrorResponse
+// @Router       /aircrafts [get]
+func (h *FleetHandler) ListAircrafts(c *gin.Context) {
+	userID, exists := c.Get(middleware.UserIDKey)
+	if !exists {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	resp, err := h.fleetClient.ListAircrafts(ctx, userID.(string))
+	if err != nil {
+		log.Println("got error when tried to list aircrafts via gRPC, ", err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}

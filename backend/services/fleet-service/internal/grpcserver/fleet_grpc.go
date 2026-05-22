@@ -25,6 +25,10 @@ func (s *FleetServer) CreateAircraftType(ctx context.Context, payload *fleetpb.C
 	return s.fleetService.CreateAircraftType(ctx, payload)
 }
 
+func (s *FleetServer) ListAircrafts(ctx context.Context, payload *fleetpb.ListAircraftsRequest) (*fleetpb.ListAircraftsResponse, error) {
+	return s.fleetService.ListAircrafts(ctx, payload.OwnerId)
+}
+
 func (s *FleetServer) ListAircraftTypes(ctx context.Context, _ *emptypb.Empty) (*fleetpb.ListAircraftTypesResponse, error) {
 	return s.fleetService.ListAircraftTypes(ctx)
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/404-u-team/airlinesim-mono/backend/fleet-service/internal/db"
 	"github.com/404-u-team/airlinesim-mono/backend/fleet-service/internal/dto"
@@ -12,6 +13,7 @@ import (
 type FleetRepository interface {
 	CreateAircraft(ctx context.Context, payload *fleetpb.CreateAircraftRequest) (uuid.UUID, error)
 	CreateAircraftType(ctx context.Context, payload *fleetpb.CreateAircraftTypeRequest) (dto.AircraftType, error)
+	ListAircraftsByOwner(ctx context.Context, ownerID uuid.UUID) ([]dto.Aircraft, error)
 	GetAircraftTypePrice(ctx context.Context, aircraftTypeID uuid.UUID) (float64, error)
 	ListAircraftTypes(ctx context.Context) ([]dto.AircraftType, error)
 	GetAircraftTypeByID(ctx context.Context, id uuid.UUID) (*dto.AircraftType, error)
@@ -188,4 +190,36 @@ func (r *fleetRepository) CreateAircraftType(ctx context.Context, payload *fleet
 	a.ImageUploadID = imageUploadID
 	a.Characteristics = characteristics
 	return a, nil
+}
+
+func (r *fleetRepository) ListAircraftsByOwner(ctx context.Context, ownerID uuid.UUID) ([]dto.Aircraft, error) {
+	query := `SELECT id, type_id, current_owner_id, base_airport_id, tail_number, in_service, status,
+		current_maintenance_points, max_maintenance_points_cached, total_flight_hours, fh_since_last_d_check,
+		total_cycles, manufactured_at
+	FROM aircraft WHERE current_owner_id = $1 ORDER BY tail_number ASC`
+
+	rows, err := r.pool.Query(ctx, query, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var res []dto.Aircraft
+	for rows.Next() {
+		var a dto.Aircraft
+		var currentOwnerID *uuid.UUID
+		var baseAirportID *uuid.UUID
+		var manufacturedAt *time.Time
+		err = rows.Scan(&a.ID, &a.TypeID, &currentOwnerID, &baseAirportID, &a.TailNumber, &a.InService, &a.Status,
+			&a.CurrentMaintenancePoints, &a.MaxMaintenancePointsCached, &a.TotalFlightHours, &a.FHSinceLastDCheck,
+			&a.TotalCycles, &manufacturedAt)
+		if err != nil {
+			return nil, err
+		}
+		a.CurrentOwnerID = currentOwnerID
+		a.BaseAirportID = baseAirportID
+		a.ManufacturedAt = manufacturedAt
+		res = append(res, a)
+	}
+	return res, nil
 }

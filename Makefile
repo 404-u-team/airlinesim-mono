@@ -16,7 +16,7 @@ compose-up:
 	docker compose -f $(COMPOSE_FILE) up --build
 
 github-push:
-	git push origin backend
+	git push origin master
 
 up: swagger compose-up
 

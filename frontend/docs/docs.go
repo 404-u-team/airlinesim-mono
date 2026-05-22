@@ -95,6 +95,53 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "description": "Create a new aircraft type (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Aircraft"
+                ],
+                "summary": "Create aircraft type",
+                "parameters": [
+                    {
+                        "description": "Aircraft type details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/fleetpb.CreateAircraftTypeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/fleetpb.AircraftType"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/aircraft-types/{id}": {
@@ -1445,6 +1492,77 @@ const docTemplate = `{
             "properties": {
                 "id": {
                     "type": "string"
+                }
+            }
+        },
+        "fleetpb.CreateAircraftTypeRequest": {
+            "type": "object",
+            "properties": {
+                "base_maintenance_points": {
+                    "type": "number"
+                },
+                "base_turnaround_points": {
+                    "type": "number"
+                },
+                "characteristics": {
+                    "type": "string"
+                },
+                "cruising_speed_kph": {
+                    "type": "number"
+                },
+                "d_check_interval_fh": {
+                    "type": "number"
+                },
+                "d_check_interval_years": {
+                    "type": "number"
+                },
+                "d_check_overdue_multiplier": {
+                    "type": "number"
+                },
+                "fuel_consumption_per_hour": {
+                    "type": "number"
+                },
+                "iata_code": {
+                    "type": "string"
+                },
+                "icao_code": {
+                    "type": "string"
+                },
+                "image_upload_id": {
+                    "type": "string"
+                },
+                "maint_cost_per_flight_hour": {
+                    "type": "number"
+                },
+                "maint_cost_per_landing": {
+                    "type": "number"
+                },
+                "maint_cost_per_takeoff": {
+                    "type": "number"
+                },
+                "manufacturer_id": {
+                    "type": "string"
+                },
+                "max_planned_seat_capacity": {
+                    "type": "number"
+                },
+                "max_range_km": {
+                    "type": "number"
+                },
+                "min_runway_length_m": {
+                    "type": "number"
+                },
+                "model_name": {
+                    "type": "string"
+                },
+                "mtow_kg": {
+                    "type": "number"
+                },
+                "price_per_unit": {
+                    "type": "number"
+                },
+                "production_points_price": {
+                    "type": "number"
                 }
             }
         },
