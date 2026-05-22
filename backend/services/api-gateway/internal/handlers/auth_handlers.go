@@ -66,7 +66,6 @@ func (h *AuthHandler) Register(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 3})
 			return
 		}
-		log.Println("got error when tried to gRPC register, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -113,7 +112,6 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 2})
 			return
 		}
-		log.Println("got error when tried to gRPC login, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
@@ -151,7 +149,6 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 			c.Status(http.StatusUnauthorized)
 			return
 		}
-		log.Println("got error when tried to gRPC refresh token, ", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
