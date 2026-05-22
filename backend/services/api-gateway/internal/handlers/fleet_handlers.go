@@ -1,0 +1,73 @@
+package handlers
+
+import (
+	"context"
+	"errors"
+	"log"
+	"net/http"
+	"time"
+
+	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/dto"
+	grpcclient "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/grpc"
+	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/middleware"
+	fleetpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/fleet/v1"
+	"github.com/404-u-team/airlinesim-mono/backend/shared/customerrors"
+	"github.com/gin-gonic/gin"
+)
+
+type FleetHandler struct {
+	fleetClient *grpcclient.FleetClient
+}
+
+func NewFleetHandler(fleetClient *grpcclient.FleetClient) *FleetHandler {
+	return &FleetHandler{fleetClient: fleetClient}
+}
+
+// PurchaseAircraft godoc
+// @Summary      Purchase aircraft
+// @Description  Purchases a new aircraft from a selected aircraft type for the authenticated user
+// @Tags         Aircraft
+// @Accept       json
+// @Produce      json
+// @Param request body fleetpb.CreateAircraftRequest true "Aircraft details"
+// @Success      201  {object}  fleetpb.CreateAircraftResponse "Aircraft purchased successfully, id returned"
+// @Failure      400  {object}  dto.ErrorResponse "1 - request validation error, 2 - aircraft type not found"
+// @Failure      401  "Unauthorized"
+// @Failure      409  "Aircraft tail number conflict"
+// @Failure      500  "Internal server error"
+// @Router       /aircraft [post]
+func (h *FleetHandler) PurchaseAircraft(c *gin.Context) {
+	var payload fleetpb.CreateAircraftRequest
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		log.Println("got error when tried to parse, ", err)
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	userID, exists := c.Get(middleware.UserIDKey)
+	if !exists {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+	payload.CurrentOwnerId = userID.(string)
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	response, err := h.fleetClient.CreateAircraft(ctx, &payload)
+	if err != nil {
+		if errors.Is(err, customerrors.ErrAircraftTypeNotFound) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 2})
+			return
+		}
+		if errors.Is(err, customerrors.ErrAircraftTailNumberConflict) {
+			c.Status(http.StatusConflict)
+			return
+		}
+		log.Println("got error when tried to gRPC purchase aircraft, ", err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusCreated, response)
+}

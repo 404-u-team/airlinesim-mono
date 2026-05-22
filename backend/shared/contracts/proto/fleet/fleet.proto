@@ -8,12 +8,22 @@ option go_package = "github.com/404-u-team/airlinesim-mono/backend/shared/contra
 /*
 protoc --go_out=./v1 --go_opt=paths=source_relative \
     --go-grpc_out=./v1 --go-grpc_opt=paths=source_relative \
-    --validate_out="lang=go:." \
-  fleet.proto
+    fleet.proto
 */
 
 // fleet service
 service FleetService {
+  // create aircraft from selected aircraft type
+  rpc CreateAircraft(CreateAircraftRequest) returns (CreateAircraftResponse);
 }
 
-// TODO: add validation
+message CreateAircraftRequest {
+  string aircraft_type_id = 1;
+  string base_airport_id = 2;
+  string tail_number = 3;
+  string current_owner_id = 4;
+}
+
+message CreateAircraftResponse {
+  string id = 1;
+}

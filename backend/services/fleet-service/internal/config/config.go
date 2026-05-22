@@ -11,6 +11,7 @@ import (
 type Config struct {
 	PostgresConnString string
 	GRPCPort           string
+	AirlineGRPCAddr    string
 }
 
 func InitConfig() Config {
@@ -30,6 +31,7 @@ func InitConfig() Config {
 	return Config{
 		PostgresConnString: postgresConnString,
 		GRPCPort:           getEnv("GRPC_PORT", ":50054"),
+		AirlineGRPCAddr:    getEnv("AIRLINE_GRPC_ADDR", "airline-service:50051"),
 	}
 }
 

@@ -24,3 +24,12 @@ func (s *airlineServer) CreateAirline(ctx context.Context, payload *airlinepb.Cr
 
 	return tokenResponse, nil
 }
+
+func (s *airlineServer) AdjustBalance(ctx context.Context, payload *airlinepb.AdjustBalanceRequest) (*airlinepb.AdjustBalanceResponse, error) {
+	response, err := s.airlineService.AdjustBalance(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}

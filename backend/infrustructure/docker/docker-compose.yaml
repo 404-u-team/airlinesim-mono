@@ -175,16 +175,16 @@ services:
             airline-db:
                 condition: service_healthy
 
-    # fleet-service:
-    #     build:
-    #         context: ../../../
-    #         dockerfile: backend/services/fleet-service/Dockerfile
-    #     restart: on-failure
-    #     env_file:
-    #         - ../../services/fleet-service/.env
-    #     depends_on:
-    #         fleet-db:
-    #             condition: service_healthy
+    fleet-service:
+        build:
+            context: ../../../
+            dockerfile: backend/services/fleet-service/Dockerfile
+        restart: on-failure
+        env_file:
+            - ../../services/fleet-service/.env
+        depends_on:
+            fleet-db:
+                condition: service_healthy
 
     auth-service:
         build:
@@ -207,6 +207,7 @@ services:
         depends_on:
             - auth-service
             - operations-service
+            - fleet-service
         ports:
             - "8080:8080"
 

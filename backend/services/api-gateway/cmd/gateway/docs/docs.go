@@ -19,6 +19,55 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/aircraft": {
+            "post": {
+                "description": "Purchases a new aircraft from a selected aircraft type for the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Aircraft"
+                ],
+                "summary": "Purchase aircraft",
+                "parameters": [
+                    {
+                        "description": "Aircraft details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/fleetpb.CreateAircraftRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Aircraft purchased successfully, id returned",
+                        "schema": {
+                            "$ref": "#/definitions/fleetpb.CreateAircraftResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "1 - request validation error, 2 - aircraft type not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "409": {
+                        "description": "Aircraft tail number conflict"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
         "/airport": {
             "post": {
                 "description": "Returns",
@@ -252,14 +301,14 @@ const docTemplate = `{
         },
         "/auth/refresh": {
             "post": {
-                "description": "Returns access token and sets refresh token into cookie",
+                "description": "Returns access token and sets refresh token into cookie. Doing that by validating refresh token",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Refreshes access and refresh token using refresh token stored in cookies",
+                "summary": "Refreshes access and refresh token",
                 "responses": {
                     "200": {
                         "description": "User authenticated",
@@ -958,6 +1007,31 @@ const docTemplate = `{
                 }
             }
         },
+        "fleetpb.CreateAircraftRequest": {
+            "type": "object",
+            "properties": {
+                "aircraft_type_id": {
+                    "type": "string"
+                },
+                "base_airport_id": {
+                    "type": "string"
+                },
+                "current_owner_id": {
+                    "type": "string"
+                },
+                "tail_number": {
+                    "type": "string"
+                }
+            }
+        },
+        "fleetpb.CreateAircraftResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
         "operationspb.Airport": {
             "type": "object",
             "properties": {
@@ -1523,9 +1597,9 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8080",
+	Host:             "api.master.stand.airlinesim.ms0ur.dev",
 	BasePath:         "",
-	Schemes:          []string{"http", "https"},
+	Schemes:          []string{"https"},
 	Title:            "AirlineSim API",
 	Description:      "",
 	InfoInstanceName: "swagger",

@@ -35,3 +35,8 @@ var ErrAirlineNameConflict = status.Error(codes.AlreadyExists, "airline with suc
 var ErrAirlineWithSuchOwnerExists = status.Error(codes.AlreadyExists, "airline by such user exists")
 var ErrAirlineIataConflict = status.Error(codes.AlreadyExists, "iata taken by airline")
 var ErrAirlineIcaoConflict = status.Error(codes.AlreadyExists, "icao taken by airline")
+var ErrAirlineNotFound = status.Error(codes.NotFound, "airline is not found")
+var ErrAirlineBalanceInsufficient = status.Error(codes.FailedPrecondition, "airline balance is insufficient")
+
+var ErrAircraftTypeNotFound = status.Error(codes.InvalidArgument, "aircraft type is not found")
+var ErrAircraftTailNumberConflict = status.Error(codes.AlreadyExists, "tail number taken by aircraft")

@@ -3,12 +3,22 @@ module github.com/404-u-team/airlinesim-mono/backend/fleet-service
 go 1.26.2
 
 require (
+	github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/airline v0.0.0-00010101000000-000000000000
+	github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/fleet v0.0.0-00010101000000-000000000000
+	github.com/404-u-team/airlinesim-mono/backend/shared/customerrors v0.0.0-00010101000000-000000000000
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/lpernett/godotenv v0.0.0-20230527005122-0de1d4c5ef5e
 	github.com/pressly/goose v2.7.0+incompatible
 	google.golang.org/grpc v1.80.0
 )
+
+
+replace github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/fleet => ../../shared/contracts/proto/fleet
+
+replace github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/airline => ../../shared/contracts/proto/airline
+
+replace github.com/404-u-team/airlinesim-mono/backend/shared/customerrors => ../../shared/customerrors
 
 require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect

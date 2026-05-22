@@ -17,6 +17,7 @@ import (
 
 type AirlineService interface {
 	CreateAirline(ctx context.Context, payload *airlinepb.CreateAirlineRequest) (*airlinepb.CreateAirlineResponse, error)
+	AdjustBalance(ctx context.Context, payload *airlinepb.AdjustBalanceRequest) (*airlinepb.AdjustBalanceResponse, error)
 }
 
 type airlineService struct {
@@ -93,4 +94,18 @@ func (s *airlineService) CreateAirline(ctx context.Context, payload *airlinepb.C
 
 	createAirlineResponse := airlinepb.CreateAirlineResponse{Id: airlineID.String(), Balance: balance}
 	return &createAirlineResponse, nil
+}
+
+func (s *airlineService) AdjustBalance(ctx context.Context, payload *airlinepb.AdjustBalanceRequest) (*airlinepb.AdjustBalanceResponse, error) {
+	ownerID, err := uuid.Parse(payload.OwnerId)
+	if err != nil {
+		return nil, fmt.Errorf("got error when tried to convert owner id to uuid, %w", err)
+	}
+
+	airlineID, balance, err := s.airlineRepo.AdjustBalance(ctx, ownerID, payload.Amount)
+	if err != nil {
+		return nil, err
+	}
+
+	return &airlinepb.AdjustBalanceResponse{AirlineId: airlineID.String(), Balance: balance}, nil
 }

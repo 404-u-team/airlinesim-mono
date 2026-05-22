@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	AirlineService_CreateAirline_FullMethodName = "/auth.v1.AirlineService/CreateAirline"
+	AirlineService_AdjustBalance_FullMethodName = "/auth.v1.AirlineService/AdjustBalance"
 )
 
 // AirlineServiceClient is the client API for AirlineService service.
@@ -30,6 +31,8 @@ const (
 type AirlineServiceClient interface {
 	// create country, returns id of newly created country
 	CreateAirline(ctx context.Context, in *CreateAirlineRequest, opts ...grpc.CallOption) (*CreateAirlineResponse, error)
+	// adjust airline balance by signed amount
+	AdjustBalance(ctx context.Context, in *AdjustBalanceRequest, opts ...grpc.CallOption) (*AdjustBalanceResponse, error)
 }
 
 type airlineServiceClient struct {
@@ -50,6 +53,16 @@ func (c *airlineServiceClient) CreateAirline(ctx context.Context, in *CreateAirl
 	return out, nil
 }
 
+func (c *airlineServiceClient) AdjustBalance(ctx context.Context, in *AdjustBalanceRequest, opts ...grpc.CallOption) (*AdjustBalanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdjustBalanceResponse)
+	err := c.cc.Invoke(ctx, AirlineService_AdjustBalance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AirlineServiceServer is the server API for AirlineService service.
 // All implementations must embed UnimplementedAirlineServiceServer
 // for forward compatibility.
@@ -58,6 +71,8 @@ func (c *airlineServiceClient) CreateAirline(ctx context.Context, in *CreateAirl
 type AirlineServiceServer interface {
 	// create country, returns id of newly created country
 	CreateAirline(context.Context, *CreateAirlineRequest) (*CreateAirlineResponse, error)
+	// adjust airline balance by signed amount
+	AdjustBalance(context.Context, *AdjustBalanceRequest) (*AdjustBalanceResponse, error)
 	mustEmbedUnimplementedAirlineServiceServer()
 }
 
@@ -70,6 +85,9 @@ type UnimplementedAirlineServiceServer struct{}
 
 func (UnimplementedAirlineServiceServer) CreateAirline(context.Context, *CreateAirlineRequest) (*CreateAirlineResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateAirline not implemented")
+}
+func (UnimplementedAirlineServiceServer) AdjustBalance(context.Context, *AdjustBalanceRequest) (*AdjustBalanceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AdjustBalance not implemented")
 }
 func (UnimplementedAirlineServiceServer) mustEmbedUnimplementedAirlineServiceServer() {}
 func (UnimplementedAirlineServiceServer) testEmbeddedByValue()                        {}
@@ -110,6 +128,24 @@ func _AirlineService_CreateAirline_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AirlineService_AdjustBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdjustBalanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AirlineServiceServer).AdjustBalance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AirlineService_AdjustBalance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AirlineServiceServer).AdjustBalance(ctx, req.(*AdjustBalanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AirlineService_ServiceDesc is the grpc.ServiceDesc for AirlineService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -120,6 +156,10 @@ var AirlineService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateAirline",
 			Handler:    _AirlineService_CreateAirline_Handler,
+		},
+		{
+			MethodName: "AdjustBalance",
+			Handler:    _AirlineService_AdjustBalance_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

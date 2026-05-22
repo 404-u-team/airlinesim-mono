@@ -66,9 +66,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("got error when tried to connect to gRPC server, %v", err)
 	}
+	defer operationsClient.Close()
+
+	fleetClient, err := grpcclient.NewFleetClient("fleet-service:50054")
+	if err != nil {
+		log.Fatalf("got error when tried to connect to gRPC server, %v", err)
+	}
+	defer fleetClient.Close()
 
 	// setup HTTP server
-	router := routes.SetupRoutes(authClient, operationsClient, socketHub, &config)
+	router := routes.SetupRoutes(authClient, operationsClient, fleetClient, socketHub, &config)
 
 	log.Printf("Server starting on %s", config.HTTPPort)
 	if err := http.ListenAndServe(config.HTTPPort, router); err != nil {
