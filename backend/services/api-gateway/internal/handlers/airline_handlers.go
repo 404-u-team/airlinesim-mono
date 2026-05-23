@@ -29,7 +29,7 @@ func NewAirlineHandler(airlineClient *grpcclient.AirlineClient) *AirlineHandler 
 // @Tags         Airline
 // @Accept       json
 // @Produce      json
-// @Param request body airlinepb.CreateAirlineRequest true "Airline details"
+// @Param request body dto.CreateAirlineRequestDTO true "Airline details (owner_id taken from token)"
 // @Success      201  {object}  airlinepb.CreateAirlineResponse "Airline created successfully"
 // @Failure      400  {object}  dto.ErrorResponse "1 - request validation error, 2 - airport not found, 3 - user not found"
 // @Failure      401  "Unauthorized"
@@ -37,7 +37,7 @@ func NewAirlineHandler(airlineClient *grpcclient.AirlineClient) *AirlineHandler 
 // @Failure      500  "Internal server error"
 // @Router       /airline [post]
 func (h *AirlineHandler) CreateAirline(c *gin.Context) {
-	var payload airlinepb.CreateAirlineRequest
+	var payload dto.CreateAirlineRequestDTO
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		log.Println("got error when tried to parse, ", err)
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
@@ -49,12 +49,19 @@ func (h *AirlineHandler) CreateAirline(c *gin.Context) {
 		c.Status(http.StatusUnauthorized)
 		return
 	}
-	payload.OwnerId = userID.(string)
+
+	pbPayload := airlinepb.CreateAirlineRequest{
+		OwnerId:           userID.(string),
+		StartingAirportId: payload.StartingAirportId,
+		Name:              payload.Name,
+		IataCode:          payload.IataCode,
+		IcaoCode:          payload.IcaoCode,
+	}
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
 	defer cancel()
 
-	response, err := h.airlineClient.CreateAirline(ctx, &payload)
+	response, err := h.airlineClient.CreateAirline(ctx, &pbPayload)
 	if err != nil {
 		if errors.Is(err, customerrors.ErrAirportNotFound) {
 			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 2})
