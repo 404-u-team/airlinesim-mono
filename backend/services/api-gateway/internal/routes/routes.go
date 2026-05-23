@@ -18,9 +18,9 @@ func SetupRoutes(authClient *grpcclient.AuthClient, operationsClient *grpcclient
 	router.Use(middleware.CORSMiddleware())
 
 	authHandler := handlers.NewAuthHandler(authClient, config)
-	airlineHandler := handlers.NewAirlineHandler(airlineClient)
-	operationsHandler := handlers.NewOperationsHandler(operationsClient, config) // maybe config is extra
-	fleetHandler := handlers.NewFleetHandler(fleetClient)
+	airlineHandler := handlers.NewAirlineHandler(airlineClient, config)
+	operationsHandler := handlers.NewOperationsHandler(operationsClient, config)
+	fleetHandler := handlers.NewFleetHandler(fleetClient, config)
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	router.GET("/socket.io/*any", gin.WrapH(socketHub.Handler()))
@@ -35,7 +35,7 @@ func SetupRoutes(authClient *grpcclient.AuthClient, operationsClient *grpcclient
 
 		// protected endpoints
 		protected := api.Group("")
-		protected.Use(middleware.AuthMiddleware(config.JWTPublicKey, authClient))
+		protected.Use(middleware.AuthMiddleware(config, authClient))
 		{
 			protected.GET("/airline/me", airlineHandler.GetMyAirline)
 			protected.GET("/airline/:id", airlineHandler.GetAirlineByID)
@@ -50,7 +50,7 @@ func SetupRoutes(authClient *grpcclient.AuthClient, operationsClient *grpcclient
 
 			// admin only
 			adminOnly := api.Group("")
-			adminOnly.Use(middleware.AuthMiddleware(config.JWTPublicKey, authClient), middleware.AdminMiddleware())
+			adminOnly.Use(middleware.AuthMiddleware(config, authClient), middleware.AdminMiddleware())
 			{
 				adminOnly.POST("/country", operationsHandler.CreateCountry)
 				adminOnly.PUT("/country/:id", operationsHandler.ChangeCountry)

@@ -2,12 +2,11 @@ package middleware
 
 import (
 	"context"
-	"crypto/rsa"
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
+	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/config"
 	grpcclient "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/grpc"
 	authpb "github.com/404-u-team/airlinesim-mono/backend/shared/contracts/proto/auth/v1"
 	"github.com/gin-gonic/gin"
@@ -16,7 +15,7 @@ import (
 const UserIDKey = "userID"
 const RoleKey = "role"
 
-func AuthMiddleware(JWTPublicKey *rsa.PublicKey, authClient *grpcclient.AuthClient) gin.HandlerFunc {
+func AuthMiddleware(config *config.Config, authClient *grpcclient.AuthClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString := getAccessToken(c)
 		if tokenString == "" {
@@ -27,7 +26,7 @@ func AuthMiddleware(JWTPublicKey *rsa.PublicKey, authClient *grpcclient.AuthClie
 		}
 
 		// verify just token signature
-		userID, role, err := verifyTokenLocal(tokenString, JWTPublicKey)
+		userID, role, err := verifyTokenLocal(tokenString, config.JWTPublicKey)
 		if err != nil {
 			log.Println("got error when tried to verify token local, ", err)
 			c.Status(http.StatusUnauthorized)
@@ -36,7 +35,7 @@ func AuthMiddleware(JWTPublicKey *rsa.PublicKey, authClient *grpcclient.AuthClie
 		}
 
 		// verify user in db through auth grpc client
-		ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(c.Request.Context(), config.RequestTimeoutSeconds)
 		defer cancel()
 
 		verifyTokenRequest := &authpb.VerifyTokenRequest{AccessToken: tokenString}

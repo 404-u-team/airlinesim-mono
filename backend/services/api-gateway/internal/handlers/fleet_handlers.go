@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/dto"
 	grpcclient "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/grpc"
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/middleware"
@@ -17,10 +18,11 @@ import (
 
 type FleetHandler struct {
 	fleetClient *grpcclient.FleetClient
+	config      *config.Config
 }
 
-func NewFleetHandler(fleetClient *grpcclient.FleetClient) *FleetHandler {
-	return &FleetHandler{fleetClient: fleetClient}
+func NewFleetHandler(fleetClient *grpcclient.FleetClient, config *config.Config) *FleetHandler {
+	return &FleetHandler{fleetClient: fleetClient, config: config}
 }
 
 // PurchaseAircraft godoc
@@ -33,7 +35,6 @@ func NewFleetHandler(fleetClient *grpcclient.FleetClient) *FleetHandler {
 // @Success      201  {object}  fleetpb.CreateAircraftResponse "Aircraft purchased successfully, id returned"
 // @Failure      400  {object}  dto.ErrorResponse "1 - request validation error, 2 - aircraft type not found"
 // @Failure      401  "Unauthorized"
-// @Failure      409  "Aircraft tail number conflict"
 // @Failure      500  "Internal server error"
 // @Router       /aircraft [post]
 func (h *FleetHandler) PurchaseAircraft(c *gin.Context) {
@@ -51,7 +52,7 @@ func (h *FleetHandler) PurchaseAircraft(c *gin.Context) {
 	}
 	payload.CurrentOwnerId = userID.(string)
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	response, err := h.fleetClient.CreateAircraft(ctx, &payload)
@@ -82,7 +83,7 @@ func (h *FleetHandler) PurchaseAircraft(c *gin.Context) {
 // @Failure      500  {object}  dto.ErrorResponse
 // @Router       /aircraft-types [get]
 func (h *FleetHandler) ListAircraftTypes(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	resp, err := h.fleetClient.ListAircraftTypes(ctx)
@@ -114,7 +115,7 @@ func (h *FleetHandler) GetAircraftType(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	resp, err := h.fleetClient.GetAircraftType(ctx, id)
@@ -181,7 +182,7 @@ func (h *FleetHandler) ListAircrafts(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	resp, err := h.fleetClient.ListAircrafts(ctx, userID.(string))
@@ -214,7 +215,7 @@ func (h *FleetHandler) GetAircraft(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	resp, err := h.fleetClient.GetAircraft(ctx, id)
@@ -257,7 +258,7 @@ func (h *FleetHandler) UpdateAircraft(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	resp, err := h.fleetClient.UpdateAircraft(ctx, id, body.TailNumber)

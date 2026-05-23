@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/dto"
@@ -52,7 +51,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	// set timeout of request
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	// grpc register
@@ -103,7 +102,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	// set timeout of request
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	// grpc login
@@ -141,7 +140,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	}
 
 	// set timeout of request
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	// grpc login

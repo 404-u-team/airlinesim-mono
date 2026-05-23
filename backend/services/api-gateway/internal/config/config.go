@@ -9,17 +9,19 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/lpernett/godotenv"
 )
 
 type Config struct {
-	KafkaBrokers []string
-	HTTPPort     string
-
+	KafkaBrokers              []string
+	HTTPPort                  string
 	JWTPublicKey              *rsa.PublicKey
 	JWTAccessTokenExpireTime  int64
 	JWTRefreshTokenExpireTime int64
+
+	RequestTimeoutSeconds time.Duration
 }
 
 func InitConfig() Config {
@@ -40,6 +42,7 @@ func InitConfig() Config {
 		JWTPublicKey:              publicKey,
 		JWTAccessTokenExpireTime:  getEnvAsInt("JWT_ACCESS_TOKEN_EXPIRE_TIME", 900),
 		JWTRefreshTokenExpireTime: getEnvAsInt("JWT_REFRESH_TOKEN_EXPIRE_TIME", 86400),
+		RequestTimeoutSeconds:     time.Duration(getEnvAsInt("REQUEST_TIMEOUT_SECONDS", 3)) * time.Second,
 	}
 }
 
