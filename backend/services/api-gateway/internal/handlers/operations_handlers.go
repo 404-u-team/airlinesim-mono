@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/dto"
@@ -48,7 +47,7 @@ func (h *OperationsHandler) CreateCountry(c *gin.Context) {
 	}
 
 	// set timeout of request
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	// grpc create country
@@ -91,7 +90,7 @@ func (h *OperationsHandler) ChangeCountry(c *gin.Context) {
 	}
 	payload.Id = c.Param("id")
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	response, err := h.operationsClient.ChangeCountry(ctx, &payload)
@@ -136,7 +135,7 @@ func (h *OperationsHandler) CreateRegion(c *gin.Context) {
 	}
 
 	// set timeout of request
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	// grpc create region
@@ -182,7 +181,7 @@ func (h *OperationsHandler) ChangeRegion(c *gin.Context) {
 	}
 	payload.Id = c.Param("id")
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	response, err := h.operationsClient.ChangeRegion(ctx, &payload)
@@ -231,7 +230,7 @@ func (h *OperationsHandler) CreateRegionLink(c *gin.Context) {
 	}
 
 	// set timeout of request
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	// grpc create region
@@ -277,7 +276,7 @@ func (h *OperationsHandler) ChangeRegionLink(c *gin.Context) {
 	}
 	payload.Id = c.Param("id")
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	response, err := h.operationsClient.ChangeRegionLink(ctx, &payload)
@@ -324,7 +323,7 @@ func (h *OperationsHandler) CreateAirport(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	IDResponse, err := h.operationsClient.CreateAirport(ctx, &payload)
@@ -374,7 +373,7 @@ func (h *OperationsHandler) ChangeAirport(c *gin.Context) {
 	}
 	payload.Id = c.Param("id")
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	response, err := h.operationsClient.ChangeAirport(ctx, &payload)
@@ -414,7 +413,7 @@ func (h *OperationsHandler) ChangeAirport(c *gin.Context) {
 // @Failure      500  "Internal server error"
 // @Router       /countries [get]
 func (h *OperationsHandler) ListCountries(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	response, err := h.operationsClient.ListCountries(ctx)
@@ -438,7 +437,7 @@ func (h *OperationsHandler) ListCountries(c *gin.Context) {
 // @Failure      500  "Internal server error"
 // @Router       /regions [get]
 func (h *OperationsHandler) ListRegions(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	response, err := h.operationsClient.ListRegions(ctx)
@@ -462,7 +461,7 @@ func (h *OperationsHandler) ListRegions(c *gin.Context) {
 // @Failure      500  "Internal server error"
 // @Router       /region-links [get]
 func (h *OperationsHandler) ListRegionLinks(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	response, err := h.operationsClient.ListRegionLinks(ctx)
@@ -486,7 +485,7 @@ func (h *OperationsHandler) ListRegionLinks(c *gin.Context) {
 // @Failure      500  "Internal server error"
 // @Router       /airports [get]
 func (h *OperationsHandler) ListAirports(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	response, err := h.operationsClient.ListAirports(ctx)
@@ -520,7 +519,7 @@ func (h *OperationsHandler) DeleteCountry(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	response, err := h.operationsClient.DeleteCountry(ctx, &operationspb.DeleteCountryRequest{Id: countryID})
@@ -562,7 +561,7 @@ func (h *OperationsHandler) DeleteRegion(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	response, err := h.operationsClient.DeleteRegion(ctx, &operationspb.DeleteRegionRequest{Id: regionID})
@@ -603,7 +602,7 @@ func (h *OperationsHandler) DeleteRegionLink(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	response, err := h.operationsClient.DeleteRegionLink(ctx, &operationspb.DeleteRegionLinkRequest{Id: regionLinkID})
@@ -640,7 +639,7 @@ func (h *OperationsHandler) DeleteAirport(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	response, err := h.operationsClient.DeleteAirport(ctx, &operationspb.DeleteAirportRequest{Id: airportID})

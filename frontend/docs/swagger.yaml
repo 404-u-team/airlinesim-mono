@@ -32,19 +32,6 @@ definitions:
       starting_airport_id:
         type: string
     type: object
-  airlinepb.CreateAirlineRequest:
-    properties:
-      iata_code:
-        type: string
-      icao_code:
-        type: string
-      name:
-        type: string
-      owner_id:
-        type: string
-      starting_airport_id:
-        type: string
-    type: object
   airlinepb.CreateAirlineResponse:
     properties:
       balance:
@@ -55,6 +42,21 @@ definitions:
   dto.AccessTokenResponse:
     properties:
       access_token:
+        type: string
+    type: object
+  dto.CreateAirlineRequestDTO:
+    properties:
+      iata_code:
+        example: AA
+        type: string
+      icao_code:
+        example: AAL
+        type: string
+      name:
+        example: My Airline
+        type: string
+      starting_airport_id:
+        example: 11111111-1111-1111-1111-111111111111
         type: string
     type: object
   dto.ErrorResponse:
@@ -840,12 +842,12 @@ paths:
       - application/json
       description: Creates an airline for the authenticated user
       parameters:
-      - description: Airline details
+      - description: Airline details (owner_id taken from token)
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/airlinepb.CreateAirlineRequest'
+          $ref: '#/definitions/dto.CreateAirlineRequestDTO'
       produces:
       - application/json
       responses:

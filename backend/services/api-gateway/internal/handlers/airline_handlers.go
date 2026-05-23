@@ -5,8 +5,8 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"time"
 
+	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/config"
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/dto"
 	grpcclient "github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/grpc"
 	"github.com/404-u-team/airlinesim-mono/backend/api-gateway/internal/middleware"
@@ -17,10 +17,11 @@ import (
 
 type AirlineHandler struct {
 	airlineClient *grpcclient.AirlineClient
+	config        *config.Config
 }
 
-func NewAirlineHandler(airlineClient *grpcclient.AirlineClient) *AirlineHandler {
-	return &AirlineHandler{airlineClient: airlineClient}
+func NewAirlineHandler(airlineClient *grpcclient.AirlineClient, config *config.Config) *AirlineHandler {
+	return &AirlineHandler{airlineClient: airlineClient, config: config}
 }
 
 // CreateAirline godoc
@@ -58,7 +59,7 @@ func (h *AirlineHandler) CreateAirline(c *gin.Context) {
 		IcaoCode:          payload.IcaoCode,
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	response, err := h.airlineClient.CreateAirline(ctx, &pbPayload)
@@ -100,7 +101,7 @@ func (h *AirlineHandler) GetMyAirline(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	response, err := h.airlineClient.GetAirlineByOwnerID(ctx, &airlinepb.GetAirlineByOwnerIDRequest{OwnerId: userID.(string)})
@@ -135,7 +136,7 @@ func (h *AirlineHandler) GetAirlineByID(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	response, err := h.airlineClient.GetAirlineByID(ctx, &airlinepb.GetAirlineByIDRequest{Id: airlineID})
@@ -193,7 +194,7 @@ func (h *AirlineHandler) UpdateAirline(c *gin.Context) {
 
 	role, _ := c.Get(middleware.RoleKey)
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
 	defer cancel()
 
 	// Ensure owner or admin
