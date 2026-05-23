@@ -1979,6 +1979,12 @@ const docTemplate = `{
                 "region_b": {
                     "type": "string"
                 },
+                "base_daily_demand_ab": {
+                    "type": "number"
+                },
+                "base_daily_demand_ba": {
+                    "type": "number"
+                },
                 "tourism": {
                     "type": "number"
                 }
@@ -2175,6 +2181,12 @@ const docTemplate = `{
                 "region_b": {
                     "type": "string"
                 },
+                "base_daily_demand_ab": {
+                    "type": "number"
+                },
+                "base_daily_demand_ba": {
+                    "type": "number"
+                },
                 "tourism": {
                     "type": "number"
                 }
@@ -2316,6 +2328,12 @@ const docTemplate = `{
                 },
                 "region_b": {
                     "type": "string"
+                },
+                "base_daily_demand_ab": {
+                    "type": "number"
+                },
+                "base_daily_demand_ba": {
+                    "type": "number"
                 },
                 "tourism": {
                     "type": "number"

@@ -59,9 +59,6 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized"
                     },
-                    "409": {
-                        "description": "Aircraft tail number conflict"
-                    },
                     "500": {
                         "description": "Internal server error"
                     }
@@ -1982,6 +1979,12 @@ const docTemplate = `{
                 "region_b": {
                     "type": "string"
                 },
+                "base_daily_demand_ab": {
+                    "type": "number"
+                },
+                "base_daily_demand_ba": {
+                    "type": "number"
+                },
                 "tourism": {
                     "type": "number"
                 }
@@ -2178,6 +2181,12 @@ const docTemplate = `{
                 "region_b": {
                     "type": "string"
                 },
+                "base_daily_demand_ab": {
+                    "type": "number"
+                },
+                "base_daily_demand_ba": {
+                    "type": "number"
+                },
                 "tourism": {
                     "type": "number"
                 }
@@ -2319,6 +2328,12 @@ const docTemplate = `{
                 },
                 "region_b": {
                     "type": "string"
+                },
+                "base_daily_demand_ab": {
+                    "type": "number"
+                },
+                "base_daily_demand_ba": {
+                    "type": "number"
                 },
                 "tourism": {
                     "type": "number"

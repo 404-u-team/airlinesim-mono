@@ -7,11 +7,12 @@
 package operationspb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -954,14 +955,16 @@ func (x *DeleteRegionRequest) GetId() string {
 
 // request to create region link
 type CreateRegionLinkRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RegionA       string                 `protobuf:"bytes,1,opt,name=region_a,json=regionA,proto3" json:"region_a,omitempty"`
-	RegionB       string                 `protobuf:"bytes,2,opt,name=region_b,json=regionB,proto3" json:"region_b,omitempty"`
-	Diaspora      float64                `protobuf:"fixed64,3,opt,name=diaspora,proto3" json:"diaspora,omitempty"`
-	Business      float64                `protobuf:"fixed64,4,opt,name=business,proto3" json:"business,omitempty"`
-	Tourism       float64                `protobuf:"fixed64,5,opt,name=tourism,proto3" json:"tourism,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	RegionA           string                 `protobuf:"bytes,1,opt,name=region_a,json=regionA,proto3" json:"region_a,omitempty"`
+	RegionB           string                 `protobuf:"bytes,2,opt,name=region_b,json=regionB,proto3" json:"region_b,omitempty"`
+	Diaspora          float64                `protobuf:"fixed64,3,opt,name=diaspora,proto3" json:"diaspora,omitempty"`
+	Business          float64                `protobuf:"fixed64,4,opt,name=business,proto3" json:"business,omitempty"`
+	Tourism           float64                `protobuf:"fixed64,5,opt,name=tourism,proto3" json:"tourism,omitempty"`
+	BaseDailyDemandAb float64                `protobuf:"fixed64,6,opt,name=base_daily_demand_ab,json=baseDailyDemandAb,proto3" json:"base_daily_demand_ab,omitempty"`
+	BaseDailyDemandBa float64                `protobuf:"fixed64,7,opt,name=base_daily_demand_ba,json=baseDailyDemandBa,proto3" json:"base_daily_demand_ba,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *CreateRegionLinkRequest) Reset() {
@@ -1029,16 +1032,32 @@ func (x *CreateRegionLinkRequest) GetTourism() float64 {
 	return 0
 }
 
+func (x *CreateRegionLinkRequest) GetBaseDailyDemandAb() float64 {
+	if x != nil {
+		return x.BaseDailyDemandAb
+	}
+	return 0
+}
+
+func (x *CreateRegionLinkRequest) GetBaseDailyDemandBa() float64 {
+	if x != nil {
+		return x.BaseDailyDemandBa
+	}
+	return 0
+}
+
 type ChangeRegionLinkRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	RegionA       string                 `protobuf:"bytes,2,opt,name=region_a,json=regionA,proto3" json:"region_a,omitempty"`
-	RegionB       string                 `protobuf:"bytes,3,opt,name=region_b,json=regionB,proto3" json:"region_b,omitempty"`
-	Diaspora      float64                `protobuf:"fixed64,4,opt,name=diaspora,proto3" json:"diaspora,omitempty"`
-	Business      float64                `protobuf:"fixed64,5,opt,name=business,proto3" json:"business,omitempty"`
-	Tourism       float64                `protobuf:"fixed64,6,opt,name=tourism,proto3" json:"tourism,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	RegionA           string                 `protobuf:"bytes,2,opt,name=region_a,json=regionA,proto3" json:"region_a,omitempty"`
+	RegionB           string                 `protobuf:"bytes,3,opt,name=region_b,json=regionB,proto3" json:"region_b,omitempty"`
+	Diaspora          float64                `protobuf:"fixed64,4,opt,name=diaspora,proto3" json:"diaspora,omitempty"`
+	Business          float64                `protobuf:"fixed64,5,opt,name=business,proto3" json:"business,omitempty"`
+	Tourism           float64                `protobuf:"fixed64,6,opt,name=tourism,proto3" json:"tourism,omitempty"`
+	BaseDailyDemandAb float64                `protobuf:"fixed64,7,opt,name=base_daily_demand_ab,json=baseDailyDemandAb,proto3" json:"base_daily_demand_ab,omitempty"`
+	BaseDailyDemandBa float64                `protobuf:"fixed64,8,opt,name=base_daily_demand_ba,json=baseDailyDemandBa,proto3" json:"base_daily_demand_ba,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ChangeRegionLinkRequest) Reset() {
@@ -1113,6 +1132,20 @@ func (x *ChangeRegionLinkRequest) GetTourism() float64 {
 	return 0
 }
 
+func (x *ChangeRegionLinkRequest) GetBaseDailyDemandAb() float64 {
+	if x != nil {
+		return x.BaseDailyDemandAb
+	}
+	return 0
+}
+
+func (x *ChangeRegionLinkRequest) GetBaseDailyDemandBa() float64 {
+	if x != nil {
+		return x.BaseDailyDemandBa
+	}
+	return 0
+}
+
 type ListRegionLinksRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -1150,15 +1183,17 @@ func (*ListRegionLinksRequest) Descriptor() ([]byte, []int) {
 }
 
 type RegionLink struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	RegionA       string                 `protobuf:"bytes,2,opt,name=region_a,json=regionA,proto3" json:"region_a,omitempty"`
-	RegionB       string                 `protobuf:"bytes,3,opt,name=region_b,json=regionB,proto3" json:"region_b,omitempty"`
-	Diaspora      float64                `protobuf:"fixed64,4,opt,name=diaspora,proto3" json:"diaspora,omitempty"`
-	Business      float64                `protobuf:"fixed64,5,opt,name=business,proto3" json:"business,omitempty"`
-	Tourism       float64                `protobuf:"fixed64,6,opt,name=tourism,proto3" json:"tourism,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	RegionA           string                 `protobuf:"bytes,2,opt,name=region_a,json=regionA,proto3" json:"region_a,omitempty"`
+	RegionB           string                 `protobuf:"bytes,3,opt,name=region_b,json=regionB,proto3" json:"region_b,omitempty"`
+	Diaspora          float64                `protobuf:"fixed64,4,opt,name=diaspora,proto3" json:"diaspora,omitempty"`
+	Business          float64                `protobuf:"fixed64,5,opt,name=business,proto3" json:"business,omitempty"`
+	Tourism           float64                `protobuf:"fixed64,6,opt,name=tourism,proto3" json:"tourism,omitempty"`
+	BaseDailyDemandAb float64                `protobuf:"fixed64,7,opt,name=base_daily_demand_ab,json=baseDailyDemandAb,proto3" json:"base_daily_demand_ab,omitempty"`
+	BaseDailyDemandBa float64                `protobuf:"fixed64,8,opt,name=base_daily_demand_ba,json=baseDailyDemandBa,proto3" json:"base_daily_demand_ba,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *RegionLink) Reset() {
@@ -1229,6 +1264,20 @@ func (x *RegionLink) GetBusiness() float64 {
 func (x *RegionLink) GetTourism() float64 {
 	if x != nil {
 		return x.Tourism
+	}
+	return 0
+}
+
+func (x *RegionLink) GetBaseDailyDemandAb() float64 {
+	if x != nil {
+		return x.BaseDailyDemandAb
+	}
+	return 0
+}
+
+func (x *RegionLink) GetBaseDailyDemandBa() float64 {
+	if x != nil {
+		return x.BaseDailyDemandBa
 	}
 	return 0
 }
