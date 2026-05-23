@@ -1,1561 +1,1552 @@
 definitions:
-    airlinepb.AirlineResponse:
-        properties:
-            balance:
-                type: number
-            created_at:
-                type: string
-            credit_rating:
-                type: integer
-            equity_cached:
-                type: number
-            equity_cached_at:
-                type: string
-            iata_code:
-                type: string
-            icao_code:
-                type: string
-            id:
-                type: string
-            is_bankrupt:
-                type: boolean
-            is_public:
-                type: boolean
-            name:
-                type: string
-            owner_id:
-                type: string
-            reputation:
-                type: integer
-            safety_rating:
-                type: integer
-            starting_airport_id:
-                type: string
-        type: object
-    airlinepb.CreateAirlineResponse:
-        properties:
-            balance:
-                type: number
-            id:
-                type: string
-        type: object
-    dto.AccessTokenResponse:
-        properties:
-            access_token:
-                type: string
-        type: object
-    dto.CreateAirlineRequestDTO:
-        properties:
-            iata_code:
-                example: AA
-                type: string
-            icao_code:
-                example: AAL
-                type: string
-            name:
-                example: My Airline
-                type: string
-            starting_airport_id:
-                example: 11111111-1111-1111-1111-111111111111
-                type: string
-        type: object
-    dto.ErrorResponse:
-        properties:
-            error:
-                type: integer
-        type: object
-    dto.IDResponse:
-        properties:
-            id:
-                type: string
-        type: object
-    dto.LoginRequest:
-        properties:
-            login:
-                maxLength: 50
-                minLength: 3
-                type: string
-            password:
-                maxLength: 72
-                minLength: 8
-                type: string
-        required:
-            - login
-            - password
-        type: object
-    dto.RegisterRequest:
-        properties:
-            email:
-                maxLength: 255
-                type: string
-            nickname:
-                maxLength: 50
-                minLength: 3
-                type: string
-            password:
-                maxLength: 72
-                minLength: 8
-                type: string
-        required:
-            - email
-            - nickname
-            - password
-        type: object
-    fleetpb.Aircraft:
-        properties:
-            base_airport_id:
-                type: string
-            current_maintenance_points:
-                type: number
-            current_owner_id:
-                type: string
-            fh_since_last_d_check:
-                type: number
-            id:
-                type: string
-            in_service:
-                type: boolean
-            manufactured_at:
-                type: string
-            max_maintenance_points_cached:
-                type: number
-            status:
-                type: string
-            tail_number:
-                type: string
-            total_cycles:
-                type: number
-            total_flight_hours:
-                type: number
-            type_id:
-                type: string
-        type: object
-    fleetpb.AircraftType:
-        properties:
-            base_maintenance_points:
-                type: number
-            base_turnaround_points:
-                type: number
-            characteristics:
-                type: string
-            cruising_speed_kph:
-                type: number
-            d_check_interval_fh:
-                type: number
-            d_check_interval_years:
-                type: number
-            d_check_overdue_multiplier:
-                type: number
-            fuel_consumption_per_hour:
-                type: number
-            iata_code:
-                type: string
-            icao_code:
-                type: string
-            id:
-                type: string
-            image_upload_id:
-                type: string
-            maint_cost_per_flight_hour:
-                type: number
-            maint_cost_per_landing:
-                type: number
-            maint_cost_per_takeoff:
-                type: number
-            manufacturer_id:
-                type: string
-            max_planned_seat_capacity:
-                type: number
-            max_range_km:
-                type: number
-            min_runway_length_m:
-                type: number
-            model_name:
-                type: string
-            mtow_kg:
-                type: number
-            price_per_unit:
-                type: number
-            production_points_price:
-                type: number
-        type: object
-    fleetpb.CreateAircraftRequest:
-        properties:
-            aircraft_type_id:
-                type: string
-            base_airport_id:
-                type: string
-            current_owner_id:
-                type: string
-            tail_number:
-                type: string
-        type: object
-    fleetpb.CreateAircraftResponse:
-        properties:
-            id:
-                type: string
-        type: object
-    fleetpb.CreateAircraftTypeRequest:
-        properties:
-            base_maintenance_points:
-                type: number
-            base_turnaround_points:
-                type: number
-            characteristics:
-                type: string
-            cruising_speed_kph:
-                type: number
-            d_check_interval_fh:
-                type: number
-            d_check_interval_years:
-                type: number
-            d_check_overdue_multiplier:
-                type: number
-            fuel_consumption_per_hour:
-                type: number
-            iata_code:
-                type: string
-            icao_code:
-                type: string
-            image_upload_id:
-                type: string
-            maint_cost_per_flight_hour:
-                type: number
-            maint_cost_per_landing:
-                type: number
-            maint_cost_per_takeoff:
-                type: number
-            manufacturer_id:
-                type: string
-            max_planned_seat_capacity:
-                type: number
-            max_range_km:
-                type: number
-            min_runway_length_m:
-                type: number
-            model_name:
-                type: string
-            mtow_kg:
-                type: number
-            price_per_unit:
-                type: number
-            production_points_price:
-                type: number
-        type: object
-    fleetpb.ListAircraftTypesResponse:
-        properties:
-            items:
-                items:
-                    $ref: "#/definitions/fleetpb.AircraftType"
-                type: array
-        type: object
-    fleetpb.ListAircraftsResponse:
-        properties:
-            items:
-                items:
-                    $ref: "#/definitions/fleetpb.Aircraft"
-                type: array
-        type: object
-    operationspb.Airport:
-        properties:
-            continent:
-                type: string
-            country_id:
-                type: string
-            elevation_ft:
-                type: number
-            fuel_price_multiplier:
-                type: number
-            gate_fee:
-                type: number
-            geog:
-                type: string
-            geom:
-                type: string
-            home_link:
-                type: string
-            iata_code:
-                type: string
-            icao_code:
-                type: string
-            id:
-                type: string
-            intl_name:
-                type: string
-            local_name:
-                type: string
-            maintenance_point_price:
-                type: number
-            max_runway_length_m:
-                type: number
-            max_runway_uses_per_day:
-                type: number
-            municipality:
-                type: string
-            region_id:
-                type: string
-            runway_fee:
-                type: number
-            stand_fee:
-                type: number
-            timezone:
-                type: string
-            turnaround_point_price:
-                type: number
-            wikipedia_link:
-                type: string
-            works_at_night:
-                type: boolean
-        type: object
-    operationspb.ChangeAirportRequest:
-        properties:
-            continent:
-                type: string
-            country_id:
-                type: string
-            elevation_ft:
-                type: number
-            fuel_price_multiplier:
-                type: number
-            gate_fee:
-                type: number
-            geog:
-                type: string
-            geom:
-                type: string
-            home_link:
-                type: string
-            iata_code:
-                type: string
-            icao_code:
-                type: string
-            id:
-                type: string
-            intl_name:
-                type: string
-            local_name:
-                type: string
-            maintenance_point_price:
-                type: number
-            max_runway_length_m:
-                type: number
-            max_runway_uses_per_day:
-                type: number
-            municipality:
-                type: string
-            region_id:
-                type: string
-            runway_fee:
-                type: number
-            stand_fee:
-                type: number
-            timezone:
-                type: string
-            turnaround_point_price:
-                type: number
-            wikipedia_link:
-                type: string
-            works_at_night:
-                type: boolean
-        type: object
-    operationspb.ChangeCountryRequest:
-        properties:
-            aircraft_tail_code:
-                type: string
-            corp_tax_rate:
-                type: number
-            flythrough_permission_price:
-                type: number
-            id:
-                type: string
-            intl_name:
-                type: string
-            iso:
-                type: string
-            land_permission_price:
-                type: number
-            local_name:
-                type: string
-            vat_rate:
-                type: number
-            wikipedia_link:
-                type: string
-        type: object
-    operationspb.ChangeRegionLinkRequest:
-        properties:
-            business:
-                type: number
-            diaspora:
-                type: number
-            id:
-                type: string
-            region_a:
-                type: string
-            region_b:
-                type: string
-            base_daily_demand_ab:
-                type: number
-            base_daily_demand_ba:
-                type: number
-            tourism:
-                type: number
-        type: object
-    operationspb.ChangeRegionRequest:
-        properties:
-            business_score:
-                type: number
-            country_id:
-                type: string
-            gdp_per_capita:
-                type: number
-            id:
-                type: string
-            intl_name:
-                type: string
-            local_code:
-                type: string
-            local_name:
-                type: string
-            population:
-                type: number
-            tourism_score:
-                type: number
-            wikipedia_link:
-                type: string
-        type: object
-    operationspb.Country:
-        properties:
-            aircraft_tail_code:
-                type: string
-            corp_tax_rate:
-                type: number
-            flythrough_permission_price:
-                type: number
-            id:
-                type: string
-            intl_name:
-                type: string
-            iso:
-                type: string
-            land_permission_price:
-                type: number
-            local_name:
-                type: string
-            vat_rate:
-                type: number
-            wikipedia_link:
-                type: string
-        type: object
-    operationspb.CreateAirportRequest:
-        properties:
-            continent:
-                type: string
-            country_id:
-                type: string
-            elevation_ft:
-                type: number
-            fuel_price_multiplier:
-                type: number
-            gate_fee:
-                type: number
-            geog:
-                type: string
-            geom:
-                type: string
-            home_link:
-                type: string
-            iata_code:
-                type: string
-            icao_code:
-                type: string
-            intl_name:
-                type: string
-            local_name:
-                type: string
-            maintenance_point_price:
-                type: number
-            max_runway_length_m:
-                type: number
-            max_runway_uses_per_day:
-                type: number
-            municipality:
-                type: string
-            region_id:
-                type: string
-            runway_fee:
-                type: number
-            stand_fee:
-                type: number
-            timezone:
-                type: string
-            turnaround_point_price:
-                type: number
-            wikipedia_link:
-                type: string
-            works_at_night:
-                type: boolean
-        type: object
-    operationspb.CreateCountryRequest:
-        properties:
-            aircraft_tail_code:
-                type: string
-            corp_tax_rate:
-                type: number
-            flythrough_permission_price:
-                type: number
-            intl_name:
-                type: string
-            iso:
-                type: string
-            land_permission_price:
-                type: number
-            local_name:
-                type: string
-            vat_rate:
-                type: number
-            wikipedia_link:
-                type: string
-        type: object
-    operationspb.CreateRegionLinkRequest:
-        properties:
-            business:
-                type: number
-            diaspora:
-                type: number
-            region_a:
-                type: string
-            region_b:
-                type: string
-            base_daily_demand_ab:
-                type: number
-            base_daily_demand_ba:
-                type: number
-            tourism:
-                type: number
-        type: object
-    operationspb.CreateRegionRequest:
-        properties:
-            business_score:
-                type: number
-            country_id:
-                type: string
-            gdp_per_capita:
-                type: number
-            intl_name:
-                type: string
-            local_code:
-                type: string
-            local_name:
-                type: string
-            population:
-                type: number
-            tourism_score:
-                type: number
-            wikipedia_link:
-                type: string
-        type: object
-    operationspb.IDResponse:
-        properties:
-            id:
-                type: string
-        type: object
-    operationspb.ListAirportsResponse:
-        properties:
-            airports:
-                items:
-                    $ref: "#/definitions/operationspb.Airport"
-                type: array
-        type: object
-    operationspb.ListCountriesResponse:
-        properties:
-            countries:
-                items:
-                    $ref: "#/definitions/operationspb.Country"
-                type: array
-        type: object
-    operationspb.ListRegionLinksResponse:
-        properties:
-            region_links:
-                items:
-                    $ref: "#/definitions/operationspb.RegionLink"
-                type: array
-        type: object
-    operationspb.ListRegionsResponse:
-        properties:
-            regions:
-                items:
-                    $ref: "#/definitions/operationspb.Region"
-                type: array
-        type: object
-    operationspb.Region:
-        properties:
-            business_score:
-                type: number
-            country_id:
-                type: string
-            gdp_per_capita:
-                type: number
-            id:
-                type: string
-            intl_name:
-                type: string
-            local_code:
-                type: string
-            local_name:
-                type: string
-            population:
-                type: number
-            tourism_score:
-                type: number
-            wikipedia_link:
-                type: string
-        type: object
-    operationspb.RegionLink:
-        properties:
-            business:
-                type: number
-            diaspora:
-                type: number
-            id:
-                type: string
-            region_a:
-                type: string
-            region_b:
-                type: string
-            base_daily_demand_ab:
-                type: number
-            base_daily_demand_ba:
-                type: number
-            tourism:
-                type: number
-        type: object
+  airlinepb.AirlineResponse:
+    properties:
+      balance:
+        type: number
+      created_at:
+        type: string
+      credit_rating:
+        type: integer
+      equity_cached:
+        type: number
+      equity_cached_at:
+        type: string
+      iata_code:
+        type: string
+      icao_code:
+        type: string
+      id:
+        type: string
+      is_bankrupt:
+        type: boolean
+      is_public:
+        type: boolean
+      name:
+        type: string
+      owner_id:
+        type: string
+      reputation:
+        type: integer
+      safety_rating:
+        type: integer
+      starting_airport_id:
+        type: string
+    type: object
+  airlinepb.CreateAirlineResponse:
+    properties:
+      balance:
+        type: number
+      id:
+        type: string
+    type: object
+  dto.AccessTokenResponse:
+    properties:
+      access_token:
+        type: string
+    type: object
+  dto.CreateAirlineRequestDTO:
+    properties:
+      iata_code:
+        example: AA
+        type: string
+      icao_code:
+        example: AAL
+        type: string
+      name:
+        example: My Airline
+        type: string
+      starting_airport_id:
+        example: 11111111-1111-1111-1111-111111111111
+        type: string
+    type: object
+  dto.ErrorResponse:
+    properties:
+      error:
+        type: integer
+    type: object
+  dto.IDResponse:
+    properties:
+      id:
+        type: string
+    type: object
+  dto.LoginRequest:
+    properties:
+      login:
+        maxLength: 50
+        minLength: 3
+        type: string
+      password:
+        maxLength: 72
+        minLength: 8
+        type: string
+    required:
+    - login
+    - password
+    type: object
+  dto.RegisterRequest:
+    properties:
+      email:
+        maxLength: 255
+        type: string
+      nickname:
+        maxLength: 50
+        minLength: 3
+        type: string
+      password:
+        maxLength: 72
+        minLength: 8
+        type: string
+    required:
+    - email
+    - nickname
+    - password
+    type: object
+  fleetpb.Aircraft:
+    properties:
+      base_airport_id:
+        type: string
+      current_maintenance_points:
+        type: number
+      current_owner_id:
+        type: string
+      fh_since_last_d_check:
+        type: number
+      id:
+        type: string
+      in_service:
+        type: boolean
+      manufactured_at:
+        type: string
+      max_maintenance_points_cached:
+        type: number
+      status:
+        type: string
+      tail_number:
+        type: string
+      total_cycles:
+        type: number
+      total_flight_hours:
+        type: number
+      type_id:
+        type: string
+    type: object
+  fleetpb.AircraftType:
+    properties:
+      base_maintenance_points:
+        type: number
+      base_turnaround_points:
+        type: number
+      characteristics:
+        type: string
+      cruising_speed_kph:
+        type: number
+      d_check_interval_fh:
+        type: number
+      d_check_interval_years:
+        type: number
+      d_check_overdue_multiplier:
+        type: number
+      fuel_consumption_per_hour:
+        type: number
+      iata_code:
+        type: string
+      icao_code:
+        type: string
+      id:
+        type: string
+      image_upload_id:
+        type: string
+      maint_cost_per_flight_hour:
+        type: number
+      maint_cost_per_landing:
+        type: number
+      maint_cost_per_takeoff:
+        type: number
+      manufacturer_id:
+        type: string
+      max_planned_seat_capacity:
+        type: number
+      max_range_km:
+        type: number
+      min_runway_length_m:
+        type: number
+      model_name:
+        type: string
+      mtow_kg:
+        type: number
+      price_per_unit:
+        type: number
+      production_points_price:
+        type: number
+    type: object
+  fleetpb.CreateAircraftRequest:
+    properties:
+      aircraft_type_id:
+        type: string
+      base_airport_id:
+        type: string
+      current_owner_id:
+        type: string
+      tail_number:
+        type: string
+    type: object
+  fleetpb.CreateAircraftResponse:
+    properties:
+      id:
+        type: string
+    type: object
+  fleetpb.CreateAircraftTypeRequest:
+    properties:
+      base_maintenance_points:
+        type: number
+      base_turnaround_points:
+        type: number
+      characteristics:
+        type: string
+      cruising_speed_kph:
+        type: number
+      d_check_interval_fh:
+        type: number
+      d_check_interval_years:
+        type: number
+      d_check_overdue_multiplier:
+        type: number
+      fuel_consumption_per_hour:
+        type: number
+      iata_code:
+        type: string
+      icao_code:
+        type: string
+      image_upload_id:
+        type: string
+      maint_cost_per_flight_hour:
+        type: number
+      maint_cost_per_landing:
+        type: number
+      maint_cost_per_takeoff:
+        type: number
+      manufacturer_id:
+        type: string
+      max_planned_seat_capacity:
+        type: number
+      max_range_km:
+        type: number
+      min_runway_length_m:
+        type: number
+      model_name:
+        type: string
+      mtow_kg:
+        type: number
+      price_per_unit:
+        type: number
+      production_points_price:
+        type: number
+    type: object
+  fleetpb.ListAircraftTypesResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/fleetpb.AircraftType'
+        type: array
+    type: object
+  fleetpb.ListAircraftsResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/fleetpb.Aircraft'
+        type: array
+    type: object
+  operationspb.Airport:
+    properties:
+      continent:
+        type: string
+      country_id:
+        type: string
+      elevation_ft:
+        type: number
+      fuel_price_multiplier:
+        type: number
+      gate_fee:
+        type: number
+      geog:
+        type: string
+      geom:
+        type: string
+      home_link:
+        type: string
+      iata_code:
+        type: string
+      icao_code:
+        type: string
+      id:
+        type: string
+      intl_name:
+        type: string
+      local_name:
+        type: string
+      maintenance_point_price:
+        type: number
+      max_runway_length_m:
+        type: number
+      max_runway_uses_per_day:
+        type: number
+      municipality:
+        type: string
+      region_id:
+        type: string
+      runway_fee:
+        type: number
+      stand_fee:
+        type: number
+      timezone:
+        type: string
+      turnaround_point_price:
+        type: number
+      wikipedia_link:
+        type: string
+      works_at_night:
+        type: boolean
+    type: object
+  operationspb.ChangeAirportRequest:
+    properties:
+      continent:
+        type: string
+      country_id:
+        type: string
+      elevation_ft:
+        type: number
+      fuel_price_multiplier:
+        type: number
+      gate_fee:
+        type: number
+      geog:
+        type: string
+      geom:
+        type: string
+      home_link:
+        type: string
+      iata_code:
+        type: string
+      icao_code:
+        type: string
+      id:
+        type: string
+      intl_name:
+        type: string
+      local_name:
+        type: string
+      maintenance_point_price:
+        type: number
+      max_runway_length_m:
+        type: number
+      max_runway_uses_per_day:
+        type: number
+      municipality:
+        type: string
+      region_id:
+        type: string
+      runway_fee:
+        type: number
+      stand_fee:
+        type: number
+      timezone:
+        type: string
+      turnaround_point_price:
+        type: number
+      wikipedia_link:
+        type: string
+      works_at_night:
+        type: boolean
+    type: object
+  operationspb.ChangeCountryRequest:
+    properties:
+      aircraft_tail_code:
+        type: string
+      corp_tax_rate:
+        type: number
+      flythrough_permission_price:
+        type: number
+      id:
+        type: string
+      intl_name:
+        type: string
+      iso:
+        type: string
+      land_permission_price:
+        type: number
+      local_name:
+        type: string
+      vat_rate:
+        type: number
+      wikipedia_link:
+        type: string
+    type: object
+  operationspb.ChangeRegionLinkRequest:
+    properties:
+      base_daily_demand_ab:
+        type: number
+      base_daily_demand_ba:
+        type: number
+      business:
+        type: number
+      diaspora:
+        type: number
+      id:
+        type: string
+      region_a:
+        type: string
+      region_b:
+        type: string
+      tourism:
+        type: number
+    type: object
+  operationspb.ChangeRegionRequest:
+    properties:
+      business_score:
+        type: number
+      country_id:
+        type: string
+      gdp_per_capita:
+        type: number
+      id:
+        type: string
+      intl_name:
+        type: string
+      local_code:
+        type: string
+      local_name:
+        type: string
+      population:
+        type: number
+      tourism_score:
+        type: number
+      wikipedia_link:
+        type: string
+    type: object
+  operationspb.Country:
+    properties:
+      aircraft_tail_code:
+        type: string
+      corp_tax_rate:
+        type: number
+      flythrough_permission_price:
+        type: number
+      id:
+        type: string
+      intl_name:
+        type: string
+      iso:
+        type: string
+      land_permission_price:
+        type: number
+      local_name:
+        type: string
+      vat_rate:
+        type: number
+      wikipedia_link:
+        type: string
+    type: object
+  operationspb.CreateAirportRequest:
+    properties:
+      continent:
+        type: string
+      country_id:
+        type: string
+      elevation_ft:
+        type: number
+      fuel_price_multiplier:
+        type: number
+      gate_fee:
+        type: number
+      geog:
+        type: string
+      geom:
+        type: string
+      home_link:
+        type: string
+      iata_code:
+        type: string
+      icao_code:
+        type: string
+      intl_name:
+        type: string
+      local_name:
+        type: string
+      maintenance_point_price:
+        type: number
+      max_runway_length_m:
+        type: number
+      max_runway_uses_per_day:
+        type: number
+      municipality:
+        type: string
+      region_id:
+        type: string
+      runway_fee:
+        type: number
+      stand_fee:
+        type: number
+      timezone:
+        type: string
+      turnaround_point_price:
+        type: number
+      wikipedia_link:
+        type: string
+      works_at_night:
+        type: boolean
+    type: object
+  operationspb.CreateCountryRequest:
+    properties:
+      aircraft_tail_code:
+        type: string
+      corp_tax_rate:
+        type: number
+      flythrough_permission_price:
+        type: number
+      intl_name:
+        type: string
+      iso:
+        type: string
+      land_permission_price:
+        type: number
+      local_name:
+        type: string
+      vat_rate:
+        type: number
+      wikipedia_link:
+        type: string
+    type: object
+  operationspb.CreateRegionLinkRequest:
+    properties:
+      base_daily_demand_ab:
+        type: number
+      base_daily_demand_ba:
+        type: number
+      business:
+        type: number
+      diaspora:
+        type: number
+      region_a:
+        type: string
+      region_b:
+        type: string
+      tourism:
+        type: number
+    type: object
+  operationspb.CreateRegionRequest:
+    properties:
+      business_score:
+        type: number
+      country_id:
+        type: string
+      gdp_per_capita:
+        type: number
+      intl_name:
+        type: string
+      local_code:
+        type: string
+      local_name:
+        type: string
+      population:
+        type: number
+      tourism_score:
+        type: number
+      wikipedia_link:
+        type: string
+    type: object
+  operationspb.IDResponse:
+    properties:
+      id:
+        type: string
+    type: object
+  operationspb.ListAirportsResponse:
+    properties:
+      airports:
+        items:
+          $ref: '#/definitions/operationspb.Airport'
+        type: array
+    type: object
+  operationspb.ListCountriesResponse:
+    properties:
+      countries:
+        items:
+          $ref: '#/definitions/operationspb.Country'
+        type: array
+    type: object
+  operationspb.ListRegionLinksResponse:
+    properties:
+      region_links:
+        items:
+          $ref: '#/definitions/operationspb.RegionLink'
+        type: array
+    type: object
+  operationspb.ListRegionsResponse:
+    properties:
+      regions:
+        items:
+          $ref: '#/definitions/operationspb.Region'
+        type: array
+    type: object
+  operationspb.Region:
+    properties:
+      business_score:
+        type: number
+      country_id:
+        type: string
+      gdp_per_capita:
+        type: number
+      id:
+        type: string
+      intl_name:
+        type: string
+      local_code:
+        type: string
+      local_name:
+        type: string
+      population:
+        type: number
+      tourism_score:
+        type: number
+      wikipedia_link:
+        type: string
+    type: object
+  operationspb.RegionLink:
+    properties:
+      base_daily_demand_ab:
+        type: number
+      base_daily_demand_ba:
+        type: number
+      business:
+        type: number
+      diaspora:
+        type: number
+      id:
+        type: string
+      region_a:
+        type: string
+      region_b:
+        type: string
+      tourism:
+        type: number
+    type: object
 host: api.master.stand.airlinesim.ms0ur.dev
 info:
-    contact:
-        email: lboris201@yandex.ru
-        name: Jeno7u
-        url: https://github.com/Jeno7u
-    title: AirlineSim API
-    version: "1.0"
+  contact:
+    email: lboris201@yandex.ru
+    name: Jeno7u
+    url: https://github.com/Jeno7u
+  title: AirlineSim API
+  version: "1.0"
 paths:
-    /aircraft:
-        post:
-            consumes:
-                - application/json
-            description:
-                Purchases a new aircraft from a selected aircraft type for the
-                authenticated user
-            parameters:
-                - description: Aircraft details
-                  in: body
-                  name: request
-                  required: true
-                  schema:
-                      $ref: "#/definitions/fleetpb.CreateAircraftRequest"
-            produces:
-                - application/json
-            responses:
-                "201":
-                    description: Aircraft purchased successfully, id returned
-                    schema:
-                        $ref: "#/definitions/fleetpb.CreateAircraftResponse"
-                "400":
-                    description: 1 - request validation error, 2 - aircraft type not found
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "500":
-                    description: Internal server error
-            summary: Purchase aircraft
-            tags:
-                - Aircraft
-    /aircraft-types:
-        get:
-            consumes:
-                - application/json
-            description: Returns a list of available aircraft types
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: OK
-                    schema:
-                        $ref: "#/definitions/fleetpb.ListAircraftTypesResponse"
-                "500":
-                    description: Internal Server Error
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-            summary: List aircraft types
-            tags:
-                - Aircraft
-        post:
-            consumes:
-                - application/json
-            description: Create a new aircraft type (admin only)
-            parameters:
-                - description: Aircraft type details
-                  in: body
-                  name: request
-                  required: true
-                  schema:
-                      $ref: "#/definitions/fleetpb.CreateAircraftTypeRequest"
-            produces:
-                - application/json
-            responses:
-                "201":
-                    description: Created
-                    schema:
-                        $ref: "#/definitions/fleetpb.AircraftType"
-                "400":
-                    description: Bad Request
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "500":
-                    description: Internal Server Error
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-            summary: Create aircraft type
-            tags:
-                - Aircraft
-    /aircraft-types/{id}:
-        get:
-            consumes:
-                - application/json
-            description: Returns details for a single aircraft type
-            parameters:
-                - description: Aircraft type id
-                  in: path
-                  name: id
-                  required: true
-                  type: string
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: OK
-                    schema:
-                        $ref: "#/definitions/fleetpb.AircraftType"
-                "400":
-                    description: Bad Request
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "404":
-                    description: Not Found
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "500":
-                    description: Internal Server Error
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-            summary: Get aircraft type
-            tags:
-                - Aircraft
-    /aircraft/{id}:
-        get:
-            consumes:
-                - application/json
-            description: Returns details for a single aircraft owned by the airline
-            parameters:
-                - description: Aircraft id
-                  in: path
-                  name: id
-                  required: true
-                  type: string
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: OK
-                    schema:
-                        $ref: "#/definitions/fleetpb.Aircraft"
-                "400":
-                    description: Bad Request
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "404":
-                    description: Not Found
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "500":
-                    description: Internal Server Error
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-            summary: Get aircraft
-            tags:
-                - Aircraft
-        patch:
-            consumes:
-                - application/json
-            description: Update aircraft tail number (owner only)
-            parameters:
-                - description: Aircraft id
-                  in: path
-                  name: id
-                  required: true
-                  type: string
-                - description: '{\'
-                  in: body
-                  name: request
-                  required: true
-                  schema:
-                      type: object
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: OK
-                    schema:
-                        $ref: "#/definitions/fleetpb.Aircraft"
-                "400":
-                    description: Bad Request
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "409":
-                    description: Tail number conflict
-                "500":
-                    description: Internal Server Error
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-            summary: Update aircraft tail number
-            tags:
-                - Aircraft
-    /aircrafts:
-        get:
-            consumes:
-                - application/json
-            description: Returns list of aircrafts owned by the authenticated airline
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: OK
-                    schema:
-                        $ref: "#/definitions/fleetpb.ListAircraftsResponse"
-                "401":
-                    description: Unauthorized
-                "500":
-                    description: Internal Server Error
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-            summary: List aircrafts for airline
-            tags:
-                - Aircraft
-    /airline:
-        post:
-            consumes:
-                - application/json
-            description: Creates an airline for the authenticated user
-            parameters:
-                - description: Airline details (owner_id taken from token)
-                  in: body
-                  name: request
-                  required: true
-                  schema:
-                      $ref: "#/definitions/dto.CreateAirlineRequestDTO"
-            produces:
-                - application/json
-            responses:
-                "201":
-                    description: Airline created successfully
-                    schema:
-                        $ref: "#/definitions/airlinepb.CreateAirlineResponse"
-                "400":
-                    description:
-                        1 - request validation error, 2 - airport not found, 3 - user
-                        not found
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "409":
-                    description: Airline conflict
-                "500":
-                    description: Internal server error
-            summary: Create airline
-            tags:
-                - Airline
-    /airline/{id}:
-        get:
-            description: Returns full airline information by airline id
-            parameters:
-                - description: Airline ID
-                  in: path
-                  name: id
-                  required: true
-                  type: string
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: Airline information
-                    schema:
-                        $ref: "#/definitions/airlinepb.AirlineResponse"
-                "401":
-                    description: Unauthorized
-                "404":
-                    description: Airline not found
-                "500":
-                    description: Internal server error
-            summary: Get airline by id
-            tags:
-                - Airline
-        patch:
-            consumes:
-                - application/json
-            description:
-                Update airline name and codes (iata, icao). Only owner or admin
-                allowed.
-            parameters:
-                - description: Airline ID
-                  in: path
-                  name: id
-                  required: true
-                  type: string
-                - description: "Fields to update: name, iata_code, icao_code"
-                  in: body
-                  name: request
-                  required: true
-                  schema:
-                      type: object
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: OK
-                    schema:
-                        $ref: "#/definitions/airlinepb.AirlineResponse"
-                "400":
-                    description: Bad Request
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "404":
-                    description: Not Found
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "409":
-                    description: Conflict
-                "500":
-                    description: Internal Server Error
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-            summary: Update airline
-            tags:
-                - Airline
-    /airline/me:
-        get:
-            description: Returns full airline information for the authenticated user
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: Airline information
-                    schema:
-                        $ref: "#/definitions/airlinepb.AirlineResponse"
-                "401":
-                    description: Unauthorized
-                "404":
-                    description: Airline not found
-                "500":
-                    description: Internal server error
-            summary: Get my airline
-            tags:
-                - Airline
-    /airport:
-        post:
-            consumes:
-                - application/json
-            description: Returns
-            parameters:
-                - description: Airport details
-                  in: body
-                  name: request
-                  required: true
-                  schema:
-                      $ref: "#/definitions/operationspb.CreateAirportRequest"
-            produces:
-                - application/json
-            responses:
-                "201":
-                    description: Airport created successfully, id returned
-                    schema:
-                        $ref: "#/definitions/operationspb.IDResponse"
-                "400":
-                    description:
-                        1 - request validation error, 2 - country with such country_id
-                        dont exists, 3 - region with such region_id dont exists
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "409":
-                    description: Airport with such ICAO/IATA already exists
-                "500":
-                    description: Internal server error
-            summary: Create Airport (admin only)
-            tags:
-                - Airport
-    /airport/{id}:
-        delete:
-            description: Returns deleted airport id
-            parameters:
-                - description: Airport ID
-                  in: path
-                  name: id
-                  required: true
-                  type: string
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: Airport deleted
-                    schema:
-                        $ref: "#/definitions/operationspb.IDResponse"
-                "400":
-                    description: 1 - invalid id
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "404":
-                    description: Airport not found
-                "500":
-                    description: Internal server error
-            summary: Delete airport (admin only)
-            tags:
-                - Airport
-        put:
-            consumes:
-                - application/json
-            description: Returns patched airport id
-            parameters:
-                - description: Airport ID
-                  in: path
-                  name: id
-                  required: true
-                  type: string
-                - description: Airport details
-                  in: body
-                  name: request
-                  required: true
-                  schema:
-                      $ref: "#/definitions/operationspb.ChangeAirportRequest"
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: Airport patched successfully
-                    schema:
-                        $ref: "#/definitions/operationspb.IDResponse"
-                "400":
-                    description:
-                        1 - request validation error, 2 - country not found, 3 - region
-                        not found
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "404":
-                    description: Airport not found
-                "409":
-                    description: Airport conflict
-                "500":
-                    description: Internal server error
-            summary: Change airport (admin only)
-            tags:
-                - Airport
-    /airports:
-        get:
-            description: Returns all airports
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: Airports list
-                    schema:
-                        $ref: "#/definitions/operationspb.ListAirportsResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "500":
-                    description: Internal server error
-            summary: List airports
-            tags:
-                - Airport
-    /auth/login:
-        post:
-            consumes:
-                - application/json
-            description: Returns access token and sets refresh token into cookie
-            parameters:
-                - description: User login details
-                  in: body
-                  name: request
-                  required: true
-                  schema:
-                      $ref: "#/definitions/dto.LoginRequest"
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: User authenticated
-                    schema:
-                        $ref: "#/definitions/dto.AccessTokenResponse"
-                "400":
-                    description: 1 - request validation error, 2 - user not found
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "500":
-                    description: Internal server error
-            summary: Login user
-            tags:
-                - Auth
-    /auth/refresh:
-        post:
-            description:
-                Returns access token and sets refresh token into cookie. Doing
-                that by validating refresh token
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: User authenticated
-                    schema:
-                        $ref: "#/definitions/dto.AccessTokenResponse"
-                "401":
-                    description: Refresh token or user is not valid
-                "500":
-                    description: Internal server error
-            summary: Refreshes access and refresh token
-            tags:
-                - Auth
-    /auth/register:
-        post:
-            consumes:
-                - application/json
-            description: Returns access token and sets refresh token into cookie
-            parameters:
-                - description: User registration details
-                  in: body
-                  name: request
-                  required: true
-                  schema:
-                      $ref: "#/definitions/dto.RegisterRequest"
-            produces:
-                - application/json
-            responses:
-                "201":
-                    description: User created and authenticated
-                    schema:
-                        $ref: "#/definitions/dto.AccessTokenResponse"
-                "400":
-                    description:
-                        1 - request validation error, 2 - email exists, 3 - nickname
-                        exists
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "500":
-                    description: Internal server error
-            summary: Register user
-            tags:
-                - Auth
-    /countries:
-        get:
-            description: Returns all countries
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: Countries list
-                    schema:
-                        $ref: "#/definitions/operationspb.ListCountriesResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "500":
-                    description: Internal server error
-            summary: List countries
-            tags:
-                - Country
-    /country:
-        post:
-            consumes:
-                - application/json
-            description: Returns
-            parameters:
-                - description: Country details
-                  in: body
-                  name: request
-                  required: true
-                  schema:
-                      $ref: "#/definitions/operationspb.CreateCountryRequest"
-            produces:
-                - application/json
-            responses:
-                "201":
-                    description: Country created successfully, id returned
-                    schema:
-                        $ref: "#/definitions/operationspb.IDResponse"
-                "400":
-                    description: 1 - request validation error
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "409":
-                    description: Country with such ISO already exists
-                "500":
-                    description: Internal server error
-            summary: Create country (admin only)
-            tags:
-                - Country
-    /country/{id}:
-        delete:
-            description: Returns deleted country id
-            parameters:
-                - description: Country ID
-                  in: path
-                  name: id
-                  required: true
-                  type: string
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: Country deleted
-                    schema:
-                        $ref: "#/definitions/operationspb.IDResponse"
-                "400":
-                    description: 1 - invalid id
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "404":
-                    description: Country not found
-                "409":
-                    description: Country has dependencies
-                "500":
-                    description: Internal server error
-            summary: Delete country (admin only)
-            tags:
-                - Country
-        put:
-            consumes:
-                - application/json
-            description: Returns patched country id
-            parameters:
-                - description: Country ID
-                  in: path
-                  name: id
-                  required: true
-                  type: string
-                - description: Country details
-                  in: body
-                  name: request
-                  required: true
-                  schema:
-                      $ref: "#/definitions/operationspb.ChangeCountryRequest"
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: Country patched successfully
-                    schema:
-                        $ref: "#/definitions/operationspb.IDResponse"
-                "400":
-                    description: 1 - request validation error
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "404":
-                    description: Country not found
-                "409":
-                    description: Country conflict
-                "500":
-                    description: Internal server error
-            summary: Change country (admin only)
-            tags:
-                - Country
-    /region:
-        post:
-            consumes:
-                - application/json
-            description: Returns
-            parameters:
-                - description: Region details
-                  in: body
-                  name: request
-                  required: true
-                  schema:
-                      $ref: "#/definitions/operationspb.CreateRegionRequest"
-            produces:
-                - application/json
-            responses:
-                "201":
-                    description: Region created successfully, id returned
-                    schema:
-                        $ref: "#/definitions/dto.IDResponse"
-                "400":
-                    description:
-                        1 - request validation error, 2 - country with such country_id
-                        dont exists
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "409":
-                    description: Region with such local code already exists
-                "500":
-                    description: Internal server error
-            summary: Create Region (admin only)
-            tags:
-                - Region
-    /region-link:
-        post:
-            consumes:
-                - application/json
-            description: Returns
-            parameters:
-                - description: Region Link details
-                  in: body
-                  name: request
-                  required: true
-                  schema:
-                      $ref: "#/definitions/operationspb.CreateRegionLinkRequest"
-            produces:
-                - application/json
-            responses:
-                "201":
-                    description: Region Link created successfully, id returned
-                    schema:
-                        $ref: "#/definitions/operationspb.IDResponse"
-                "400":
-                    description:
-                        1 - request validation error, 2 - region with such region_id
-                        dont exists
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "409":
-                    description: Region Link with such regions already exists
-                "500":
-                    description: Internal server error
-            summary: Create Region Link (admin only)
-            tags:
-                - Region Link
-    /region-link/{id}:
-        delete:
-            description: Returns deleted region link id
-            parameters:
-                - description: Region Link ID
-                  in: path
-                  name: id
-                  required: true
-                  type: string
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: Region link deleted
-                    schema:
-                        $ref: "#/definitions/operationspb.IDResponse"
-                "400":
-                    description: 1 - invalid id
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "404":
-                    description: Region link not found
-                "500":
-                    description: Internal server error
-            summary: Delete region link (admin only)
-            tags:
-                - Region Link
-        put:
-            consumes:
-                - application/json
-            description: Returns patched region link id
-            parameters:
-                - description: Region Link ID
-                  in: path
-                  name: id
-                  required: true
-                  type: string
-                - description: Region link details
-                  in: body
-                  name: request
-                  required: true
-                  schema:
-                      $ref: "#/definitions/operationspb.ChangeRegionLinkRequest"
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: Region link patched successfully
-                    schema:
-                        $ref: "#/definitions/operationspb.IDResponse"
-                "400":
-                    description: 1 - request validation error, 2 - region not found
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "404":
-                    description: Region link not found
-                "409":
-                    description: Region link conflict
-                "500":
-                    description: Internal server error
-            summary: Change region link (admin only)
-            tags:
-                - Region Link
-    /region-links:
-        get:
-            description: Returns all region links
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: Region links list
-                    schema:
-                        $ref: "#/definitions/operationspb.ListRegionLinksResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "500":
-                    description: Internal server error
-            summary: List region links
-            tags:
-                - Region Link
-    /region/{id}:
-        delete:
-            description: Returns deleted region id
-            parameters:
-                - description: Region ID
-                  in: path
-                  name: id
-                  required: true
-                  type: string
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: Region deleted
-                    schema:
-                        $ref: "#/definitions/operationspb.IDResponse"
-                "400":
-                    description: 1 - invalid id
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "404":
-                    description: Region not found
-                "409":
-                    description: Region has dependencies
-                "500":
-                    description: Internal server error
-            summary: Delete region (admin only)
-            tags:
-                - Region
-        put:
-            consumes:
-                - application/json
-            description: Returns patched region id
-            parameters:
-                - description: Region ID
-                  in: path
-                  name: id
-                  required: true
-                  type: string
-                - description: Region details
-                  in: body
-                  name: request
-                  required: true
-                  schema:
-                      $ref: "#/definitions/operationspb.ChangeRegionRequest"
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: Region patched successfully
-                    schema:
-                        $ref: "#/definitions/operationspb.IDResponse"
-                "400":
-                    description: 1 - request validation error, 2 - country not found
-                    schema:
-                        $ref: "#/definitions/dto.ErrorResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "404":
-                    description: Region not found
-                "409":
-                    description: Region conflict
-                "500":
-                    description: Internal server error
-            summary: Change region (admin only)
-            tags:
-                - Region
-    /regions:
-        get:
-            description: Returns all regions
-            produces:
-                - application/json
-            responses:
-                "200":
-                    description: Regions list
-                    schema:
-                        $ref: "#/definitions/operationspb.ListRegionsResponse"
-                "401":
-                    description: Unauthorized
-                "403":
-                    description: Forbidden
-                "500":
-                    description: Internal server error
-            summary: List regions
-            tags:
-                - Region
+  /aircraft:
+    post:
+      consumes:
+      - application/json
+      description: Purchases a new aircraft from a selected aircraft type for the
+        authenticated user
+      parameters:
+      - description: Aircraft details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/fleetpb.CreateAircraftRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Aircraft purchased successfully, id returned
+          schema:
+            $ref: '#/definitions/fleetpb.CreateAircraftResponse'
+        "400":
+          description: 1 - request validation error, 2 - aircraft type not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+      summary: Purchase aircraft
+      tags:
+      - Aircraft
+  /aircraft-types:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of available aircraft types
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/fleetpb.ListAircraftTypesResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List aircraft types
+      tags:
+      - Aircraft
+    post:
+      consumes:
+      - application/json
+      description: Create a new aircraft type (admin only)
+      parameters:
+      - description: Aircraft type details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/fleetpb.CreateAircraftTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/fleetpb.AircraftType'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Create aircraft type
+      tags:
+      - Aircraft
+  /aircraft-types/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Returns details for a single aircraft type
+      parameters:
+      - description: Aircraft type id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/fleetpb.AircraftType'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get aircraft type
+      tags:
+      - Aircraft
+  /aircraft/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Returns details for a single aircraft owned by the airline
+      parameters:
+      - description: Aircraft id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/fleetpb.Aircraft'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get aircraft
+      tags:
+      - Aircraft
+    patch:
+      consumes:
+      - application/json
+      description: Update aircraft tail number (owner only)
+      parameters:
+      - description: Aircraft id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: '{\'
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/fleetpb.Aircraft'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "409":
+          description: Tail number conflict
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update aircraft tail number
+      tags:
+      - Aircraft
+  /aircrafts:
+    get:
+      consumes:
+      - application/json
+      description: Returns list of aircrafts owned by the authenticated airline
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/fleetpb.ListAircraftsResponse'
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List aircrafts for airline
+      tags:
+      - Aircraft
+  /airline:
+    post:
+      consumes:
+      - application/json
+      description: Creates an airline for the authenticated user
+      parameters:
+      - description: Airline details (owner_id taken from token)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateAirlineRequestDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Airline created successfully
+          schema:
+            $ref: '#/definitions/airlinepb.CreateAirlineResponse'
+        "400":
+          description: 1 - request validation error, 2 - airport not found, 3 - user
+            not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "409":
+          description: Airline conflict
+        "500":
+          description: Internal server error
+      summary: Create airline
+      tags:
+      - Airline
+  /airline/{id}:
+    get:
+      description: Returns full airline information by airline id
+      parameters:
+      - description: Airline ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Airline information
+          schema:
+            $ref: '#/definitions/airlinepb.AirlineResponse'
+        "401":
+          description: Unauthorized
+        "404":
+          description: Airline not found
+        "500":
+          description: Internal server error
+      summary: Get airline by id
+      tags:
+      - Airline
+    patch:
+      consumes:
+      - application/json
+      description: Update airline name and codes (iata, icao). Only owner or admin
+        allowed.
+      parameters:
+      - description: Airline ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 'Fields to update: name, iata_code, icao_code'
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/airlinepb.AirlineResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update airline
+      tags:
+      - Airline
+  /airline/me:
+    get:
+      description: Returns full airline information for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Airline information
+          schema:
+            $ref: '#/definitions/airlinepb.AirlineResponse'
+        "401":
+          description: Unauthorized
+        "404":
+          description: Airline not found
+        "500":
+          description: Internal server error
+      summary: Get my airline
+      tags:
+      - Airline
+  /airport:
+    post:
+      consumes:
+      - application/json
+      description: Returns
+      parameters:
+      - description: Airport details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/operationspb.CreateAirportRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Airport created successfully, id returned
+          schema:
+            $ref: '#/definitions/operationspb.IDResponse'
+        "400":
+          description: 1 - request validation error, 2 - country with such country_id
+            dont exists, 3 - region with such region_id dont exists
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "409":
+          description: Airport with such ICAO/IATA already exists
+        "500":
+          description: Internal server error
+      summary: Create Airport (admin only)
+      tags:
+      - Airport
+  /airport/{id}:
+    delete:
+      description: Returns deleted airport id
+      parameters:
+      - description: Airport ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Airport deleted
+          schema:
+            $ref: '#/definitions/operationspb.IDResponse'
+        "400":
+          description: 1 - invalid id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Airport not found
+        "500":
+          description: Internal server error
+      summary: Delete airport (admin only)
+      tags:
+      - Airport
+    put:
+      consumes:
+      - application/json
+      description: Returns patched airport id
+      parameters:
+      - description: Airport ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Airport details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/operationspb.ChangeAirportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Airport patched successfully
+          schema:
+            $ref: '#/definitions/operationspb.IDResponse'
+        "400":
+          description: 1 - request validation error, 2 - country not found, 3 - region
+            not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Airport not found
+        "409":
+          description: Airport conflict
+        "500":
+          description: Internal server error
+      summary: Change airport (admin only)
+      tags:
+      - Airport
+  /airports:
+    get:
+      description: Returns all airports
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Airports list
+          schema:
+            $ref: '#/definitions/operationspb.ListAirportsResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      summary: List airports
+      tags:
+      - Airport
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Returns access token and sets refresh token into cookie
+      parameters:
+      - description: User login details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User authenticated
+          schema:
+            $ref: '#/definitions/dto.AccessTokenResponse'
+        "400":
+          description: 1 - request validation error, 2 - user not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal server error
+      summary: Login user
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      description: Returns access token and sets refresh token into cookie. Doing
+        that by validating refresh token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User authenticated
+          schema:
+            $ref: '#/definitions/dto.AccessTokenResponse'
+        "401":
+          description: Refresh token or user is not valid
+        "500":
+          description: Internal server error
+      summary: Refreshes access and refresh token
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Returns access token and sets refresh token into cookie
+      parameters:
+      - description: User registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created and authenticated
+          schema:
+            $ref: '#/definitions/dto.AccessTokenResponse'
+        "400":
+          description: 1 - request validation error, 2 - email exists, 3 - nickname
+            exists
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal server error
+      summary: Register user
+      tags:
+      - Auth
+  /countries:
+    get:
+      description: Returns all countries
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Countries list
+          schema:
+            $ref: '#/definitions/operationspb.ListCountriesResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      summary: List countries
+      tags:
+      - Country
+  /country:
+    post:
+      consumes:
+      - application/json
+      description: Returns
+      parameters:
+      - description: Country details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/operationspb.CreateCountryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Country created successfully, id returned
+          schema:
+            $ref: '#/definitions/operationspb.IDResponse'
+        "400":
+          description: 1 - request validation error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "409":
+          description: Country with such ISO already exists
+        "500":
+          description: Internal server error
+      summary: Create country (admin only)
+      tags:
+      - Country
+  /country/{id}:
+    delete:
+      description: Returns deleted country id
+      parameters:
+      - description: Country ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Country deleted
+          schema:
+            $ref: '#/definitions/operationspb.IDResponse'
+        "400":
+          description: 1 - invalid id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Country not found
+        "409":
+          description: Country has dependencies
+        "500":
+          description: Internal server error
+      summary: Delete country (admin only)
+      tags:
+      - Country
+    put:
+      consumes:
+      - application/json
+      description: Returns patched country id
+      parameters:
+      - description: Country ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Country details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/operationspb.ChangeCountryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Country patched successfully
+          schema:
+            $ref: '#/definitions/operationspb.IDResponse'
+        "400":
+          description: 1 - request validation error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Country not found
+        "409":
+          description: Country conflict
+        "500":
+          description: Internal server error
+      summary: Change country (admin only)
+      tags:
+      - Country
+  /region:
+    post:
+      consumes:
+      - application/json
+      description: Returns
+      parameters:
+      - description: Region details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/operationspb.CreateRegionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Region created successfully, id returned
+          schema:
+            $ref: '#/definitions/dto.IDResponse'
+        "400":
+          description: 1 - request validation error, 2 - country with such country_id
+            dont exists
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "409":
+          description: Region with such local code already exists
+        "500":
+          description: Internal server error
+      summary: Create Region (admin only)
+      tags:
+      - Region
+  /region-link:
+    post:
+      consumes:
+      - application/json
+      description: Returns
+      parameters:
+      - description: Region Link details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/operationspb.CreateRegionLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Region Link created successfully, id returned
+          schema:
+            $ref: '#/definitions/operationspb.IDResponse'
+        "400":
+          description: 1 - request validation error, 2 - region with such region_id
+            dont exists
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "409":
+          description: Region Link with such regions already exists
+        "500":
+          description: Internal server error
+      summary: Create Region Link (admin only)
+      tags:
+      - Region Link
+  /region-link/{id}:
+    delete:
+      description: Returns deleted region link id
+      parameters:
+      - description: Region Link ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Region link deleted
+          schema:
+            $ref: '#/definitions/operationspb.IDResponse'
+        "400":
+          description: 1 - invalid id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Region link not found
+        "500":
+          description: Internal server error
+      summary: Delete region link (admin only)
+      tags:
+      - Region Link
+    put:
+      consumes:
+      - application/json
+      description: Returns patched region link id
+      parameters:
+      - description: Region Link ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Region link details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/operationspb.ChangeRegionLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Region link patched successfully
+          schema:
+            $ref: '#/definitions/operationspb.IDResponse'
+        "400":
+          description: 1 - request validation error, 2 - region not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Region link not found
+        "409":
+          description: Region link conflict
+        "500":
+          description: Internal server error
+      summary: Change region link (admin only)
+      tags:
+      - Region Link
+  /region-links:
+    get:
+      description: Returns all region links
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Region links list
+          schema:
+            $ref: '#/definitions/operationspb.ListRegionLinksResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      summary: List region links
+      tags:
+      - Region Link
+  /region/{id}:
+    delete:
+      description: Returns deleted region id
+      parameters:
+      - description: Region ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Region deleted
+          schema:
+            $ref: '#/definitions/operationspb.IDResponse'
+        "400":
+          description: 1 - invalid id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Region not found
+        "409":
+          description: Region has dependencies
+        "500":
+          description: Internal server error
+      summary: Delete region (admin only)
+      tags:
+      - Region
+    put:
+      consumes:
+      - application/json
+      description: Returns patched region id
+      parameters:
+      - description: Region ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Region details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/operationspb.ChangeRegionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Region patched successfully
+          schema:
+            $ref: '#/definitions/operationspb.IDResponse'
+        "400":
+          description: 1 - request validation error, 2 - country not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Region not found
+        "409":
+          description: Region conflict
+        "500":
+          description: Internal server error
+      summary: Change region (admin only)
+      tags:
+      - Region
+  /regions:
+    get:
+      description: Returns all regions
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Regions list
+          schema:
+            $ref: '#/definitions/operationspb.ListRegionsResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      summary: List regions
+      tags:
+      - Region
 schemes:
-    - https
+- https
 swagger: "2.0"

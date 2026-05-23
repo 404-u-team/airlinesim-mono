@@ -1964,6 +1964,12 @@ const docTemplate = `{
         "operationspb.ChangeRegionLinkRequest": {
             "type": "object",
             "properties": {
+                "base_daily_demand_ab": {
+                    "type": "number"
+                },
+                "base_daily_demand_ba": {
+                    "type": "number"
+                },
                 "business": {
                     "type": "number"
                 },
@@ -1978,12 +1984,6 @@ const docTemplate = `{
                 },
                 "region_b": {
                     "type": "string"
-                },
-                "base_daily_demand_ab": {
-                    "type": "number"
-                },
-                "base_daily_demand_ba": {
-                    "type": "number"
                 },
                 "tourism": {
                     "type": "number"
@@ -2169,6 +2169,12 @@ const docTemplate = `{
         "operationspb.CreateRegionLinkRequest": {
             "type": "object",
             "properties": {
+                "base_daily_demand_ab": {
+                    "type": "number"
+                },
+                "base_daily_demand_ba": {
+                    "type": "number"
+                },
                 "business": {
                     "type": "number"
                 },
@@ -2180,12 +2186,6 @@ const docTemplate = `{
                 },
                 "region_b": {
                     "type": "string"
-                },
-                "base_daily_demand_ab": {
-                    "type": "number"
-                },
-                "base_daily_demand_ba": {
-                    "type": "number"
                 },
                 "tourism": {
                     "type": "number"
@@ -2314,6 +2314,12 @@ const docTemplate = `{
         "operationspb.RegionLink": {
             "type": "object",
             "properties": {
+                "base_daily_demand_ab": {
+                    "type": "number"
+                },
+                "base_daily_demand_ba": {
+                    "type": "number"
+                },
                 "business": {
                     "type": "number"
                 },
@@ -2328,12 +2334,6 @@ const docTemplate = `{
                 },
                 "region_b": {
                     "type": "string"
-                },
-                "base_daily_demand_ab": {
-                    "type": "number"
-                },
-                "base_daily_demand_ba": {
-                    "type": "number"
                 },
                 "tourism": {
                     "type": "number"
