@@ -59,9 +59,6 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized"
                     },
-                    "409": {
-                        "description": "Aircraft tail number conflict"
-                    },
                     "500": {
                         "description": "Internal server error"
                     }
