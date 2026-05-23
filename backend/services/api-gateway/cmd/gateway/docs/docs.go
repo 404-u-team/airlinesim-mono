@@ -351,12 +351,12 @@ const docTemplate = `{
                 "summary": "Create airline",
                 "parameters": [
                     {
-                        "description": "Airline details",
+                        "description": "Airline details (owner_id taken from token)",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/airlinepb.CreateAirlineRequest"
+                            "$ref": "#/definitions/dto.CreateAirlineRequestDTO"
                         }
                     }
                 ],
@@ -1440,26 +1440,6 @@ const docTemplate = `{
                 }
             }
         },
-        "airlinepb.CreateAirlineRequest": {
-            "type": "object",
-            "properties": {
-                "iata_code": {
-                    "type": "string"
-                },
-                "icao_code": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "owner_id": {
-                    "type": "string"
-                },
-                "starting_airport_id": {
-                    "type": "string"
-                }
-            }
-        },
         "airlinepb.CreateAirlineResponse": {
             "type": "object",
             "properties": {
@@ -1476,6 +1456,27 @@ const docTemplate = `{
             "properties": {
                 "access_token": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.CreateAirlineRequestDTO": {
+            "type": "object",
+            "properties": {
+                "iata_code": {
+                    "type": "string",
+                    "example": "AA"
+                },
+                "icao_code": {
+                    "type": "string",
+                    "example": "AAL"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "My Airline"
+                },
+                "starting_airport_id": {
+                    "type": "string",
+                    "example": "11111111-1111-1111-1111-111111111111"
                 }
             }
         },
