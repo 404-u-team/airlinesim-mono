@@ -25,17 +25,16 @@ func NewRegionLinkRepository(pool db.DBConn) RegionLinkRepository {
 
 func (r *regionLinkRepository) CreateRegionLink(ctx context.Context, payload *operationspb.CreateRegionLinkRequest) (uuid.UUID, error) {
 	query := `
-		INSERT INTO region (
-			region_a, region_b, diaspora, 
-            business, tourism,
+		INSERT INTO region_link (
+			region_a, region_b, diaspora, business, tourism, base_daily_demand_ab, base_daily_demand_ba
 		)
-		VALUES ($1, $2, $3, $4, $5)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
 
 	var regionLinkID uuid.UUID
 	err := r.pool.QueryRow(ctx, query, payload.RegionA, payload.RegionB,
-		payload.Diaspora, payload.Business, payload.Tourism).Scan(&regionLinkID)
+		payload.Diaspora, payload.Business, payload.Tourism, payload.BaseDailyDemandAb, payload.BaseDailyDemandBa).Scan(&regionLinkID)
 
 	return regionLinkID, err
 }
@@ -43,9 +42,9 @@ func (r *regionLinkRepository) CreateRegionLink(ctx context.Context, payload *op
 func (r *regionLinkRepository) ChangeRegionLink(ctx context.Context, payload *operationspb.ChangeRegionLinkRequest) (bool, error) {
 	result, err := r.pool.Exec(ctx, `
 		UPDATE region_link
-		SET region_a=$2, region_b=$3, diaspora=$4, business=$5, tourism=$6
+		SET region_a=$2, region_b=$3, diaspora=$4, business=$5, tourism=$6, base_daily_demand_ab=$7, base_daily_demand_ba=$8
 		WHERE id=$1
-	`, payload.Id, payload.RegionA, payload.RegionB, payload.Diaspora, payload.Business, payload.Tourism)
+	`, payload.Id, payload.RegionA, payload.RegionB, payload.Diaspora, payload.Business, payload.Tourism, payload.BaseDailyDemandAb, payload.BaseDailyDemandBa)
 	if err != nil {
 		return false, err
 	}
@@ -61,7 +60,9 @@ func (r *regionLinkRepository) ListRegionLinks(ctx context.Context) ([]*operatio
 			region_b::text,
 			COALESCE(diaspora, 0),
 			COALESCE(business, 0),
-			COALESCE(tourism, 0)
+			COALESCE(tourism, 0),
+			COALESCE(base_daily_demand_ab, -1),
+			COALESCE(base_daily_demand_ba, -1)
 		FROM region_link
 		ORDER BY id
 	`
@@ -82,6 +83,8 @@ func (r *regionLinkRepository) ListRegionLinks(ctx context.Context) ([]*operatio
 			&regionLink.Diaspora,
 			&regionLink.Business,
 			&regionLink.Tourism,
+			&regionLink.BaseDailyDemandAb,
+			&regionLink.BaseDailyDemandBa,
 		); err != nil {
 			return nil, err
 		}

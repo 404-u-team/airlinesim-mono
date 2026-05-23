@@ -169,6 +169,8 @@ message CreateRegionLinkRequest {
   double diaspora = 3;
   double business = 4;
   double tourism = 5;
+  double base_daily_demand_ab = 6;
+  double base_daily_demand_ba = 7;
 }
 
 message ChangeRegionLinkRequest {
@@ -178,6 +180,8 @@ message ChangeRegionLinkRequest {
   double diaspora = 4;
   double business = 5;
   double tourism = 6;
+  double base_daily_demand_ab = 7;
+  double base_daily_demand_ba = 8;
 }
 
 message ListRegionLinksRequest {}
@@ -189,6 +193,8 @@ message RegionLink {
   double diaspora = 4;
   double business = 5;
   double tourism = 6;
+  double base_daily_demand_ab = 7;
+  double base_daily_demand_ba = 8;
 }
 
 message ListRegionLinksResponse {

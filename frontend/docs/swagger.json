@@ -1,7 +1,5 @@
 {
-    "schemes": [
-        "https"
-    ],
+    "schemes": ["https"],
     "swagger": "2.0",
     "info": {
         "title": "AirlineSim API",
@@ -17,15 +15,9 @@
         "/aircraft": {
             "post": {
                 "description": "Purchases a new aircraft from a selected aircraft type for the authenticated user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Aircraft"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Aircraft"],
                 "summary": "Purchase aircraft",
                 "parameters": [
                     {
@@ -54,9 +46,6 @@
                     "401": {
                         "description": "Unauthorized"
                     },
-                    "409": {
-                        "description": "Aircraft tail number conflict"
-                    },
                     "500": {
                         "description": "Internal server error"
                     }
@@ -66,15 +55,9 @@
         "/aircraft-types": {
             "get": {
                 "description": "Returns a list of available aircraft types",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Aircraft"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Aircraft"],
                 "summary": "List aircraft types",
                 "responses": {
                     "200": {
@@ -93,15 +76,9 @@
             },
             "post": {
                 "description": "Create a new aircraft type (admin only)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Aircraft"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Aircraft"],
                 "summary": "Create aircraft type",
                 "parameters": [
                     {
@@ -142,15 +119,9 @@
         "/aircraft-types/{id}": {
             "get": {
                 "description": "Returns details for a single aircraft type",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Aircraft"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Aircraft"],
                 "summary": "Get aircraft type",
                 "parameters": [
                     {
@@ -192,15 +163,9 @@
         "/aircraft/{id}": {
             "get": {
                 "description": "Returns details for a single aircraft owned by the airline",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Aircraft"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Aircraft"],
                 "summary": "Get aircraft",
                 "parameters": [
                     {
@@ -243,15 +208,9 @@
             },
             "patch": {
                 "description": "Update aircraft tail number (owner only)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Aircraft"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Aircraft"],
                 "summary": "Update aircraft tail number",
                 "parameters": [
                     {
@@ -302,15 +261,9 @@
         "/aircrafts": {
             "get": {
                 "description": "Returns list of aircrafts owned by the authenticated airline",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Aircraft"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Aircraft"],
                 "summary": "List aircrafts for airline",
                 "responses": {
                     "200": {
@@ -334,15 +287,9 @@
         "/airline": {
             "post": {
                 "description": "Creates an airline for the authenticated user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Airline"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Airline"],
                 "summary": "Create airline",
                 "parameters": [
                     {
@@ -383,12 +330,8 @@
         "/airline/me": {
             "get": {
                 "description": "Returns full airline information for the authenticated user",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Airline"
-                ],
+                "produces": ["application/json"],
+                "tags": ["Airline"],
                 "summary": "Get my airline",
                 "responses": {
                     "200": {
@@ -412,12 +355,8 @@
         "/airline/{id}": {
             "get": {
                 "description": "Returns full airline information by airline id",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Airline"
-                ],
+                "produces": ["application/json"],
+                "tags": ["Airline"],
                 "summary": "Get airline by id",
                 "parameters": [
                     {
@@ -448,15 +387,9 @@
             },
             "patch": {
                 "description": "Update airline name and codes (iata, icao). Only owner or admin allowed.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Airline"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Airline"],
                 "summary": "Update airline",
                 "parameters": [
                     {
@@ -516,15 +449,9 @@
         "/airport": {
             "post": {
                 "description": "Returns",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Airport"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Airport"],
                 "summary": "Create Airport (admin only)",
                 "parameters": [
                     {
@@ -568,15 +495,9 @@
         "/airport/{id}": {
             "put": {
                 "description": "Returns patched airport id",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Airport"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Airport"],
                 "summary": "Change airport (admin only)",
                 "parameters": [
                     {
@@ -628,12 +549,8 @@
             },
             "delete": {
                 "description": "Returns deleted airport id",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Airport"
-                ],
+                "produces": ["application/json"],
+                "tags": ["Airport"],
                 "summary": "Delete airport (admin only)",
                 "parameters": [
                     {
@@ -675,12 +592,8 @@
         "/airports": {
             "get": {
                 "description": "Returns all airports",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Airport"
-                ],
+                "produces": ["application/json"],
+                "tags": ["Airport"],
                 "summary": "List airports",
                 "responses": {
                     "200": {
@@ -704,15 +617,9 @@
         "/auth/login": {
             "post": {
                 "description": "Returns access token and sets refresh token into cookie",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Auth"],
                 "summary": "Login user",
                 "parameters": [
                     {
@@ -747,12 +654,8 @@
         "/auth/refresh": {
             "post": {
                 "description": "Returns access token and sets refresh token into cookie. Doing that by validating refresh token",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
+                "produces": ["application/json"],
+                "tags": ["Auth"],
                 "summary": "Refreshes access and refresh token",
                 "responses": {
                     "200": {
@@ -773,15 +676,9 @@
         "/auth/register": {
             "post": {
                 "description": "Returns access token and sets refresh token into cookie",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Auth"],
                 "summary": "Register user",
                 "parameters": [
                     {
@@ -816,12 +713,8 @@
         "/countries": {
             "get": {
                 "description": "Returns all countries",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Country"
-                ],
+                "produces": ["application/json"],
+                "tags": ["Country"],
                 "summary": "List countries",
                 "responses": {
                     "200": {
@@ -845,15 +738,9 @@
         "/country": {
             "post": {
                 "description": "Returns",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Country"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Country"],
                 "summary": "Create country (admin only)",
                 "parameters": [
                     {
@@ -897,15 +784,9 @@
         "/country/{id}": {
             "put": {
                 "description": "Returns patched country id",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Country"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Country"],
                 "summary": "Change country (admin only)",
                 "parameters": [
                     {
@@ -957,12 +838,8 @@
             },
             "delete": {
                 "description": "Returns deleted country id",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Country"
-                ],
+                "produces": ["application/json"],
+                "tags": ["Country"],
                 "summary": "Delete country (admin only)",
                 "parameters": [
                     {
@@ -1007,15 +884,9 @@
         "/region": {
             "post": {
                 "description": "Returns",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Region"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Region"],
                 "summary": "Create Region (admin only)",
                 "parameters": [
                     {
@@ -1059,15 +930,9 @@
         "/region-link": {
             "post": {
                 "description": "Returns",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Region Link"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Region Link"],
                 "summary": "Create Region Link (admin only)",
                 "parameters": [
                     {
@@ -1111,15 +976,9 @@
         "/region-link/{id}": {
             "put": {
                 "description": "Returns patched region link id",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Region Link"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Region Link"],
                 "summary": "Change region link (admin only)",
                 "parameters": [
                     {
@@ -1171,12 +1030,8 @@
             },
             "delete": {
                 "description": "Returns deleted region link id",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Region Link"
-                ],
+                "produces": ["application/json"],
+                "tags": ["Region Link"],
                 "summary": "Delete region link (admin only)",
                 "parameters": [
                     {
@@ -1218,12 +1073,8 @@
         "/region-links": {
             "get": {
                 "description": "Returns all region links",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Region Link"
-                ],
+                "produces": ["application/json"],
+                "tags": ["Region Link"],
                 "summary": "List region links",
                 "responses": {
                     "200": {
@@ -1247,15 +1098,9 @@
         "/region/{id}": {
             "put": {
                 "description": "Returns patched region id",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Region"
-                ],
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["Region"],
                 "summary": "Change region (admin only)",
                 "parameters": [
                     {
@@ -1307,12 +1152,8 @@
             },
             "delete": {
                 "description": "Returns deleted region id",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Region"
-                ],
+                "produces": ["application/json"],
+                "tags": ["Region"],
                 "summary": "Delete region (admin only)",
                 "parameters": [
                     {
@@ -1357,12 +1198,8 @@
         "/regions": {
             "get": {
                 "description": "Returns all regions",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Region"
-                ],
+                "produces": ["application/json"],
+                "tags": ["Region"],
                 "summary": "List regions",
                 "responses": {
                     "200": {
@@ -1493,10 +1330,7 @@
         },
         "dto.LoginRequest": {
             "type": "object",
-            "required": [
-                "login",
-                "password"
-            ],
+            "required": ["login", "password"],
             "properties": {
                 "login": {
                     "type": "string",
@@ -1512,11 +1346,7 @@
         },
         "dto.RegisterRequest": {
             "type": "object",
-            "required": [
-                "email",
-                "nickname",
-                "password"
-            ],
+            "required": ["email", "nickname", "password"],
             "properties": {
                 "email": {
                     "type": "string",
@@ -1977,6 +1807,12 @@
                 "region_b": {
                     "type": "string"
                 },
+                "base_daily_demand_ab": {
+                    "type": "number"
+                },
+                "base_daily_demand_ba": {
+                    "type": "number"
+                },
                 "tourism": {
                     "type": "number"
                 }
@@ -2173,6 +2009,12 @@
                 "region_b": {
                     "type": "string"
                 },
+                "base_daily_demand_ab": {
+                    "type": "number"
+                },
+                "base_daily_demand_ba": {
+                    "type": "number"
+                },
                 "tourism": {
                     "type": "number"
                 }
@@ -2314,6 +2156,12 @@
                 },
                 "region_b": {
                     "type": "string"
+                },
+                "base_daily_demand_ab": {
+                    "type": "number"
+                },
+                "base_daily_demand_ba": {
+                    "type": "number"
                 },
                 "tourism": {
                     "type": "number"
