@@ -505,3 +505,9 @@ FodyWeavers.xsd
 # Additional files built by Visual Studio
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudio,macos,windows,go,git
+
+# BFF world-data importer runtime cache and generated artifacts.
+frontend/bff/data/import/world-data/mappings/
+frontend/bff/data/import/world-data/raw/
+frontend/bff/data/import/world-data/reports/
+frontend/bff/data/import/world-data/stage/

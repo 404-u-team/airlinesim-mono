@@ -7,25 +7,26 @@ type AccessTokenResponse = {
 };
 
 let adminAccessToken: null | string = null;
+let adminAccessTokenExpiresAt: null | number = null;
 let adminLoginPromise: null | Promise<string> = null;
 
 export async function getBackendAdminToken(config: BffConfig): Promise<string> {
-  if (adminAccessToken) {
+  if (adminAccessToken && !isTokenExpiringSoon(adminAccessTokenExpiresAt)) {
     return adminAccessToken;
   }
 
-   
-  adminLoginPromise ??= loginBackendAdmin(config);
+  adminLoginPromise ??= loginBackendAdmin(config)
+    .then((token) => {
+      adminAccessToken = token;
+      adminAccessTokenExpiresAt = getJwtExpiresAt(token);
 
-  try {
-    // eslint-disable-next-line require-atomic-updates
-    adminAccessToken = await adminLoginPromise;
+      return token;
+    })
+    .finally(() => {
+      adminLoginPromise = null;
+    });
 
-    return adminAccessToken;
-  } finally {
-    // eslint-disable-next-line require-atomic-updates
-    adminLoginPromise = null;
-  }
+  return adminLoginPromise;
 }
 
 export function getUserAuthorization(request: Request): null | string {
@@ -36,6 +37,11 @@ export function getUserAuthorization(request: Request): null | string {
   }
 
   return authorization;
+}
+
+export function invalidateBackendAdminToken(): void {
+  adminAccessToken = null;
+  adminAccessTokenExpiresAt = null;
 }
 
 export async function requireValidUserToken(
@@ -59,6 +65,27 @@ export async function requireValidUserToken(
   }
 
   return null;
+}
+
+function getJwtExpiresAt(token: string): null | number {
+  const payload = token.split(".")[1];
+  if (!payload) {
+    return null;
+  }
+
+  try {
+    const normalized = payload.replaceAll("-", "+").replaceAll("_", "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const decoded = JSON.parse(atob(padded)) as { exp?: unknown };
+
+    return typeof decoded.exp === "number" ? decoded.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+function isTokenExpiringSoon(expiresAt: null | number): boolean {
+  return expiresAt !== null && expiresAt - Date.now() < 30_000;
 }
 
 async function loginBackendAdmin(config: BffConfig): Promise<string> {

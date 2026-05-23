@@ -1,35 +1,8 @@
 import type { BffConfig } from "../../config";
+import type { ImportMode, ImportRequestBody } from "./shared/types";
 
-import { getBackendAdminToken, requireValidUserToken } from "../../auth";
-import { jsonResponse, readJson } from "../../http";
-
-type NormalizedAirport = {
-  continent?: string;
-  country_id?: string;
-  elevation_ft?: number;
-  iata_code?: string;
-  icao_code?: string;
-  intl_name?: string;
-  local_name?: string;
-  municipality?: string;
-  timezone?: string;
-};
-
-type RawAirport = {
-  continent?: string;
-  country_id?: string;
-  elevation_ft?: number;
-  iata_code?: string;
-  icao_code?: string;
-  intl_name?: string;
-  local_name?: string;
-  municipality?: string;
-  timezone?: string;
-};
-
-type WorldDataImportRequest = {
-  airports?: RawAirport[];
-};
+import { jsonResponse } from "../../http";
+import { getImportJobStatus, startWorldDataImportJob } from "./runtime/jobs";
 
 export async function handleImportRequest(
   request: Request,
@@ -37,57 +10,73 @@ export async function handleImportRequest(
   config: BffConfig,
 ): Promise<null | Response> {
   if (request.method === "POST" && url.pathname === "/import/world-data") {
-    return importWorldData(request, config);
+    return importWorldData(request, url, config);
+  }
+
+  if (request.method === "POST" && url.pathname === "/import/world-data/dry-run") {
+    return importWorldData(request, url, config, "dry-run");
+  }
+
+  if (request.method === "POST" && url.pathname === "/import/world-data/run") {
+    return importWorldData(request, url, config, "import");
+  }
+
+  if (request.method === "GET" && url.pathname === "/import/world-data/status") {
+    return getImportStatus(url);
+  }
+
+  if (request.method === "GET" && url.pathname.startsWith("/import/world-data/jobs/")) {
+    return getImportStatus(url);
   }
 
   return null;
 }
 
-async function importWorldData(request: Request, config: BffConfig): Promise<Response> {
-  const authError = await requireValidUserToken(request, config);
+function getImportStatus(url: URL): Response {
+  const jobId = url.pathname.startsWith("/import/world-data/jobs/")
+    ? url.pathname.slice("/import/world-data/jobs/".length)
+    : url.searchParams.get("jobId");
+  const job = jobId ? getImportJobStatus(jobId) : null;
 
-  if (authError) {
-    return authError;
+  if (!job) {
+    return jsonResponse({ error: "Import job not found" }, { status: 404 });
   }
 
-  const payload = await readJson<WorldDataImportRequest>(request);
-  const airports = (payload.airports ?? []).map(normalizeAirport);
-  const adminToken = await getBackendAdminToken(config);
-  const results = await Promise.all(
-    airports.map(async (airport) => {
-      const response = await fetch(`${config.backendBaseUrl}/airport`, {
-        body: JSON.stringify(airport),
-        headers: {
-          Authorization: `Bearer ${adminToken}`,
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      });
-
-      return {
-        iata_code: airport.iata_code,
-        ok: response.ok,
-        status: response.status,
-      };
-    }),
-  );
-
-  return jsonResponse({
-    imported: results.filter((result) => result.ok).length,
-    results,
-  });
+  return jsonResponse({ job });
 }
 
-function normalizeAirport(airport: RawAirport): NormalizedAirport {
-  return {
-    continent: airport.continent?.trim(),
-    country_id: airport.country_id?.trim(),
-    elevation_ft: airport.elevation_ft,
-    iata_code: airport.iata_code?.trim().toUpperCase(),
-    icao_code: airport.icao_code?.trim().toUpperCase(),
-    intl_name: airport.intl_name?.trim(),
-    local_name: airport.local_name?.trim(),
-    municipality: airport.municipality?.trim(),
-    timezone: airport.timezone?.trim(),
-  };
+async function importWorldData(
+  request: Request,
+  url: URL,
+  config: BffConfig,
+  routeMode?: ImportMode,
+): Promise<Response> {
+  const body = await readOptionalJson(request);
+  const mode = routeMode ?? normalizeMode(url.searchParams.get("mode") ?? body.mode);
+  const job = startWorldDataImportJob(config, {
+    dataDir: body.dataDir,
+    mode,
+    refreshRaw: body.refreshRaw,
+    source: body.source,
+  });
+
+  return jsonResponse({
+    jobId: job.id,
+    status: job.status,
+    statusUrl: `/import/world-data/jobs/${job.id}`,
+  }, { status: 202 });
+}
+
+async function readOptionalJson(request: Request): Promise<ImportRequestBody> {
+  const text = await request.text();
+
+  if (!text.trim()) {
+    return {};
+  }
+
+  return JSON.parse(text) as ImportRequestBody;
+}
+
+function normalizeMode(value: null | string | undefined): ImportMode {
+  return value === "import" ? "import" : "dry-run";
 }
