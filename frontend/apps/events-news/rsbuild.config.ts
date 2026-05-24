@@ -6,6 +6,9 @@ import { getAppDevPorts } from "../../dev-ports";
 
 const appPorts = getAppDevPorts("../..");
 const appOrigin = (port: number): string => `http://localhost:${String(port)}`;
+const mfeBaseUrl = process.env.VITE_MFE_BASE_URL?.replace(/\/+$/, "");
+const appAssetPrefix = (appName: string, port: number): string =>
+  mfeBaseUrl ? `${mfeBaseUrl}/mfe/${appName}/` : appOrigin(port);
 const { publicVars } = loadEnv({ cwd: "../..", prefixes: ["VITE_"] });
 
 export default defineConfig({
@@ -13,7 +16,7 @@ export default defineConfig({
     template: "./index.html",
   },
   output: {
-    assetPrefix: appOrigin(appPorts.eventsNews),
+    assetPrefix: appAssetPrefix("events-news", appPorts.eventsNews),
   },
   plugins: [
     pluginVue(),

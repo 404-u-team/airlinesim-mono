@@ -9,8 +9,9 @@
   },
   "scripts": {
     "check": "turbo lint",
-    "dev": "bun run generate:openapi && turbo dev --concurrency=14",
+    "dev": "bun run generate:openapi && bun run generate:bff-openapi && turbo dev --concurrency=14",
     "dev:fresh": "bun run ports:clear && bun run dev",
+    "generate:bff-openapi": "bun run --cwd bff generate:openapi",
     "generate:openapi": "bun run --cwd packages/api-contracts generate",
     "lint": "turbo lint",
     "lint:fix": "turbo run lint:fix --continue=always --force",

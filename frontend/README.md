@@ -27,6 +27,22 @@ bun run check
 `bun run lint` запускает `turbo lint` и проходит каждый workspace-пакет, где есть `lint`-скрипт.
 `bun run lint:fix` запускает `turbo run lint:fix --continue=always --force`: ESLint пытается исправить все workspace-пакеты, даже если один из них завершился с ошибкой.
 
+В dev shell остается на `4100`, remote-приложения на `4101-4106`, а API/BFF вызывается как same-origin `/bff/*`; Vite shell-dev-server проксирует этот путь на локальный BFF `4200`.
+
+## Production Docker
+
+```bash
+docker compose -f docker-compose.yaml up --build
+```
+
+Compose собирает shell и все remote-приложения в production-режиме одним Turbo build, затем раздает shell и MFE-статику через один nginx-контейнер. BFF запускается отдельным Bun-контейнером.
+
+Наружу публикуется только один frontend-порт:
+
+- `4100` - shell, MFE static через `/mfe/<app>` и BFF proxy через `/bff/*`.
+
+По умолчанию BFF ходит в backend по `https://api.master.stand.airlinesim.ms0ur.dev/`. Для другого адреса задайте `BFF_BACKEND_BASE_URL` перед запуском compose. Browser-facing адреса `VITE_BACKEND_URL`, `VITE_BFF_URL`, `VITE_SOCKET_URL` и `VITE_MFE_BASE_URL` вшиваются на этапе сборки; в compose API/BFF по умолчанию идут через same-origin `/bff`, поэтому credentialed auth не требует wildcard CORS.
+
 ## Приложения
 
 - `apps/shell` - host-приложение на Vue 3 + Vite. Отвечает за общий layout, глобальные состояния, авторизацию, уведомления, i18n и lazy import remote-модулей.

@@ -1,7 +1,7 @@
 import type {
   AirlinepbAirlineResponse,
-  AirlinepbCreateAirlineRequest,
   AirlinepbCreateAirlineResponse,
+  DtoCreateAirlineRequestDTO,
 } from "@airlinesim/api-contracts";
 
 import { airlineSimEventBus } from "@airlinesim/event-bus";
@@ -36,7 +36,7 @@ export const authState = {
 };
 
 export async function createMyAirline(
-  request: AirlinepbCreateAirlineRequest,
+  request: DtoCreateAirlineRequestDTO,
 ): Promise<AirlinepbCreateAirlineResponse> {
   state.isSubmitting = true;
   state.error = null;

@@ -14,7 +14,9 @@ export function getConfig(): BffConfig {
   return {
     backendAdminLogin: Bun.env.backend_admin_login ?? Bun.env.BACKEND_ADMIN_LOGIN,
     backendAdminPassword: Bun.env.backend_admin_password ?? Bun.env.BACKEND_ADMIN_PASSWORD,
-    backendBaseUrl: normalizeBaseUrl(Bun.env.BFF_BACKEND_BASE_URL ?? "http://localhost:8080"),
+    backendBaseUrl: normalizeBaseUrl(
+      Bun.env.BFF_BACKEND_BASE_URL ?? "https://api.master.stand.airlinesim.ms0ur.dev/",
+    ),
     port: Number(Bun.env.BFF_PORT ?? "4200"),
   };
 }

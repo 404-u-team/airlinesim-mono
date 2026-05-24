@@ -1,0 +1,18 @@
+ARG BUN_VERSION=1.3.1
+
+FROM oven/bun:${BUN_VERSION} AS runtime
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV BFF_PORT=4200
+
+COPY . .
+
+RUN bun install --frozen-lockfile --production
+
+WORKDIR /app/bff
+
+EXPOSE 4200
+
+CMD ["bun", "run", "start"]

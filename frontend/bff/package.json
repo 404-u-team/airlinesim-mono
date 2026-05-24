@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun --watch src/server.ts",
+    "generate:openapi": "bun src/scripts/generate-openapi.ts",
     "import:world-data": "bun src/modules/import/cli.ts --import",
     "import:world-data:dry-run": "bun src/modules/import/cli.ts",
     "lint": "eslint . --max-warnings=0 && tsc --noEmit",
@@ -16,6 +17,7 @@
     "@airlinesim/eslint-config": "workspace:*",
     "@types/bun": "latest",
     "eslint": "latest",
-    "typescript": "~6.0.2"
+    "typescript": "~6.0.2",
+    "yaml": "^2.8.2"
   }
 }

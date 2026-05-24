@@ -198,6 +198,7 @@
         "@types/bun": "latest",
         "eslint": "latest",
         "typescript": "~6.0.2",
+        "yaml": "^2.8.2",
       },
     },
     "packages/air-ui": {

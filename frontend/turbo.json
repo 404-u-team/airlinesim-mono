@@ -1,5 +1,11 @@
 {
     "$schema": "https://turborepo.dev/schema.json",
+    "globalEnv": [
+        "VITE_BACKEND_URL",
+        "VITE_BFF_URL",
+        "VITE_SOCKET_URL",
+        "VITE_MFE_BASE_URL"
+    ],
     "tasks": {
         "build": {
             "dependsOn": [
