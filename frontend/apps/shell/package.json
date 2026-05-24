@@ -8,7 +8,8 @@
     "build": "vue-tsc -b && vite build",
     "lint": "eslint . --max-warnings=0 && vue-tsc -b --noEmit",
     "lint:fix": "eslint . --fix",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "bun test"
   },
   "dependencies": {
     "@airlinesim/air-ui": "workspace:*",

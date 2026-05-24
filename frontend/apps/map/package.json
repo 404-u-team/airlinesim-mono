@@ -9,7 +9,8 @@
     "lint": "eslint . --max-warnings=0 && svelte-check --tsconfig ./tsconfig.json",
     "lint:fix": "eslint . --fix",
     "preview": "rsbuild preview",
-    "svelte-check": "svelte-check --tsconfig ./tsconfig.json"
+    "svelte-check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "bun test"
   },
   "dependencies": {
     "@airlinesim/air-ui": "workspace:*",

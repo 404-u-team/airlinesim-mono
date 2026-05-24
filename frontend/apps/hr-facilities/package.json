@@ -8,7 +8,8 @@
     "build": "vue-tsc -b && rsbuild build",
     "lint": "eslint . --max-warnings=0 && vue-tsc -b --noEmit",
     "lint:fix": "eslint . --fix",
-    "preview": "rsbuild preview"
+    "preview": "rsbuild preview",
+    "test": "bun test"
   },
   "dependencies": {
     "@airlinesim/air-ui": "workspace:*",

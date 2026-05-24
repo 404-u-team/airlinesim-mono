@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { airlineSimEventBus, type RemoteId } from "@airlinesim/event-bus";
 import { type Locale, translate } from "@airlinesim/i18n";
-import { computed, defineAsyncComponent, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 
 import AppLoader from "../components/AppLoader.vue";
@@ -16,6 +16,7 @@ const props = defineProps<{
 }>();
 
 const route = useRoute();
+const isRouteLoading = ref(false);
 
 const activeRemoteId = computed<RemoteId | undefined>(() => {
   const { remoteId } = route.meta;
@@ -62,7 +63,8 @@ const t = computed(() => (key: ShellMessageKey): string =>
 
 watch(
   () => route.path,
-  (path, fromPath) => {
+  async (path, fromPath) => {
+    isRouteLoading.value = true;
     const remoteId = getRemoteIdByPath(path);
 
     if (remoteId) {
@@ -77,6 +79,9 @@ watch(
         remoteId,
       });
     }
+
+    await nextTick();
+    isRouteLoading.value = false;
   },
   { immediate: true },
 );
@@ -84,9 +89,14 @@ watch(
 
 <template>
   <main class="relative min-h-0 overflow-hidden bg-background">
+    <AppLoader
+      v-if="isRouteLoading"
+      class="absolute inset-0 z-10 bg-background/90"
+      :label="t('remote.loading')"
+    />
     <template v-if="activeRemoteId === 'map'">
       <SvelteWrapper
-        :key="activeRemoteId"
+        :key="route.path"
         :create-fn="createMap"
         :component-props="{ appLocale: props.appLocale, controls: false, remoteId: activeRemoteId, rotation: false, shellPath: route.path, theme: props.appTheme }"
       />
@@ -95,7 +105,7 @@ watch(
     <Suspense v-else-if="activeRemoteId">
       <component
         :is="activeVueRemote"
-        :key="activeRemoteId"
+        :key="route.path"
         :remote-id="activeRemoteId"
         :app-locale="props.appLocale"
         :shell-path="route.path"

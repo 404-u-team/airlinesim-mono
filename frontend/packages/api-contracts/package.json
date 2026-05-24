@@ -18,7 +18,8 @@
     "dev": "bun --watch run scripts/generate-openapi.ts",
     "generate": "bun run scripts/generate-openapi.ts",
     "lint": "eslint . --max-warnings=0 && tsc --noEmit",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "bun test"
   },
   "dependencies": {
     "zod": "^4.2.0"

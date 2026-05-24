@@ -9,7 +9,8 @@
     "import:world-data:dry-run": "bun src/modules/import/cli.ts",
     "lint": "eslint . --max-warnings=0 && tsc --noEmit",
     "lint:fix": "eslint . --fix",
-    "start": "bun src/server.ts"
+    "start": "bun src/server.ts",
+    "test": "bun test"
   },
   "devDependencies": {
     "@airlinesim/eslint-config": "workspace:*",

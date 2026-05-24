@@ -14,7 +14,8 @@
     "generate:openapi": "bun run --cwd packages/api-contracts generate",
     "lint": "turbo lint",
     "lint:fix": "turbo run lint:fix --continue=always --force",
-    "ports:clear": "bun run scripts/clear-dev-ports.ts"
+    "ports:clear": "bun run scripts/clear-dev-ports.ts",
+    "test": "turbo test"
   },
   "private": true,
   "type": "module",

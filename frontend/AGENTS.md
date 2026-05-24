@@ -8,6 +8,7 @@
 - Перед изменениями проверять этот файл и локальные README/STYLING документы.
 - Не смешивать backend и frontend задачи без явной просьбы.
 - Для frontend проверок использовать `bun run lint` из `frontend`.
+- Для тестов использовать `bun run test` из `frontend`; правила создания и запуска тестов описаны в `docs/TESTS.md`.
 - Для автоисправлений использовать `bun run lint:fix` из `frontend`; команда продолжает обходить остальные пакеты через Turbo даже после ошибки в одном пакете.
 - Для изменений запускать применимые проверки: минимум `bun run lint` из `frontend`, а при наличии/добавлении более точечных тестов или storybook-проверок запускать соответствующие package scripts.
 - Для workspace-скриптов полагаться на Turborepo.
@@ -35,6 +36,7 @@
 - `docs/MFE_EXAMPLE.png` - пример cross-MFE сценария через singleton `event-bus`: выбор рейса/самолета на карте, обработка в Shell и подготовка виджета Fleet & Ops.
 - `docs/mfe-routing.md` - спецификация маршрутизации между Shell и MFE: источник истины для route registry, порядок портов, события `event-bus`, публичные auth routes и правила навигации remote-приложений.
 - `docs/I18N.md` - спецификация мультиязычности RU/EN: источник локали, хранение строк, fallback и контракт Shell -> MFE.
+- `docs/TESTS.md` - правила создания и запуска тестов frontend-модулей.
 - `docs/bff.md` - спецификация Bun BFF: отдельное расположение вне `apps`, модули `import` и `proxy`, env и правила развития.
 - `docs/swagger.yaml` - OpenAPI/Swagger контракт backend API; `docs/swagger.json` лежит рядом как fallback для генерации.
 - `docs/erd.txt` - доменная ERD модель.
