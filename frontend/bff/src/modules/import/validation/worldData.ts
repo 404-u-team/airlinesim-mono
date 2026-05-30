@@ -1,14 +1,57 @@
-import type { FinalAirport, FinalCountry, FinalRegion, FinalRegionLink, SourceIssueSink, WorldData } from "../shared/types";
+import type { FinalAircraftType, FinalAirport, FinalCountry, FinalRegion, FinalRegionLink, SourceIssueSink, WorldData } from "../shared/types";
 
 const CONTINENTS = new Set(["AF", "AN", "AS", "EU", "NA", "OC", "SA"]);
 
 export function validateWorldData(data: WorldData, issues: SourceIssueSink): boolean {
+  const aircraftTypes = validateAircraftTypes(data.aircraftTypes, issues);
   const countries = validateCountries(data.countries, issues);
   const regions = validateRegions(data.regions, new Set(data.countries.map((country) => country.sourceKey)), issues);
   const airports = validateAirports(data.airports, countries, regions, issues);
   const links = validateRegionLinks(data.regionLinks, regions, issues);
 
-  return countries.size > 0 && airports && links;
+  return aircraftTypes && countries.size > 0 && airports && links;
+}
+
+function validateAircraftTypes(aircraftTypes: FinalAircraftType[], issues: SourceIssueSink): boolean {
+  const icaoCodes = new Set<string>();
+  let ok = true;
+
+  for (const aircraftType of aircraftTypes) {
+    const { payload, sourceKey } = aircraftType;
+
+    if (!/^[A-Z0-9]{3,4}$/u.test(payload.icao_code) || !/^[A-Z0-9]{2,3}$/u.test(payload.iata_code)) {
+      ok = fail(issues, "aircraft-type", sourceKey, "Invalid aircraft type IATA or ICAO code");
+    }
+    if (icaoCodes.has(payload.icao_code)) {
+      ok = fail(issues, "aircraft-type", sourceKey, "Duplicate aircraft type ICAO code");
+    }
+    if (!payload.model_name || !payload.characteristics) {
+      ok = fail(issues, "aircraft-type", sourceKey, "Aircraft type model name or characteristics is empty");
+    }
+    if (payload.max_planned_seat_capacity < 20 || payload.max_range_km < 500 || payload.cruising_speed_kph < 250) {
+      ok = fail(issues, "aircraft-type", sourceKey, "Aircraft type capacity, range or speed is out of range");
+    }
+    if (payload.min_runway_length_m < 500 || payload.mtow_kg < 5_000 || payload.fuel_consumption_per_hour <= 0) {
+      ok = fail(issues, "aircraft-type", sourceKey, "Aircraft type runway, MTOW or fuel burn is out of range");
+    }
+    if (
+      [
+        payload.base_maintenance_points,
+        payload.base_turnaround_points,
+        payload.maint_cost_per_flight_hour,
+        payload.maint_cost_per_landing,
+        payload.maint_cost_per_takeoff,
+        payload.price_per_unit,
+        payload.production_points_price,
+      ].some((value) => value <= 0)
+    ) {
+      ok = fail(issues, "aircraft-type", sourceKey, "Aircraft type cost or points field is not positive");
+    }
+
+    icaoCodes.add(payload.icao_code);
+  }
+
+  return ok;
 }
 
 function validateAirports(

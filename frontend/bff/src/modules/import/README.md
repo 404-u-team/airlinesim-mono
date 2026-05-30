@@ -6,8 +6,9 @@
 
 - `index.ts` - HTTP endpoints модуля.
 - `cli.ts` - CLI-вход для dry-run и импорта.
-- `build/` - нормализация и синтез Country, Region, Airport, RegionLink.
+- `build/` - нормализация и синтез AircraftType, Country, Region, Airport, RegionLink.
   - `index.ts` - orchestration сборки dataset.
+  - `aircraftTypes.ts` - справочник реальных типов самолетов и игровые поля эксплуатации.
   - `countries.ts`, `regions.ts`, `airports.ts`, `regionLinks.ts`, `runways.ts` - доменные этапы сборки.
   - `shared.ts`, `types.ts` - helpers и типы, относящиеся именно к build-слою.
 - `runtime/` - orchestration выполнения, storage и отчеты.
@@ -100,7 +101,7 @@ bun src/modules/import/cli.ts --import
 
 Dry-run может построить dataset без admin env, но не сможет сверить уже существующие backend entities через list endpoints. Import mode без admin credentials запишет ошибку в report и не будет мутировать backend.
 
-Важно: dry-run не отправляет create/update запросы в backend. Реальная отправка выполняется только в `import` mode: `POST /import/world-data/run`, `POST /import/world-data?mode=import` или `bun run import:world-data`. В import mode сущности отправляются в backend по одной, строго в порядке Country -> Region -> Airport -> RegionLink. Если import job завершается слишком быстро, сначала проверь status endpoint: чаще всего там будет ошибка про отсутствующие backend admin credentials или backend request failure.
+Важно: dry-run не отправляет create/update запросы в backend. Реальная отправка выполняется только в `import` mode: `POST /import/world-data/run`, `POST /import/world-data?mode=import` или `bun run import:world-data`. В import mode сущности отправляются в backend по одной, строго в порядке Country -> AircraftType -> Region -> Airport -> RegionLink. Если import job завершается слишком быстро, сначала проверь status endpoint: чаще всего там будет ошибка про отсутствующие backend admin credentials или backend request failure.
 
 ## Runtime storage
 
@@ -114,6 +115,7 @@ frontend/bff/data/import/world-data
 
 - `raw/` - cached raw sources: OurAirports CSV, REST Countries JSON, World Bank JSON, GeoNames TXT/ZIP.
 - `manual/` - ручные overrides, отслеживаются git:
+  - `aircraft-types.json`
   - `countries.json`
   - `regions.json`
   - `airports.json`
@@ -152,17 +154,20 @@ Importer использует:
 Порядок импорта строгий:
 
 1. Country
-2. Region
-3. Airport
-4. RegionLink
+2. AircraftType
+3. Region
+4. Airport
+5. RegionLink
 
 Зависимости:
 
 - Region требует backend `country_id`.
 - Airport требует backend `country_id` и `region_id`.
 - RegionLink требует два backend ID регионов.
+- AircraftType не зависит от world-data сущностей и сверяется с backend по `icao_code`.
 
 `RegionLink` симметричен. Importer сортирует backend UUID регионов лексикографически перед отправкой payload, потому что в backend DB есть `CHECK (region_a < region_b)`.
+Для AircraftType в текущем OpenAPI есть `POST /aircraft-types` и `GET /aircraft-types`, но нет update endpoint; если payload уже импортированного типа изменится, importer запишет ошибку в report вместо попытки несуществующего PUT.
 
 ## Стабильные source keys
 
@@ -172,6 +177,7 @@ Importer использует:
 - Region: `region:<LOCAL_CODE>`, пример `region:US-NY`.
 - Airport: `airport:<ICAO>`, пример `airport:UUEE`.
 - RegionLink: `region-link:<A>:<B>`, коды регионов отсортированы лексикографически.
+- AircraftType: `aircraft-type:<ICAO>`, пример `aircraft-type:A20N`.
 
 Эти ключи используются в отчетах, mappings, разрешении зависимостей и идемпотентности.
 
@@ -194,8 +200,21 @@ Importer использует:
   - Region по `local_code`.
   - Airport по `icao_code`.
   - RegionLink через mapped backend IDs регионов.
+  - AircraftType по `icao_code`.
 
 Это предотвращает слепые повторные `POST` запросы.
+
+## Сборка AircraftType
+
+Importer содержит tracked справочник реальных популярных типов самолетов: Airbus A220/A320/A321/A330/A350/A380, ATR 72, Boeing 737/777/787 и Embraer E190-E2. Базовые поля берутся из открыто известных характеристик самолетов и переводятся в backend payload:
+
+- `iata_code`, `icao_code`, `model_name`.
+- `max_planned_seat_capacity`, `max_range_km`, `cruising_speed_kph`, `min_runway_length_m`, `mtow_kg`.
+- игровые `base_maintenance_points`, `base_turnaround_points`, `production_points_price`.
+- эксплуатационные расходы и расход топлива.
+- `characteristics` как JSON-строка с range/runway/category классами.
+
+`manual/aircraft-types.json` может переопределять отдельные поля по ICAO или model name. `manufacturer_id` намеренно не задан в базовом справочнике, потому что OpenAPI пока не публикует импорт производителей; его можно добавить manual override, если backend уже содержит нужные manufacturer IDs.
 
 ## Выбор аэропортов
 

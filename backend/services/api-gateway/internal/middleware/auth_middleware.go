@@ -55,7 +55,7 @@ func AuthMiddleware(config *config.Config, authClient *grpcclient.AuthClient) gi
 		}
 
 		// закидываем userID и role в контекст
-		c.Set(UserIDKey, userID)
+		c.Set(UserIDKey, userID.String())
 		c.Set(RoleKey, role)
 		c.Next()
 	}

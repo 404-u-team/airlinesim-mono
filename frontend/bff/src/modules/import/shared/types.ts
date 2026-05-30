@@ -1,3 +1,28 @@
+export type AircraftTypePayload = {
+  base_maintenance_points: number;
+  base_turnaround_points: number;
+  characteristics: string;
+  cruising_speed_kph: number;
+  d_check_interval_fh: number;
+  d_check_interval_years: number;
+  d_check_overdue_multiplier: number;
+  fuel_consumption_per_hour: number;
+  iata_code: string;
+  icao_code: string;
+  image_upload_id: string;
+  maint_cost_per_flight_hour: number;
+  maint_cost_per_landing: number;
+  maint_cost_per_takeoff: number;
+  manufacturer_id?: string;
+  max_planned_seat_capacity: number;
+  max_range_km: number;
+  min_runway_length_m: number;
+  model_name: string;
+  mtow_kg: number;
+  price_per_unit: number;
+  production_points_price: number;
+};
+
 export type AirportPayload = {
   continent: string;
   country_id: string;
@@ -47,7 +72,12 @@ export type CountryPayload = {
   wikipedia_link: string;
 };
 
-export type EntityType = "airport" | "country" | "region" | "region-link";
+export type EntityType = "aircraft-type" | "airport" | "country" | "region" | "region-link";
+
+export type FinalAircraftType = {
+  payload: AircraftTypePayload;
+  sourceKey: string;
+};
 
 export type FinalAirport = {
   capacityIndex: number;
@@ -164,6 +194,7 @@ export type SourceIssueSink = {
 };
 
 export type WorldData = {
+  aircraftTypes: FinalAircraftType[];
   airports: FinalAirport[];
   countries: FinalCountry[];
   regionLinks: FinalRegionLink[];

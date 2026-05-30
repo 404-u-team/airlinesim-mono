@@ -6,6 +6,9 @@ export type ReconcileState = {
 };
 
 export function camelPlural(entityType: EntityType): string {
+  if (entityType === "aircraft-type") {
+    return "aircraftTypes";
+  }
   if (entityType === "country") {
     return "countries";
   }

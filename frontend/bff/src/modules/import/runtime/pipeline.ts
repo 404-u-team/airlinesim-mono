@@ -61,6 +61,7 @@ function createIssueSink(report: ImportReport): SourceIssueSink {
 }
 
 function fillBuildCounts(report: ImportReport, data: WorldData): void {
+  report.counts.aircraftTypes = data.aircraftTypes.length;
   report.counts.countries = data.countries.length;
   report.counts.regions = data.regions.length;
   report.counts.selectedAirports = data.airports.length;

@@ -2,6 +2,7 @@ import type { BffConfig } from "../../../config";
 import type { BackendEntity } from "../shared/types";
 
 export type BackendSnapshot = {
+  aircraftTypes: BackendEntity[];
   airports: BackendEntity[];
   countries: BackendEntity[];
   regionLinks: BackendEntity[];
@@ -82,14 +83,16 @@ export function extractBackendId(payload: unknown): null | string {
 }
 
 export async function loadBackendSnapshot(config: BffConfig, token: string): Promise<BackendSnapshot> {
-  const [countries, regions, airports, regionLinks] = await Promise.all([
+  const [countries, regions, airports, regionLinks, aircraftTypes] = await Promise.all([
     backendRequest<{ countries?: BackendEntity[] }>(config, "/countries", { token }),
     backendRequest<{ regions?: BackendEntity[] }>(config, "/regions", { token }),
     backendRequest<{ airports?: BackendEntity[] }>(config, "/airports", { token }),
     backendRequest<{ region_links?: BackendEntity[] }>(config, "/region-links", { token }),
+    backendRequest<{ items?: BackendEntity[] }>(config, "/aircraft-types", { token }),
   ]);
 
   return {
+    aircraftTypes: aircraftTypes.items ?? [],
     airports: airports.airports ?? [],
     countries: countries.countries ?? [],
     regionLinks: regionLinks.region_links ?? [],

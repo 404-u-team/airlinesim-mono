@@ -2,6 +2,7 @@ import type { BffConfig } from "../../../config";
 import type {
   AirportPayload,
   EntityType,
+  FinalAircraftType,
   FinalAirport,
   FinalCountry,
   FinalRegion,
@@ -40,6 +41,9 @@ export async function planOrImport(
   for (const country of data.countries) {
     await importCountry(config, state, report, country);
   }
+  for (const aircraftType of data.aircraftTypes) {
+    await importAircraftType(config, state, report, aircraftType);
+  }
   for (const region of data.regions) {
     await importRegion(config, state, report, region);
   }
@@ -60,7 +64,7 @@ async function importEntity(
     entityType: EntityType;
     payload: Record<string, unknown>;
     sourceKey: string;
-    updatePath: (id: string) => string;
+    updatePath?: (id: string) => string;
   },
 ): Promise<null | string> {
   const hash = stableHash(input.payload);
@@ -98,6 +102,23 @@ async function createEntity(
   state.mappings.set(mappingKey(input.entityType, input.sourceKey), createMapping(input.entityType, input.sourceKey, id, hash));
 
   return id;
+}
+
+async function importAircraftType(
+  config: BffConfig,
+  state: ReconcileState,
+  report: ImportReport,
+  aircraftType: FinalAircraftType,
+): Promise<void> {
+  const existedBefore = state.mappings.has(mappingKey("aircraft-type", aircraftType.sourceKey));
+  const id = await importEntity(config, state, report, {
+    createPath: "/aircraft-types",
+    entityType: "aircraft-type",
+    payload: aircraftType.payload,
+    sourceKey: aircraftType.sourceKey,
+  });
+
+  incrementCreateCount(report, "aircraftTypesToCreate", id, existedBefore);
 }
 
 async function importAirport(
@@ -208,6 +229,9 @@ function incrementCreateCount(report: ImportReport, key: string, id: null | stri
 }
 
 function planEntities(state: ReconcileState, data: WorldData, report: ImportReport): void {
+  for (const aircraftType of data.aircraftTypes) {
+    planEntity(state, report, "aircraft-type", aircraftType.sourceKey, aircraftType.payload, "aircraftTypesToCreate");
+  }
   for (const country of data.countries) {
     planEntity(state, report, "country", country.sourceKey, country.payload, "countriesToCreate");
   }
@@ -257,6 +281,11 @@ async function updateEntity(
   }
 
   report.counts.updatesNeeded = (report.counts.updatesNeeded ?? 0) + 1;
+  if (!input.updatePath) {
+    pushError(report, { entityType: input.entityType, message: "Skipping update because backend update endpoint is not available", sourceKey: input.sourceKey });
+    return null;
+  }
+
   const response = await importBackendRequest(config, state, input.updatePath(backendId), {
     body: { ...input.payload, id: backendId },
     method: "PUT",

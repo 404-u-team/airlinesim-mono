@@ -186,6 +186,17 @@ services:
             user-db:
                 condition: service_healthy
 
+    fleet-service:
+        build:
+            context: ../../../
+            dockerfile: backend/services/fleet-service/Dockerfile
+        restart: on-failure
+        env_file:
+            - ../../services/fleet-service/.env
+        depends_on:
+            fleet-db:
+                condition: service_healthy
+
     api-gateway:
         build:
             context: ../../../
@@ -197,6 +208,7 @@ services:
         depends_on:
             - auth-service
             - operations-service
+            - fleet-service
         networks:
             - default
             - intranet

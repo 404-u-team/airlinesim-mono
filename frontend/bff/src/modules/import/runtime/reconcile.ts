@@ -45,6 +45,11 @@ export async function reconcileExistingBackend(
   const countryByIso = new Map(snapshot.countries.map((country) => [stringField(country, "iso"), country]));
   const regionByCode = new Map(snapshot.regions.map((region) => [stringField(region, "local_code"), region]));
   const airportByIcao = new Map(snapshot.airports.map((airport) => [stringField(airport, "icao_code"), airport]));
+  const aircraftTypeByIcao = new Map(snapshot.aircraftTypes.map((aircraftType) => [stringField(aircraftType, "icao_code"), aircraftType]));
+
+  for (const aircraftType of data.aircraftTypes) {
+    reconcileMapping(state, "aircraft-type", aircraftType.sourceKey, aircraftType.payload, aircraftTypeByIcao.get(aircraftType.payload.icao_code));
+  }
 
   for (const country of data.countries) {
     reconcileMapping(state, "country", country.sourceKey, country.payload, countryByIso.get(country.payload.iso));
