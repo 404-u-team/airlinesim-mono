@@ -123,6 +123,42 @@ bun run generate:bff-openapi
 
 Файл результата: `docs/bff-openapi.json`. Корневой `bun run dev` генерирует его перед запуском Turbo. `packages/api-contracts` использует `docs/bff-openapi.json`, если файл есть, и только при его отсутствии возвращается к backend `docs/swagger.yaml` / `docs/swagger.json`.
 
+### `demand`
+
+Папка: `bff/src/modules/demand`.
+
+Модуль считает спрос лениво по запросу клиента и сохраняет результат в backend `RegionLink`, потому что backend хранит базовый спрос именно на связи регионов.
+
+HTTP endpoint:
+
+- `GET /demand/airport-pair?origin_airport_id=<id>&destination_airport_id=<id>`
+
+Правила:
+
+- endpoint требует пользовательский `Authorization: Bearer ...` и проверяет его через backend;
+- BFF внутри использует backend admin credentials, потому что list/mutate endpoints регионов и region-links сейчас admin-only;
+- BFF загружает airports, regions и region-links, находит регионы пары аэропортов, затем ищет связь этих регионов;
+- если `base_daily_demand_ab` и `base_daily_demand_ba` уже положительные, возвращается сохраненный спрос;
+- если спрос не сгенерирован, BFF считает его гравитационной формулой на основе population, GDP per capita, tourism/business scores, region-link affinity, расстояния аэропортов, runway capacity, night operations, fee/fuel multipliers и наличия IATA;
+- если region-link существует, BFF обновляет его через `PUT /region-link/:id`;
+- если region-link отсутствует, BFF создает его через `POST /region-link` с рассчитанными affinity и demand values;
+- в ответе направление `origin_daily_passengers` / `destination_daily_passengers` соответствует аэропортам из запроса, даже если backend хранит пару регионов в отсортированном порядке `region_a`/`region_b`.
+
+### `game`
+
+Папка: `bff/src/modules/game`.
+
+Модуль собирает frontend-facing игровые ответы для MFE из уже готовых backend routes. Пользовательские данные (`/airline/me`, `/aircrafts`) читаются с пользовательским `Authorization` token. Справочники world-data и aircraft types читаются через backend admin credentials, потому что соответствующие backend list routes сейчас находятся в admin-only группе.
+
+HTTP endpoints:
+
+- `GET /game/finance-overview` - баланс авиакомпании, стоимость флота, maintenance reserve, credit/safety/reputation.
+- `GET /game/facilities-overview` - starting airport, базированные борта, совместимые типы самолетов, слоты и ground costs.
+- `GET /game/events-feed` - синтетическая лента событий из airline/fleet/demand-cache состояния.
+- `GET /game/network-opportunities?origin_airport_id=<id>` - список route opportunities из airports, regions и region-links. Если `origin_airport_id` не передан, используется `airline.starting_airport_id`.
+
+Правило развития: если backend позже откроет read-only world-data routes для обычного пользователя, `game` должен перестать использовать admin-token для чтения этих справочников.
+
 ## Правила развития
 
 - Не добавлять библиотеки без явной необходимости; Bun уже дает HTTP server, fetch, env и файловые API.

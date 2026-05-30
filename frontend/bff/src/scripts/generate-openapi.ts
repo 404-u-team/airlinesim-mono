@@ -23,6 +23,7 @@ type SwaggerDocument = {
 type SwaggerOperation = {
   description?: string;
   parameters?: SwaggerParameter[];
+  produces?: string[];
   responses?: Record<string, { schema?: JsonSchema }>;
 };
 
@@ -79,7 +80,64 @@ function addBffOverlay(swagger: SwaggerDocument): SwaggerDocument {
     operation.parameters = mergeQueryParameters(operation.parameters, getFilterParameters(swagger, operation));
   }
 
+  addDemandOverlay(swagger);
+
   return swagger;
+}
+
+function addDemandOverlay(swagger: SwaggerDocument): void {
+  swagger.definitions ??= {};
+  swagger.paths ??= {};
+  swagger.definitions["bff.AirportPairDemand"] = {
+    properties: {
+      cached: { type: "boolean" },
+      destination_airport_id: { type: "string" },
+      destination_daily_passengers: { type: "number" },
+      distance_km: { type: "number" },
+      origin_airport_id: { type: "string" },
+      origin_daily_passengers: { type: "number" },
+      region_link_id: { type: "string" },
+    },
+    type: "object",
+  };
+  swagger.definitions["bff.AirportPairDemandResponse"] = {
+    properties: {
+      demand: { $ref: "#/definitions/bff.AirportPairDemand" },
+    },
+    type: "object",
+  };
+  swagger.paths["/demand/airport-pair"] = {
+    get: {
+      description:
+        "Lazily calculates base daily passenger demand for an airport pair using airport, region and region-link data. If the linked regions do not have cached base demand, BFF writes the generated values back to the backend region-link endpoint.",
+      parameters: [
+        {
+          description: "Origin backend airport id.",
+          in: "query",
+          name: "origin_airport_id",
+          required: true,
+          type: "string",
+        },
+        {
+          description: "Destination backend airport id.",
+          in: "query",
+          name: "destination_airport_id",
+          required: true,
+          type: "string",
+        },
+      ],
+      produces: ["application/json"],
+      responses: {
+        "200": {
+          schema: { $ref: "#/definitions/bff.AirportPairDemandResponse" },
+        },
+        "400": {},
+        "401": {},
+        "404": {},
+        "500": {},
+      },
+    },
+  };
 }
 
 function getFilterParameters(

@@ -349,6 +349,20 @@ export type OperationspbRegionLink = {
   "tourism"?: number;
 };
 
+export type BffAirportPairDemand = {
+  "cached"?: boolean;
+  "destination_airport_id"?: string;
+  "destination_daily_passengers"?: number;
+  "distance_km"?: number;
+  "origin_airport_id"?: string;
+  "origin_daily_passengers"?: number;
+  "region_link_id"?: string;
+};
+
+export type BffAirportPairDemandResponse = {
+  "demand"?: BffAirportPairDemand;
+};
+
 export type GetAircraftTypesQuery = {
   "q"?: string;
   "refresh"?: "true" | "false";
@@ -447,6 +461,11 @@ export type GetRegionsQuery = {
   "population"?: number;
   "tourism_score"?: number;
   "wikipedia_link"?: string;
+};
+
+export type GetDemandAirportPairQuery = {
+  "origin_airport_id": string;
+  "destination_airport_id": string;
 };
 
 export const openApiOperations = [
@@ -719,5 +738,12 @@ export const openApiOperations = [
     "tags": [
       "Region"
     ]
+  },
+  {
+    "method": "GET",
+    "operationId": "get__demand_airport_pair",
+    "path": "/demand/airport-pair",
+    "summary": "",
+    "tags": []
   }
 ] as const;

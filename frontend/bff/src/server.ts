@@ -1,5 +1,7 @@
 import { getConfig } from "./config";
 import { jsonResponse, notFound } from "./http";
+import { handleDemandRequest } from "./modules/demand";
+import { handleGameRequest } from "./modules/game";
 import { handleImportRequest } from "./modules/import";
 import { handleProxyRequest } from "./modules/proxy";
 
@@ -18,6 +20,8 @@ Bun.serve({
 
     return (
       (await handleImportRequest(request, url, config)) ??
+      (await handleDemandRequest(request, url, config)) ??
+      (await handleGameRequest(request, url, config)) ??
       (await handleProxyRequest(request, url, config)) ??
       notFound()
     );
