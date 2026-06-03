@@ -32,8 +32,7 @@ func (r *airlineRepository) CreateAirline(ctx context.Context, payload *airlinep
 			owner_id, starting_airport_id, name, iata_code, icao_code
 		)
 		VALUES (
-			$1, $2, $3, $4, $5, $6,
-			$7	
+			$1, $2, $3, $4, $5
 		)
 		RETURNING id, balance
 	`
