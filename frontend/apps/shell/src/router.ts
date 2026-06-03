@@ -33,6 +33,15 @@ export const router = createRouter({
       path: "/register",
     },
     {
+      component: AuthView,
+      meta: {
+        public: false,
+        publicLayout: true,
+      },
+      name: "onboarding-airline",
+      path: "/onboarding/airline",
+    },
+    {
       path: "/admin",
       redirect: "/admin/countries",
     },
@@ -60,26 +69,61 @@ export const router = createRouter({
 });
 
 router.beforeEach((to) => {
-  const isPublic = to.meta.public === true;
+  return getNavigationRedirect(
+    to.path,
+    to.fullPath,
+    to.meta.public === true,
+    authState.isAuthenticated.value,
+    authState.isRestoringSession.value,
+    authState.airline.value !== null,
+  );
+});
 
-  if (!isPublic && !authState.isAuthenticated.value) {
-    return {
-      path: "/login",
-      query: {
-        redirect: to.fullPath,
-      },
-    };
+function checkMfeRedirect(toPath: string): boolean | string {
+  const mfeRoute = resolveMfeRoute(toPath);
+  if (!mfeRoute) {
+    return true;
   }
 
-  if (isPublic && authState.isAuthenticated.value) {
-    return defaultRoutePath;
-  }
-
-  const mfeRoute = resolveMfeRoute(to.path);
-
-  if (mfeRoute?.defaultPath !== mfeRoute?.pathPrefix && to.path === mfeRoute?.pathPrefix) {
-    return mfeRoute.defaultPath;
+  const { defaultPath, pathPrefix } = mfeRoute;
+  if (defaultPath !== pathPrefix && toPath === pathPrefix) {
+    return defaultPath;
   }
 
   return true;
-});
+}
+
+function getNavigationRedirect(
+  toPath: string,
+  fullPath: string,
+  isPublic: boolean,
+  isAuthenticated: boolean,
+  isRestoringSession: boolean,
+  hasAirline: boolean,
+): boolean | string | { path: string; query: { redirect: string } } {
+  if (!isAuthenticated) {
+    if (!isPublic) {
+      return { path: "/login", query: { redirect: fullPath } };
+    }
+    return true;
+  }
+
+  if (isRestoringSession) {
+    return true;
+  }
+
+  if (isPublic) {
+    return hasAirline ? defaultRoutePath : "/onboarding/airline";
+  }
+
+  const isOnboardingRoute = toPath === "/onboarding/airline";
+  if (!hasAirline) {
+    return isOnboardingRoute ? true : "/onboarding/airline";
+  }
+
+  if (isOnboardingRoute) {
+    return defaultRoutePath;
+  }
+
+  return checkMfeRedirect(toPath);
+}

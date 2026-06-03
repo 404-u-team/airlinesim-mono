@@ -7,22 +7,19 @@ import type {
 import { airlineSimEventBus } from "@airlinesim/event-bus";
 import {
   ApiRequestError,
-  createApiClient,
-  createAuthClient,
   type LoginRequest,
   type RegisterRequest,
 } from "@airlinesim/game-sdk";
 import { computed, reactive } from "vue";
 
-const authClient = createAuthClient();
-const apiClient = createApiClient({
-  getToken: authClient.getAccessToken,
-});
+import { authClient } from "./api";
+import { createOnboardingAirline, getOnboardingSession } from "./onboarding/api";
 
 const state = reactive({
   accessToken: authClient.getAccessToken(),
   airline: null as AirlinepbAirlineResponse | null,
   error: null as null | string,
+  isRestoringSession: false,
   isSubmitting: false,
 });
 
@@ -32,6 +29,7 @@ export const authState = {
   airlineName: computed(() => state.airline?.name ?? "AirlineSim"),
   error: computed(() => state.error),
   isAuthenticated: computed(() => Boolean(state.accessToken)),
+  isRestoringSession: computed(() => state.isRestoringSession),
   isSubmitting: computed(() => state.isSubmitting),
 };
 
@@ -42,10 +40,17 @@ export async function createMyAirline(
   state.error = null;
 
   try {
-    const response = await apiClient.post<AirlinepbCreateAirlineResponse>("/airline", request);
-    await loadMyAirline();
+    const response = await createOnboardingAirline({
+      iata_code: request.iata_code ?? "",
+      icao_code: request.icao_code ?? "",
+      name: request.name ?? "",
+      starting_airport_id: request.starting_airport_id ?? "",
+    });
 
-    return response;
+     
+    state.airline = response.airline;
+
+    return response.airline;
   } catch (error) {
     state.error = getAuthErrorMessage(error);
     throw error;
@@ -61,14 +66,18 @@ export async function loadMyAirline(): Promise<AirlinepbAirlineResponse | null> 
   }
 
   try {
-    const airline = await apiClient.get<AirlinepbAirlineResponse>("/airline/me");
+    const session = await getOnboardingSession();
+    if (session.airline) {
+      // eslint-disable-next-line require-atomic-updates
+      state.airline = session.airline;
+      return session.airline;
+    }
     // eslint-disable-next-line require-atomic-updates
-    state.airline = airline;
-
-    return airline;
+    state.airline = null;
+    return null;
   } catch (error) {
-    if (error instanceof ApiRequestError && error.status === 404) {
-      state.airline = null;
+    if (error instanceof ApiRequestError && (error.status === 401 || error.status === 403)) {
+      logout("expired");
       return null;
     }
 
@@ -97,13 +106,25 @@ export function restoreAuthSession(): void {
   state.accessToken = accessToken;
 
   if (accessToken) {
+    state.isRestoringSession = true;
     airlineSimEventBus.emit("auth:session-restored", { accessToken });
-    void loadMyAirline();
+    void loadMyAirline().finally(() => {
+      state.isRestoringSession = false;
+    });
   }
 }
 
 function getAuthErrorMessage(error: unknown): string {
   if (error instanceof ApiRequestError) {
+    // Check if BFF returned a normalized error payload
+    const data = error.data as null | Record<string, unknown>;
+    if (data && typeof data === "object" && data.error && typeof data.error === "object") {
+      const err = data.error as Record<string, unknown>;
+      if (typeof err.code === "string" && err.code) {
+        return `auth.error.${err.code}`;
+      }
+    }
+
     if (error.status === 400) {
       return "auth.error.invalidCredentials";
     }

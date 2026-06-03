@@ -1,5 +1,7 @@
 export { default as AirBadge } from "./components/AirBadge";
 export { default as AirButton } from "./components/AirButton";
+export { default as AirCombobox } from "./components/AirCombobox";
+export type { AirComboboxOption } from "./components/AirCombobox";
 export { default as AirFormPanel } from "./components/AirFormPanel";
 export { default as AirIconButton } from "./components/AirIconButton";
 export { default as AirMetricCard } from "./components/AirMetricCard";

@@ -1,6 +1,7 @@
 import type { BffConfig } from "../../config";
 
 import { getUserAuthorization, requireValidUserToken } from "../../auth";
+import { BackendHttpError, requestBackend } from "../../backend-http";
 import { jsonResponse } from "../../http";
 
 type CacheableRouteConfig = {
@@ -17,7 +18,6 @@ type CachedPayload = {
 
 type JsonObject = Record<string, unknown>;
 
-const maxBackendAttempts = 4;
 const cacheableRoutes: CacheableRouteConfig[] = [
   {
     backendPath: "/aircraft-types",
@@ -51,6 +51,30 @@ const cacheableRoutes: CacheableRouteConfig[] = [
   },
 ];
 const cache = new Map<string, CachedPayload>();
+
+// Export cache and loadCacheableRoute helper for use in onboarding or other modules
+export { cache, cacheableRoutes };
+
+export async function getCachedListInternal<T>(
+  request: Request,
+  config: BffConfig,
+  path: string,
+  _collectionKey: string,
+): Promise<T[]> {
+  const cachedPayload = cache.get(path);
+  if (cachedPayload) {
+    return cachedPayload.items as T[];
+  }
+
+  // Load fresh
+  const route = cacheableRoutes.find((r) => r.path === path);
+  if (!route) {
+    throw new Error(`Route configuration not found for cacheable path: ${path}`);
+  }
+
+  const result = await loadCacheableRouteInternal(request, config, route);
+  return result.items as T[];
+}
 
 export async function handleProxyRequest(
   request: Request,
@@ -129,16 +153,31 @@ async function forwardBackendRequest(
   url: URL,
   config: BffConfig,
 ): Promise<Response> {
-  const backendUrl = new URL(`${config.backendBaseUrl}${url.pathname}`);
-  backendUrl.search = url.search;
-  const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer();
-  const backendResponse = await requestBackendWithRetry(backendUrl, {
-    body,
-    headers: buildBackendHeaders(request),
-    method: request.method,
-  });
+  try {
+    const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer();
+    const response = await requestBackend(config, url.pathname + url.search, {
+      body,
+      headers: buildBackendHeaders(request),
+      method: request.method as "DELETE" | "GET" | "HEAD" | "PATCH" | "POST" | "PUT",
+    });
 
-  return cloneBackendResponse(backendResponse);
+    return cloneBackendResponse(response);
+  } catch (error) {
+    if (error instanceof BackendHttpError) {
+      return jsonResponse(error.toNormalizedJson(), { status: error.status });
+    }
+
+    return jsonResponse(
+      {
+        error: {
+          code: "BACKEND_UNAVAILABLE",
+          message: error instanceof Error ? error.message : String(error),
+          retryable: true,
+        },
+      },
+      { status: 503 },
+    );
+  }
 }
 
 async function handleCacheableRoute(
@@ -157,7 +196,29 @@ async function handleCacheableRoute(
 
   const refresh = url.searchParams.get("refresh") === "true";
   const cachedPayload = refresh ? null : cache.get(route.path);
-  const payload = cachedPayload ?? (await loadCacheableRoute(request, config, route));
+  let payload: CachedPayload | Response;
+
+  if (cachedPayload) {
+    payload = cachedPayload;
+  } else {
+    try {
+      payload = await loadCacheableRouteInternal(request, config, route);
+    } catch (error) {
+      if (error instanceof BackendHttpError) {
+        return jsonResponse(error.toNormalizedJson(), { status: error.status });
+      }
+      return jsonResponse(
+        {
+          error: {
+            code: "BACKEND_UNAVAILABLE",
+            message: error instanceof Error ? error.message : String(error),
+            retryable: true,
+          },
+        },
+        { status: 503 },
+      );
+    }
+  }
 
   if (payload instanceof Response) {
     return payload;
@@ -186,19 +247,15 @@ function cloneBackendResponse(response: Response): Response {
   });
 }
 
-async function loadCacheableRoute(
+async function loadCacheableRouteInternal(
   request: Request,
   config: BffConfig,
   route: CacheableRouteConfig,
-): Promise<CachedPayload | Response> {
-  const response = await requestBackendWithRetry(`${config.backendBaseUrl}${route.backendPath}`, {
+): Promise<CachedPayload> {
+  const response = await requestBackend(config, route.backendPath, {
     headers: buildBackendHeaders(request),
     method: "GET",
   });
-
-  if (!response.ok) {
-    return jsonResponse({ error: "Backend request failed" }, { status: response.status });
-  }
 
   const backendPayload = (await response.json()) as Record<string, unknown>;
   const items = backendPayload[route.collectionKey];
@@ -216,26 +273,9 @@ function normalizeSearchValue(value: null | string): string {
   return value?.trim().toLowerCase() ?? "";
 }
 
+// Helper to extract text search fields
 function objectTextValues(item: JsonObject): string[] {
   return Object.values(item)
     .filter((value): value is string => typeof value === "string")
     .map((value) => value.toLowerCase());
-}
-
-async function requestBackendWithRetry(input: string | URL, init: RequestInit): Promise<Response> {
-  let response: null | Response = null;
-
-  for (let attempt = 1; attempt <= maxBackendAttempts; attempt += 1) {
-    response = await fetch(input, init);
-
-    if (response.status !== 500) {
-      return response;
-    }
-  }
-
-  if (!response) {
-    throw new Error("Backend request did not return a response");
-  }
-
-  return response;
 }

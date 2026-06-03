@@ -41,7 +41,7 @@ Compose собирает shell и все remote-приложения в producti
 
 - `4100` - shell, MFE static через `/mfe/<app>` и BFF proxy через `/bff/*`.
 
-По умолчанию BFF ходит в backend по `https://api.master.stand.airlinesim.ms0ur.dev/`. Для другого адреса задайте `BFF_BACKEND_BASE_URL` перед запуском compose. Browser-facing адреса `VITE_BACKEND_URL`, `VITE_BFF_URL`, `VITE_SOCKET_URL` и `VITE_MFE_BASE_URL` вшиваются на этапе сборки; в compose API/BFF по умолчанию идут через same-origin `/bff`, поэтому credentialed auth не требует wildcard CORS.
+По умолчанию BFF ходит в backend по `https://api.master.stand.airlinesim.ms0ur.dev/`. Для другого адреса задайте `BFF_BACKEND_BASE_URL` перед запуском compose. Browser-facing адреса `VITE_BFF_URL`, `VITE_SOCKET_URL` и `VITE_MFE_BASE_URL` вшиваются на этапе сборки; в compose API/BFF по умолчанию идут через same-origin `/bff`, поэтому credentialed auth не требует wildcard CORS.
 
 ## Приложения
 

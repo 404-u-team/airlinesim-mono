@@ -42,6 +42,22 @@ BFF проверяет токен обычного пользователя из
 
 ## Модули
 
+### Общий backend HTTP
+
+Папка/файл: `bff/src/backend-http.ts`.
+
+Все BFF-модули, которые обращаются к backend API, должны использовать общий helper `requestBackend` / `requestBackendJson`, а не raw `fetch`. Helper отвечает за:
+
+- сбор backend URL из `BFF_BACKEND_BASE_URL`;
+- bearer token и JSON headers;
+- timeout через `AbortController`;
+- retry для сетевых ошибок, timeout, `408`, `429`, `500`, `502`, `503`, `504`;
+- запрет retry для обычных client/authz/validation ошибок: `400`, `401`, `403`, `404`, `409`, `422`;
+- осторожную политику mutating-запросов: `GET`/`HEAD` безопасно повторяются, auth-запросы могут повторяться, остальные mutation requests повторяются только при явном `retryMutating`;
+- нормализацию backend ошибок в JSON вида `{ "error": { "code": "...", "message": "...", "retryable": false } }`.
+
+Browser-facing приложения не должны реализовывать retry к backend напрямую: они вызывают BFF, а BFF уже применяет общую backend retry-политику.
+
 ### `import`
 
 Папка: `bff/src/modules/import`.
@@ -94,9 +110,9 @@ Dry-run не вызывает create/update endpoints backend. Реальный 
 
 Папка: `bff/src/modules/proxy`.
 
-Модуль отвечает за BFF-ручки поверх backend API. Все frontend HTTP-запросы идут на BFF URL (`VITE_BFF_URL` или `VITE_BACKEND_URL`), а BFF уже делает запрос в backend из `BFF_BACKEND_BASE_URL`.
+Модуль отвечает за BFF-ручки поверх backend API. Все frontend HTTP-запросы идут только на BFF URL (`VITE_BFF_URL`), а BFF уже делает запрос в backend из `BFF_BACKEND_BASE_URL`. Browser-facing код не должен использовать прямой backend URL.
 
-Для backend `500` BFF повторяет запрос до `200`, максимум 4 попытки. Для остальных статусов ответ возвращается клиенту без повторов.
+Повторы backend-запросов выполняются через общий helper `bff/src/backend-http.ts`; локальная retry-логика в модулях не допускается.
 
 Кэшируемые list endpoints:
 
@@ -159,9 +175,30 @@ HTTP endpoints:
 
 Правило развития: если backend позже откроет read-only world-data routes для обычного пользователя, `game` должен перестать использовать admin-token для чтения этих справочников.
 
+### `onboarding`
+
+Папка: `bff/src/modules/onboarding`.
+
+Модуль закрывает первый пользовательский сценарий: восстановление сессии, проверка наличия авиакомпании, выбор стартовой базы и создание авиакомпании. Backend не меняется; BFF использует существующие backend endpoints и добавляет frontend-friendly ответы.
+
+HTTP endpoints:
+
+- `GET /onboarding/session` - возвращает состояние входа: `AUTH_REQUIRED`, `AIRLINE_REQUIRED` или `READY`, данные авиакомпании, стартовую базу и рекомендованный следующий route.
+- `GET /onboarding/airports?q=<query>&country_id=<id>&region_id=<id>&limit=<n>` - возвращает список аэропортов для выбора стартовой базы с score и предупреждениями.
+- `POST /onboarding/airline` - валидирует payload создания авиакомпании, проверяет стартовый аэропорт и вызывает backend `POST /airline`.
+
+Правила:
+
+- `/onboarding/session` без токена отвечает `AUTH_REQUIRED`, а не backend ошибкой.
+- protected onboarding endpoints требуют пользовательский `Authorization: Bearer ...`.
+- аэропорты читаются через BFF list cache/proxy; если backend list routes остаются admin-only, BFF использует существующую служебную модель доступа.
+- `POST /onboarding/airline` не дублирует backend бизнес-логику, а только валидирует UX-вход, нормализует ошибки и обогащает ответ для shell.
+- после успешного создания авиакомпании BFF возвращает `recommendedNextRoute`; для пустого флота это `/fleet/overview`.
+
 ## Правила развития
 
 - Не добавлять библиотеки без явной необходимости; Bun уже дает HTTP server, fetch, env и файловые API.
 - Новые модули добавлять в `bff/src/modules/<module-name>`.
 - Пользовательский `Authorization` token проверять на входе protected endpoints.
 - Для backend admin-действий использовать env `backend_admin_login` / `backend_admin_password`, а не пользовательский token.
+- Browser-facing frontend-код использует `VITE_BFF_URL`; прямой `VITE_BACKEND_URL` в приложениях и `game-sdk` не допускается.

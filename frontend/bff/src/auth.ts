@@ -1,5 +1,6 @@
 import type { BffConfig } from "./config";
 
+import { BackendHttpError, requestBackend, requestBackendJson } from "./backend-http";
 import { jsonResponse } from "./http";
 
 type AccessTokenResponse = {
@@ -54,14 +55,35 @@ export async function requireValidUserToken(
     return jsonResponse({ error: "Missing user token" }, { status: 401 });
   }
 
-  const response = await fetch(`${config.backendBaseUrl}/airline/me`, {
-    headers: {
-      Authorization: authorization,
-    },
-  });
+  try {
+    // GET request will be retried automatically by requestBackend
+    const response = await requestBackend(config, "/airline/me", {
+      token: authorization,
+    });
 
-  if (response.status === 401 || response.status === 403) {
-    return jsonResponse({ error: "Invalid user token" }, { status: 401 });
+    if (response.status === 401 || response.status === 403) {
+      return jsonResponse({ error: "Invalid user token" }, { status: 401 });
+    }
+  } catch (error) {
+    if (error instanceof BackendHttpError) {
+      if (error.status === 401 || error.status === 403) {
+        return jsonResponse({ error: "Invalid user token" }, { status: 401 });
+      }
+      if (error.status === 404) {
+        return null;
+      }
+      return jsonResponse(error.toNormalizedJson(), { status: error.status });
+    }
+    return jsonResponse(
+      {
+        error: {
+          code: "BACKEND_UNAVAILABLE",
+          message: error instanceof Error ? error.message : "Authentication check failed.",
+          retryable: true,
+        },
+      },
+      { status: 503 },
+    );
   }
 
   return null;
@@ -93,22 +115,13 @@ async function loginBackendAdmin(config: BffConfig): Promise<string> {
     throw new Error("BFF backend admin credentials are not configured");
   }
 
-  const response = await fetch(`${config.backendBaseUrl}/auth/login`, {
-    body: JSON.stringify({
+  const payload = await requestBackendJson<AccessTokenResponse>(config, "/auth/login", {
+    body: {
       login: config.backendAdminLogin,
       password: config.backendAdminPassword,
-    }),
-    headers: {
-      "Content-Type": "application/json",
     },
     method: "POST",
   });
-
-  if (!response.ok) {
-    throw new Error("BFF backend admin login failed");
-  }
-
-  const payload = (await response.json()) as AccessTokenResponse;
 
   if (!payload.access_token) {
     throw new Error("BFF backend admin login response did not include access_token");

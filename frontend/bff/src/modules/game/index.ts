@@ -1,8 +1,8 @@
 import type { BffConfig } from "../../config";
 
 import { getBackendAdminToken, getUserAuthorization, requireValidUserToken } from "../../auth";
+import { requestBackendJson } from "../../backend-http";
 import { jsonResponse } from "../../http";
-import { backendRequest } from "../import/backend/api";
 
 type Aircraft = {
   base_airport_id?: string;
@@ -290,12 +290,12 @@ function formatMoney(value: number | undefined): string {
 async function loadGameSnapshot(config: BffConfig, userAuthorization: string): Promise<GameSnapshot> {
   const token = await getBackendAdminToken(config);
   const [airline, aircrafts, aircraftTypes, airports, regions, regionLinks] = await Promise.all([
-    requestUserBackend<Airline>(config, "/airline/me", userAuthorization),
-    requestUserBackend<{ items?: Aircraft[] }>(config, "/aircrafts", userAuthorization),
-    backendRequest<{ items?: AircraftType[] }>(config, "/aircraft-types", { token }),
-    backendRequest<{ airports?: Airport[] }>(config, "/airports", { token }),
-    backendRequest<{ regions?: Region[] }>(config, "/regions", { token }),
-    backendRequest<{ region_links?: RegionLink[] }>(config, "/region-links", { token }),
+    requestBackendJson<Airline>(config, "/airline/me", { token: userAuthorization }),
+    requestBackendJson<{ items?: Aircraft[] }>(config, "/aircrafts", { token: userAuthorization }),
+    requestBackendJson<{ items?: AircraftType[] }>(config, "/aircraft-types", { token }),
+    requestBackendJson<{ airports?: Airport[] }>(config, "/airports", { token }),
+    requestBackendJson<{ regions?: Region[] }>(config, "/regions", { token }),
+    requestBackendJson<{ region_links?: RegionLink[] }>(config, "/region-links", { token }),
   ]);
 
   return {
@@ -316,24 +316,6 @@ function maintenanceRatio(aircraft: Aircraft): number {
   }
 
   return Math.max(0, Math.min(1, (aircraft.current_maintenance_points ?? max) / max));
-}
-
-async function requestUserBackend<TValue>(
-  config: BffConfig,
-  path: string,
-  authorization: string,
-): Promise<TValue> {
-  const response = await fetch(`${config.backendBaseUrl}${path}`, {
-    headers: {
-      Authorization: authorization,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Backend ${path} failed with ${String(response.status)}`);
-  }
-
-  return (await response.json()) as TValue;
 }
 
 function toRouteOpportunity(origin: Airport, destination: Airport, snapshot: GameSnapshot): RouteOpportunity {

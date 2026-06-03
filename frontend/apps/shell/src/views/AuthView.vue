@@ -6,8 +6,10 @@ import { computed, reactive } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 
 import { authState, createMyAirline, login, register } from "../auth";
+import StartingAirportPicker from "../components/StartingAirportPicker.vue";
 import { type ShellMessageKey, shellMessages } from "../i18n/messages";
 import { defaultRoutePath } from "../mfe-routing";
+import { getOnboardingSession } from "../onboarding/api";
 
 const props = defineProps<{
   appLocale: Locale;
@@ -32,11 +34,10 @@ const form = reactive({
   password: "",
 });
 
-const isCreatingAirline = reactive({
-  value: false,
-});
+const isExpired = computed(() => route.query.expired === "true");
 
-const isRegister = computed(() => route.name === "register");
+const isCreatingAirline = computed(() => route.name === "onboarding-airline");
+
 const t = computed(() => (key: ShellMessageKey): string =>
   translate(shellMessages, props.appLocale, key),
 );
@@ -78,14 +79,24 @@ const translatedError = computed(() => {
     : error.value;
 });
 
+const isRegister = computed(() => route.name === "register");
+
 async function completeAuth(): Promise<void> {
-  const redirect = typeof route.query.redirect === "string" ? route.query.redirect : defaultRoutePath;
-  await router.replace(redirect);
+  try {
+    const session = await getOnboardingSession();
+    await router.replace(session.recommendedNextRoute || defaultRoutePath);
+  } catch {
+    await router.replace(defaultRoutePath);
+  }
 }
 
 async function submit(): Promise<void> {
   try {
     if (isCreatingAirline.value) {
+      // Input sanitization
+      form.airlineIataCode = form.airlineIataCode.toUpperCase();
+      form.airlineIcaoCode = form.airlineIcaoCode.toUpperCase();
+
       await createMyAirline({
         iata_code: form.airlineIataCode,
         icao_code: form.airlineIcaoCode,
@@ -110,14 +121,13 @@ async function submit(): Promise<void> {
     }
 
     if (!authState.airline.value) {
-      // eslint-disable-next-line require-atomic-updates
-      isCreatingAirline.value = true;
+      await router.replace("/onboarding/airline");
       return;
     }
 
     await completeAuth();
   } catch {
-    // Error state is owned by auth.ts so event-bus receives the same failure.
+    // Error state is owned by auth.ts
   }
 }
 </script>
@@ -154,7 +164,7 @@ async function submit(): Promise<void> {
         class="space-y-4"
         @submit.prevent="submit"
       >
-        <template v-if="isCreatingAirline.value">
+        <template v-if="isCreatingAirline">
           <AirTextField
             v-model="form.airlineName"
             autocomplete="organization"
@@ -182,17 +192,14 @@ async function submit(): Promise<void> {
               required
             />
           </div>
-          <AirTextField
+          <StartingAirportPicker
             v-model="form.airlineStartingAirportId"
-            autocomplete="off"
-            :hint="t('airline.startingAirportHint')"
-            :label="t('airline.startingAirportId')"
-            name="airlineStartingAirportId"
+            :app-locale="props.appLocale"
           />
         </template>
 
         <AirTextField
-          v-if="isRegister && !isCreatingAirline.value"
+          v-if="isRegister && !isCreatingAirline"
           v-model="form.email"
           autocomplete="email"
           :label="t('auth.email')"
@@ -201,7 +208,7 @@ async function submit(): Promise<void> {
           type="email"
         />
         <AirTextField
-          v-if="isRegister && !isCreatingAirline.value"
+          v-if="isRegister && !isCreatingAirline"
           v-model="form.nickname"
           autocomplete="username"
           :hint="t('auth.nicknameHint')"
@@ -210,7 +217,7 @@ async function submit(): Promise<void> {
           required
         />
         <AirTextField
-          v-if="!isRegister && !isCreatingAirline.value"
+          v-if="!isRegister && !isCreatingAirline"
           v-model="form.login"
           autocomplete="username"
           :label="t('auth.login')"
@@ -218,7 +225,7 @@ async function submit(): Promise<void> {
           required
         />
         <AirTextField
-          v-if="!isCreatingAirline.value"
+          v-if="!isCreatingAirline"
           v-model="form.password"
           :autocomplete="isRegister ? 'new-password' : 'current-password'"
           :hint="t('auth.passwordHint')"
@@ -227,6 +234,13 @@ async function submit(): Promise<void> {
           required
           type="password"
         />
+
+        <p
+          v-if="isExpired && !error"
+          class="rounded-lg bg-warning/10 px-3 py-2 text-body text-warning"
+        >
+          {{ t("auth.expiredSession") }}
+        </p>
 
         <p
           v-if="error"
@@ -244,7 +258,7 @@ async function submit(): Promise<void> {
       </form>
 
       <p class="mt-5 text-center text-body text-text-muted">
-        <template v-if="!isCreatingAirline.value">
+        <template v-if="!isCreatingAirline">
           {{ switchLabel }}
           <RouterLink
             class="text-link hover:underline"

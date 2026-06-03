@@ -17,4 +17,11 @@ airlineSimEventBus.on("navigation:intent", (event) => {
   void router.push(event.targetPath);
 });
 
+airlineSimEventBus.on("auth:logout", (event) => {
+  void router.replace({
+    path: "/login",
+    query: event.reason === "expired" ? { expired: "true" } : undefined,
+  });
+});
+
 createApp(App).use(router).mount("#app");

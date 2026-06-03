@@ -5,13 +5,15 @@ import {
   type Locale,
   LOCALE_STORAGE_KEY,
   normalizeLocale,
+  translate,
 } from "@airlinesim/i18n";
 import { computed, onMounted, ref, watch } from "vue";
-import { RouterView, useRoute } from "vue-router";
+import { RouterView, useRoute, useRouter } from "vue-router";
 
 import { authState } from "./auth";
 import AppSidebar from "./components/AppSidebar.vue";
 import AppTopbar from "./components/AppTopbar.vue";
+import { type ShellMessageKey, shellMessages } from "./i18n/messages";
 
 type AppTheme = "dark" | "light";
 
@@ -22,6 +24,10 @@ const locale = ref<Locale>("en");
 const theme = ref<AppTheme>("light");
 const companyName = computed(() => authState.airlineName.value);
 const route = useRoute();
+const router = useRouter();
+const t = computed(() => (key: ShellMessageKey): string =>
+  translate(shellMessages, locale.value, key),
+);
 
 function closeSidebar(): void {
   isSidebarOpen.value = false;
@@ -90,16 +96,60 @@ watch(
   },
   { immediate: true },
 );
+
+watch(
+  [
+    () => authState.isRestoringSession.value,
+    () => authState.isAuthenticated.value,
+    () => authState.airline.value,
+    () => route.path,
+  ],
+  ([isRestoringSession, isAuthenticated, airline]) => {
+    if (isRestoringSession || !isAuthenticated) {
+      return;
+    }
+
+    if (!airline && route.path !== "/onboarding/airline") {
+      void router.replace("/onboarding/airline");
+      return;
+    }
+
+    if (airline && (route.meta.public === true || route.path === "/onboarding/airline")) {
+      void router.replace("/");
+    }
+  },
+);
 </script>
 
 <template>
+  <div
+    v-if="authState.isRestoringSession.value"
+    class="flex h-screen items-center justify-center bg-background text-text-primary"
+  >
+    <div class="text-center space-y-4">
+      <div
+        class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent align-[-0.125em]"
+        role="status"
+      >
+        <span class="sr-only">{{ t("auth.restoringSession") }}</span>
+      </div>
+      <div class="text-body font-medium text-text-muted">
+        {{ t("auth.restoringSession") }}
+      </div>
+    </div>
+  </div>
   <RouterView
-    v-if="route.meta.publicLayout"
-    class="min-h-screen"
-    :app-locale="locale"
-    :app-theme="theme"
-    @toggle-locale="toggleLocale"
-  />
+    v-else-if="route.meta.publicLayout"
+    v-slot="{ Component }"
+  >
+    <component
+      :is="Component"
+      class="min-h-screen"
+      :app-locale="locale"
+      :app-theme="theme"
+      @toggle-locale="toggleLocale"
+    />
+  </RouterView>
   <div
     v-else
     class="h-screen overflow-hidden bg-background text-body text-text-primary"

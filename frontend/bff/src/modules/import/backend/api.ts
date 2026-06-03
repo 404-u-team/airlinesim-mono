@@ -1,5 +1,6 @@
 import type { BffConfig } from "../../../config";
 import type { BackendEntity } from "../shared/types";
+import { BackendHttpError, requestBackendJson } from "../../../backend-http";
 
 export type BackendSnapshot = {
   aircraftTypes: BackendEntity[];
@@ -30,45 +31,21 @@ export async function backendRequest<TValue>(
   options: RequestOptions,
 ): Promise<TValue> {
   const method = options.method ?? "GET";
-  const startedAt = performance.now();
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10_000);
-
-    try {
-      const response = await fetch(`${config.backendBaseUrl}${path}`, {
-        body: options.body == null ? undefined : JSON.stringify(options.body),
-        headers: {
-          Authorization: `Bearer ${options.token}`,
-          "Content-Type": "application/json",
-        },
-        method,
-        signal: controller.signal,
-      });
-
-      if (response.ok) {
-        console.warn(`${method} ${path} ${String(response.status)} ${String(Math.round(performance.now() - startedAt))}ms`);
-
-        return (await response.json()) as TValue;
-      }
-
-      if (response.status !== 429 && response.status < 500) {
-        throw new BackendRequestError(`Backend ${method} ${path} failed with ${String(response.status)}`, response.status);
-      }
-
-      lastError = new BackendRequestError(`Backend ${method} ${path} failed with ${String(response.status)}`, response.status);
-    } catch (error) {
-      lastError = error;
-    } finally {
-      clearTimeout(timeout);
+  try {
+    return await requestBackendJson<TValue>(config, path, {
+      body: options.body,
+      headers: {
+        Authorization: `Bearer ${options.token}`,
+      },
+      method,
+      retryMutating: true, // safe for ETL imports
+    });
+  } catch (error) {
+    if (error instanceof BackendHttpError) {
+      throw new BackendRequestError(error.message, error.status);
     }
-
-    await Bun.sleep(250 * 2 ** attempt);
+    throw error;
   }
-
-  throw lastError instanceof Error ? lastError : new Error(`Backend ${method} ${path} failed`);
 }
 
 export function extractBackendId(payload: unknown): null | string {
