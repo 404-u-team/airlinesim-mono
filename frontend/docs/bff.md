@@ -160,6 +160,54 @@ HTTP endpoint:
 - если region-link отсутствует, BFF создает его через `POST /region-link` с рассчитанными affinity и demand values;
 - в ответе направление `origin_daily_passengers` / `destination_daily_passengers` соответствует аэропортам из запроса, даже если backend хранит пару регионов в отсортированном порядке `region_a`/`region_b`.
 
+### `fleet`
+
+Папка: `bff/src/modules/fleet`.
+
+Модуль закрывает продуктовый сценарий покупки первого самолета без изменений backend. UI Fleet & Ops не склеивает `/aircraft-types`, `/airports`, `/aircrafts`, `/aircraft` и `/airline/me` самостоятельно: он вызывает BFF `/fleet/*`, а BFF возвращает frontend-facing модель с совместимостью, предупреждениями и следующими действиями.
+
+HTTP endpoints:
+
+- `GET /fleet/market?base_airport_id=<id>&q=<query>&min_range=<km>&min_capacity=<seats>&max_price=<money>&sort=<recommended|price|capacity|range>` - каталог типов самолетов, обогащенный балансом авиакомпании, стартовой базой, пригодностью к ВПП, доступностью по бюджету, score и предупреждениями.
+- `GET /fleet/purchase-preview?aircraft_type_id=<id>&base_airport_id=<id>&tail_number=<value>` - read-only предпросмотр покупки: `canPurchase`, blocking reasons, warnings, цена, остаток баланса, recommended reserve, daily maintenance reserve и validation tail number.
+- `POST /fleet/aircraft` - product-facing покупка самолета. BFF повторяет проверки preview, нормализует tail number, вызывает backend `POST /aircraft`, сбрасывает list cache и возвращает enriched aircraft card, финансовый summary и next action.
+- `GET /fleet/aircraft` - enriched список купленных самолетов и product-facing empty state.
+- `GET /fleet/aircraft/{id}` - enriched карточка самолета с типом, базой, maintenance ratio и route-assignment placeholder.
+- `PATCH /fleet/aircraft/{id}/tail-number` - validation/normalization wrapper над backend `PATCH /aircraft/{id}`.
+
+Правила:
+
+- Все endpoints требуют пользовательский `Authorization: Bearer ...`; отсутствие токена на `/fleet/*` возвращает normalized `AUTH_REQUIRED`.
+- Справочники `aircraft-types`, `airports`, `countries` читаются через общий proxy cache и backend admin token, пока backend держит эти list routes в admin-only группе.
+- `GET` endpoints используют общий retry из `requestBackend` / `requestBackendJson`.
+- `POST /fleet/aircraft` и `PATCH /fleet/aircraft/{id}/tail-number` не делают unsafe automatic retry: для mutation requests задан `maxAttempts: 1`, потому что backend не дает idempotency key.
+- После успешной покупки BFF сбрасывает cache из `modules/proxy`, чтобы последующие read models увидели свежий fleet state.
+- Fleet scoring живет в `bff/src/modules/fleet/scoring.ts`; UI не должен дублировать правила пригодности.
+
+Статусы пригодности:
+
+- `recommended` - хватает денег, база совместима, остаток выше recommended reserve и нет предупреждений.
+- `available` - покупка возможна, но есть мягкие предупреждения.
+- `risky` - покупка возможна, но остаток ниже recommended reserve или первый самолет слишком крупный/дорогой.
+- `blocked` - покупка невозможна из-за денег, ВПП, отсутствующих критичных данных, отсутствующего типа/базы или invalid tail number.
+
+Reason/warning codes:
+
+- `FLEET_AIRCRAFT_TYPE_NOT_FOUND`
+- `FLEET_BASE_AIRPORT_NOT_FOUND`
+- `FLEET_INSUFFICIENT_FUNDS`
+- `FLEET_LARGE_AIRCRAFT_FIRST_PURCHASE`
+- `FLEET_LOW_SLOT_CAPACITY`
+- `FLEET_MISSING_PRICE`
+- `FLEET_MISSING_RUNWAY_DATA`
+- `FLEET_NO_NIGHT_OPS`
+- `FLEET_RESERVE_RISK`
+- `FLEET_RUNWAY_TOO_SHORT`
+- `FLEET_TAIL_NUMBER_EXISTS`
+- `FLEET_TAIL_NUMBER_INVALID`
+
+Пользовательская документация для этого сценария лежит в `docs/knowledge-base/` и должна использоваться будущим разделом "База знаний".
+
 ### `game`
 
 Папка: `bff/src/modules/game`.

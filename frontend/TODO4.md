@@ -55,11 +55,11 @@ Backend не меняем. Все недостающие product-facing отве
 
 ## Обязательные продуктовые требования
 
-- [ ] Игрок выбирает самолет под стартовую базу и бюджет.
+- [x] Игрок выбирает самолет под стартовую базу и бюджет.
 
   Каталог должен явно учитывать `airline.starting_airport_id`, баланс авиакомпании, параметры аэропорта и характеристики aircraft type.
 
-- [ ] Каталог показывает пригодность самолета.
+- [x] Каталог показывает пригодность самолета.
 
   Минимум:
   - цена;
@@ -73,7 +73,7 @@ Backend не меняем. Все недостающие product-facing отве
   - доступность по бюджету;
   - краткий статус: `Recommended`, `Available`, `Risky`, `Blocked`.
 
-- [ ] Неподходящие самолеты не просто исчезают.
+- [x] Неподходящие самолеты не просто исчезают.
 
   Игрок должен видеть причины:
   - ВПП базы короче минимальной;
@@ -83,7 +83,7 @@ Backend не меняем. Все недостающие product-facing отве
   - низкая slot capacity;
   - отсутствуют данные аэропорта или цены.
 
-- [ ] Перед покупкой есть preview последствий.
+- [x] Перед покупкой есть preview последствий.
 
   Минимум:
   - текущий баланс;
@@ -95,11 +95,11 @@ Backend не меняем. Все недостающие product-facing отве
   - предупреждения;
   - финальное `canPurchase`.
 
-- [ ] Покупка требует явного подтверждения.
+- [x] Покупка требует явного подтверждения.
 
   Кнопка `Buy aircraft` не должна сразу списывать деньги из карточки каталога. Нужен confirmation step/modal/panel с summary и предупреждениями.
 
-- [ ] После покупки самолет появляется в owned fleet.
+- [x] После покупки самолет появляется в owned fleet.
 
   В списке должны быть:
   - tail number;
@@ -110,7 +110,7 @@ Backend не меняем. Все недостающие product-facing отве
   - maintenance ratio;
   - следующий шаг: `Plan route`, `Open aircraft`, `Edit tail number`.
 
-- [ ] Карточка самолета готова для MVP.
+- [x] Карточка самолета готова для MVP.
 
   Минимум:
   - модель;
@@ -128,29 +128,29 @@ Backend не меняем. Все недостающие product-facing отве
   - manufactured date;
   - назначенный маршрут или пустое состояние "Route assignment will appear after route planning".
 
-- [ ] Редактирование tail number поддержано как полезное MVP-действие.
+- [x] Редактирование tail number поддержано как полезное MVP-действие.
 
   В `TODO_MVP.md` оно не обязательное, если номер задается при покупке. Но backend уже поддерживает `PATCH /aircraft/{id}`, поэтому в план включаем это как часть карточки самолета, если не ломает сроки.
 
-- [ ] Сценарий работает на desktop, tablet и mobile.
+- [x] Сценарий работает на desktop, tablet и mobile.
 
   Каталог, preview, confirmation и owned fleet не должны требовать широкой таблицы.
 
 ## BFF-first правило для TODO4
 
-- [ ] UI Fleet & Ops не должен напрямую собирать product logic из raw backend endpoints.
+- [x] UI Fleet & Ops не должен напрямую собирать product logic из raw backend endpoints.
 
   Даже если `game-sdk` ходит в BFF, сам UI не должен вручную склеивать `/aircraft-types`, `/airports`, `/aircrafts`, `/airline/me` и product warnings. Для MVP нужен BFF `fleet` module, который возвращает frontend-facing модель.
 
-- [ ] Все новые Fleet endpoints создаем в `bff/src/modules/fleet`.
+- [x] Все новые Fleet endpoints создаем в `bff/src/modules/fleet`.
 
   Не добавлять логику покупки в `proxy`, потому что `proxy` должен оставаться generic forwarding/cache layer. Product composition должна жить в отдельном модуле.
 
-- [ ] BFF использует уже существующий общий `requestBackend` / `requestBackendJson`.
+- [x] BFF использует уже существующий общий `requestBackend` / `requestBackendJson`.
 
   Покупка самолета - mutating request. По умолчанию не делать retry на `POST /aircraft` по backend `5xx`, если нет гарантии idempotency. Допустимо ретраить только safe GET preview/catalog endpoints.
 
-- [ ] После успешной покупки BFF должен сбрасывать relevant caches.
+- [x] После успешной покупки BFF должен сбрасывать relevant caches.
 
   Минимум:
   - owned aircraft list;
@@ -162,13 +162,13 @@ Backend не меняем. Все недостающие product-facing отве
 
 ### 1. `GET /fleet/market`
 
-- [ ] Добавить endpoint:
+- [x] Добавить endpoint:
 
   ```http
   GET /fleet/market?base_airport_id=<id>&q=<query>&min_range=<km>&min_capacity=<seats>&max_price=<money>&sort=<recommended|price|capacity|range>
   ```
 
-- [ ] Endpoint требует user token.
+- [x] Endpoint требует user token.
 
   Если token отсутствует или недействителен, вернуть normalized BFF error:
 
@@ -182,7 +182,7 @@ Backend не меняем. Все недостающие product-facing отве
   }
   ```
 
-- [ ] Endpoint должен собрать snapshot:
+- [x] Endpoint должен собрать snapshot:
 
   - `GET /airline/me` с user token;
   - `GET /aircrafts` с user token;
@@ -190,7 +190,7 @@ Backend не меняем. Все недостающие product-facing отве
   - `GET /airports` через BFF/admin-token/cache;
   - starting airport из airline или `base_airport_id` override.
 
-- [ ] Ответ должен быть product-facing:
+- [x] Ответ должен быть product-facing:
 
   ```ts
   type FleetMarketResponse = {
@@ -220,7 +220,7 @@ Backend не меняем. Все недостающие product-facing отве
   };
   ```
 
-- [ ] `FleetMarketAircraftType` должен включать:
+- [x] `FleetMarketAircraftType` должен включать:
 
   - backend `id`;
   - `model_name`;
@@ -245,7 +245,7 @@ Backend не меняем. Все недостающие product-facing отве
   - `preview.cashReserveWarning`;
   - `preview.estimatedDailyMaintenanceReserve`.
 
-- [ ] Добавить статус пригодности.
+- [x] Добавить статус пригодности.
 
   Предлагаемая модель:
 
@@ -254,7 +254,7 @@ Backend не меняем. Все недостающие product-facing отве
   - `risky`: можно купить, но остаток денег ниже recommended reserve или высокие операционные расходы;
   - `blocked`: нельзя купить или нельзя использовать на базе.
 
-- [ ] Реализовать ранжирование `recommended`.
+- [x] Реализовать ранжирование `recommended`.
 
   Рекомендуемый score:
 
@@ -272,13 +272,13 @@ Backend не меняем. Все недостающие product-facing отве
 
 ### 2. `GET /fleet/purchase-preview`
 
-- [ ] Добавить endpoint:
+- [x] Добавить endpoint:
 
   ```http
   GET /fleet/purchase-preview?aircraft_type_id=<id>&base_airport_id=<id>&tail_number=<value>
   ```
 
-- [ ] Endpoint должен проверить:
+- [x] Endpoint должен проверить:
 
   - пользователь авторизован;
   - airline существует;
@@ -290,7 +290,7 @@ Backend не меняем. Все недостающие product-facing отве
   - баланс >= price;
   - остаток после покупки не уходит ниже мягкого reserve threshold.
 
-- [ ] Ответ:
+- [x] Ответ:
 
   ```ts
   type FleetPurchasePreviewResponse = {
@@ -313,7 +313,7 @@ Backend не меняем. Все недостающие product-facing отве
   };
   ```
 
-- [ ] Tail number validation должна учитывать страну/базу, если доступен `country.aircraft_tail_code`.
+- [x] Tail number validation должна учитывать страну/базу, если доступен `country.aircraft_tail_code`.
 
   На MVP достаточно:
   - trim;
@@ -324,13 +324,13 @@ Backend не меняем. Все недостающие product-facing отве
 
   Если country tail code доступен через airport -> country, добавить подсказку: например, suggested prefix.
 
-- [ ] Preview не должен мутировать backend.
+- [x] Preview не должен мутировать backend.
 
   Только read-only запросы и BFF расчеты.
 
 ### 3. `POST /fleet/aircraft`
 
-- [ ] Добавить product-facing endpoint покупки:
+- [x] Добавить product-facing endpoint покупки:
 
   ```http
   POST /fleet/aircraft
@@ -341,11 +341,11 @@ Backend не меняем. Все недостающие product-facing отве
   }
   ```
 
-- [ ] Endpoint должен повторить все проверки preview.
+- [x] Endpoint должен повторить все проверки preview.
 
   Нельзя полагаться только на frontend disabled button. Если preview говорит `canPurchase=false`, purchase endpoint должен вернуть `400` с normalized reasons.
 
-- [ ] Endpoint вызывает backend `POST /aircraft`.
+- [x] Endpoint вызывает backend `POST /aircraft`.
 
   Payload:
 
@@ -359,11 +359,11 @@ Backend не меняем. Все недостающие product-facing отве
 
   `current_owner_id` не отправлять из UI/BFF, если backend берет владельца из token.
 
-- [ ] Не делать unsafe retry на `POST /aircraft`.
+- [x] Не делать unsafe retry на `POST /aircraft`.
 
   Если backend вернул `500`, BFF должен вернуть retryable error, но не повторять покупку автоматически без idempotency.
 
-- [ ] После backend success загрузить созданный самолет.
+- [x] После backend success загрузить созданный самолет.
 
   Если backend вернул `id`, вызвать `GET /aircraft/{id}` и вернуть enriched card.
 
@@ -372,7 +372,7 @@ Backend не меняем. Все недостающие product-facing отве
   - найти по normalized tail number;
   - если не найдено, вернуть success с `id` null и рекомендацией refresh.
 
-- [ ] Ответ должен включать следующий шаг.
+- [x] Ответ должен включать следующий шаг.
 
   Например:
 
@@ -398,7 +398,7 @@ Backend не меняем. Все недостающие product-facing отве
 
   Если раздел 5 еще не готов, route может вести в `/airports/hubs` или future route, но action должен быть понятным.
 
-- [ ] Нормализовать ошибки:
+- [x] Нормализовать ошибки:
 
   - `FLEET_AIRCRAFT_TYPE_NOT_FOUND`;
   - `FLEET_BASE_AIRPORT_NOT_FOUND`;
@@ -411,20 +411,20 @@ Backend не меняем. Все недостающие product-facing отве
 
 ### 4. `GET /fleet/aircraft`
 
-- [ ] Добавить endpoint enriched owned fleet:
+- [x] Добавить endpoint enriched owned fleet:
 
   ```http
   GET /fleet/aircraft
   ```
 
-- [ ] Ответ должен склеивать:
+- [x] Ответ должен склеивать:
 
   - `/aircrafts`;
   - `/aircraft-types`;
   - `/airports`;
   - будущие route assignments, когда разделы 5/6 будут готовы.
 
-- [ ] Каждый aircraft card должен содержать:
+- [x] Каждый aircraft card должен содержать:
 
   - id;
   - tail number;
@@ -439,7 +439,7 @@ Backend не меняем. Все недостающие product-facing отве
   - canAssignToRoute boolean or placeholder;
   - recommended action.
 
-- [ ] Empty state должен быть product-facing.
+- [x] Empty state должен быть product-facing.
 
   Если самолетов нет, ответ может включать:
 
@@ -452,11 +452,11 @@ Backend не меняем. Все недостающие product-facing отве
 
 ### 5. `GET /fleet/aircraft/{id}`
 
-- [ ] Добавить enriched aircraft detail endpoint.
+- [x] Добавить enriched aircraft detail endpoint.
 
   Использовать backend `GET /aircraft/{id}` и обогатить type/base данными.
 
-- [ ] Ответ должен включать MVP-карточку:
+- [x] Ответ должен включать MVP-карточку:
 
   - aircraft;
   - type;
@@ -466,17 +466,17 @@ Backend не меняем. Все недостающие product-facing отве
   - route assignment placeholder;
   - actions.
 
-- [ ] Если aircraft не принадлежит пользователю или не найден, вернуть normalized `404`.
+- [x] Если aircraft не принадлежит пользователю или не найден, вернуть normalized `404`.
 
 ### 6. `PATCH /fleet/aircraft/{id}/tail-number`
 
-- [ ] Добавить BFF wrapper над backend `PATCH /aircraft/{id}`.
+- [x] Добавить BFF wrapper над backend `PATCH /aircraft/{id}`.
 
-- [ ] BFF валидирует и нормализует tail number до отправки.
+- [x] BFF валидирует и нормализует tail number до отправки.
 
-- [ ] После success вернуть обновленную enriched aircraft card.
+- [x] После success вернуть обновленную enriched aircraft card.
 
-- [ ] Ошибки:
+- [x] Ошибки:
 
   - invalid tail number;
   - conflict;
@@ -485,7 +485,7 @@ Backend не меняем. Все недостающие product-facing отве
 
 ## BFF implementation details
 
-- [ ] Создать структуру:
+- [x] Создать структуру:
 
   ```text
   bff/src/modules/fleet/
@@ -497,7 +497,7 @@ Backend не меняем. Все недостающие product-facing отве
     errors.ts
   ```
 
-- [ ] Подключить `handleFleetRequest` в `bff/src/server.ts`.
+- [x] Подключить `handleFleetRequest` в `bff/src/server.ts`.
 
   Порядок до generic proxy:
 
@@ -510,15 +510,15 @@ Backend не меняем. Все недостающие product-facing отве
 
   Или до `handleGameRequest`, если fleet endpoints используют собственные routes. Главное - до `proxy`, чтобы `/fleet/*` не пытался уйти в backend напрямую.
 
-- [ ] Использовать `getCachedListInternal` аккуратно.
+- [x] Использовать `getCachedListInternal` аккуратно.
 
   Для aircraft types, airports, countries можно использовать proxy cache. Для пользовательских aircrafts и airline нельзя глобально кэшировать без user scope.
 
-- [ ] Добавить user-scoped short cache только если реально нужно.
+- [x] Добавить user-scoped short cache только если реально нужно.
 
   Для MVP можно обойтись без user cache. Если добавляем cache, ключ должен включать user/airline id.
 
-- [ ] Не смешивать route/schedule future logic в fleet purchase.
+- [x] Не смешивать route/schedule future logic в fleet purchase.
 
   До разделов 5/6 route assignment остается placeholder. Но BFF response должен предусмотреть поле `assignment`, чтобы потом не ломать UI.
 
@@ -526,7 +526,7 @@ Backend не меняем. Все недостающие product-facing отве
 
 ### 1. Разделить `RemoteApp.vue`
 
-- [ ] Убрать монолитную реализацию из одного файла.
+- [x] Убрать монолитную реализацию из одного файла.
 
   Предлагаемая структура:
 
@@ -552,7 +552,7 @@ Backend не меняем. Все недостающие product-facing отве
     types.ts
   ```
 
-- [ ] `RemoteApp.vue` должен быть orchestration layer.
+- [x] `RemoteApp.vue` должен быть orchestration layer.
 
   Он выбирает view по `shellPath`:
   - `/fleet/overview` -> market + owned summary;
@@ -562,13 +562,13 @@ Backend не меняем. Все недостающие product-facing отве
 
 ### 2. Fleet market
 
-- [ ] Заменить ручную сборку данных в UI на `GET /fleet/market`.
+- [x] Заменить ручную сборку данных в UI на `GET /fleet/market`.
 
-- [ ] Фильтры отправлять в BFF или применять локально только поверх уже product-facing ответа.
+- [x] Фильтры отправлять в BFF или применять локально только поверх уже product-facing ответа.
 
   Если список aircraft types небольшой, допустима локальная фильтрация после BFF enrich. Но source of truth для compatibility должен быть BFF.
 
-- [ ] Добавить status bands в каталоге.
+- [x] Добавить status bands в каталоге.
 
   Пример группировки:
   - Recommended for your base;
@@ -578,7 +578,7 @@ Backend не меняем. Все недостающие product-facing отве
 
   Можно реализовать как сортировку + badges, без сложных tabs.
 
-- [ ] Карточка aircraft type должна показывать:
+- [x] Карточка aircraft type должна показывать:
 
   - модель;
   - price;
@@ -592,24 +592,24 @@ Backend не меняем. Все недостающие product-facing отве
   - warning chips;
   - CTA `Review purchase`.
 
-- [ ] Заблокированные самолеты должны иметь CTA `View reasons`, а не `Buy`.
+- [x] Заблокированные самолеты должны иметь CTA `View reasons`, а не `Buy`.
 
   Игрок должен понять, что надо изменить: выбрать другую базу, накопить деньги, выбрать меньший самолет.
 
 ### 3. Purchase preview and confirmation
 
-- [ ] При выборе самолета открыть purchase panel.
+- [x] При выборе самолета открыть purchase panel.
 
   На desktop это может быть правый panel. На mobile - full-width stacked panel ниже карточки или modal/drawer.
 
-- [ ] Purchase panel должен загружать `/fleet/purchase-preview`.
+- [x] Purchase panel должен загружать `/fleet/purchase-preview`.
 
   Preview обновляется при изменении:
   - aircraft type;
   - base airport;
   - tail number.
 
-- [ ] Добавить tail number ввод.
+- [x] Добавить tail number ввод.
 
   Поведение:
   - uppercase;
@@ -618,11 +618,11 @@ Backend не меняем. Все недостающие product-facing отве
   - validation error inline;
   - conflict warning из preview.
 
-- [ ] Добавить base airport selector только если нужно.
+- [x] Добавить base airport selector только если нужно.
 
   Для первого самолета default = starting base. Можно разрешить выбрать другую базу, но UI должен объяснять, что это база самолета, не обязательно стартовый hub. Если раздел 3 уже умеет выбирать аэропорт на карте, поддержать event-bus preselect.
 
-- [ ] Добавить confirmation step.
+- [x] Добавить confirmation step.
 
   Содержание:
   - aircraft model;
@@ -634,7 +634,7 @@ Backend не меняем. Все недостающие product-facing отве
   - checkbox/explicit acknowledge только для risky purchase;
   - primary CTA `Confirm purchase`.
 
-- [ ] После success:
+- [x] После success:
 
   - закрыть confirmation;
   - показать success state/toast;
@@ -644,9 +644,9 @@ Backend не меняем. Все недостающие product-facing отве
 
 ### 4. Owned fleet
 
-- [ ] Использовать `GET /fleet/aircraft` вместо raw `/aircrafts`.
+- [x] Использовать `GET /fleet/aircraft` вместо raw `/aircrafts`.
 
-- [ ] Owned aircraft card должна показывать:
+- [x] Owned aircraft card должна показывать:
 
   - tail number;
   - model;
@@ -656,26 +656,26 @@ Backend не меняем. Все недостающие product-facing отве
   - in service;
   - next action.
 
-- [ ] Empty state:
+- [x] Empty state:
 
   Если самолетов нет:
   - объяснить, зачем нужен первый самолет;
   - CTA на market;
   - secondary link на knowledge base article, если раздел базы знаний уже есть.
 
-- [ ] После покупки список должен обновляться без полного reload страницы.
+- [x] После покупки список должен обновляться без полного reload страницы.
 
 ### 5. Aircraft detail
 
-- [ ] Добавить detail panel/page.
+- [x] Добавить detail panel/page.
 
   MVP вариант:
   - открыть справа при выборе card;
   - или route-driven detail внутри `/fleet/aircraft`.
 
-- [ ] Detail загружает `GET /fleet/aircraft/{id}`.
+- [x] Detail загружает `GET /fleet/aircraft/{id}`.
 
-- [ ] Карточка деталей должна показывать:
+- [x] Карточка деталей должна показывать:
 
   - general info;
   - technical limits;
@@ -685,7 +685,7 @@ Backend не меняем. Все недостающие product-facing отве
   - route assignment placeholder;
   - actions.
 
-- [ ] Добавить tail number editor.
+- [x] Добавить tail number editor.
 
   UX:
   - edit icon/button;
@@ -697,7 +697,7 @@ Backend не меняем. Все недостающие product-facing отве
 
 ## Интеграция с Dashboard и картой
 
-- [ ] После покупки emit event-bus событие.
+- [x] После покупки emit event-bus событие.
 
   Предлагаемый event:
 
@@ -712,7 +712,7 @@ Backend не меняем. Все недостающие product-facing отве
   });
   ```
 
-- [ ] После покупки emit generic refresh events.
+- [x] После покупки emit generic refresh events.
 
   Чтобы разделы 2/3 могли обновиться:
 
@@ -722,21 +722,21 @@ Backend не меняем. Все недостающие product-facing отве
 
   Если в разделах 2/3 уже будет другой event contract, использовать его.
 
-- [ ] Fleet должен принимать preselected base airport от карты.
+- [x] Fleet должен принимать preselected base airport от карты.
 
   Если карта из раздела 3 отправляет `airport:selected` или `fleet:base-preselected`, purchase panel должен уметь подставить base airport, но не обязан менять starting base airline.
 
-- [ ] Dashboard next-best-action после покупки должен перейти к планированию маршрута.
+- [x] Dashboard next-best-action после покупки должен перейти к планированию маршрута.
 
   TODO4 только эмитит событие/обновляет state; actual dashboard logic остается в разделе 2.
 
 ## I18N
 
-- [ ] Добавить локализацию в `apps/fleet-ops`.
+- [x] Добавить локализацию в `apps/fleet-ops`.
 
   Сейчас remote содержит английские строки напрямую. Для MVP нужно сделать локальный словарь `en/ru` и использовать `appLocale`.
 
-- [ ] Добавить ключи:
+- [x] Добавить ключи:
 
   - titles: aircraft market, owned fleet, purchase preview, confirmation, aircraft detail;
   - filters;
@@ -748,17 +748,17 @@ Backend не меняем. Все недостающие product-facing отве
   - empty states;
   - success messages.
 
-- [ ] Все numbers/money/dates форматировать locale-aware.
+- [x] Все numbers/money/dates форматировать locale-aware.
 
   Использовать `Intl.NumberFormat(appLocale, ...)`, а не hardcoded `"en"`.
 
 ## UI-kit tasks
 
-- [ ] Проверить, хватает ли текущих компонентов `air-ui`.
+- [x] Проверить, хватает ли текущих компонентов `air-ui`.
 
   Сейчас есть `AirButton`, `AirBadge`, `AirSelect`, `AirTextField`, `AirMetricCard`, `AirIconButton`.
 
-- [ ] Добавить общий confirmation/dialog компонент, если его нет.
+- [x] Добавить общий confirmation/dialog компонент, если его нет.
 
   Возможные компоненты:
   - `AirModal`;
@@ -767,7 +767,7 @@ Backend не меняем. Все недостающие product-facing отве
 
   Для mobile purchase confirmation drawer удобнее, но если времени мало, можно сделать local component в `fleet-ops` и позже вынести.
 
-- [ ] Если добавляем компонент в `packages/air-ui`, обязательно добавить Storybook story.
+- [x] Если добавляем компонент в `packages/air-ui`, обязательно добавить Storybook story.
 
   Состояния:
   - default;
@@ -777,13 +777,13 @@ Backend не меняем. Все недостающие product-facing отве
   - long content;
   - mobile/narrow.
 
-- [ ] Не создавать карточки внутри карточек.
+- [x] Не создавать карточки внутри карточек.
 
   Каталог может быть сеткой cards; purchase panel и owned list должны быть отдельными surfaces, без nested card-heavy layout.
 
 ## Tail number rules
 
-- [ ] BFF и UI должны использовать одинаковую нормализацию.
+- [x] BFF и UI должны использовать одинаковую нормализацию.
 
   Правило:
   - trim;
@@ -793,13 +793,13 @@ Backend не меняем. Все недостающие product-facing отве
   - длина 2-12;
   - уникальность среди owned aircraft.
 
-- [ ] UI должен показывать suggested examples.
+- [x] UI должен показывать suggested examples.
 
   Если у страны есть `aircraft_tail_code`, использовать его. Если нет:
   - fallback примеры: `HL-001`, `TC-001`, `N-001`;
   - не хардкодить один пример как обязательный.
 
-- [ ] Ошибки tail number:
+- [x] Ошибки tail number:
 
   - empty;
   - too short;
@@ -809,11 +809,11 @@ Backend не меняем. Все недостающие product-facing отве
 
 ## Проверки и ограничения покупки
 
-- [ ] Бюджет.
+- [x] Бюджет.
 
   `canAfford = airline.balance >= aircraftType.price_per_unit`.
 
-- [ ] Recommended reserve.
+- [x] Recommended reserve.
 
   MVP формула в BFF:
 
@@ -823,23 +823,23 @@ Backend не меняем. Все недостающие product-facing отве
 
   Если remaining balance ниже reserve, покупка не блокируется, но получает `risky`.
 
-- [ ] ВПП.
+- [x] ВПП.
 
   `canUseBase = baseAirport.max_runway_length_m >= aircraftType.min_runway_length_m`.
 
   Если поле отсутствует, статус не `recommended`; warning `MISSING_RUNWAY_DATA`.
 
-- [ ] Slots.
+- [x] Slots.
 
   Пока нет route/schedule usage. Для MVP:
   - `LOW_SLOT_CAPACITY` warning, если `max_runway_uses_per_day` ниже порога;
   - не блокировать покупку только из-за slots, пока нет расписаний.
 
-- [ ] Night operations.
+- [x] Night operations.
 
   Не блокировать покупку, но показывать warning, что будущие расписания будут ограничены.
 
-- [ ] Maintenance/fuel risk.
+- [x] Maintenance/fuel risk.
 
   Считать approximate operating cost:
 
@@ -850,25 +850,25 @@ Backend не меняем. Все недостающие product-facing отве
 
   Fuel money cost можно оставить как qualitative warning, если нет стабильного fuel price.
 
-- [ ] Overpowered first aircraft.
+- [x] Overpowered first aircraft.
 
   Для первого самолета widebody/очень дорогие самолеты не блокировать, если хватает денег и база подходит, но показывать warning `LARGE_AIRCRAFT_FIRST_PURCHASE`.
 
 ## Ошибки и empty states
 
-- [ ] Market loading.
+- [x] Market loading.
 
   Показывать skeleton/loader без layout shift.
 
-- [ ] Market backend unavailable.
+- [x] Market backend unavailable.
 
   Human message + retry button.
 
-- [ ] No aircraft types.
+- [x] No aircraft types.
 
   Объяснить, что каталог пуст или world data не загружены; CTA refresh.
 
-- [ ] No compatible aircraft.
+- [x] No compatible aircraft.
 
   Объяснить, что база ограничивает выбор; предложить:
   - убрать фильтры;
@@ -876,21 +876,21 @@ Backend не меняем. Все недостающие product-facing отве
   - открыть Facilities, если раздел 9 уже доступен;
   - открыть базу знаний, если раздел 13 готов.
 
-- [ ] No owned aircraft.
+- [x] No owned aircraft.
 
   CTA `Choose first aircraft`.
 
-- [ ] Purchase conflict.
+- [x] Purchase conflict.
 
   Tail number conflict должен оставлять форму заполненной и фокусировать поле tail number.
 
-- [ ] Purchase backend failure.
+- [x] Purchase backend failure.
 
   Если неизвестно, была ли покупка выполнена, UI должен предложить refresh owned fleet, а не повторять POST автоматически.
 
 ## Тесты BFF
 
-- [ ] `GET /fleet/market`:
+- [x] `GET /fleet/market`:
   - unauthorized;
   - airline without starting airport;
   - normal response;
@@ -900,7 +900,7 @@ Backend не меняем. Все недостающие product-facing отве
   - blocked by budget;
   - risky by reserve.
 
-- [ ] `GET /fleet/purchase-preview`:
+- [x] `GET /fleet/purchase-preview`:
   - valid purchase;
   - insufficient funds;
   - runway too short;
@@ -909,89 +909,89 @@ Backend не меняем. Все недостающие product-facing отве
   - missing aircraft type;
   - missing base airport.
 
-- [ ] `POST /fleet/aircraft`:
+- [x] `POST /fleet/aircraft`:
   - validation repeats preview checks;
   - success calls backend once;
   - no unsafe retry for backend `500`;
   - conflict maps to `FLEET_TAIL_NUMBER_EXISTS`;
   - success returns enriched aircraft.
 
-- [ ] `GET /fleet/aircraft`:
+- [x] `GET /fleet/aircraft`:
   - empty state;
   - enriches model/base;
   - maintenance ratio.
 
-- [ ] `GET /fleet/aircraft/{id}`:
+- [x] `GET /fleet/aircraft/{id}`:
   - success;
   - not found;
   - unauthorized.
 
-- [ ] `PATCH /fleet/aircraft/{id}/tail-number`:
+- [x] `PATCH /fleet/aircraft/{id}/tail-number`:
   - validation;
   - backend conflict;
   - success enriched response.
 
 ## Тесты frontend
 
-- [ ] `useFleetMarket`:
+- [x] `useFleetMarket`:
   - loads market;
   - applies filters;
   - handles error;
   - refreshes after purchase.
 
-- [ ] `usePurchasePreview`:
+- [x] `usePurchasePreview`:
   - debounces tail number;
   - updates preview when selected type/base changes;
   - handles blocking reasons.
 
-- [ ] `AircraftTypeCard`:
+- [x] `AircraftTypeCard`:
   - recommended state;
   - risky state;
   - blocked state;
   - long model name;
   - mobile layout.
 
-- [ ] `PurchaseConfirmation`:
+- [x] `PurchaseConfirmation`:
   - confirm disabled when blocked;
   - risky acknowledge requirement;
   - loading state;
   - success callback.
 
-- [ ] `OwnedAircraftList`:
+- [x] `OwnedAircraftList`:
   - empty;
   - after purchase item appears;
   - card action emits/open detail.
 
-- [ ] `AircraftDetailPanel`:
+- [x] `AircraftDetailPanel`:
   - renders technical details;
   - renders route placeholder;
   - tail number edit success/error.
 
-- [ ] i18n:
+- [x] i18n:
   - all new keys exist in `en` and `ru`;
   - no direct English user-facing strings remain in fleet components.
 
 ## Manual QA
 
-- [ ] New airline with no aircraft opens Fleet and sees first-aircraft guidance.
-- [ ] User sees budget and starting base in market header.
-- [ ] User filters aircraft by range/capacity/price.
-- [ ] User can see why an aircraft is blocked.
-- [ ] User can open purchase preview for recommended aircraft.
-- [ ] User sees remaining balance before confirmation.
-- [ ] User cannot confirm invalid tail number.
-- [ ] User cannot confirm runway-incompatible aircraft.
-- [ ] User can confirm valid purchase.
-- [ ] Purchased aircraft appears without full page reload.
-- [ ] Dashboard refresh event is emitted after purchase.
-- [ ] Map/network refresh event is emitted after purchase.
-- [ ] Mobile viewport completes purchase flow without horizontal overflow.
-- [ ] Backend unavailable during preview shows retryable human error.
-- [ ] Backend failure after POST does not auto-repeat unsafe purchase.
+- [x] New airline with no aircraft opens Fleet and sees first-aircraft guidance.
+- [x] User sees budget and starting base in market header.
+- [x] User filters aircraft by range/capacity/price.
+- [x] User can see why an aircraft is blocked.
+- [x] User can open purchase preview for recommended aircraft.
+- [x] User sees remaining balance before confirmation.
+- [x] User cannot confirm invalid tail number.
+- [x] User cannot confirm runway-incompatible aircraft.
+- [x] User can confirm valid purchase.
+- [x] Purchased aircraft appears without full page reload.
+- [x] Dashboard refresh event is emitted after purchase.
+- [x] Map/network refresh event is emitted after purchase.
+- [x] Mobile viewport completes purchase flow without horizontal overflow.
+- [x] Backend unavailable during preview shows retryable human error.
+- [x] Backend failure after POST does not auto-repeat unsafe purchase.
 
 ## Документация
 
-- [ ] Обновить `docs/bff.md`.
+- [x] Обновить `docs/bff.md`.
 
   Добавить:
   - `fleet` module;
@@ -1000,11 +1000,11 @@ Backend не меняем. Все недостающие product-facing отве
   - no unsafe retry rule for `POST /fleet/aircraft`;
   - reason/warning code list.
 
-- [ ] Обновить `AGENTS.md`, если добавляется `bff/src/modules/fleet`.
+- [x] Обновить `AGENTS.md`, если добавляется `bff/src/modules/fleet`.
 
   В структуре указать новый модуль и источник истины.
 
-- [ ] Обновить или создать product docs для базы знаний.
+- [x] Обновить или создать product docs для базы знаний.
 
   Минимум статьи:
   - "Как купить первый самолет";
@@ -1040,21 +1040,21 @@ Backend не меняем. Все недостающие product-facing отве
 
 ## Definition of Done для TODO4
 
-- [ ] Fleet UI не использует raw `/aircraft-types`, `/airports`, `/aircrafts`, `/aircraft` напрямую для продуктовой логики покупки.
-- [ ] Есть BFF `fleet` module с market, preview, purchase и aircraft detail/list endpoints.
-- [ ] Каталог показывает пригодность самолета к базе и бюджету.
-- [ ] Неподходящие самолеты имеют объяснимые причины.
-- [ ] Перед покупкой игрок видит цену, остаток денег и риски.
-- [ ] Покупка требует подтверждения.
-- [ ] Unsafe automatic retry для `POST /aircraft` отсутствует.
-- [ ] После покупки самолет появляется во флоте без ручного refresh.
-- [ ] Есть MVP-карточка самолета.
-- [ ] Tail number валидируется и конфликт обрабатывается.
-- [ ] После покупки отправляются события для Dashboard/Map refresh.
-- [ ] Все пользовательские тексты Fleet purchase flow локализованы на `ru` и `en`.
-- [ ] Сценарий покупки первого самолета проходит на desktop и mobile.
-- [ ] Есть BFF и frontend тесты на ключевые состояния.
-- [ ] Документация BFF и пользовательская документация обновлены.
+- [x] Fleet UI не использует raw `/aircraft-types`, `/airports`, `/aircrafts`, `/aircraft` напрямую для продуктовой логики покупки.
+- [x] Есть BFF `fleet` module с market, preview, purchase и aircraft detail/list endpoints.
+- [x] Каталог показывает пригодность самолета к базе и бюджету.
+- [x] Неподходящие самолеты имеют объяснимые причины.
+- [x] Перед покупкой игрок видит цену, остаток денег и риски.
+- [x] Покупка требует подтверждения.
+- [x] Unsafe automatic retry для `POST /aircraft` отсутствует.
+- [x] После покупки самолет появляется во флоте без ручного refresh.
+- [x] Есть MVP-карточка самолета.
+- [x] Tail number валидируется и конфликт обрабатывается.
+- [x] После покупки отправляются события для Dashboard/Map refresh.
+- [x] Все пользовательские тексты Fleet purchase flow локализованы на `ru` и `en`.
+- [x] Сценарий покупки первого самолета проходит на desktop и mobile.
+- [x] Есть BFF и frontend тесты на ключевые состояния.
+- [x] Документация BFF и пользовательская документация обновлены.
 
 ## Зависимости от разделов 2 и 3
 

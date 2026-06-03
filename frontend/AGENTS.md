@@ -27,7 +27,7 @@
 - `apps/network-planner` - целевой Vue 3 remote для маршрутной сети.
 - `apps/events-news` - целевой Vue 3 remote для событий и новостей.
 - `apps/hr-facilities` - целевой Vue 3 remote для HR и объектов.
-- `bff` - Bun backend-for-frontend приложение, не MFE и не `apps/*`; модули для import/proxy/onboarding живут в `bff/src/modules`, правила BFF-first API, retry и onboarding endpoints описаны в `docs/bff.md`.
+- `bff` - Bun backend-for-frontend приложение, не MFE и не `apps/*`; модули для import/proxy/onboarding/game/fleet живут в `bff/src/modules`, правила BFF-first API, retry, onboarding и Fleet purchase endpoints описаны в `docs/bff.md`.
 - `packages/air-ui` - Vue UI-kit, Tailwind theme tokens, Storybook.
 - `packages/game-sdk` - клиентский SDK для backend API.
 - `packages/eslint-config` - shared ESLint flat configs: `base`, `vue`, `svelte`.
@@ -40,6 +40,7 @@
 - `docs/I18N.md` - спецификация мультиязычности RU/EN: источник локали, хранение строк, fallback и контракт Shell -> MFE.
 - `docs/TESTS.md` - правила создания и запуска тестов frontend-модулей.
 - `docs/bff.md` - спецификация Bun BFF: отдельное расположение вне `apps`, модули `import` и `proxy`, env и правила развития.
+- `docs/knowledge-base/` - markdown-источник пользовательской базы знаний; до реализации wiki UI новые инструкции для пользователей добавлять туда и связывать с соответствующими продуктовым сценариями.
 - `docs/map-state.md` - контракт BFF map-state и правила Shell-owned Dashboard -> Map remote visual widget.
 - `docs/swagger.yaml` - OpenAPI/Swagger контракт backend API; `docs/swagger.json` лежит рядом как fallback для генерации.
 - `docs/erd.txt` - доменная ERD модель.

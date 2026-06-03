@@ -14,6 +14,7 @@ const apiClient = createApiClient({
 });
 
 export type FleetMarketFilters = {
+  baseAirportId?: string;
   maxPrice?: string;
   minCapacity?: string;
   minRange?: string;
@@ -32,6 +33,9 @@ export async function getFleetAircraftDetail(id: string): Promise<FleetAircraftD
 export async function getFleetMarket(filters: FleetMarketFilters): Promise<FleetMarketResponse> {
   const search = new URLSearchParams();
 
+  if (filters.baseAirportId) {
+    search.set("base_airport_id", filters.baseAirportId);
+  }
   if (filters.q) {
     search.set("q", filters.q);
   }

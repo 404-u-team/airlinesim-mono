@@ -1,5 +1,7 @@
 import { parse } from "yaml";
 
+import { addFleetOverlay } from "./openapi-fleet";
+
 type JsonSchema = {
   $ref?: string;
   items?: JsonSchema;
@@ -81,6 +83,7 @@ function addBffOverlay(swagger: SwaggerDocument): SwaggerDocument {
   }
 
   addDemandOverlay(swagger);
+  addFleetOverlay(swagger);
   addGameOverlay(swagger);
 
   return swagger;

@@ -987,6 +987,21 @@
       },
       "type": "object"
     },
+    "bff.FleetAircraftDetailResponse": {
+      "type": "object"
+    },
+    "bff.FleetAircraftResponse": {
+      "type": "object"
+    },
+    "bff.FleetMarketResponse": {
+      "type": "object"
+    },
+    "bff.FleetPurchasePreviewResponse": {
+      "type": "object"
+    },
+    "bff.FleetPurchaseResponse": {
+      "type": "object"
+    },
     "bff.DashboardSummary": {
       "properties": {
         "airline": {
@@ -3089,6 +3104,191 @@
           "400": {},
           "401": {},
           "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/fleet/aircraft": {
+      "get": {
+        "description": "Returns the enriched owned fleet list with product-facing empty state.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "schema": {
+              "$ref": "#/definitions/bff.FleetAircraftResponse"
+            }
+          },
+          "400": {},
+          "401": {},
+          "404": {},
+          "409": {},
+          "500": {}
+        }
+      },
+      "post": {
+        "description": "Repeats purchase-preview checks, calls backend POST /aircraft once, clears relevant BFF caches and returns the enriched purchased aircraft plus next action.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "schema": {
+              "$ref": "#/definitions/bff.FleetPurchaseResponse"
+            }
+          },
+          "400": {},
+          "401": {},
+          "404": {},
+          "409": {},
+          "500": {}
+        }
+      }
+    },
+    "/fleet/aircraft/{id}": {
+      "get": {
+        "description": "Returns an enriched owned aircraft detail card for Fleet & Ops.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "schema": {
+              "$ref": "#/definitions/bff.FleetAircraftDetailResponse"
+            }
+          },
+          "400": {},
+          "401": {},
+          "404": {},
+          "409": {},
+          "500": {}
+        }
+      }
+    },
+    "/fleet/aircraft/{id}/tail-number": {
+      "patch": {
+        "description": "Validates and normalizes a tail number, forwards PATCH /aircraft/{id} once and returns the updated enriched aircraft card.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "schema": {
+              "$ref": "#/definitions/bff.FleetAircraftDetailResponse"
+            }
+          },
+          "400": {},
+          "401": {},
+          "404": {},
+          "409": {},
+          "500": {}
+        }
+      }
+    },
+    "/fleet/market": {
+      "get": {
+        "description": "Returns the Fleet & Ops aircraft market read model enriched with budget, base compatibility, recommendation score, warnings and owned aircraft summary.",
+        "parameters": [
+          {
+            "description": "Override aircraft base airport id for compatibility checks.",
+            "in": "query",
+            "name": "base_airport_id",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Search aircraft model and codes.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Minimum aircraft range in kilometers.",
+            "in": "query",
+            "name": "min_range",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Minimum planned seat capacity.",
+            "in": "query",
+            "name": "min_capacity",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Maximum purchase price.",
+            "in": "query",
+            "name": "max_price",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Sort order: recommended, price, capacity or range.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "schema": {
+              "$ref": "#/definitions/bff.FleetMarketResponse"
+            }
+          },
+          "400": {},
+          "401": {},
+          "404": {},
+          "409": {},
+          "500": {}
+        }
+      }
+    },
+    "/fleet/purchase-preview": {
+      "get": {
+        "description": "Returns read-only purchase consequences: canPurchase, blocking reasons, warnings, balance impact, reserve estimate and tail-number validation.",
+        "parameters": [
+          {
+            "description": "Aircraft type id to preview.",
+            "in": "query",
+            "name": "aircraft_type_id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Base airport id to validate.",
+            "in": "query",
+            "name": "base_airport_id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Requested aircraft tail number.",
+            "in": "query",
+            "name": "tail_number",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "schema": {
+              "$ref": "#/definitions/bff.FleetPurchasePreviewResponse"
+            }
+          },
+          "400": {},
+          "401": {},
+          "404": {},
+          "409": {},
           "500": {}
         }
       }

@@ -1,6 +1,6 @@
 import type { BffConfig } from "../../config";
 
-import { requireValidUserToken } from "../../auth";
+import { getUserAuthorization, requireValidUserToken } from "../../auth";
 import { jsonResponse } from "../../http";
 import {
   getAircraftDetail,
@@ -20,6 +20,19 @@ export async function handleFleetRequest(
 ): Promise<null | Response> {
   if (!url.pathname.startsWith("/fleet/")) {
     return null;
+  }
+
+  if (!getUserAuthorization(request)) {
+    return jsonResponse(
+      {
+        error: {
+          code: "AUTH_REQUIRED",
+          message: "Authentication required.",
+          retryable: false,
+        },
+      },
+      { status: 401 },
+    );
   }
 
   const authError = await requireValidUserToken(request, config);

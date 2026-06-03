@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { airlineSimEventBus } from "@airlinesim/event-bus";
 import { type Locale, translate } from "@airlinesim/i18n";
-import { computed, onMounted, reactive, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 
 import type {
   FleetMarketAircraftType,
@@ -24,8 +24,7 @@ import FleetMarketToolbar from "./components/FleetMarketToolbar.vue";
 import FleetSidebar from "./components/FleetSidebar.vue";
 import { formatMoneyValue, formatNumberValue, formatPercentValue } from "./formatters";
 import { type FleetMessageKey, fleetMessages } from "./i18n";
-
-type StatusVariant = "danger-soft" | "primary-soft" | "success-soft" | "warning-soft";
+import { getStatusVariant } from "./status";
 
 const props = defineProps<{
   appLocale: Locale;
@@ -35,6 +34,7 @@ const props = defineProps<{
 const editTailNumber = ref("");
 const error = ref("");
 const filters = reactive({
+  baseAirportId: "",
   maxPrice: "",
   minCapacity: "",
   minRange: "",
@@ -55,6 +55,7 @@ const tailNumber = ref("");
 
 let marketDebounce: null | ReturnType<typeof setTimeout> = null;
 let previewDebounce: null | ReturnType<typeof setTimeout> = null;
+let unsubscribeAirportSelected: (() => void) | null = null;
 
 const canConfirmPurchase = computed(() =>
   Boolean(preview.value?.canPurchase) &&
@@ -84,8 +85,14 @@ const t = computed(() => (key: FleetMessageKey | string): string =>
 
 onMounted(() => {
   airlineSimEventBus.emit("mfe:ready", { remoteId: "fleet-ops" });
+  unsubscribeAirportSelected = airlineSimEventBus.on("map:airport-selected", (payload) => {
+    filters.baseAirportId = payload.airportId;
+    void loadMarket();
+  });
   void loadMarket();
 });
+
+onUnmounted(() => unsubscribeAirportSelected?.());
 
 watch(
   filters,
@@ -316,17 +323,6 @@ function statusLabel(status: FleetMarketAircraftType["compatibility"]["status"])
   return t.value(`status.${status}`);
 }
 
-function statusVariant(status: FleetMarketAircraftType["compatibility"]["status"]): StatusVariant {
-  const variants: Record<FleetMarketAircraftType["compatibility"]["status"], StatusVariant> = {
-    available: "primary-soft",
-    blocked: "danger-soft",
-    recommended: "success-soft",
-    risky: "warning-soft",
-  };
-
-  return variants[status];
-}
-
 function updateFilter(key: keyof typeof filters, value: string): void {
   filters[key] = value;
 }
@@ -361,7 +357,7 @@ function updateFilter(key: keyof typeof filters, value: string): void {
           :reason-label="reasonLabel"
           :selected-type-id="selectedTypeId"
           :status-label="statusLabel"
-          :status-variant="statusVariant"
+          :status-variant="getStatusVariant"
           :t="t"
           :types="market.aircraftTypes"
           @select-type="selectType"
