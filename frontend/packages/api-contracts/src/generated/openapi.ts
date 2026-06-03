@@ -363,6 +363,16 @@ export type BffAirportPairDemandResponse = {
   "demand"?: BffAirportPairDemand;
 };
 
+export type BffFleetAircraftDetailResponse = Record<string, unknown>;
+
+export type BffFleetAircraftResponse = Record<string, unknown>;
+
+export type BffFleetMarketResponse = Record<string, unknown>;
+
+export type BffFleetPurchasePreviewResponse = Record<string, unknown>;
+
+export type BffFleetPurchaseResponse = Record<string, unknown>;
+
 export type BffDashboardSummary = {
   "airline"?: Record<string, unknown>;
   "alerts"?: Array<Record<string, unknown>>;
@@ -488,6 +498,21 @@ export type GetRegionsQuery = {
 export type GetDemandAirportPairQuery = {
   "origin_airport_id": string;
   "destination_airport_id": string;
+};
+
+export type GetFleetMarketQuery = {
+  "base_airport_id"?: string;
+  "q"?: string;
+  "min_range"?: string;
+  "min_capacity"?: string;
+  "max_price"?: string;
+  "sort"?: string;
+};
+
+export type GetFleetPurchasePreviewQuery = {
+  "aircraft_type_id": string;
+  "base_airport_id": string;
+  "tail_number": string;
 };
 
 export type GetGameMapStateQuery = {
@@ -772,6 +797,48 @@ export const openApiOperations = [
     "method": "GET",
     "operationId": "get__demand_airport_pair",
     "path": "/demand/airport-pair",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__fleet_aircraft",
+    "path": "/fleet/aircraft",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "POST",
+    "operationId": "post__fleet_aircraft",
+    "path": "/fleet/aircraft",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__fleet_aircraft__id_",
+    "path": "/fleet/aircraft/{id}",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "PATCH",
+    "operationId": "patch__fleet_aircraft__id__tail_number",
+    "path": "/fleet/aircraft/{id}/tail-number",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__fleet_market",
+    "path": "/fleet/market",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__fleet_purchase_preview",
+    "path": "/fleet/purchase-preview",
     "summary": "",
     "tags": []
   },

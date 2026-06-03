@@ -22,6 +22,7 @@ type AuthService interface {
 	Login(ctx context.Context, payload *authpb.LoginRequest, config *config.Config) (*authpb.TokenResponse, error)
 	RefreshToken(ctx context.Context, payload *authpb.RefreshTokenRequest, config *config.Config) (*authpb.TokenResponse, error)
 	VerifyToken(ctx context.Context, payload *authpb.VerifyTokenRequest, config *config.Config) (*authpb.VerifyResponse, error)
+	VerifyUser(ctx context.Context, payload *authpb.VerifyUserRequest) (*authpb.VerifyResponse, error)
 }
 
 type authService struct {
@@ -138,6 +139,21 @@ func (s *authService) VerifyToken(ctx context.Context, payload *authpb.VerifyTok
 	}
 
 	return &authpb.VerifyResponse{Valid: true}, nil
+}
+
+func (s *authService) VerifyUser(ctx context.Context, payload *authpb.VerifyUserRequest) (*authpb.VerifyResponse, error) {
+	userID, err := uuid.Parse(payload.UserId)
+	if err != nil {
+		return &authpb.VerifyResponse{Valid: false}, nil
+	}
+
+	exists, err := s.repo.IsUserExists(ctx, userID)
+	if err != nil {
+		log.Println("got error when tried to check user existence, ", err)
+		return nil, customerrors.ErrInternal
+	}
+
+	return &authpb.VerifyResponse{Valid: exists}, nil
 }
 
 // create token response using userID and role
