@@ -2,6 +2,7 @@ import { type Component, mount, unmount } from "svelte";
 
 import MapComponent from "./components/Map.component.svelte";
 import { mapManager } from "./map-manager/index.svelte";
+export type { MapAirportFeature, MapManagerSnapshot, MapState } from "./map-manager/index.svelte";
 
 export type RemoteComponentInstance = {
     destroy: () => Promise<void>;

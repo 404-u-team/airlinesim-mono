@@ -24,6 +24,14 @@ export type AirlineSimEvents = {
   "i18n:locale-changed": {
     locale: Locale;
   };
+  "map:airport-selected": {
+    airportId: string;
+    source: "dashboard" | "map" | "network-planner";
+  };
+  "map:route-selected": {
+    routeId: string;
+    source: "dashboard" | "map" | "network-planner";
+  };
   "mfe:ready": {
     remoteId: RemoteId;
   };

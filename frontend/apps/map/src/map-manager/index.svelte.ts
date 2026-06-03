@@ -1,3 +1,5 @@
+import { airlineSimEventBus } from "@airlinesim/event-bus";
+/* eslint-disable max-lines */
 import { Map as MapLibreMap, type Map as MapLibreMapType } from "maplibre-gl";
 import { SvelteSet } from "svelte/reactivity";
 
@@ -7,6 +9,20 @@ import { MAP__STYLES, type MapStyle, type MapTheme } from "./styles";
 const DEFAULT_STYLE = MAP__STYLES[0];
 const DEFAULT_ZOOM = 2;
 
+export type MapAirportFeature = {
+    geometry: {
+        coordinates: [number, number];
+        type: "Point";
+    };
+    id?: string;
+    properties: {
+        id?: string;
+        label?: string;
+        role?: "base" | "opportunity";
+    };
+    type: "Feature";
+};
+
 export type MapManagerSnapshot = {
     isGlobe: boolean;
     isReady: boolean;
@@ -15,6 +31,22 @@ export type MapManagerSnapshot = {
     selectedTheme: MapTheme;
     styles: readonly MapStyle[];
     zoom: number;
+};
+
+export type MapState = {
+    airports?: {
+        features: MapAirportFeature[];
+        type: "FeatureCollection";
+    };
+    routes?: {
+        features: Array<Record<string, unknown>>;
+        type: "FeatureCollection";
+    };
+    viewport?: {
+        bounds?: [[number, number], [number, number]];
+        center?: [number, number];
+        zoom?: number;
+    };
 };
 
 type CameraState = {
@@ -53,6 +85,8 @@ export class MapManager {
     private readonly listeners = new SvelteSet<MapManagerListener>();
 
     private map: MapLibreMapType | null = null;
+
+    private mapState: MapState | null = null;
 
     private pendingCameraState: CameraState | null = null;
 
@@ -137,6 +171,7 @@ export class MapManager {
             this.setGlobeProjection(this.isGlobe, true);
             this.setRotation(this.isInRotation);
             this.initThreeLayer();
+            this.applyGameLayers();
         });
 
         this.map.on("zoom", () => {
@@ -157,6 +192,12 @@ export class MapManager {
         this.isGlobe = isGlobe;
         this.map?.setProjection({ type: isGlobe ? "globe" : "mercator" });
         this.emit();
+    }
+
+    public setMapState(mapState: MapState | null): void {
+        this.mapState = mapState;
+        this.applyGameLayers();
+        this.fitGameBounds();
     }
 
     public setRotation(rotationStatus: boolean): void {
@@ -201,6 +242,20 @@ export class MapManager {
         this.zoomBy(-1);
     }
 
+    private applyGameLayers(): void {
+        if (!this.map?.isStyleLoaded()) {
+            return;
+        }
+
+        const airportData = this.mapState?.airports ?? { features: [], type: "FeatureCollection" as const };
+        const routeData = this.mapState?.routes ?? { features: [], type: "FeatureCollection" as const };
+
+        this.upsertGeoJsonSource("airlinesim-routes", routeData);
+        this.upsertGeoJsonSource("airlinesim-airports", airportData);
+        this.ensureRouteLayer();
+        this.ensureAirportLayers();
+    }
+
     private applyStyle(style: MapStyle): void {
         if (!this.map) {
             return;
@@ -220,6 +275,126 @@ export class MapManager {
         const snapshot = this.getSnapshot();
         this.listeners.forEach((listener) => listener(snapshot));
     }
+
+    private ensureAirportLayers(): void {
+        if (!this.map) {
+            return;
+        }
+
+        if (!this.map.getLayer("airlinesim-airport-points")) {
+            this.map.addLayer({
+                id: "airlinesim-airport-points",
+                paint: {
+                    "circle-color": [
+                        "match",
+                        ["get", "role"],
+                        "base",
+                        "#2563eb",
+                        "opportunity",
+                        "#f59e0b",
+                        "#64748b",
+                    ],
+                    "circle-radius": [
+                        "match",
+                        ["get", "role"],
+                        "base",
+                        8,
+                        5,
+                    ],
+                    "circle-stroke-color": "#ffffff",
+                    "circle-stroke-width": 2,
+                },
+                source: "airlinesim-airports",
+                type: "circle",
+            });
+        }
+
+        if (!this.map.getLayer("airlinesim-airport-labels")) {
+            this.map.addLayer({
+                id: "airlinesim-airport-labels",
+                layout: {
+                    "text-field": ["coalesce", ["get", "iata_code"], ["get", "icao_code"], ["get", "label"]],
+                    "text-offset": [0, 1.2],
+                    "text-size": 11,
+                },
+                paint: {
+                    "text-color": this.style.theme === "dark" ? "#f8fafc" : "#0f172a",
+                    "text-halo-color": this.style.theme === "dark" ? "#020617" : "#ffffff",
+                    "text-halo-width": 1,
+                },
+                source: "airlinesim-airports",
+                type: "symbol",
+            });
+        }
+
+        this.map.off("click", "airlinesim-airport-points", this.handleAirportClick);
+        this.map.on("click", "airlinesim-airport-points", this.handleAirportClick);
+    }
+
+    private ensureRouteLayer(): void {
+        if (!this.map) {
+            return;
+        }
+
+        if (!this.map.getLayer("airlinesim-route-lines")) {
+            this.map.addLayer({
+                id: "airlinesim-route-lines",
+                layout: {
+                    "line-cap": "round",
+                    "line-join": "round",
+                },
+                paint: {
+                    "line-color": "#2563eb",
+                    "line-opacity": 0.75,
+                    "line-width": 3,
+                },
+                source: "airlinesim-routes",
+                type: "line",
+            });
+        }
+
+        this.map.off("click", "airlinesim-route-lines", this.handleRouteClick);
+        this.map.on("click", "airlinesim-route-lines", this.handleRouteClick);
+    }
+
+    private fitGameBounds(): void {
+        if (!this.map || !this.mapState?.viewport) {
+            return;
+        }
+
+        const { bounds, center, zoom } = this.mapState.viewport;
+
+        if (bounds) {
+            this.map.fitBounds(bounds, { duration: 500, padding: 48 });
+            return;
+        }
+
+        if (center) {
+            this.map.easeTo({ center, duration: 500, zoom: zoom ?? 5 });
+        }
+    }
+
+    private readonly handleAirportClick = (event: { features?: Array<{ properties?: { id?: string } }> }): void => {
+        const airportId = event.features?.[0]?.properties?.id;
+
+        if (airportId) {
+            airlineSimEventBus.emit("map:airport-selected", {
+                airportId,
+                source: "map",
+            });
+        }
+    };
+
+    private readonly handleRouteClick = (event: { features?: Array<{ properties?: { id?: string } }> }): void => {
+        const routeId = event.features?.[0]?.properties?.id;
+
+        if (routeId) {
+            airlineSimEventBus.emit("map:route-selected", {
+                routeId,
+                source: "map",
+            });
+        }
+    };
 
     private initThreeLayer(): void {
         if (!this.map) {
@@ -274,6 +449,24 @@ export class MapManager {
         this.map.jumpTo({ center: currentCenter });
 
         this.animationId = requestAnimationFrame(() => this.spinGlobe());
+    }
+
+    private upsertGeoJsonSource(id: string, data: Record<string, unknown>): void {
+        if (!this.map) {
+            return;
+        }
+
+        const source = this.map.getSource(id) as undefined | { setData?: (nextData: Record<string, unknown>) => void };
+
+        if (source?.setData) {
+            source.setData(data);
+            return;
+        }
+
+        this.map.addSource(id, {
+            data: data as unknown as GeoJSON.GeoJSON,
+            type: "geojson",
+        });
     }
 
     private zoomBy(delta: number): void {

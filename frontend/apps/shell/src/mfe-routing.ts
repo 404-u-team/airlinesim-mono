@@ -14,13 +14,7 @@ export type ResolvedMfeRoute = MfeRouteDefinition & {
 
 export const defaultRoutePath = "/dashboard";
 
-export const mfeRoutes = [
-  {
-    defaultPath: "/dashboard",
-    label: "Dashboard",
-    pathPrefix: "/dashboard",
-    remoteId: "map",
-  },
+export const mfeRoutes: MfeRouteDefinition[] = [
   {
     defaultPath: "/fleet/overview",
     label: "Fleet",
@@ -57,25 +51,19 @@ export const mfeRoutes = [
     pathPrefix: "/settings",
     remoteId: "events-news",
   },
-] as const satisfies MfeRouteDefinition[];
+] as const;
 
 export function createMfeRouteRecords(component: RouteComponent): RouteRecordRaw[] {
   return mfeRoutes.flatMap((route) => {
+    const path = `${route.pathPrefix}/:mfePath(.*)*`;
     const remoteRoute: RouteRecordRaw = {
       component,
       meta: {
         defaultPath: route.defaultPath,
         remoteId: route.remoteId,
       },
-      path:
-        route.pathPrefix === route.defaultPath
-          ? route.pathPrefix
-          : `${route.pathPrefix}/:mfePath(.*)*`,
+      path,
     };
-
-    if (route.pathPrefix === route.defaultPath) {
-      return [remoteRoute];
-    }
 
     return [
       {

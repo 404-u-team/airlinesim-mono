@@ -81,6 +81,7 @@ function addBffOverlay(swagger: SwaggerDocument): SwaggerDocument {
   }
 
   addDemandOverlay(swagger);
+  addGameOverlay(swagger);
 
   return swagger;
 }
@@ -134,6 +135,104 @@ function addDemandOverlay(swagger: SwaggerDocument): void {
         "400": {},
         "401": {},
         "404": {},
+        "500": {},
+      },
+    },
+  };
+}
+
+// OpenAPI overlay is intentionally declarative; splitting the literal schema lowers readability.
+// eslint-disable-next-line max-lines-per-function
+function addGameOverlay(swagger: SwaggerDocument): void {
+  swagger.definitions ??= {};
+  swagger.paths ??= {};
+  swagger.definitions["bff.DashboardSummary"] = {
+    properties: {
+      airline: { type: "object" },
+      alerts: {
+        items: { type: "object" },
+        type: "array",
+      },
+      base: { type: "object" },
+      fleet: { type: "object" },
+      flights: { type: "object" },
+      navigation_progress: {
+        items: { type: "object" },
+        type: "array",
+      },
+      next_action: { type: "object" },
+      routes: { type: "object" },
+      updated_at: { type: "string" },
+    },
+    type: "object",
+  };
+  swagger.definitions["bff.MapState"] = {
+    properties: {
+      airports: { type: "object" },
+      capabilities: { type: "object" },
+      routes: { type: "object" },
+      scope: { type: "string" },
+      selected: { type: "object" },
+      viewport: { type: "object" },
+      warnings: {
+        items: { type: "string" },
+        type: "array",
+      },
+    },
+    type: "object",
+  };
+  swagger.paths["/game/dashboard-summary"] = {
+    get: {
+      description:
+        "Returns the shell Dashboard read model: airline status, base, fleet, route/flight empty capabilities, alerts, navigation progress and next best action.",
+      produces: ["application/json"],
+      responses: {
+        "200": { schema: { $ref: "#/definitions/bff.DashboardSummary" } },
+        "401": {},
+        "500": {},
+      },
+    },
+  };
+  swagger.paths["/game/map-state"] = {
+    get: {
+      description:
+        "Returns GeoJSON-oriented map state for the shell Dashboard and map remote. The map remote visualizes this payload and does not call backend directly.",
+      parameters: [
+        {
+          description: "Map scenario scope.",
+          enum: ["dashboard", "network", "operations"],
+          in: "query",
+          name: "scope",
+          required: false,
+          type: "string",
+        },
+        {
+          description: "Selected airport id for detail card enrichment.",
+          in: "query",
+          name: "selected_airport_id",
+          required: false,
+          type: "string",
+        },
+        {
+          description: "Selected route id for future route detail enrichment.",
+          in: "query",
+          name: "selected_route_id",
+          required: false,
+          type: "string",
+        },
+        {
+          description: "Whether route opportunities should be included.",
+          enum: ["true", "false"],
+          in: "query",
+          name: "include_opportunities",
+          required: false,
+          type: "string",
+        },
+      ],
+      produces: ["application/json"],
+      responses: {
+        "200": { schema: { $ref: "#/definitions/bff.MapState" } },
+        "401": {},
         "500": {},
       },
     },

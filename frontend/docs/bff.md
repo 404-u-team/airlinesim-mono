@@ -168,12 +168,18 @@ HTTP endpoint:
 
 HTTP endpoints:
 
+- `GET /game/dashboard-summary` - единый read model для shell Dashboard: airline/base/fleet/routes/flights/alerts/next action/navigation progress.
+- `GET /game/map-state?scope=dashboard&include_opportunities=true` - GeoJSON/read model для карты Dashboard: стартовая база, важные аэропорты, будущие route lines и selected airport detail.
 - `GET /game/finance-overview` - баланс авиакомпании, стоимость флота, maintenance reserve, credit/safety/reputation.
 - `GET /game/facilities-overview` - starting airport, базированные борта, совместимые типы самолетов, слоты и ground costs.
 - `GET /game/events-feed` - синтетическая лента событий из airline/fleet/demand-cache состояния.
 - `GET /game/network-opportunities?origin_airport_id=<id>` - список route opportunities из airports, regions и region-links. Если `origin_airport_id` не передан, используется `airline.starting_airport_id`.
 
 Правило развития: если backend позже откроет read-only world-data routes для обычного пользователя, `game` должен перестать использовать admin-token для чтения этих справочников.
+
+`dashboard-summary` и `map-state` уже возвращают `routes`/`flights` capabilities, но пока backend routes/flights отсутствуют, эти capabilities равны `not_configured`, а массивы маршрутов и рейсов пустые. Следующие MVP-блоки должны заполнять эти поля через BFF, не меняя контракт Dashboard и карты.
+
+Map remote не делает HTTP-запросы к backend или BFF в dashboard-сценарии. Shell загружает `map-state` и передает его в `apps/map` через Module Federation props; выбор объектов карты отправляется обратно через `@airlinesim/event-bus`.
 
 ### `onboarding`
 

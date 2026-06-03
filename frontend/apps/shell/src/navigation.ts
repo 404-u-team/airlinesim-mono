@@ -3,12 +3,12 @@ import type { Component } from "vue";
 
 import {
   Banknote,
+  Bell,
   BriefcaseBusiness,
   Building2,
   CalendarDays,
   CircleDollarSign,
   ClipboardList,
-  Fuel,
   Gauge,
   Home,
   Map,
@@ -22,6 +22,7 @@ import {
   Wrench,
 } from "@lucide/vue";
 
+import type { ShellStatusSummary } from "./dashboard/types";
 import type { ShellMessageKey } from "./i18n/messages";
 
 import { resolveRemoteId } from "./mfe-routing";
@@ -142,24 +143,36 @@ export const navigationSections: NavigationSection[] = [
   },
 ];
 
-export function getStatusMetrics(t: (key: ShellMessageKey) => string): StatusMetric[] {
+export function getStatusMetrics(
+  t: (key: ShellMessageKey) => string,
+  status: null | ShellStatusSummary,
+): StatusMetric[] {
   return [
     {
       icon: CircleDollarSign,
       label: t("status.account"),
-      value: "$50,000,000",
-    },
-    {
-      icon: Fuel,
-      label: t("status.fuel"),
-      value: "30,000 t",
+      value: status ? formatMoney(status.balance) : "-",
     },
     {
       icon: PlaneTakeoff,
       label: t("status.planes"),
-      value: "122",
+      value: status ? String(status.aircraft) : "-",
+    },
+    {
+      icon: Bell,
+      label: t("status.alerts"),
+      value: status ? String(status.alerts) : "-",
     },
   ];
+}
+
+function formatMoney(value: number): string {
+  return new Intl.NumberFormat("en", {
+    currency: "USD",
+    maximumFractionDigits: 0,
+    notation: value >= 1_000_000 ? "compact" : "standard",
+    style: "currency",
+  }).format(value);
 }
 
 export const quickActions = [

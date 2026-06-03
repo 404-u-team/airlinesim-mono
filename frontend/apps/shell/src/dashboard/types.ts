@@ -1,0 +1,138 @@
+export type DashboardAirport = {
+  coordinates?: null | {
+    latitude: number;
+    longitude: number;
+  };
+  gate_fee?: number;
+  iata_code?: string;
+  icao_code?: string;
+  id?: string;
+  intl_name?: string;
+  label: string;
+  local_name?: string;
+  max_runway_length_m?: number;
+  max_runway_uses_per_day?: number;
+  municipality?: string;
+  runway_fee?: number;
+  stand_fee?: number;
+  turnaround_point_price?: number;
+  works_at_night?: boolean;
+};
+
+export type DashboardAlert = {
+  action_code: string;
+  code: string;
+  severity: "danger" | "info" | "success" | "warning";
+  target_path: string;
+};
+
+export type DashboardMapState = {
+  airports: {
+    features: MapAirportFeature[];
+    type: "FeatureCollection";
+  };
+  capabilities: {
+    flights: "available" | "not_configured";
+    routes: "available" | "not_configured";
+  };
+  routes: {
+    features: unknown[];
+    type: "FeatureCollection";
+  };
+  scope: string;
+  selected: null | {
+    airport: DashboardAirport;
+    cta_target_path: string;
+    demand: number;
+    region_name: string;
+    score: number;
+  };
+  viewport?: Record<string, unknown>;
+  warnings: string[];
+};
+
+export type DashboardNextActionCode =
+  | "BUY_FIRST_AIRCRAFT"
+  | "CREATE_SCHEDULE"
+  | "PLAN_FIRST_ROUTE"
+  | "VIEW_OPERATIONS";
+
+export type DashboardProgressItem = {
+  count: number;
+  next_path: string;
+  path: string;
+  reason_code: string;
+  state: "blocked" | "empty" | "future" | "ready";
+};
+
+export type DashboardSummary = {
+  airline: {
+    balance: number;
+    credit_rating: number;
+    id?: string;
+    is_bankrupt: boolean;
+    name: string;
+    reputation: number;
+    safety_rating: number;
+  };
+  alerts: DashboardAlert[];
+  base: {
+    airport: DashboardAirport | null;
+    status: "missing" | "ready";
+    warnings: string[];
+  };
+  fleet: {
+    average_maintenance_ratio: number;
+    compatible_base_types: number;
+    fleet_value: number;
+    in_flight_aircraft: number;
+    maintenance_aircraft: number;
+    ready_aircraft: number;
+    total_aircraft: number;
+  };
+  flights: {
+    capabilities: "available" | "not_configured";
+    completed_today: number;
+    items: unknown[];
+    live_flights: number;
+    upcoming_flights: number;
+  };
+  navigation_progress: DashboardProgressItem[];
+  next_action: {
+    code: DashboardNextActionCode;
+    secondary_target_path?: string;
+    target_path: string;
+  };
+  routes: {
+    active_routes: number;
+    awaiting_schedule: number;
+    capabilities: "available" | "not_configured";
+    draft_routes: number;
+    items: unknown[];
+  };
+  updated_at: string;
+};
+
+export type MapAirportFeature = {
+  geometry: {
+    coordinates: [number, number];
+    type: "Point";
+  };
+  id?: string;
+  properties: {
+    demand?: number;
+    iata_code?: string;
+    icao_code?: string;
+    id?: string;
+    label: string;
+    role: "base" | "opportunity";
+    score?: number;
+  };
+  type: "Feature";
+};
+
+export type ShellStatusSummary = {
+  aircraft: number;
+  alerts: number;
+  balance: number;
+};

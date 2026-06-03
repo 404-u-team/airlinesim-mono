@@ -27,6 +27,7 @@ globalThis.document = {
 mock.module("../src/views/AuthView.vue", () => ({ default: { name: "AuthView" } }));
 mock.module("../src/views/ShellRemoteView.vue", () => ({ default: { name: "ShellRemoteView" } }));
 mock.module("../src/admin/views/AdminView.vue", () => ({ default: { name: "AdminView" } }));
+mock.module("../src/dashboard/DashboardView.vue", () => ({ default: { name: "DashboardView" } }));
 mock.module("../src/views/SystemSettingsView.vue", () => ({ default: { name: "SystemSettingsView" } }));
 
 // 3. Mock the auth module to control isAuthenticated and airline refs in tests

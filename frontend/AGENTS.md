@@ -38,6 +38,7 @@
 - `docs/I18N.md` - спецификация мультиязычности RU/EN: источник локали, хранение строк, fallback и контракт Shell -> MFE.
 - `docs/TESTS.md` - правила создания и запуска тестов frontend-модулей.
 - `docs/bff.md` - спецификация Bun BFF: отдельное расположение вне `apps`, модули `import` и `proxy`, env и правила развития.
+- `docs/map-state.md` - контракт BFF map-state и правила Shell-owned Dashboard -> Map remote visual widget.
 - `docs/swagger.yaml` - OpenAPI/Swagger контракт backend API; `docs/swagger.json` лежит рядом как fallback для генерации.
 - `docs/erd.txt` - доменная ERD модель.
 - `docs/to-be-enabled.md` - матрица shell admin страниц: что уже включено по OpenAPI, какие ERD-сущности пока disabled и условия их включения.
@@ -48,7 +49,7 @@ Shell лениво импортирует `World Map`, `Fleet & Ops`, `Finance &
 
 Целевые shared-пакеты из диаграммы: `event-bus`, `ui-kit`/`air-ui`, `api-contracts`, `game-sdk`.
 
-Shell routing должен оставаться URL-driven: sidebar/topbar меняют route, Shell определяет lazy remote по route и уже затем Module Federation подгружает нужный MFE. Для межмодульных действий использовать singleton `@airlinesim/event-bus`; примеры событий есть в `docs/MFE_EXAMPLE.png`, актуальная спецификация маршрутизации - в `docs/mfe-routing.md`.
+Shell routing должен оставаться URL-driven: sidebar/topbar меняют route, Shell определяет lazy remote по route и уже затем Module Federation подгружает нужный MFE. `/dashboard` принадлежит Shell и использует `apps/map` только как визуальный виджет с BFF `map-state`; правила контракта описаны в `docs/map-state.md`. Для межмодульных действий использовать singleton `@airlinesim/event-bus`; примеры событий есть в `docs/MFE_EXAMPLE.png`, актуальная спецификация маршрутизации - в `docs/mfe-routing.md`.
 
 `packages/api-contracts` генерируется из `docs/swagger.yaml` / `docs/swagger.json` и экспортирует backend контракты для `game-sdk` и remotes. Корневой `bun run dev` должен запускать генерацию OpenAPI контрактов до старта Turbo dev.
 

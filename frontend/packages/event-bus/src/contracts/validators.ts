@@ -24,6 +24,14 @@ export const airlineSimEventValidators: ValidatorMap<AirlineSimEvents> = {
     isOneOf(payload.source, ["fleet-ops", "map", "shell"]),
   "i18n:locale-changed": (payload): payload is AirlineSimEvents["i18n:locale-changed"] =>
     isRecord(payload) && isOneOf(payload.locale, ["en", "ru"]),
+  "map:airport-selected": (payload): payload is AirlineSimEvents["map:airport-selected"] =>
+    isRecord(payload) &&
+    typeof payload.airportId === "string" &&
+    isOneOf(payload.source, ["dashboard", "map", "network-planner"]),
+  "map:route-selected": (payload): payload is AirlineSimEvents["map:route-selected"] =>
+    isRecord(payload) &&
+    typeof payload.routeId === "string" &&
+    isOneOf(payload.source, ["dashboard", "map", "network-planner"]),
   "mfe:ready": hasRemoteId,
   "navigation:changed": (payload): payload is NavigationChangedEvent =>
     isRecord(payload) &&

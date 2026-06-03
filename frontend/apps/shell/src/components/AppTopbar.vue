@@ -6,6 +6,7 @@ import { computed } from "vue";
 import { useRouter } from "vue-router";
 
 import { logout } from "../auth";
+import { dashboardState } from "../dashboard/state";
 import { type ShellMessageKey, shellMessages } from "../i18n/messages";
 import { getStatusMetrics } from "../navigation";
 
@@ -21,7 +22,7 @@ const router = useRouter();
 const t = computed(() => (key: ShellMessageKey): string =>
   translate(shellMessages, props.appLocale, key),
 );
-const statusMetrics = computed(() => getStatusMetrics(t.value));
+const statusMetrics = computed(() => getStatusMetrics(t.value, dashboardState.statusSummary.value));
 
 function requestPanel(panel: "notifications" | "profile"): void {
   airlineSimEventBus.emit("shell:panel-requested", {

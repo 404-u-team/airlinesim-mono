@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 
 import AdminView from "./admin/views/AdminView.vue";
 import { authState } from "./auth";
+import DashboardView from "./dashboard/DashboardView.vue";
 import { createMfeRouteRecords, defaultRoutePath, resolveMfeRoute } from "./mfe-routing";
 import AuthView from "./views/AuthView.vue";
 import ShellRemoteView from "./views/ShellRemoteView.vue";
@@ -40,6 +41,11 @@ export const router = createRouter({
       },
       name: "onboarding-airline",
       path: "/onboarding/airline",
+    },
+    {
+      component: DashboardView,
+      name: "dashboard",
+      path: "/dashboard",
     },
     {
       path: "/admin",

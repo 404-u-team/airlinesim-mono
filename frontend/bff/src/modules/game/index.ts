@@ -1,3 +1,4 @@
+/* eslint-disable complexity, max-lines */
 import type { BffConfig } from "../../config";
 
 import { getBackendAdminToken, getUserAuthorization, requireValidUserToken } from "../../auth";
@@ -40,6 +41,8 @@ type Airline = {
 
 type Airport = {
   gate_fee?: number;
+  geog?: string;
+  geom?: string;
   iata_code?: string;
   icao_code?: string;
   id?: string;
@@ -47,7 +50,9 @@ type Airport = {
   local_name?: string;
   max_runway_length_m?: number;
   max_runway_uses_per_day?: number;
+  municipality?: string;
   region_id?: string;
+  runway_fee?: number;
   stand_fee?: number;
   turnaround_point_price?: number;
   works_at_night?: boolean;
@@ -110,6 +115,14 @@ export async function handleGameRequest(
 
   const snapshot = await loadGameSnapshot(config, userAuthorization);
 
+  if (url.pathname === "/game/dashboard-summary") {
+    return jsonResponse(buildDashboardSummary(snapshot));
+  }
+
+  if (url.pathname === "/game/map-state") {
+    return jsonResponse(buildMapState(snapshot, url.searchParams));
+  }
+
   if (url.pathname === "/game/finance-overview") {
     return jsonResponse(buildFinanceOverview(snapshot));
   }
@@ -143,6 +156,121 @@ function average(values: number[]): number {
   }
 
   return values.reduce((total, value) => total + value, 0) / values.length;
+}
+
+function baseWarnings(airport: Airport): string[] {
+  const warnings: string[] = [];
+
+  if ((airport.max_runway_length_m ?? 0) < 1800) {
+    warnings.push("SHORT_RUNWAY");
+  }
+  if (!airport.works_at_night) {
+    warnings.push("NO_NIGHT_OPS");
+  }
+  if ((airport.max_runway_uses_per_day ?? 0) < 50) {
+    warnings.push("LOW_SLOT_CAPACITY");
+  }
+  if (!airport.region_id) {
+    warnings.push("MISSING_REGION_DATA");
+  }
+
+  return warnings;
+}
+
+function buildDashboardAlerts(
+  snapshot: GameSnapshot,
+  baseAirport: Airport | undefined,
+  fleet: ReturnType<typeof buildFleetSummary>,
+): Array<Record<string, unknown>> {
+  const alerts: Array<Record<string, unknown>> = [];
+
+  if (!baseAirport) {
+    alerts.push({
+      action_code: "OPEN_ONBOARDING",
+      code: "MISSING_BASE",
+      severity: "warning",
+      target_path: "/onboarding/airline",
+    });
+  }
+  if (fleet.total_aircraft === 0) {
+    alerts.push({
+      action_code: "BUY_FIRST_AIRCRAFT",
+      code: "NO_AIRCRAFT",
+      severity: "warning",
+      target_path: "/fleet/overview",
+    });
+  }
+  if ((snapshot.airline.balance ?? 0) < 5_000_000) {
+    alerts.push({
+      action_code: "OPEN_FINANCES",
+      code: "LOW_BALANCE",
+      severity: "danger",
+      target_path: "/finances/overview",
+    });
+  }
+  if (fleet.average_maintenance_ratio < 0.35 && fleet.total_aircraft > 0) {
+    alerts.push({
+      action_code: "REVIEW_MAINTENANCE",
+      code: "LOW_MAINTENANCE",
+      severity: "warning",
+      target_path: "/fleet/maintenance",
+    });
+  }
+  if (fleet.total_aircraft > 0) {
+    alerts.push({
+      action_code: "PLAN_FIRST_ROUTE",
+      code: "NO_ROUTES",
+      severity: "info",
+      target_path: "/airports/routes",
+    });
+  }
+
+  return alerts.slice(0, 5);
+}
+
+function buildDashboardSummary(snapshot: GameSnapshot): Record<string, unknown> {
+  const baseAirport = getBaseAirport(snapshot);
+  const fleet = buildFleetSummary(snapshot, baseAirport);
+  const alerts = buildDashboardAlerts(snapshot, baseAirport, fleet);
+  const hasAircraft = fleet.total_aircraft > 0;
+  const routesCapability = "not_configured";
+  const flightsCapability = "not_configured";
+
+  return {
+    airline: {
+      balance: snapshot.airline.balance ?? 0,
+      credit_rating: snapshot.airline.credit_rating ?? 0,
+      id: snapshot.airline.id,
+      is_bankrupt: Boolean(snapshot.airline.is_bankrupt),
+      name: snapshot.airline.name ?? "Airline",
+      reputation: snapshot.airline.reputation ?? 0,
+      safety_rating: snapshot.airline.safety_rating ?? 0,
+    },
+    alerts,
+    base: {
+      airport: baseAirport ? toAirportSummary(baseAirport) : null,
+      status: baseAirport ? "ready" : "missing",
+      warnings: baseAirport ? baseWarnings(baseAirport) : ["MISSING_BASE"],
+    },
+    fleet,
+    flights: {
+      capabilities: flightsCapability,
+      completed_today: 0,
+      items: [],
+      live_flights: 0,
+      upcoming_flights: 0,
+    },
+    navigation_progress: buildNavigationProgress(hasAircraft),
+    next_action: buildNextAction(hasAircraft),
+    routes: {
+      active_routes: 0,
+      awaiting_schedule: 0,
+      capabilities: routesCapability,
+      draft_routes: 0,
+      items: [],
+    },
+    updated_at: new Date().toISOString(),
+  };
 }
 
 function buildEventsFeed(snapshot: GameSnapshot): { events: Array<Record<string, unknown>> } {
@@ -224,6 +352,94 @@ function buildFinanceOverview(snapshot: GameSnapshot): Record<string, unknown> {
   };
 }
 
+function buildFleetSummary(snapshot: GameSnapshot, baseAirport: Airport | undefined): {
+  average_maintenance_ratio: number;
+  compatible_base_types: number;
+  fleet_value: number;
+  in_flight_aircraft: number;
+  maintenance_aircraft: number;
+  ready_aircraft: number;
+  total_aircraft: number;
+} {
+  const typeById = new Map(snapshot.aircraftTypes.map((type) => [type.id, type]));
+  const fleetValue = snapshot.aircrafts.reduce((total, aircraft) => total + (typeById.get(aircraft.type_id)?.price_per_unit ?? 0), 0);
+
+  return {
+    average_maintenance_ratio: average(snapshot.aircrafts.map(maintenanceRatio)),
+    compatible_base_types: snapshot.aircraftTypes.filter(
+      (type) => (type.min_runway_length_m ?? 0) <= (baseAirport?.max_runway_length_m ?? 0),
+    ).length,
+    fleet_value: fleetValue,
+    in_flight_aircraft: snapshot.aircrafts.filter((aircraft) => aircraft.status === "in_flight").length,
+    maintenance_aircraft: snapshot.aircrafts.filter((aircraft) => aircraft.status === "maintenance").length,
+    ready_aircraft: snapshot.aircrafts.filter((aircraft) => aircraft.status !== "maintenance").length,
+    total_aircraft: snapshot.aircrafts.length,
+  };
+}
+
+function buildMapState(snapshot: GameSnapshot, searchParams: URLSearchParams): Record<string, unknown> {
+  const baseAirport = getBaseAirport(snapshot);
+  const includeOpportunities = searchParams.get("include_opportunities") !== "false";
+  const requestedSelectedAirportId = searchParams.get("selected_airport_id");
+  const opportunities = includeOpportunities
+    ? buildRouteOpportunities(snapshot, baseAirport?.id ?? null).slice(0, 12)
+    : [];
+  const selectedAirport =
+    snapshot.airports.find((airport) => airport.id === requestedSelectedAirportId) ??
+    opportunities[0]?.airport ??
+    baseAirport;
+  const airportFeatures = new Map<string, Record<string, unknown>>();
+
+  if (baseAirport) {
+    const feature = toAirportFeature(baseAirport, "base", 0);
+    if (feature) {
+      airportFeatures.set(baseAirport.id ?? "base", feature);
+    }
+  }
+
+  for (const opportunity of opportunities) {
+    const feature = toAirportFeature(opportunity.airport, "opportunity", opportunity.score, opportunity.demand);
+    if (feature) {
+      airportFeatures.set(opportunity.airport.id ?? airportLabel(opportunity.airport), feature);
+    }
+  }
+
+  const warnings = [
+    ...(baseAirport && !pointFromAirport(baseAirport) ? ["MISSING_BASE_COORDINATES"] : []),
+    ...(airportFeatures.size === 0 ? ["NO_MAP_AIRPORTS"] : []),
+  ];
+
+  return {
+    airports: {
+      features: Array.from(airportFeatures.values()),
+      type: "FeatureCollection",
+    },
+    capabilities: {
+      flights: "not_configured",
+      routes: "not_configured",
+    },
+    routes: {
+      features: [],
+      type: "FeatureCollection",
+    },
+    scope: searchParams.get("scope") ?? "dashboard",
+    selected: selectedAirport ? toSelectedAirport(selectedAirport, snapshot, baseAirport) : null,
+    viewport: buildViewport(Array.from(airportFeatures.values())),
+    warnings,
+  };
+}
+
+function buildNavigationProgress(hasAircraft: boolean): Array<Record<string, unknown>> {
+  return [
+    { count: 1, next_path: "/dashboard", path: "/dashboard", reason_code: "DASHBOARD_READY", state: "ready" },
+    { count: hasAircraft ? 1 : 0, next_path: "/fleet/overview", path: "/fleet", reason_code: hasAircraft ? "FLEET_READY" : "NO_AIRCRAFT", state: hasAircraft ? "ready" : "empty" },
+    { count: 0, next_path: "/airports/routes", path: "/airports", reason_code: hasAircraft ? "NO_ROUTES" : "NEEDS_AIRCRAFT", state: hasAircraft ? "empty" : "blocked" },
+    { count: 0, next_path: "/operations/schedule", path: "/operations", reason_code: "NEEDS_ROUTE", state: "blocked" },
+    { count: 1, next_path: "/finances/overview", path: "/finances", reason_code: "FINANCES_READY", state: "ready" },
+    { count: 1, next_path: "/staff/overview", path: "/staff", reason_code: "BASE_READY", state: "ready" },
+  ];
+}
+
 function buildNetworkOpportunities(
   snapshot: GameSnapshot,
   requestedOriginAirportId: null | string,
@@ -234,17 +450,66 @@ function buildNetworkOpportunities(
     return { airports: compactAirports(snapshot.airports), opportunities: [], origin_airport: null };
   }
 
-  const opportunities = snapshot.airports
-    .filter((airport) => airport.id !== origin.id && airport.region_id)
-    .map((airport) => toRouteOpportunity(origin, airport, snapshot))
-    .filter((opportunity) => opportunity.score > 0)
-    .sort((left, right) => right.score - left.score)
-    .slice(0, 24);
+  const opportunities = buildRouteOpportunities(snapshot, origin.id ?? null).slice(0, 24);
 
   return {
     airports: compactAirports(snapshot.airports),
     opportunities,
     origin_airport: origin,
+  };
+}
+
+function buildNextAction(hasAircraft: boolean): Record<string, unknown> {
+  if (!hasAircraft) {
+    return {
+      code: "BUY_FIRST_AIRCRAFT",
+      secondary_target_path: "/finances/overview",
+      target_path: "/fleet/overview",
+    };
+  }
+
+  return {
+    code: "PLAN_FIRST_ROUTE",
+    secondary_target_path: "/fleet/aircraft",
+    target_path: "/airports/routes",
+  };
+}
+
+function buildRouteOpportunities(snapshot: GameSnapshot, requestedOriginAirportId: null | string): RouteOpportunity[] {
+  const origin = snapshot.airports.find((airport) => airport.id === (requestedOriginAirportId ?? snapshot.airline.starting_airport_id));
+
+  if (!origin?.region_id) {
+    return [];
+  }
+
+  return snapshot.airports
+    .filter((airport) => airport.id !== origin.id && airport.region_id)
+    .map((airport) => toRouteOpportunity(origin, airport, snapshot))
+    .filter((opportunity) => opportunity.score > 0)
+    .sort((left, right) => right.score - left.score);
+}
+
+function buildViewport(features: Array<Record<string, unknown>>): Record<string, unknown> {
+  const coordinates = features
+    .map((feature) => (feature.geometry as undefined | { coordinates?: unknown })?.coordinates)
+    .filter((value): value is [number, number] => Array.isArray(value) && value.length === 2);
+
+  if (coordinates.length === 0) {
+    return { center: [0, 0], zoom: 2 };
+  }
+
+  if (coordinates.length === 1) {
+    return { center: coordinates[0], zoom: 5 };
+  }
+
+  const lngs = coordinates.map(([lng]) => lng);
+  const lats = coordinates.map(([, lat]) => lat);
+
+  return {
+    bounds: [
+      [Math.min(...lngs), Math.min(...lats)],
+      [Math.max(...lngs), Math.max(...lats)],
+    ],
   };
 }
 
@@ -287,6 +552,10 @@ function formatMoney(value: number | undefined): string {
   }).format(value ?? 0);
 }
 
+function getBaseAirport(snapshot: GameSnapshot): Airport | undefined {
+  return snapshot.airports.find((airport) => airport.id === snapshot.airline.starting_airport_id);
+}
+
 async function loadGameSnapshot(config: BffConfig, userAuthorization: string): Promise<GameSnapshot> {
   const token = await getBackendAdminToken(config);
   const [airline, aircrafts, aircraftTypes, airports, regions, regionLinks] = await Promise.all([
@@ -318,6 +587,72 @@ function maintenanceRatio(aircraft: Aircraft): number {
   return Math.max(0, Math.min(1, (aircraft.current_maintenance_points ?? max) / max));
 }
 
+function pointFromAirport(airport: Airport): null | { latitude: number; longitude: number } {
+  const match = /POINT\s*\(\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*\)/i.exec(
+    airport.geog ?? airport.geom ?? "",
+  );
+
+  if (!match?.[1] || !match[2]) {
+    return null;
+  }
+
+  return {
+    latitude: Number(match[2]),
+    longitude: Number(match[1]),
+  };
+}
+
+function toAirportFeature(
+  airport: Airport,
+  role: "base" | "opportunity",
+  score: number,
+  demand?: number,
+): null | Record<string, unknown> {
+  const point = pointFromAirport(airport);
+
+  if (!point) {
+    return null;
+  }
+
+  return {
+    geometry: {
+      coordinates: [point.longitude, point.latitude],
+      type: "Point",
+    },
+    id: airport.id,
+    properties: {
+      demand: demand ?? 0,
+      iata_code: airport.iata_code,
+      icao_code: airport.icao_code,
+      id: airport.id,
+      label: airportLabel(airport),
+      role,
+      score,
+    },
+    type: "Feature",
+  };
+}
+
+function toAirportSummary(airport: Airport): Record<string, unknown> {
+  return {
+    coordinates: pointFromAirport(airport),
+    gate_fee: airport.gate_fee ?? 0,
+    iata_code: airport.iata_code,
+    icao_code: airport.icao_code,
+    id: airport.id,
+    intl_name: airport.intl_name,
+    label: airportLabel(airport),
+    local_name: airport.local_name,
+    max_runway_length_m: airport.max_runway_length_m ?? 0,
+    max_runway_uses_per_day: airport.max_runway_uses_per_day ?? 0,
+    municipality: airport.municipality,
+    runway_fee: airport.runway_fee ?? 0,
+    stand_fee: airport.stand_fee ?? 0,
+    turnaround_point_price: airport.turnaround_point_price ?? 0,
+    works_at_night: Boolean(airport.works_at_night),
+  };
+}
+
 function toRouteOpportunity(origin: Airport, destination: Airport, snapshot: GameSnapshot): RouteOpportunity {
   const link = findRegionLink(snapshot.regionLinks, origin.region_id, destination.region_id);
   const region = snapshot.regions.find((item) => item.id === destination.region_id);
@@ -330,5 +665,23 @@ function toRouteOpportunity(origin: Airport, destination: Airport, snapshot: Gam
     demand,
     region_name: region?.intl_name ?? region?.local_name ?? "-",
     score,
+  };
+}
+
+function toSelectedAirport(
+  airport: Airport,
+  snapshot: GameSnapshot,
+  baseAirport: Airport | undefined,
+): Record<string, unknown> {
+  const opportunity = baseAirport
+    ? toRouteOpportunity(baseAirport, airport, snapshot)
+    : undefined;
+
+  return {
+    airport: toAirportSummary(airport),
+    cta_target_path: airport.id === baseAirport?.id ? "/staff/overview" : "/airports/routes",
+    demand: opportunity?.demand ?? 0,
+    region_name: opportunity?.region_name ?? "-",
+    score: opportunity?.score ?? 0,
   };
 }

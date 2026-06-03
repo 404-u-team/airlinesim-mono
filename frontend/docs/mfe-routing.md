@@ -12,13 +12,14 @@ Shell владеет историей браузера. Remote-приложен�
 
 | Префикс | Путь по умолчанию | Remote |
 | --- | --- | --- |
-| `/dashboard` | `/dashboard` | `map` |
 | `/fleet` | `/fleet/overview` | `fleet-ops` |
 | `/airports` | `/airports/hubs` | `network-planner` |
 | `/operations` | `/operations/live-flights` | `fleet-ops` |
 | `/finances` | `/finances/overview` | `finance-stock` |
 | `/staff` | `/staff/overview` | `hr-facilities` |
 | `/settings` | `/settings/company` | `events-news` |
+
+`/dashboard` является shell-owned route. Shell сам загружает dashboard summary и map-state из BFF, а `apps/map` монтируется внутри Dashboard как визуальный remote-виджет. Это исключение сделано потому, что Dashboard владеет глобальными CTA, прогрессом разделов, статусом компании и общей навигацией.
 
 Навигация боковой панели, guards маршрутов и резолвинг remote должны использовать этот реестр.
 Не дублируйте сопоставление prefix-to-remote в remote-приложениях.

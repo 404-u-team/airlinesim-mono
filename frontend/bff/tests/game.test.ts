@@ -89,6 +89,255 @@ test("builds finance overview from user fleet and backend aircraft types", async
   });
 });
 
+test("builds dashboard summary with next action for airline without aircraft", async () => {
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+
+    if (url === "http://backend.test/airline/me") {
+      return json({
+        balance: 20_000_000,
+        id: "airline-1",
+        name: "Seoul Air",
+        starting_airport_id: "airport-1",
+      });
+    }
+
+    if (url === "http://backend.test/auth/login") {
+      return json({ access_token: token() });
+    }
+
+    if (url === "http://backend.test/aircrafts") {
+      return json({ items: [] });
+    }
+
+    if (url === "http://backend.test/aircraft-types") {
+      return json({ items: [{ id: "type-1", min_runway_length_m: 1800, price_per_unit: 10_000_000 }] });
+    }
+
+    if (url === "http://backend.test/airports") {
+      return json({
+        airports: [
+          {
+            geog: "POINT (126.4505 37.4691)",
+            iata_code: "ICN",
+            id: "airport-1",
+            intl_name: "Incheon International",
+            max_runway_length_m: 3750,
+            max_runway_uses_per_day: 600,
+            region_id: "region-1",
+            works_at_night: true,
+          },
+        ],
+      });
+    }
+
+    if (url === "http://backend.test/regions") {
+      return json({ regions: [{ id: "region-1", intl_name: "Seoul" }] });
+    }
+
+    if (url === "http://backend.test/region-links") {
+      return json({ region_links: [] });
+    }
+
+    return json({ error: "unexpected" }, 500);
+  };
+
+  const response = await handleGameRequest(
+    authorizedRequest("http://bff.test/game/dashboard-summary"),
+    new URL("http://bff.test/game/dashboard-summary"),
+    config,
+  );
+  const payload = await response?.json();
+
+  expect(response?.status).toBe(200);
+  expect(payload).toMatchObject({
+    base: {
+      status: "ready",
+    },
+    fleet: {
+      total_aircraft: 0,
+    },
+    next_action: {
+      code: "BUY_FIRST_AIRCRAFT",
+      target_path: "/fleet/overview",
+    },
+    routes: {
+      active_routes: 0,
+      capabilities: "not_configured",
+    },
+  });
+});
+
+test("builds dashboard summary with route planning action when aircraft exists", async () => {
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+
+    if (url === "http://backend.test/airline/me") {
+      return json({
+        balance: 3_000_000,
+        id: "airline-1",
+        name: "Seoul Air",
+        starting_airport_id: "airport-1",
+      });
+    }
+
+    if (url === "http://backend.test/auth/login") {
+      return json({ access_token: token() });
+    }
+
+    if (url === "http://backend.test/aircrafts") {
+      return json({
+        items: [{ current_maintenance_points: 90, max_maintenance_points_cached: 100, status: "idle", type_id: "type-1" }],
+      });
+    }
+
+    if (url === "http://backend.test/aircraft-types") {
+      return json({ items: [{ id: "type-1", min_runway_length_m: 1800, price_per_unit: 10_000_000 }] });
+    }
+
+    if (url === "http://backend.test/airports") {
+      return json({
+        airports: [
+          {
+            geog: "POINT (126.4505 37.4691)",
+            iata_code: "ICN",
+            id: "airport-1",
+            intl_name: "Incheon International",
+            max_runway_length_m: 3750,
+            max_runway_uses_per_day: 600,
+            region_id: "region-1",
+            works_at_night: true,
+          },
+        ],
+      });
+    }
+
+    if (url === "http://backend.test/regions") {
+      return json({ regions: [{ id: "region-1", intl_name: "Seoul" }] });
+    }
+
+    if (url === "http://backend.test/region-links") {
+      return json({ region_links: [] });
+    }
+
+    return json({ error: "unexpected" }, 500);
+  };
+
+  const response = await handleGameRequest(
+    authorizedRequest("http://bff.test/game/dashboard-summary"),
+    new URL("http://bff.test/game/dashboard-summary"),
+    config,
+  );
+  const payload = await response?.json();
+
+  expect(response?.status).toBe(200);
+  expect(payload).toMatchObject({
+    next_action: {
+      code: "PLAN_FIRST_ROUTE",
+      target_path: "/airports/routes",
+    },
+  });
+  expect(payload.alerts.some((alert: { code: string }) => alert.code === "LOW_BALANCE")).toBe(true);
+});
+
+test("builds map state with base and opportunity airport features", async () => {
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+
+    if (url === "http://backend.test/airline/me") {
+      return json({
+        balance: 20_000_000,
+        id: "airline-1",
+        starting_airport_id: "airport-1",
+      });
+    }
+
+    if (url === "http://backend.test/auth/login") {
+      return json({ access_token: token() });
+    }
+
+    if (url === "http://backend.test/aircrafts") {
+      return json({ items: [] });
+    }
+
+    if (url === "http://backend.test/aircraft-types") {
+      return json({ items: [] });
+    }
+
+    if (url === "http://backend.test/airports") {
+      return json({
+        airports: [
+          {
+            geog: "POINT (126.4505 37.4691)",
+            iata_code: "ICN",
+            id: "airport-1",
+            intl_name: "Incheon International",
+            max_runway_length_m: 3750,
+            max_runway_uses_per_day: 600,
+            region_id: "region-1",
+            works_at_night: true,
+          },
+          {
+            geog: "POINT (139.7798 35.5523)",
+            iata_code: "HND",
+            id: "airport-2",
+            intl_name: "Tokyo Haneda",
+            max_runway_length_m: 3360,
+            max_runway_uses_per_day: 500,
+            region_id: "region-2",
+            works_at_night: true,
+          },
+        ],
+      });
+    }
+
+    if (url === "http://backend.test/regions") {
+      return json({
+        regions: [
+          { business_score: 0.8, id: "region-1", intl_name: "Seoul", tourism_score: 0.5 },
+          { business_score: 0.9, id: "region-2", intl_name: "Tokyo", tourism_score: 0.7 },
+        ],
+      });
+    }
+
+    if (url === "http://backend.test/region-links") {
+      return json({
+        region_links: [
+          {
+            base_daily_demand_ab: 420,
+            base_daily_demand_ba: 390,
+            region_a: "region-1",
+            region_b: "region-2",
+          },
+        ],
+      });
+    }
+
+    return json({ error: "unexpected" }, 500);
+  };
+
+  const response = await handleGameRequest(
+    authorizedRequest("http://bff.test/game/map-state?include_opportunities=true"),
+    new URL("http://bff.test/game/map-state?include_opportunities=true"),
+    config,
+  );
+  const payload = await response?.json();
+
+  expect(response?.status).toBe(200);
+  expect(payload.airports.features.length).toBe(2);
+  expect(payload.routes.features).toEqual([]);
+  expect(payload.capabilities.routes).toBe("not_configured");
+  expect(payload.airports.features[0].geometry.type).toBe("Point");
+});
+
+function authorizedRequest(url: string): Request {
+  return new Request(url, {
+    headers: {
+      Authorization: "Bearer user-token",
+    },
+  });
+}
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     headers: {
