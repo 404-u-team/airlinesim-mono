@@ -1,3 +1,12 @@
+export type CreateScheduleResponse = SchedulePreviewResponse & {
+  flights: FlightCard[];
+  schedule: {
+    id: string;
+    route_id: string;
+    status: string;
+  };
+};
+
 export type FleetAircraftDetailResponse = {
   aircraft: FleetOwnedAircraftCard;
 };
@@ -145,3 +154,88 @@ export type FleetReasonCode =
   | "FLEET_RUNWAY_TOO_SHORT"
   | "FLEET_TAIL_NUMBER_EXISTS"
   | "FLEET_TAIL_NUMBER_INVALID";
+
+export type FlightCard = {
+  aircraft_id: string;
+  arrival_at: string;
+  departure_at: string;
+  destination_airport_id: string;
+  expected: FlightFinancials;
+  flight_number: string;
+  id: string;
+  origin_airport_id: string;
+  route_id: string;
+  status: "boarding" | "cancelled" | "completed" | "in_flight" | "scheduled";
+};
+
+export type FlightFinancials = {
+  cost: number;
+  load_factor: number;
+  passengers: number;
+  profit: number;
+  revenue: number;
+};
+
+export type FlightsResponse = {
+  flights: FlightCard[];
+  summary: {
+    completed: number;
+    live: number;
+    upcoming: number;
+  };
+};
+
+export type OperationAircraftOption = {
+  aircraft: FleetOwnedAircraftCard;
+  blockers: OperationReason[];
+  compatible: boolean;
+  warnings: OperationReason[];
+};
+
+export type OperationReason = {
+  code: string;
+  message: string;
+};
+
+export type OperationRoute = {
+  demand_snapshot: {
+    distance_km: number;
+    origin_daily_passengers: number;
+  };
+  destination_airport: null | {
+    label: string;
+  };
+  destination_airport_id: string;
+  id: string;
+  origin_airport: null | {
+    label: string;
+  };
+  origin_airport_id: string;
+  status: string;
+};
+
+export type ScheduleOptionsResponse = {
+  aircraft: OperationAircraftOption[];
+  default_pattern: {
+    days_of_week: number[];
+    departure_local_time: string;
+    turnaround_minutes: number;
+  };
+  route: null | OperationRoute;
+  routes: OperationRoute[];
+};
+
+export type SchedulePreviewResponse = {
+  preview: {
+    blockers: OperationReason[];
+    canActivate: boolean;
+    economics: {
+      weekly_cost: number;
+      weekly_profit: number;
+      weekly_revenue: number;
+    };
+    sample_flights: FlightCard[];
+    warnings: OperationReason[];
+    weekly_utilization_hours: number;
+  };
+};

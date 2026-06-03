@@ -1,149 +1,209 @@
 <script setup lang="ts">
-import { AirBadge, AirButton, AirMetricCard, AirSelect } from "@airlinesim/air-ui";
+import type { Locale } from "@airlinesim/i18n";
+
+import { AirBadge, AirButton, AirMetricCard, AirTextField } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
-import { ApiRequestError, createApiClient, createAuthClient } from "@airlinesim/game-sdk";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 
-type AirportOption = {
-  id?: string;
-  label: string;
-};
+import type { RouteOpportunity, StoredRoute } from "./types";
 
-type DemandResponse = {
-  demand?: {
-    destination_daily_passengers?: number;
-    distance_km?: number;
-    origin_daily_passengers?: number;
-  };
-};
+import { createRoute, getRouteOpportunities, getRoutePreview, getRoutes } from "./api";
+import RouteListPanel from "./components/RouteListPanel.vue";
+import RouteOpportunityGrid from "./components/RouteOpportunityGrid.vue";
+import RoutePreviewPanel from "./components/RoutePreviewPanel.vue";
+import { type NetworkMessageKey, t as translateNetwork } from "./i18n";
 
-type Metric = {
-  label: string;
-  tone?: "danger" | "neutral" | "success" | "warning";
-  value: string;
-};
+const props = defineProps<{
+  appLocale: Locale;
+  shellPath?: string;
+}>();
 
-type NetworkOpportunity = {
-  airport?: {
-    iata_code?: string;
-    id?: string;
-    intl_name?: string;
-    max_runway_uses_per_day?: number;
-  };
-  demand?: number;
-  region_name?: string;
-  score?: number;
-};
-
-type NetworkResponse = {
-  airports?: AirportOption[];
-  opportunities?: NetworkOpportunity[];
-  origin_airport?: {
-    id?: string;
-    intl_name?: string;
-  };
-};
-
-const authClient = createAuthClient();
-const apiClient = createApiClient({
-  getToken: authClient.getAccessToken,
-});
-const data = ref<NetworkResponse>({});
-const demand = ref<DemandResponse["demand"]>();
 const error = ref("");
-const isCalculating = ref(false);
+const isCreating = ref(false);
 const isLoading = ref(false);
+const isPreviewLoading = ref(false);
+const message = ref("");
+const opportunities = ref<RouteOpportunity[]>([]);
+const preview = ref<null | RouteOpportunity>(null);
+const routes = ref<StoredRoute[]>([]);
 const selectedDestinationId = ref("");
-const selectedOriginId = ref("");
+const selectedAircraftId = ref("");
+const filters = reactive({
+  maxDistance: "",
+  minDemand: "",
+  onlyCompatible: false,
+  onlyProfitable: false,
+});
 
-const airportOptions = computed(() => [
-  { label: "Home airport", value: "" },
-  ...(data.value.airports ?? []).map((airport) => ({
-    label: airport.label,
-    value: airport.id ?? "",
-  })),
-]);
-const selectedDestination = computed(() =>
-  data.value.opportunities?.find((opportunity) => opportunity.airport?.id === selectedDestinationId.value),
+const currentPreview = computed(() => preview.value ?? selectedOpportunity.value ?? null);
+const selectedOpportunity = computed(() =>
+  opportunities.value.find((opportunity) => opportunity.destination_airport.id === selectedDestinationId.value) ?? null,
 );
-const topMetrics = computed<Metric[]>(() => [
+const topMetrics = computed(() => [
   {
-    label: "Opportunities",
-    value: formatNumber(data.value.opportunities?.length),
+    label: tr("metric.weekDemand"),
+    value: formatNumber(opportunities.value[0]?.demand.origin_daily_passengers),
   },
   {
-    label: "Best demand",
-    value: formatNumber(data.value.opportunities?.[0]?.demand),
+    label: tr("metric.profit"),
+    tone: (opportunities.value[0]?.economics.estimated_profit_per_flight ?? 0) > 0 ? "success" as const : "warning" as const,
+    value: formatMoney(opportunities.value[0]?.economics.estimated_profit_per_flight),
   },
   {
-    label: "Saved demand",
-    tone: demand.value ? "success" : "neutral",
-    value: demand.value ? formatNumber(demand.value.origin_daily_passengers) : "-",
+    label: tr("metric.routes"),
+    value: formatNumber(routes.value.length),
   },
 ]);
 
 onMounted(() => {
   airlineSimEventBus.emit("mfe:ready", { remoteId: "network-planner" });
-  void loadOpportunities();
+  void loadData();
 });
 
-function apiMessage(value: unknown): string {
-  if (value instanceof ApiRequestError && value.status === 401) {
-    return "Sign in to plan routes.";
-  }
+async function createSelectedRoute(): Promise<void> {
+  const selected = currentPreview.value;
+  const destinationAirportId = selected?.destination_airport.id;
+  const originAirportId = selected?.origin_airport.id;
 
-  return value instanceof Error ? value.message : "Could not load route opportunities.";
-}
-
-async function calculateDemand(destinationId: string | undefined): Promise<void> {
-  const originId = data.value.origin_airport?.id;
-  if (!originId || !destinationId) {
+  if (!selected || !destinationAirportId || !originAirportId || selected.recommendation === "blocked") {
     return;
   }
 
-  isCalculating.value = true;
+  isCreating.value = true;
   error.value = "";
-  selectedDestinationId.value = destinationId;
+  message.value = "";
 
   try {
-    const response = await apiClient.get<DemandResponse>(
-      `/demand/airport-pair?origin_airport_id=${encodeURIComponent(originId)}&destination_airport_id=${encodeURIComponent(destinationId)}`,
-    );
-    demand.value = response.demand;
+    await createRoute({
+      base_frequency_per_week: 3,
+      destination_airport_id: destinationAirportId,
+      origin_airport_id: originAirportId,
+      selected_aircraft_id: selectedAircraftId.value || selected.compatible_aircraft.find((option) => option.isCompatible)?.aircraft.id,
+    });
+    message.value = tr("success.created");
+    airlineSimEventBus.emit("route:created", {
+      destinationAirportId,
+      originAirportId,
+      source: "network-planner",
+    });
+    airlineSimEventBus.emit("game:snapshot-invalidated", {
+      reason: "route-created",
+      source: "network-planner",
+    });
+    airlineSimEventBus.emit("map:network-refresh-requested", {
+      reason: "route-created",
+      source: "network-planner",
+    });
+    await loadData();
   } catch (loadError) {
-    error.value = apiMessage(loadError);
+    error.value = errorMessage(loadError);
   } finally {
-    isCalculating.value = false;
+    isCreating.value = false;
   }
 }
 
-function destinationTitle(opportunity: NetworkOpportunity): string {
-  return `${opportunity.airport?.iata_code || "----"} - ${opportunity.airport?.intl_name ?? "Airport"}`;
+function errorMessage(value: unknown): string {
+  return value instanceof Error ? value.message : "Could not load route data.";
+}
+
+function formatMoney(value: number | undefined): string {
+  return new Intl.NumberFormat(props.appLocale, {
+    currency: "USD",
+    maximumFractionDigits: 0,
+    style: "currency",
+  }).format(value ?? 0);
 }
 
 function formatNumber(value: number | undefined): string {
-  return new Intl.NumberFormat("en", { maximumFractionDigits: 0 }).format(value ?? 0);
+  return new Intl.NumberFormat(props.appLocale, { maximumFractionDigits: 0 }).format(value ?? 0);
 }
 
-async function loadOpportunities(): Promise<void> {
+async function loadData(): Promise<void> {
   isLoading.value = true;
   error.value = "";
-  demand.value = undefined;
 
   try {
-    const query = selectedOriginId.value ? `?origin_airport_id=${encodeURIComponent(selectedOriginId.value)}` : "";
-    data.value = await apiClient.get<NetworkResponse>(`/game/network-opportunities${query}`);
-    selectedDestinationId.value = data.value.opportunities?.[0]?.airport?.id ?? "";
+    const [opportunityResponse, routeResponse] = await Promise.all([
+      getRouteOpportunities(filters),
+      getRoutes(),
+    ]);
+    opportunities.value = opportunityResponse.opportunities;
+    routes.value = routeResponse.routes;
+    selectedDestinationId.value ||= opportunities.value[0]?.destination_airport.id ?? "";
+    await loadPreview();
   } catch (loadError) {
-    error.value = apiMessage(loadError);
+    error.value = errorMessage(loadError);
   } finally {
     isLoading.value = false;
   }
 }
+
+async function loadPreview(): Promise<void> {
+  const destinationId = selectedDestinationId.value;
+  if (!destinationId) {
+    preview.value = null;
+    return;
+  }
+
+  isPreviewLoading.value = true;
+
+  try {
+    const response = await getRoutePreview(destinationId, selectedAircraftId.value || undefined);
+    preview.value = response.preview;
+  } catch (loadError) {
+    error.value = errorMessage(loadError);
+  } finally {
+    isPreviewLoading.value = false;
+  }
+}
+
+function navigateToSchedule(route: StoredRoute): void {
+  airlineSimEventBus.emit("navigation:intent", {
+    source: "mfe",
+    targetPath: `${route.next_action.target_path}?route_id=${encodeURIComponent(route.id)}`,
+  });
+}
+
+function recommendationLabel(value: RouteOpportunity["recommendation"]): string {
+  return tr(`recommendation.${value}` as NetworkMessageKey);
+}
+
+function recommendationVariant(value: RouteOpportunity["recommendation"]): "danger-soft" | "success-soft" | "warning-soft" {
+  if (value === "open") {
+    return "success-soft";
+  }
+  if (value === "blocked") {
+    return "danger-soft";
+  }
+  return "warning-soft";
+}
+
+function selectOpportunity(opportunity: RouteOpportunity): void {
+  selectedDestinationId.value = opportunity.destination_airport.id ?? "";
+  selectedAircraftId.value = opportunity.compatible_aircraft.find((option) => option.isCompatible)?.aircraft.id ?? "";
+  void loadPreview();
+}
+
+function statusLabel(status: string): string {
+  const key = `status.${status}` as NetworkMessageKey;
+  return key in tMap ? tr(key) : status;
+}
+
+function tr(key: NetworkMessageKey): string {
+  return translateNetwork(props.appLocale, key);
+}
+
+const tMap = {
+  "status.active": true,
+  "status.awaiting_schedule": true,
+  "status.draft": true,
+  "status.paused": true,
+  "status.scheduled": true,
+};
 </script>
 
 <template>
-  <section class="min-h-full overflow-x-hidden bg-background p-4 text-body text-text-primary sm:p-6">
+  <section class="h-full overflow-y-auto bg-background p-4 text-body text-text-primary sm:p-6">
     <div class="flex flex-col gap-5 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
       <div class="min-w-0">
         <AirBadge
@@ -151,33 +211,27 @@ async function loadOpportunities(): Promise<void> {
           variant="warning-soft"
         />
         <h1 class="mt-4 text-h2">
-          Route Opportunities
+          {{ tr("title") }}
         </h1>
         <p class="mt-2 max-w-2xl text-body text-text-muted">
-          Rank destinations from backend region links and generate route demand on demand.
+          {{ tr("description") }}
         </p>
       </div>
-      <div class="flex flex-col gap-2 sm:flex-row">
-        <AirSelect
-          v-model="selectedOriginId"
-          label="Origin airport"
-          :options="airportOptions"
-        />
-        <AirButton
-          :disabled="isLoading"
-          :label="isLoading ? 'Loading' : 'Refresh'"
-          size="sm"
-          variant="warning"
-          @click="loadOpportunities"
-        />
-      </div>
+      <AirButton
+        :disabled="isLoading"
+        :label="isLoading ? '...' : tr('action.refresh')"
+        size="sm"
+        variant="warning"
+        @click="loadData"
+      />
     </div>
 
     <div
-      v-if="error"
-      class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-slate-950"
+      v-if="error || message"
+      class="mt-4 rounded-lg border p-3"
+      :class="error ? 'border-error bg-error-bg text-slate-950' : 'border-success bg-success-bg text-slate-950'"
     >
-      {{ error }}
+      {{ error || message }}
     </div>
 
     <div class="mt-6 grid gap-3 sm:grid-cols-3">
@@ -190,65 +244,67 @@ async function loadOpportunities(): Promise<void> {
       />
     </div>
 
-    <div class="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
-      <div class="grid gap-3 lg:grid-cols-2">
-        <article
-          v-for="opportunity in data.opportunities"
-          :key="opportunity.airport?.id"
-          class="rounded-lg border border-border bg-surface p-4"
-        >
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <h2 class="truncate text-subtitle">
-                {{ destinationTitle(opportunity) }}
-              </h2>
-              <p class="mt-1 truncate text-caption text-text-muted">
-                {{ opportunity.region_name }}
-              </p>
-            </div>
-            <AirBadge
-              :label="formatNumber(opportunity.demand)"
-              variant="warning-soft"
-            />
-          </div>
-          <div class="mt-4 grid grid-cols-2 gap-3 text-caption text-text-muted">
-            <span>Score {{ formatNumber(opportunity.score) }}</span>
-            <span>Slots {{ formatNumber(opportunity.airport?.max_runway_uses_per_day) }}</span>
-          </div>
-          <AirButton
-            class="mt-4 w-full"
-            :disabled="isCalculating"
-            label="Calculate demand"
-            size="sm"
-            variant="warning"
-            @click="calculateDemand(opportunity.airport?.id)"
+    <div class="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_28rem]">
+      <div class="min-w-0">
+        <div class="grid gap-3 rounded-lg border border-border bg-surface p-4 md:grid-cols-4">
+          <AirTextField
+            v-model="filters.minDemand"
+            :label="tr('filter.minDemand')"
+            placeholder="120"
           />
-        </article>
+          <AirTextField
+            v-model="filters.maxDistance"
+            :label="tr('filter.maxDistance')"
+            placeholder="3500"
+          />
+          <label class="flex items-center gap-2 text-body text-text-muted">
+            <input
+              v-model="filters.onlyCompatible"
+              type="checkbox"
+            />
+            {{ tr("filter.compatible") }}
+          </label>
+          <label class="flex items-center gap-2 text-body text-text-muted">
+            <input
+              v-model="filters.onlyProfitable"
+              type="checkbox"
+            />
+            {{ tr("filter.profitable") }}
+          </label>
+        </div>
+
+        <RouteOpportunityGrid
+          :format-money="formatMoney"
+          :format-number="formatNumber"
+          :is-loading="isLoading"
+          :opportunities="opportunities"
+          :recommendation-label="recommendationLabel"
+          :recommendation-variant="recommendationVariant"
+          :selected-destination-id="selectedDestinationId"
+          :t="tr"
+          @select-opportunity="selectOpportunity"
+        />
+
+        <RouteListPanel
+          :format-number="formatNumber"
+          :routes="routes"
+          :status-label="statusLabel"
+          :t="tr"
+          @navigate-to-schedule="navigateToSchedule"
+        />
       </div>
 
-      <aside class="rounded-lg border border-border bg-surface p-4">
-        <h2 class="text-subtitle">
-          Demand Result
-        </h2>
-        <p class="mt-2 text-body text-text-muted">
-          {{ selectedDestination ? destinationTitle(selectedDestination) : "Select a destination." }}
-        </p>
-        <div class="mt-4 grid gap-3">
-          <AirMetricCard
-            label="Outbound pax/day"
-            :value="formatNumber(demand?.origin_daily_passengers)"
-            :tone="demand ? 'success' : 'neutral'"
-          />
-          <AirMetricCard
-            label="Inbound pax/day"
-            :value="formatNumber(demand?.destination_daily_passengers)"
-          />
-          <AirMetricCard
-            label="Distance"
-            :value="`${formatNumber(demand?.distance_km)} km`"
-          />
-        </div>
-      </aside>
+      <RoutePreviewPanel
+        :current-preview="currentPreview"
+        :format-money="formatMoney"
+        :format-number="formatNumber"
+        :is-creating="isCreating"
+        :is-preview-loading="isPreviewLoading"
+        :recommendation-label="recommendationLabel"
+        :recommendation-variant="recommendationVariant"
+        :t="tr"
+        @create-selected-route="createSelectedRoute"
+      />
     </div>
   </section>
 </template>

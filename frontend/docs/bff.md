@@ -177,9 +177,57 @@ HTTP endpoints:
 
 Правило развития: если backend позже откроет read-only world-data routes для обычного пользователя, `game` должен перестать использовать admin-token для чтения этих справочников.
 
-`dashboard-summary` и `map-state` уже возвращают `routes`/`flights` capabilities, но пока backend routes/flights отсутствуют, эти capabilities равны `not_configured`, а массивы маршрутов и рейсов пустые. Следующие MVP-блоки должны заполнять эти поля через BFF, не меняя контракт Dashboard и карты.
+`dashboard-summary` и `map-state` возвращают `routes`/`flights` capabilities и читают BFF-owned overlays из модулей `routes` и `operations`. Пока backend routes/flights отсутствуют, эти overlays являются источником истины для MVP-маршрутов, расписаний и рейсов.
 
 Map remote не делает HTTP-запросы к backend или BFF в dashboard-сценарии. Shell загружает `map-state` и передает его в `apps/map` через Module Federation props; выбор объектов карты отправляется обратно через `@airlinesim/event-bus`.
+
+### `routes`
+
+Папка: `bff/src/modules/routes`.
+
+Модуль реализует MVP route overlay до появления backend route endpoints. Backend не меняется; BFF использует airline/fleet/airports/regions/region-links из существующего backend API и хранит созданные пользователем маршруты в `bff/data/game-state/routes.json`.
+
+HTTP endpoints:
+
+- `GET /routes/opportunities` - список направлений из базы игрока с demand, distance, aircraft compatibility, rough economics и recommendation.
+- `GET /routes/opportunities/:destinationAirportId/preview` - детальный preview выбранного направления.
+- `POST /routes` - создает маршрут в статусе `awaiting_schedule` или `draft`, если есть blockers.
+- `GET /routes` - список маршрутов текущей airline.
+- `GET /routes/:id` - карточка маршрута.
+- `PATCH /routes/:id` - обновление статуса, самолета или базовой частоты.
+- `DELETE /routes/:id` - удаление draft/awaiting_schedule маршрута без расписания.
+
+Правила:
+
+- данные изолированы по `airline_id`, который BFF получает через backend `/airline/me`;
+- клиентский `airline_id` не принимается как trusted input;
+- сохранение выполняется атомарно через временный JSON-файл и rename;
+- route line features попадают в `/game/map-state`;
+- route counts и next action попадают в `/game/dashboard-summary`;
+- это MVP overlay, который надо заменить backend route endpoints, когда они появятся.
+
+### `operations`
+
+Папка: `bff/src/modules/operations`.
+
+Модуль реализует MVP schedule/flight overlay до появления backend schedule/flight endpoints. Он читает созданные BFF routes, fleet snapshot и airport constraints, затем хранит расписания в `bff/data/game-state/schedules.json`, а рейсы в `bff/data/game-state/flights.json`.
+
+HTTP endpoints:
+
+- `GET /operations/schedule-options?route_id=<id>` - данные для формы расписания: route, routes, compatible aircraft и default pattern.
+- `POST /operations/schedule-preview` - проверка ограничений и расчет sample flights/weekly economics.
+- `POST /operations/schedules` - создание active schedule и генерация upcoming flights.
+- `GET /operations/schedules` - список расписаний airline.
+- `GET /operations/flights` - flight board с live/upcoming/completed summary.
+- `POST /operations/flights/:id/complete` - idempotent MVP/demo completion endpoint.
+
+Правила:
+
+- schedules/flights изолированы по `airline_id`;
+- flight status обновляется детерминированно по текущему времени;
+- BFF проверяет range/runway/status/conflicts/night ops/oversupply/cash reserve;
+- Dashboard, Events и Map читают operations overlay для next action, flight counts и route status;
+- expected flight financials являются MVP estimate и готовят вход для финансового раздела.
 
 ### `onboarding`
 

@@ -18,10 +18,8 @@ import {
   purchaseFleetAircraft,
   updateFleetAircraftTailNumber,
 } from "./api";
-import AircraftMarketList from "./components/AircraftMarketList.vue";
-import FleetLoadingSkeleton from "./components/FleetLoadingSkeleton.vue";
-import FleetMarketToolbar from "./components/FleetMarketToolbar.vue";
-import FleetSidebar from "./components/FleetSidebar.vue";
+import FleetMarketView from "./components/FleetMarketView.vue";
+import OperationsRouter from "./components/OperationsRouter.vue";
 import { formatMoneyValue, formatNumberValue, formatPercentValue } from "./formatters";
 import { type FleetMessageKey, fleetMessages } from "./i18n";
 
@@ -81,6 +79,16 @@ const sortOptions = computed(() => [
 const t = computed(() => (key: FleetMessageKey | string): string =>
   translate(fleetMessages, props.appLocale, key as FleetMessageKey),
 );
+const activeMode = computed<"fleet" | "flights" | "schedule">(() => {
+  if (props.shellPath?.startsWith("/operations/live-flights")) {
+    return "flights";
+  }
+  if (props.shellPath?.startsWith("/operations/schedule")) {
+    return "schedule";
+  }
+
+  return "fleet";
+});
 
 onMounted(() => {
   airlineSimEventBus.emit("mfe:ready", { remoteId: "fleet-ops" });
@@ -333,70 +341,50 @@ function updateFilter(key: keyof typeof filters, value: string): void {
 </script>
 
 <template>
-  <section class="h-full overflow-y-auto bg-background p-4 text-body text-text-primary sm:p-6">
-    <FleetMarketToolbar
-      :error="error"
-      :filters="filters"
-      :format-money="formatMoney"
-      :format-number="formatNumber"
-      :is-loading="isLoading"
-      :market="market"
-      :message="message"
-      :sort-options="sortOptions"
-      :t="t"
-      @refresh="loadMarket"
-      @update-filter="updateFilter"
-    />
-
-    <FleetLoadingSkeleton v-if="isLoading && !market" />
-
-    <div
-      v-else-if="market"
-      class="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_26rem]"
-    >
-      <div class="min-w-0">
-        <AircraftMarketList
-          :format-money="formatMoney"
-          :format-number="formatNumber"
-          :reason-label="reasonLabel"
-          :selected-type-id="selectedTypeId"
-          :status-label="statusLabel"
-          :status-variant="statusVariant"
-          :t="t"
-          :types="market.aircraftTypes"
-          @select-type="selectType"
-        />
-      </div>
-
-      <FleetSidebar
-        :can-confirm-purchase="canConfirmPurchase"
-        :edit-tail-number="editTailNumber"
-        :format-money="formatMoney"
-        :format-number="formatNumber"
-        :format-percent="formatPercent"
-        :is-confirming-risk="isConfirmingRisk"
-        :is-preview-loading="isPreviewLoading"
-        :is-purchasing="isPurchasing"
-        :is-tail-saving="isTailSaving"
-        :owned-aircraft="market.ownedAircraft"
-        :preview="preview"
-        :purchase-reasons="purchaseReasons"
-        :reason-label="reasonLabel"
-        :requires-risk-acknowledge="requiresRiskAcknowledge"
-        :selected-aircraft="selectedAircraft"
-        :selected-type="selectedType"
-        :tail-number="tailNumber"
-        :t="t"
-        @close-detail="selectedAircraft = null"
-        @confirm-purchase="confirmPurchase"
-        @load-market="loadMarket"
-        @open-aircraft="openAircraft"
-        @plan-route="planRoute"
-        @save-tail-number="saveTailNumber"
-        @update-confirming-risk="isConfirmingRisk = $event"
-        @update-edit-tail-number="editTailNumber = $event"
-        @update-tail-number="tailNumber = $event"
-      />
-    </div>
-  </section>
+  <OperationsRouter
+    v-if="activeMode !== 'fleet'"
+    :app-locale="props.appLocale"
+    :mode="activeMode"
+    :t="t"
+  />
+  <FleetMarketView
+    v-else
+    :can-confirm-purchase="canConfirmPurchase"
+    :edit-tail-number="editTailNumber"
+    :error="error"
+    :filters="filters"
+    :format-money="formatMoney"
+    :format-number="formatNumber"
+    :format-percent="formatPercent"
+    :is-confirming-risk="isConfirmingRisk"
+    :is-loading="isLoading"
+    :is-preview-loading="isPreviewLoading"
+    :is-purchasing="isPurchasing"
+    :is-tail-saving="isTailSaving"
+    :market="market"
+    :message="message"
+    :preview="preview"
+    :purchase-reasons="purchaseReasons"
+    :reason-label="reasonLabel"
+    :requires-risk-acknowledge="requiresRiskAcknowledge"
+    :selected-aircraft="selectedAircraft"
+    :selected-type="selectedType"
+    :selected-type-id="selectedTypeId"
+    :sort-options="sortOptions"
+    :status-label="statusLabel"
+    :status-variant="statusVariant"
+    :tail-number="tailNumber"
+    :t="t"
+    @close-detail="selectedAircraft = null"
+    @confirm-purchase="confirmPurchase"
+    @load-market="loadMarket"
+    @open-aircraft="openAircraft"
+    @plan-route="planRoute"
+    @save-tail-number="saveTailNumber"
+    @select-type="selectType"
+    @update-confirming-risk="isConfirmingRisk = $event"
+    @update-edit-tail-number="editTailNumber = $event"
+    @update-filter="updateFilter"
+    @update-tail-number="tailNumber = $event"
+  />
 </template>

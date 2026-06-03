@@ -1,11 +1,15 @@
 import { createApiClient, createAuthClient } from "@airlinesim/game-sdk";
 
 import type {
+  CreateScheduleResponse,
   FleetAircraftDetailResponse,
   FleetAircraftResponse,
   FleetMarketResponse,
   FleetPurchasePreviewResponse,
   FleetPurchaseResponse,
+  FlightsResponse,
+  ScheduleOptionsResponse,
+  SchedulePreviewResponse,
 } from "./types";
 
 const authClient = createAuthClient();
@@ -20,6 +24,20 @@ export type FleetMarketFilters = {
   q?: string;
   sort?: string;
 };
+
+export async function completeFlight(id: string): Promise<{ flight: unknown }> {
+  return apiClient.post<{ flight: unknown }>(`/operations/flights/${encodeURIComponent(id)}/complete`, {});
+}
+
+export async function createSchedule(payload: {
+  aircraft_id: string;
+  days_of_week: number[];
+  departure_local_time: string;
+  route_id: string;
+  turnaround_minutes: number;
+}): Promise<CreateScheduleResponse> {
+  return apiClient.post<CreateScheduleResponse>("/operations/schedules", payload);
+}
 
 export async function getFleetAircraft(): Promise<FleetAircraftResponse> {
   return apiClient.get<FleetAircraftResponse>("/fleet/aircraft");
@@ -65,6 +83,30 @@ export async function getFleetPurchasePreview(
   });
 
   return apiClient.get<FleetPurchasePreviewResponse>(`/fleet/purchase-preview?${search.toString()}`);
+}
+
+export async function getFlights(): Promise<FlightsResponse> {
+  return apiClient.get<FlightsResponse>("/operations/flights");
+}
+
+export async function getScheduleOptions(routeId?: string): Promise<ScheduleOptionsResponse> {
+  const search = new URLSearchParams();
+  if (routeId) {
+    search.set("route_id", routeId);
+  }
+  const query = search.toString();
+
+  return apiClient.get<ScheduleOptionsResponse>(`/operations/schedule-options${query ? `?${query}` : ""}`);
+}
+
+export async function getSchedulePreview(payload: {
+  aircraft_id: string;
+  days_of_week: number[];
+  departure_local_time: string;
+  route_id: string;
+  turnaround_minutes: number;
+}): Promise<SchedulePreviewResponse> {
+  return apiClient.post<SchedulePreviewResponse>("/operations/schedule-preview", payload);
 }
 
 export async function purchaseFleetAircraft(payload: {

@@ -27,7 +27,7 @@
 - `apps/network-planner` - целевой Vue 3 remote для маршрутной сети.
 - `apps/events-news` - целевой Vue 3 remote для событий и новостей.
 - `apps/hr-facilities` - целевой Vue 3 remote для HR и объектов.
-- `bff` - Bun backend-for-frontend приложение, не MFE и не `apps/*`; модули для import/proxy/onboarding живут в `bff/src/modules`, правила BFF-first API, retry и onboarding endpoints описаны в `docs/bff.md`.
+- `bff` - Bun backend-for-frontend приложение, не MFE и не `apps/*`; модули для import/proxy/onboarding/routes/operations живут в `bff/src/modules`, правила BFF-first API, retry, onboarding endpoints и MVP overlays описаны в `docs/bff.md`.
 - `packages/air-ui` - Vue UI-kit, Tailwind theme tokens, Storybook.
 - `packages/game-sdk` - клиентский SDK для backend API.
 - `packages/eslint-config` - shared ESLint flat configs: `base`, `vue`, `svelte`.

@@ -1,0 +1,281 @@
+import type { Aircraft, AircraftType, Airport } from "../fleet/types";
+import type { RoutePlanningSnapshot } from "../routes/planning";
+import type { StoredRoute } from "../routes/types";
+import type { OperationReason, SchedulePattern, SchedulePreview, StoredFlight, StoredSchedule } from "./types";
+
+import { estimateUtilizationHours, estimateWeeklyCost, generateFlightsForSchedule, summarizeWeeklyEconomics } from "./flights";
+
+export type OperationsSnapshot = RoutePlanningSnapshot & {
+  flights: StoredFlight[];
+  routes: StoredRoute[];
+  schedules: StoredSchedule[];
+};
+
+type SchedulePreviewInput = {
+  aircraft_id?: string;
+  days_of_week?: number[];
+  departure_local_time?: string;
+  route_id?: string;
+  starts_on?: string;
+  turnaround_minutes?: number;
+};
+
+export function buildSchedulePreview(snapshot: OperationsSnapshot, input: SchedulePreviewInput): SchedulePreview {
+  const route = snapshot.routes.find((item) => item.id === input.route_id);
+  const aircraft = snapshot.aircrafts.find((item) => item.id === input.aircraft_id);
+  const type = snapshot.aircraftTypes.find((item) => item.id === aircraft?.type_id);
+  const origin = snapshot.airports.find((item) => item.id === route?.origin_airport_id);
+  const destination = snapshot.airports.find((item) => item.id === route?.destination_airport_id);
+  const days = normalizeDays(input.days_of_week);
+  const pattern = buildPattern(days, input.departure_local_time, input.turnaround_minutes);
+  const blockers = buildBlockers(snapshot, route, aircraft, type, origin, destination, pattern);
+  const warnings = buildWarnings(snapshot, route, aircraft, type, origin, destination, pattern);
+  const sampleFlights = blockers.length === 0 && route && aircraft && type && origin && destination
+    ? generateFlightsForSchedule(snapshot, route, aircraft, type, pattern, input.starts_on, 7).slice(0, 5)
+    : [];
+  const weeklyEconomics = summarizeWeeklyEconomics(sampleFlights, days.length || 1);
+
+  return {
+    blockers,
+    canActivate: blockers.length === 0,
+    economics: weeklyEconomics,
+    sample_flights: sampleFlights,
+    warnings,
+    weekly_utilization_hours: estimateUtilizationHours(route, type, days.length),
+  };
+}
+
+export function createScheduleFromPreview(snapshot: OperationsSnapshot, input: SchedulePreviewInput, preview: SchedulePreview): {
+  flights: StoredFlight[];
+  schedule: StoredSchedule;
+} {
+  const route = snapshot.routes.find((item) => item.id === input.route_id);
+  const aircraft = snapshot.aircrafts.find((item) => item.id === input.aircraft_id);
+  const type = snapshot.aircraftTypes.find((item) => item.id === aircraft?.type_id);
+  const days = normalizeDays(input.days_of_week);
+  const pattern = buildPattern(days, input.departure_local_time, input.turnaround_minutes);
+  const now = new Date().toISOString();
+
+  if (!route || !aircraft || !type) {
+    throw new Error("Cannot create schedule without route and aircraft.");
+  }
+
+  const schedule: StoredSchedule = {
+    aircraft_id: aircraft.id ?? "",
+    airline_id: snapshot.airline.id ?? "",
+    checks_snapshot: [...preview.blockers, ...preview.warnings],
+    created_at: now,
+    id: crypto.randomUUID(),
+    pattern,
+    route_id: route.id,
+    status: preview.canActivate ? "active" : "draft",
+    updated_at: now,
+    validity: {
+      starts_on: input.starts_on ?? now.slice(0, 10),
+    },
+  };
+  const flights = preview.canActivate
+    ? generateFlightsForSchedule(snapshot, route, aircraft, type, pattern, input.starts_on, 14).map((flight) => ({
+      ...flight,
+      schedule_id: schedule.id,
+    }))
+    : [];
+
+  return { flights, schedule };
+}
+
+function addAircraftBlockers(blockers: OperationReason[], aircraft: Aircraft | undefined): void {
+  if (!aircraft) {
+    addReason(blockers, "AIRCRAFT_NOT_FOUND", "Aircraft not found.");
+  }
+  if (aircraft?.status === "maintenance") {
+    addReason(blockers, "AIRCRAFT_NOT_READY", "Aircraft is in maintenance.");
+  }
+}
+
+function addCashWarning(
+  warnings: OperationReason[],
+  snapshot: OperationsSnapshot,
+  route: StoredRoute | undefined,
+  type: AircraftType | undefined,
+  origin: Airport | undefined,
+  destination: Airport | undefined,
+  pattern: SchedulePattern,
+): void {
+  if ((snapshot.airline.balance ?? 0) < estimateWeeklyCost(route, type, origin, destination, pattern.days_of_week.length)) {
+    addReason(warnings, "CASH_RESERVE_LOW", "Cash reserve may be low after the first week.");
+  }
+}
+
+function addConflictBlockers(
+  blockers: OperationReason[],
+  snapshot: OperationsSnapshot,
+  aircraft: Aircraft | undefined,
+  pattern: SchedulePattern,
+): void {
+  if (aircraft && hasConflict(snapshot, aircraft.id ?? "", pattern)) {
+    addReason(blockers, "AIRCRAFT_CONFLICT", "Aircraft is already scheduled at this time.");
+  }
+}
+
+function addMaintenanceWarning(warnings: OperationReason[], aircraft: Aircraft | undefined): void {
+  if (aircraft && maintenanceRatio(aircraft) < 0.35) {
+    addReason(warnings, "AIRCRAFT_NOT_READY", "Aircraft maintenance reserve is low.");
+  }
+}
+
+function addNightOpsWarning(
+  warnings: OperationReason[],
+  origin: Airport | undefined,
+  destination: Airport | undefined,
+  pattern: SchedulePattern,
+): void {
+  if (isNightTime(pattern.departure_local_time) && (origin?.works_at_night === false || destination?.works_at_night === false)) {
+    addReason(warnings, "AIRPORT_NIGHT_OPS_LIMITED", "One airport has limited night operations.");
+  }
+}
+
+function addOversupplyWarning(
+  warnings: OperationReason[],
+  route: StoredRoute | undefined,
+  type: AircraftType | undefined,
+  pattern: SchedulePattern,
+): void {
+  if (route && type) {
+    const seatsPerWeek = (type.max_planned_seat_capacity ?? 100) * pattern.days_of_week.length;
+    const demandPerWeek = route.demand_snapshot.origin_daily_passengers * 7;
+    if (seatsPerWeek > demandPerWeek * 1.35) {
+      addReason(warnings, "OVERSUPPLY_RISK", "Offered seats exceed expected demand.");
+    }
+  }
+}
+
+function addPatternBlockers(blockers: OperationReason[], pattern: SchedulePattern): void {
+  if (!pattern.days_of_week.length) {
+    addReason(blockers, "NO_DAYS_SELECTED", "Select at least one operating day.");
+  }
+}
+
+function addPerformanceBlockers(
+  blockers: OperationReason[],
+  route: StoredRoute | undefined,
+  type: AircraftType | undefined,
+  origin: Airport | undefined,
+  destination: Airport | undefined,
+): void {
+  if (isRangeTooShort(route, type)) {
+    addReason(blockers, "AIRCRAFT_RANGE_TOO_SHORT", "Aircraft range is below route distance.");
+  }
+  if (isRunwayTooShort(origin, type)) {
+    addReason(blockers, "ORIGIN_RUNWAY_TOO_SHORT", "Origin runway is too short.");
+  }
+  if (isRunwayTooShort(destination, type)) {
+    addReason(blockers, "DESTINATION_RUNWAY_TOO_SHORT", "Destination runway is too short.");
+  }
+}
+
+function addReason(reasons: OperationReason[], code: OperationReason["code"], message: string): void {
+  reasons.push({ code, message });
+}
+
+function addRouteBlockers(blockers: OperationReason[], route: StoredRoute | undefined): void {
+  if (!route) {
+    addReason(blockers, "ROUTE_NOT_FOUND", "Route not found.");
+  } else if (route.status !== "awaiting_schedule" && route.status !== "scheduled") {
+    addReason(blockers, "ROUTE_NOT_READY", "Route is not ready for scheduling.");
+  }
+}
+
+function buildBlockers(
+  snapshot: OperationsSnapshot,
+  route: StoredRoute | undefined,
+  aircraft: Aircraft | undefined,
+  type: AircraftType | undefined,
+  origin: Airport | undefined,
+  destination: Airport | undefined,
+  pattern: SchedulePattern,
+): OperationReason[] {
+  const blockers: OperationReason[] = [];
+
+  addRouteBlockers(blockers, route);
+  addAircraftBlockers(blockers, aircraft);
+  addPatternBlockers(blockers, pattern);
+  addPerformanceBlockers(blockers, route, type, origin, destination);
+  addConflictBlockers(blockers, snapshot, aircraft, pattern);
+
+  return blockers;
+}
+
+function buildPattern(
+  days: number[],
+  departureLocalTime = "09:00",
+  turnaroundMinutes = 90,
+): SchedulePattern {
+  return {
+    days_of_week: days,
+    departure_local_time: departureLocalTime,
+    mode: days.length >= 7 ? "daily" : "weekly",
+    turnaround_minutes: turnaroundMinutes,
+  };
+}
+
+function buildWarnings(
+  snapshot: OperationsSnapshot,
+  route: StoredRoute | undefined,
+  aircraft: Aircraft | undefined,
+  type: AircraftType | undefined,
+  origin: Airport | undefined,
+  destination: Airport | undefined,
+  pattern: SchedulePattern,
+): OperationReason[] {
+  const warnings: OperationReason[] = [];
+
+  addNightOpsWarning(warnings, origin, destination, pattern);
+  addOversupplyWarning(warnings, route, type, pattern);
+  addCashWarning(warnings, snapshot, route, type, origin, destination, pattern);
+  addMaintenanceWarning(warnings, aircraft);
+
+  return warnings;
+}
+
+function hasConflict(snapshot: OperationsSnapshot, aircraftId: string, pattern: SchedulePattern): boolean {
+  return snapshot.schedules.some(
+    (schedule) =>
+      schedule.status === "active" &&
+      schedule.aircraft_id === aircraftId &&
+      schedule.pattern.departure_local_time === pattern.departure_local_time &&
+      schedule.pattern.days_of_week.some((day) => pattern.days_of_week.includes(day)),
+  );
+}
+
+function isNightTime(time: string): boolean {
+  const hour = Number(time.split(":")[0] ?? "0");
+
+  return hour < 6 || hour >= 22;
+}
+
+function isRangeTooShort(route: StoredRoute | undefined, type: AircraftType | undefined): boolean {
+  return Boolean(route && type && (type.max_range_km ?? 0) < route.demand_snapshot.distance_km);
+}
+
+function isRunwayTooShort(airport: Airport | undefined, type: AircraftType | undefined): boolean {
+  return Boolean(airport && type && (airport.max_runway_length_m ?? 0) < (type.min_runway_length_m ?? 0));
+}
+
+function maintenanceRatio(aircraft: Aircraft): number {
+  const max = aircraft.max_maintenance_points_cached ?? 0;
+
+  if (max <= 0) {
+    return 1;
+  }
+
+  return Math.max(0, Math.min(1, (aircraft.current_maintenance_points ?? max) / max));
+}
+
+function normalizeDays(days: number[] | undefined): number[] {
+  const normalized = (days?.length ? days : [1, 3, 5])
+    .map((day) => Math.max(0, Math.min(6, day)))
+    .filter((day) => Number.isFinite(day));
+
+  return Array.from(new Set(normalized)).sort((left, right) => left - right);
+}

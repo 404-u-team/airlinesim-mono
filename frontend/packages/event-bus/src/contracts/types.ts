@@ -30,8 +30,8 @@ export type AirlineSimEvents = {
     source: "fleet-ops" | "map" | "shell";
   };
   "game:snapshot-invalidated": {
-    reason: "aircraft-purchased" | "manual-refresh";
-    source: "fleet-ops" | "shell";
+    reason: "aircraft-purchased" | "manual-refresh" | "route-created" | "schedule-activated";
+    source: "fleet-ops" | "network-planner" | "shell";
   };
   "i18n:locale-changed": {
     locale: Locale;
@@ -41,8 +41,8 @@ export type AirlineSimEvents = {
     source: "dashboard" | "map" | "network-planner";
   };
   "map:network-refresh-requested": {
-    reason: "aircraft-purchased" | "manual-refresh";
-    source: "fleet-ops" | "shell";
+    reason: "aircraft-purchased" | "manual-refresh" | "route-created" | "schedule-activated";
+    source: "fleet-ops" | "network-planner" | "shell";
   };
   "map:route-selected": {
     routeId: string;
@@ -60,6 +60,15 @@ export type AirlineSimEvents = {
   "notification:created": {
     message: string;
     severity: "error" | "info" | "success" | "warning";
+  };
+  "route:created": {
+    destinationAirportId: string;
+    originAirportId: string;
+    source: "network-planner";
+  };
+  "schedule:activated": {
+    routeId: string;
+    source: "fleet-ops";
   };
   "shell:panel-requested": {
     panel: "flight-details" | "notifications" | "profile";
