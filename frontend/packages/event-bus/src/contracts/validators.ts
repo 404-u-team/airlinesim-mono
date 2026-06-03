@@ -32,8 +32,8 @@ export const airlineSimEventValidators: ValidatorMap<AirlineSimEvents> = {
     isOneOf(payload.source, ["fleet-ops", "map", "shell"]),
   "game:snapshot-invalidated": (payload): payload is AirlineSimEvents["game:snapshot-invalidated"] =>
     isRecord(payload) &&
-    isOneOf(payload.reason, ["aircraft-purchased", "manual-refresh"]) &&
-    isOneOf(payload.source, ["fleet-ops", "shell"]),
+    isOneOf(payload.reason, ["aircraft-purchased", "manual-refresh", "route-created", "schedule-activated"]) &&
+    isOneOf(payload.source, ["fleet-ops", "network-planner", "shell"]),
   "i18n:locale-changed": (payload): payload is AirlineSimEvents["i18n:locale-changed"] =>
     isRecord(payload) && isOneOf(payload.locale, ["en", "ru"]),
   "map:airport-selected": (payload): payload is AirlineSimEvents["map:airport-selected"] =>
@@ -42,8 +42,8 @@ export const airlineSimEventValidators: ValidatorMap<AirlineSimEvents> = {
     isOneOf(payload.source, ["dashboard", "map", "network-planner"]),
   "map:network-refresh-requested": (payload): payload is AirlineSimEvents["map:network-refresh-requested"] =>
     isRecord(payload) &&
-    isOneOf(payload.reason, ["aircraft-purchased", "manual-refresh"]) &&
-    isOneOf(payload.source, ["fleet-ops", "shell"]),
+    isOneOf(payload.reason, ["aircraft-purchased", "manual-refresh", "route-created", "schedule-activated"]) &&
+    isOneOf(payload.source, ["fleet-ops", "network-planner", "shell"]),
   "map:route-selected": (payload): payload is AirlineSimEvents["map:route-selected"] =>
     isRecord(payload) &&
     typeof payload.routeId === "string" &&
@@ -70,6 +70,15 @@ export const airlineSimEventValidators: ValidatorMap<AirlineSimEvents> = {
     isRecord(payload) &&
     typeof payload.message === "string" &&
     isOneOf(payload.severity, ["error", "info", "success", "warning"]),
+  "route:created": (payload): payload is AirlineSimEvents["route:created"] =>
+    isRecord(payload) &&
+    typeof payload.destinationAirportId === "string" &&
+    typeof payload.originAirportId === "string" &&
+    payload.source === "network-planner",
+  "schedule:activated": (payload): payload is AirlineSimEvents["schedule:activated"] =>
+    isRecord(payload) &&
+    typeof payload.routeId === "string" &&
+    payload.source === "fleet-ops",
   "shell:panel-requested": (payload): payload is AirlineSimEvents["shell:panel-requested"] =>
     isRecord(payload) && isOneOf(payload.panel, ["flight-details", "notifications", "profile"]),
 };

@@ -363,6 +363,28 @@ export type BffAirportPairDemandResponse = {
   "demand"?: BffAirportPairDemand;
 };
 
+export type BffDashboardSummary = {
+  "airline"?: Record<string, unknown>;
+  "alerts"?: Array<Record<string, unknown>>;
+  "base"?: Record<string, unknown>;
+  "fleet"?: Record<string, unknown>;
+  "flights"?: Record<string, unknown>;
+  "navigation_progress"?: Array<Record<string, unknown>>;
+  "next_action"?: Record<string, unknown>;
+  "routes"?: Record<string, unknown>;
+  "updated_at"?: string;
+};
+
+export type BffMapState = {
+  "airports"?: Record<string, unknown>;
+  "capabilities"?: Record<string, unknown>;
+  "routes"?: Record<string, unknown>;
+  "scope"?: string;
+  "selected"?: Record<string, unknown>;
+  "viewport"?: Record<string, unknown>;
+  "warnings"?: Array<string>;
+};
+
 export type GetAircraftTypesQuery = {
   "q"?: string;
   "refresh"?: "true" | "false";
@@ -466,6 +488,13 @@ export type GetRegionsQuery = {
 export type GetDemandAirportPairQuery = {
   "origin_airport_id": string;
   "destination_airport_id": string;
+};
+
+export type GetGameMapStateQuery = {
+  "scope"?: "dashboard" | "network" | "operations";
+  "selected_airport_id"?: string;
+  "selected_route_id"?: string;
+  "include_opportunities"?: "true" | "false";
 };
 
 export const openApiOperations = [
@@ -743,6 +772,20 @@ export const openApiOperations = [
     "method": "GET",
     "operationId": "get__demand_airport_pair",
     "path": "/demand/airport-pair",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__game_dashboard_summary",
+    "path": "/game/dashboard-summary",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__game_map_state",
+    "path": "/game/map-state",
     "summary": "",
     "tags": []
   }

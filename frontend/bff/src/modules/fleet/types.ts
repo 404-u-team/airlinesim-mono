@@ -42,6 +42,8 @@ export type Airport = {
   country_id?: string;
   fuel_price_multiplier?: number;
   gate_fee?: number;
+  geog?: string;
+  geom?: string;
   iata_code?: string;
   icao_code?: string;
   id?: string;

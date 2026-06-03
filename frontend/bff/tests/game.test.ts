@@ -163,7 +163,7 @@ test("builds dashboard summary with next action for airline without aircraft", a
     },
     routes: {
       active_routes: 0,
-      capabilities: "not_configured",
+      capabilities: "configured",
     },
   });
 });
@@ -326,7 +326,7 @@ test("builds map state with base and opportunity airport features", async () => 
   expect(response?.status).toBe(200);
   expect(payload.airports.features.length).toBe(2);
   expect(payload.routes.features).toEqual([]);
-  expect(payload.capabilities.routes).toBe("not_configured");
+  expect(payload.capabilities.routes).toBe("configured");
   expect(payload.airports.features[0].geometry.type).toBe("Point");
 });
 
