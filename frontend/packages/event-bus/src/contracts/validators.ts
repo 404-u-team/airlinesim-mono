@@ -18,16 +18,32 @@ export const airlineSimEventValidators: ValidatorMap<AirlineSimEvents> = {
   "auth:register-failed": hasString("message"),
   "auth:register-succeeded": hasString("accessToken"),
   "auth:session-restored": hasString("accessToken"),
+  "fleet:aircraft-purchased": (payload): payload is AirlineSimEvents["fleet:aircraft-purchased"] =>
+    isRecord(payload) &&
+    hasOptionalStringValue(payload, "aircraftId") &&
+    hasOptionalStringValue(payload, "baseAirportId") &&
+    hasOptionalStringValue(payload, "modelName") &&
+    hasOptionalNumberValue(payload, "price") &&
+    hasOptionalStringValue(payload, "tailNumber") &&
+    hasOptionalStringValue(payload, "typeId"),
   "flight:selected": (payload): payload is AirlineSimEvents["flight:selected"] =>
     isRecord(payload) &&
     typeof payload.flightId === "string" &&
     isOneOf(payload.source, ["fleet-ops", "map", "shell"]),
+  "game:snapshot-invalidated": (payload): payload is AirlineSimEvents["game:snapshot-invalidated"] =>
+    isRecord(payload) &&
+    isOneOf(payload.reason, ["aircraft-purchased", "manual-refresh"]) &&
+    isOneOf(payload.source, ["fleet-ops", "shell"]),
   "i18n:locale-changed": (payload): payload is AirlineSimEvents["i18n:locale-changed"] =>
     isRecord(payload) && isOneOf(payload.locale, ["en", "ru"]),
   "map:airport-selected": (payload): payload is AirlineSimEvents["map:airport-selected"] =>
     isRecord(payload) &&
     typeof payload.airportId === "string" &&
     isOneOf(payload.source, ["dashboard", "map", "network-planner"]),
+  "map:network-refresh-requested": (payload): payload is AirlineSimEvents["map:network-refresh-requested"] =>
+    isRecord(payload) &&
+    isOneOf(payload.reason, ["aircraft-purchased", "manual-refresh"]) &&
+    isOneOf(payload.source, ["fleet-ops", "shell"]),
   "map:route-selected": (payload): payload is AirlineSimEvents["map:route-selected"] =>
     isRecord(payload) &&
     typeof payload.routeId === "string" &&
@@ -57,6 +73,14 @@ export const airlineSimEventValidators: ValidatorMap<AirlineSimEvents> = {
   "shell:panel-requested": (payload): payload is AirlineSimEvents["shell:panel-requested"] =>
     isRecord(payload) && isOneOf(payload.panel, ["flight-details", "notifications", "profile"]),
 };
+
+function hasOptionalNumberValue(record: Record<string, unknown>, key: string): boolean {
+  return record[key] === undefined || typeof record[key] === "number";
+}
+
+function hasOptionalStringValue(record: Record<string, unknown>, key: string): boolean {
+  return record[key] === undefined || typeof record[key] === "string";
+}
 
 function hasRemoteId(payload: unknown): payload is { remoteId: RemoteId } {
   return (

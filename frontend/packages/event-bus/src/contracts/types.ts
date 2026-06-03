@@ -17,9 +17,21 @@ export type AirlineSimEvents = {
   "auth:session-restored": {
     accessToken: string;
   };
+  "fleet:aircraft-purchased": {
+    aircraftId?: string;
+    baseAirportId?: string;
+    modelName?: string;
+    price?: number;
+    tailNumber?: string;
+    typeId?: string;
+  };
   "flight:selected": {
     flightId: string;
     source: "fleet-ops" | "map" | "shell";
+  };
+  "game:snapshot-invalidated": {
+    reason: "aircraft-purchased" | "manual-refresh";
+    source: "fleet-ops" | "shell";
   };
   "i18n:locale-changed": {
     locale: Locale;
@@ -27,6 +39,10 @@ export type AirlineSimEvents = {
   "map:airport-selected": {
     airportId: string;
     source: "dashboard" | "map" | "network-planner";
+  };
+  "map:network-refresh-requested": {
+    reason: "aircraft-purchased" | "manual-refresh";
+    source: "fleet-ops" | "shell";
   };
   "map:route-selected": {
     routeId: string;

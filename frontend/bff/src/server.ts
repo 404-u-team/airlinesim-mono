@@ -1,6 +1,7 @@
 import { getConfig } from "./config";
 import { jsonResponse, notFound } from "./http";
 import { handleDemandRequest } from "./modules/demand";
+import { handleFleetRequest } from "./modules/fleet";
 import { handleGameRequest } from "./modules/game";
 import { handleImportRequest } from "./modules/import";
 import { handleOnboardingRequest } from "./modules/onboarding";
@@ -23,6 +24,7 @@ Bun.serve({
       (await handleImportRequest(request, url, config)) ??
       (await handleDemandRequest(request, url, config)) ??
       (await handleOnboardingRequest(request, url, config)) ??
+      (await handleFleetRequest(request, url, config)) ??
       (await handleGameRequest(request, url, config)) ??
       (await handleProxyRequest(request, url, config)) ??
       notFound()

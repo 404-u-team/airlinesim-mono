@@ -32,6 +32,7 @@ const selectedAirportId = ref<string | undefined>();
 const summary = ref<DashboardSummary | null>(null);
 
 let unsubscribeAirportSelected: (() => void) | null = null;
+let unsubscribeSnapshotInvalidated: (() => void) | null = null;
 
 const t = computed(() => (key: ShellMessageKey): string =>
   translate(shellMessages, props.appLocale, key),
@@ -53,11 +54,16 @@ onMounted(() => {
     selectedAirportId.value = event.airportId;
     void loadMapState(event.airportId);
   });
+  unsubscribeSnapshotInvalidated = airlineSimEventBus.on("game:snapshot-invalidated", () => {
+    void refreshDashboard();
+  });
 });
 
 onBeforeUnmount(() => {
   unsubscribeAirportSelected?.();
   unsubscribeAirportSelected = null;
+  unsubscribeSnapshotInvalidated?.();
+  unsubscribeSnapshotInvalidated = null;
 });
 
 function formatMoney(value: number): string {

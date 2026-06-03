@@ -1,207 +1,129 @@
 <script setup lang="ts">
-/* eslint-disable max-lines */
-import type {
-  FleetpbAircraft,
-  FleetpbAircraftType,
-  FleetpbCreateAircraftResponse,
-  FleetpbListAircraftsResponse,
-  FleetpbListAircraftTypesResponse,
-  OperationspbAirport,
-  OperationspbListAirportsResponse,
-} from "@airlinesim/api-contracts";
-
-import { AirBadge, AirButton, AirSelect, AirTextField } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
-import { ApiRequestError, createApiClient, createAuthClient } from "@airlinesim/game-sdk";
+import { type Locale, translate } from "@airlinesim/i18n";
 import { computed, onMounted, reactive, ref, watch } from "vue";
 
-type AircraftSort = "capacity-desc" | "price-asc" | "range-desc";
+import type {
+  FleetMarketAircraftType,
+  FleetMarketResponse,
+  FleetOwnedAircraftCard,
+  FleetPurchasePreviewResponse,
+  FleetReason,
+} from "./types";
 
-const authClient = createAuthClient();
-const apiClient = createApiClient({
-  getToken: authClient.getAccessToken,
-});
+import {
+  getFleetAircraftDetail,
+  getFleetMarket,
+  getFleetPurchasePreview,
+  purchaseFleetAircraft,
+  updateFleetAircraftTailNumber,
+} from "./api";
+import AircraftMarketList from "./components/AircraftMarketList.vue";
+import FleetLoadingSkeleton from "./components/FleetLoadingSkeleton.vue";
+import FleetMarketToolbar from "./components/FleetMarketToolbar.vue";
+import FleetSidebar from "./components/FleetSidebar.vue";
+import { formatMoneyValue, formatNumberValue, formatPercentValue } from "./formatters";
+import { type FleetMessageKey, fleetMessages } from "./i18n";
 
-const aircraftTypes = ref<FleetpbAircraftType[]>([]);
-const aircrafts = ref<FleetpbAircraft[]>([]);
-const airports = ref<OperationspbAirport[]>([]);
-const selectedTypeId = ref("");
-const selectedBaseAirportId = ref("");
-const message = ref("");
+type StatusVariant = "danger-soft" | "primary-soft" | "success-soft" | "warning-soft";
+
+const props = defineProps<{
+  appLocale: Locale;
+  shellPath?: string;
+}>();
+
+const editTailNumber = ref("");
 const error = ref("");
-const isLoading = ref(false);
-const isPurchasing = ref(false);
 const filters = reactive({
-  airportQuery: "",
   maxPrice: "",
   minCapacity: "",
   minRange: "",
-  query: "",
-  sort: "capacity-desc" as AircraftSort,
-  tailNumber: "",
+  q: "",
+  sort: "recommended",
 });
+const isConfirmingRisk = ref(false);
+const isLoading = ref(false);
+const isPreviewLoading = ref(false);
+const isPurchasing = ref(false);
+const isTailSaving = ref(false);
+const market = ref<FleetMarketResponse | null>(null);
+const message = ref("");
+const preview = ref<FleetPurchasePreviewResponse | null>(null);
+const selectedAircraft = ref<FleetOwnedAircraftCard | null>(null);
+const selectedTypeId = ref("");
+const tailNumber = ref("");
 
-const selectedType = computed(() => aircraftTypes.value.find((type) => type.id === selectedTypeId.value));
-const selectedBaseAirport = computed(() => airports.value.find((airport) => airport.id === selectedBaseAirportId.value));
-const availableAircraftTypes = computed(() => {
-  return aircraftTypes.value
-    .filter(aircraftMatchesFilters)
-    .sort(compareAircraftTypes);
-});
-const baseAirportOptions = computed(() => {
-  const query = filters.airportQuery.trim().toLowerCase();
-  const selectedRunwayMin = selectedType.value?.min_runway_length_m ?? 0;
-  const filtered = airports.value
-    .filter((airport) => airportMatchesFilter(airport, query, selectedRunwayMin))
-    .slice(0, 80)
-    .map(toAirportOption)
-    .filter((option) => option.value);
+let marketDebounce: null | ReturnType<typeof setTimeout> = null;
+let previewDebounce: null | ReturnType<typeof setTimeout> = null;
 
-  return [{ label: "Select base airport", value: "" }, ...filtered];
-});
-const selectedTypeOptions = computed(() => [
-  { label: "Capacity", value: "capacity-desc" },
-  { label: "Price", value: "price-asc" },
-  { label: "Range", value: "range-desc" },
+const canConfirmPurchase = computed(() =>
+  Boolean(preview.value?.canPurchase) &&
+  !isPurchasing.value &&
+  (!requiresRiskAcknowledge.value || isConfirmingRisk.value),
+);
+const purchaseReasons = computed(() => [
+  ...(preview.value?.blockingReasons ?? []),
+  ...(preview.value?.warnings ?? []),
 ]);
-const canPurchase = computed(
-  () => Boolean(selectedTypeId.value && selectedBaseAirportId.value && filters.tailNumber.trim()) && !isPurchasing.value,
+const requiresRiskAcknowledge = computed(() =>
+  Boolean(preview.value?.warnings.some((warning) => warning.code === "FLEET_RESERVE_RISK")),
 );
-const selectedTypeSummary = computed(() => {
-  if (!selectedType.value) {
-    return "Select an aircraft type to see operating limits.";
-  }
-
-  return `${formatNumber(selectedType.value.max_planned_seat_capacity)} seats, ${formatNumber(selectedType.value.max_range_km)} km range, ${formatMoney(selectedType.value.price_per_unit)}`;
-});
-const ownedAircraftRows = computed(() =>
-  aircrafts.value.map((aircraft) => ({
-    ...aircraft,
-    baseAirportName: airportName(aircraft.base_airport_id),
-    modelName: typeNameById.value.get(aircraft.type_id ?? "") ?? aircraft.type_id ?? "-",
-  })),
+const selectedBaseAirportId = computed(() => market.value?.baseAirport?.id ?? "");
+const selectedType = computed(() =>
+  market.value?.aircraftTypes.find((type) => type.id === selectedTypeId.value) ?? null,
 );
-const typeNameById = computed(() => new Map(aircraftTypes.value.map((type) => [type.id ?? "", type.model_name ?? "-"])));
+const sortOptions = computed(() => [
+  { label: t.value("filter.sort.recommended"), value: "recommended" },
+  { label: t.value("filter.sort.price"), value: "price" },
+  { label: t.value("filter.sort.capacity"), value: "capacity" },
+  { label: t.value("filter.sort.range"), value: "range" },
+]);
+const t = computed(() => (key: FleetMessageKey | string): string =>
+  translate(fleetMessages, props.appLocale, key as FleetMessageKey),
+);
 
 onMounted(() => {
   airlineSimEventBus.emit("mfe:ready", { remoteId: "fleet-ops" });
-  void loadFleetData();
+  void loadMarket();
 });
 
-watch(selectedTypeId, () => {
-  const base = selectedBaseAirport.value;
+watch(
+  filters,
+  () => {
+    if (marketDebounce) {
+      clearTimeout(marketDebounce);
+    }
+    marketDebounce = setTimeout(() => void loadMarket(), 250);
+  },
+  { deep: true },
+);
 
-  if (base && (base.max_runway_length_m ?? 0) < (selectedType.value?.min_runway_length_m ?? 0)) {
-    selectedBaseAirportId.value = "";
+watch([selectedTypeId, tailNumber], () => {
+  if (previewDebounce) {
+    clearTimeout(previewDebounce);
   }
+  previewDebounce = setTimeout(() => void loadPreview(), 250);
 });
 
-function aircraftMatchesFilters(type: FleetpbAircraftType): boolean {
-  const query = filters.query.trim().toLowerCase();
-  const text = `${type.model_name ?? ""} ${type.icao_code ?? ""} ${type.iata_code ?? ""}`.toLowerCase();
-  const checks = [
-    matchesQuery(text, query),
-    meetsMinimum(type.max_range_km, filters.minRange),
-    meetsMinimum(type.max_planned_seat_capacity, filters.minCapacity),
-    meetsMaximum(type.price_per_unit, filters.maxPrice),
-    meetsRunway(type.min_runway_length_m),
-  ];
+function apiErrorMessage(value: unknown, fallback: FleetMessageKey): string {
+  const errorPayload = getErrorPayload(value);
 
-  return checks.every(Boolean);
-}
-
-function airportMatchesFilter(airport: OperationspbAirport, query: string, selectedRunwayMin: number): boolean {
-  const text = `${airport.iata_code ?? ""} ${airport.icao_code ?? ""} ${airport.intl_name ?? ""} ${airport.municipality ?? ""}`.toLowerCase();
-
-  return (!query || text.includes(query)) && (airport.max_runway_length_m ?? 0) >= selectedRunwayMin;
-}
-
-function airportName(id: string | undefined): string {
-  const airport = airports.value.find((item) => item.id === id);
-
-  return airport ? `${airport.iata_code || airport.icao_code || "----"} - ${airport.intl_name ?? airport.local_name ?? "Airport"}` : id ?? "-";
-}
-
-function apiMessage(value: unknown, fallback: string): string {
-  if (value instanceof ApiRequestError) {
-    if (value.status === 401) {
-      return "Sign in to manage fleet.";
+  if (errorPayload?.code) {
+    const key = `warning.${errorPayload.code}` as FleetMessageKey;
+    if (key in fleetMessages.en) {
+      return t.value(key);
     }
-
-    if (value.status === 409) {
-      return "Tail number already exists.";
-    }
-
-    return value.message;
   }
 
-  return fallback;
+  return errorPayload?.message ?? t.value(fallback);
 }
 
-function compareAircraftTypes(left: FleetpbAircraftType, right: FleetpbAircraftType): number {
-  if (filters.sort === "price-asc") {
-    return (left.price_per_unit ?? 0) - (right.price_per_unit ?? 0);
-  }
+async function confirmPurchase(): Promise<void> {
+  const baseAirportId = selectedBaseAirportId.value;
+  const typeId = selectedTypeId.value;
+  const requestedTailNumber = preview.value?.tailNumber.normalizedValue ?? tailNumber.value;
 
-  if (filters.sort === "range-desc") {
-    return (right.max_range_km ?? 0) - (left.max_range_km ?? 0);
-  }
-
-  return (right.max_planned_seat_capacity ?? 0) - (left.max_planned_seat_capacity ?? 0);
-}
-
-function formatMoney(value: number | undefined): string {
-  return new Intl.NumberFormat("en", {
-    currency: "USD",
-    maximumFractionDigits: 0,
-    style: "currency",
-  }).format(value ?? 0);
-}
-
-function formatNumber(value: number | undefined): string {
-  return new Intl.NumberFormat("en", { maximumFractionDigits: 0 }).format(value ?? 0);
-}
-
-async function loadFleetData(): Promise<void> {
-  isLoading.value = true;
-  error.value = "";
-
-  try {
-    const [typesResponse, airportsResponse, aircraftsResponse] = await Promise.all([
-      apiClient.get<FleetpbListAircraftTypesResponse>("/aircraft-types"),
-      apiClient.get<OperationspbListAirportsResponse>("/airports"),
-      apiClient.get<FleetpbListAircraftsResponse>("/aircrafts"),
-    ]);
-
-    aircraftTypes.value = typesResponse.items ?? [];
-    airports.value = airportsResponse.airports ?? [];
-    aircrafts.value = aircraftsResponse.items ?? [];
-    selectedTypeId.value ||= availableAircraftTypes.value[0]?.id ?? "";
-  } catch (loadError) {
-    error.value = apiMessage(loadError, "Could not load fleet data.");
-  } finally {
-    isLoading.value = false;
-  }
-}
-
-function matchesQuery(text: string, query: string): boolean {
-  return !query || text.includes(query);
-}
-
-function meetsMaximum(value: number | undefined, maxValue: string): boolean {
-  return (value ?? 0) <= (Number(maxValue) || Number.POSITIVE_INFINITY);
-}
-
-function meetsMinimum(value: number | undefined, minValue: string): boolean {
-  return (value ?? 0) >= (Number(minValue) || 0);
-}
-
-function meetsRunway(minRunway: number | undefined): boolean {
-  return (minRunway ?? 0) <= (selectedBaseAirport.value?.max_runway_length_m ?? Number.POSITIVE_INFINITY);
-}
-
-async function purchaseAircraft(): Promise<void> {
-  if (!canPurchase.value) {
+  if (!canConfirmPurchase.value || !typeId || !baseAirportId) {
     return;
   }
 
@@ -210,213 +132,271 @@ async function purchaseAircraft(): Promise<void> {
   message.value = "";
 
   try {
-    const tailNumber = filters.tailNumber.trim().toUpperCase();
-    const response = await apiClient.post<FleetpbCreateAircraftResponse>("/aircraft", {
-      aircraft_type_id: selectedTypeId.value,
-      base_airport_id: selectedBaseAirportId.value,
-      tail_number: tailNumber,
+    const response = await purchaseFleetAircraft({
+      aircraft_type_id: typeId,
+      base_airport_id: baseAirportId,
+      tail_number: requestedTailNumber,
     });
-
-    message.value = `Aircraft purchased: ${response.id ?? tailNumber}`;
-    // eslint-disable-next-line require-atomic-updates
-    filters.tailNumber = "";
-    await loadFleetData();
+    handlePurchaseSuccess(response.aircraft, response.finance.aircraftPrice);
+    await loadMarket();
   } catch (purchaseError) {
-    error.value = apiMessage(purchaseError, "Could not purchase aircraft.");
+    error.value = apiErrorMessage(purchaseError, "error.purchase");
   } finally {
     isPurchasing.value = false;
   }
 }
 
-function toAirportOption(airport: OperationspbAirport): { label: string; value: string } {
-  return {
-    label: `${airport.iata_code || airport.icao_code || "----"} - ${airport.intl_name ?? airport.local_name ?? "Airport"}`,
-    value: airport.id ?? "",
+function formatMoney(value: number | undefined): string { return formatMoneyValue(props.appLocale, value); }
+
+function formatNumber(value: number | undefined): string { return formatNumberValue(props.appLocale, value); }
+
+function formatPercent(value: number | undefined): string { return formatPercentValue(props.appLocale, value); }
+
+function getErrorPayload(value: unknown): null | { code?: string; message?: string } {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const { data } = value as { data?: unknown };
+  if (!data || typeof data !== "object") {
+    return null;
+  }
+
+  const { error: payload } = data as { error?: { code?: string; message?: string } };
+
+  return payload ?? null;
+}
+
+function getNextSelectedTypeId(response: FleetMarketResponse): string {
+  const currentTypeAvailable = response.aircraftTypes.some((type) => type.id === selectedTypeId.value);
+
+  return currentTypeAvailable
+    ? selectedTypeId.value
+    : response.summary.recommendedTypeId ?? response.aircraftTypes[0]?.id ?? "";
+}
+
+function handlePurchaseSuccess(aircraft: FleetOwnedAircraftCard | null, price: number): void {
+  message.value = t.value("purchase.success");
+  tailNumber.value = "";
+  preview.value = null;
+  isConfirmingRisk.value = false;
+
+  if (aircraft) {
+    setSelectedAircraft(aircraft);
+    airlineSimEventBus.emit("fleet:aircraft-purchased", {
+      aircraftId: aircraft.id,
+      baseAirportId: aircraft.base_airport_id,
+      modelName: aircraft.modelName,
+      price,
+      tailNumber: aircraft.tail_number,
+      typeId: aircraft.type_id,
+    });
+  }
+
+  airlineSimEventBus.emit("game:snapshot-invalidated", {
+    reason: "aircraft-purchased",
+    source: "fleet-ops",
+  });
+  airlineSimEventBus.emit("map:network-refresh-requested", {
+    reason: "aircraft-purchased",
+    source: "fleet-ops",
+  });
+  airlineSimEventBus.emit("notification:created", {
+    message: t.value("purchase.success"),
+    severity: "success",
+  });
+}
+
+async function loadMarket(): Promise<void> {
+  isLoading.value = true;
+  error.value = "";
+
+  try {
+    const response = await getFleetMarket(filters);
+    market.value = response;
+    selectedTypeId.value = getNextSelectedTypeId(response);
+
+    if (!tailNumber.value && response.ownedAircraft.length === 0) {
+      tailNumber.value = "HL-001";
+    }
+
+    await loadPreview();
+  } catch (loadError) {
+    error.value = apiErrorMessage(loadError, "error.load");
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+async function loadPreview(): Promise<void> {
+  const baseAirportId = selectedBaseAirportId.value;
+  const requestedTailNumber = tailNumber.value;
+  const typeId = selectedTypeId.value;
+
+  if (!typeId || !baseAirportId) {
+    preview.value = null;
+    return;
+  }
+
+  isPreviewLoading.value = true;
+
+  try {
+    const response = await getFleetPurchasePreview(typeId, baseAirportId, requestedTailNumber);
+    preview.value = response;
+    isConfirmingRisk.value = false;
+  } catch (loadError) {
+    error.value = apiErrorMessage(loadError, "error.load");
+  } finally {
+    isPreviewLoading.value = false;
+  }
+}
+
+async function openAircraft(aircraft: FleetOwnedAircraftCard): Promise<void> {
+  const aircraftId = aircraft.id;
+
+  if (!aircraftId) {
+    selectedAircraft.value = aircraft;
+    return;
+  }
+
+  try {
+    const detail = await getFleetAircraftDetail(aircraftId);
+    const detailAircraft = detail.aircraft;
+    setSelectedAircraft(detailAircraft);
+    editTailNumber.value = detailAircraft.tail_number ?? "";
+  } catch {
+    setSelectedAircraft(aircraft);
+  }
+}
+
+function planRoute(): void {
+  airlineSimEventBus.emit("navigation:intent", {
+    source: "mfe",
+    targetPath: "/airports/routes",
+  });
+}
+
+function reasonLabel(reason: FleetReason): string {
+  const key = `warning.${reason.code}` as FleetMessageKey;
+
+  return key in fleetMessages.en ? t.value(key) : reason.message;
+}
+
+async function saveTailNumber(): Promise<void> {
+  const aircraftId = selectedAircraft.value?.id;
+  const requestedTailNumber = editTailNumber.value;
+
+  if (!aircraftId) {
+    return;
+  }
+
+  isTailSaving.value = true;
+  error.value = "";
+
+  try {
+    const response = await updateFleetAircraftTailNumber(aircraftId, requestedTailNumber);
+    setSelectedAircraft(response.aircraft);
+    await loadMarket();
+  } catch (tailError) {
+    error.value = apiErrorMessage(tailError, "error.tail");
+  } finally {
+    isTailSaving.value = false;
+  }
+}
+
+function selectType(type: FleetMarketAircraftType): void {
+  selectedTypeId.value = type.id ?? "";
+}
+
+function setSelectedAircraft(aircraft: FleetOwnedAircraftCard | null): void {
+  selectedAircraft.value = aircraft;
+}
+
+function statusLabel(status: FleetMarketAircraftType["compatibility"]["status"]): string {
+  return t.value(`status.${status}`);
+}
+
+function statusVariant(status: FleetMarketAircraftType["compatibility"]["status"]): StatusVariant {
+  const variants: Record<FleetMarketAircraftType["compatibility"]["status"], StatusVariant> = {
+    available: "primary-soft",
+    blocked: "danger-soft",
+    recommended: "success-soft",
+    risky: "warning-soft",
   };
+
+  return variants[status];
+}
+
+function updateFilter(key: keyof typeof filters, value: string): void {
+  filters[key] = value;
 }
 </script>
 
 <template>
-  <section class="min-h-full overflow-x-hidden bg-background p-4 text-body text-text-primary sm:p-6">
-    <div class="flex flex-col gap-5 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
-      <div class="min-w-0">
-        <AirBadge
-          label="Fleet & Ops"
-          variant="primary-soft"
-        />
-        <h1 class="mt-4 text-h2">
-          Aircraft Market
-        </h1>
-        <p class="mt-2 max-w-2xl text-body text-text-muted">
-          Buy aircraft from backend catalog, filter by performance, and assign a base airport.
-        </p>
-      </div>
-      <AirButton
-        :disabled="isLoading"
-        :label="isLoading ? 'Loading' : 'Refresh'"
-        size="sm"
-        variant="primary-soft"
-        @click="loadFleetData"
-      />
-    </div>
+  <section class="h-full overflow-y-auto bg-background p-4 text-body text-text-primary sm:p-6">
+    <FleetMarketToolbar
+      :error="error"
+      :filters="filters"
+      :format-money="formatMoney"
+      :format-number="formatNumber"
+      :is-loading="isLoading"
+      :market="market"
+      :message="message"
+      :sort-options="sortOptions"
+      :t="t"
+      @refresh="loadMarket"
+      @update-filter="updateFilter"
+    />
+
+    <FleetLoadingSkeleton v-if="isLoading && !market" />
 
     <div
-      v-if="error || message"
-      class="mt-4 rounded-lg border p-3 text-body"
-      :class="error ? 'border-error bg-error-bg text-slate-950' : 'border-success bg-success-bg text-slate-950'"
+      v-else-if="market"
+      class="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_26rem]"
     >
-      {{ error || message }}
-    </div>
-
-    <div class="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_25rem]">
       <div class="min-w-0">
-        <div class="grid gap-3 rounded-lg border border-border bg-surface p-4 md:grid-cols-2 xl:grid-cols-5">
-          <AirTextField
-            v-model="filters.query"
-            label="Search"
-            placeholder="A320, B738, long range"
-            type="search"
-          />
-          <AirTextField
-            v-model="filters.minRange"
-            label="Min range, km"
-            placeholder="2500"
-          />
-          <AirTextField
-            v-model="filters.minCapacity"
-            label="Min seats"
-            placeholder="120"
-          />
-          <AirTextField
-            v-model="filters.maxPrice"
-            label="Max price"
-            placeholder="90000000"
-          />
-          <div class="flex min-w-0 flex-col gap-1.5">
-            <span class="text-caption text-text-muted">Sort</span>
-            <AirSelect
-              v-model="filters.sort"
-              class="w-full"
-              label="Sort aircraft"
-              :options="selectedTypeOptions"
-            />
-          </div>
-        </div>
-
-        <div class="mt-4 grid gap-3 lg:grid-cols-2">
-          <button
-            v-for="type in availableAircraftTypes"
-            :key="type.id"
-            class="min-w-0 rounded-lg border bg-surface p-4 text-left transition hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            :class="selectedTypeId === type.id ? 'border-primary' : 'border-border'"
-            type="button"
-            @click="selectedTypeId = type.id ?? ''"
-          >
-            <div class="flex min-w-0 items-start justify-between gap-3">
-              <div class="min-w-0">
-                <p class="truncate text-subtitle">
-                  {{ type.model_name || "Aircraft type" }}
-                </p>
-                <p class="mt-1 text-caption text-text-muted">
-                  {{ type.icao_code || "----" }} / {{ type.iata_code || "---" }}
-                </p>
-              </div>
-              <AirBadge
-                :label="formatMoney(type.price_per_unit)"
-                variant="success-soft"
-              />
-            </div>
-            <div class="mt-4 grid grid-cols-2 gap-3 text-caption text-text-muted sm:grid-cols-4">
-              <span>{{ formatNumber(type.max_planned_seat_capacity) }} seats</span>
-              <span>{{ formatNumber(type.max_range_km) }} km</span>
-              <span>{{ formatNumber(type.cruising_speed_kph) }} kph</span>
-              <span>{{ formatNumber(type.min_runway_length_m) }} m runway</span>
-            </div>
-          </button>
-        </div>
-
-        <div
-          v-if="!isLoading && availableAircraftTypes.length === 0"
-          class="mt-4 rounded-lg border border-border bg-surface p-5 text-text-muted"
-        >
-          No aircraft types match the current filters.
-        </div>
+        <AircraftMarketList
+          :format-money="formatMoney"
+          :format-number="formatNumber"
+          :reason-label="reasonLabel"
+          :selected-type-id="selectedTypeId"
+          :status-label="statusLabel"
+          :status-variant="statusVariant"
+          :t="t"
+          :types="market.aircraftTypes"
+          @select-type="selectType"
+        />
       </div>
 
-      <aside class="min-w-0 rounded-lg border border-border bg-surface p-4">
-        <h2 class="text-subtitle">
-          Purchase
-        </h2>
-        <p class="mt-2 text-body text-text-muted">
-          {{ selectedTypeSummary }}
-        </p>
-
-        <div class="mt-4 grid gap-3">
-          <AirTextField
-            v-model="filters.airportQuery"
-            label="Base airport filter"
-            placeholder="ICN, Istanbul, Seoul"
-            type="search"
-          />
-          <div class="flex min-w-0 flex-col gap-1.5">
-            <span class="text-caption text-text-muted">Base airport</span>
-            <AirSelect
-              v-model="selectedBaseAirportId"
-              class="w-full"
-              label="Base airport"
-              :options="baseAirportOptions"
-            />
-          </div>
-          <AirTextField
-            v-model="filters.tailNumber"
-            label="Tail number"
-            placeholder="HL-001"
-          />
-          <AirButton
-            :disabled="!canPurchase"
-            :label="isPurchasing ? 'Purchasing' : 'Buy aircraft'"
-            class="w-full"
-            @click="purchaseAircraft"
-          />
-        </div>
-
-        <div class="mt-6 border-t border-border pt-4">
-          <h2 class="text-subtitle">
-            Owned Aircraft
-          </h2>
-          <div class="mt-3 grid gap-3">
-            <div
-              v-for="aircraft in ownedAircraftRows"
-              :key="aircraft.id"
-              class="rounded-lg border border-border bg-background p-3"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0">
-                  <p class="truncate text-subtitle">
-                    {{ aircraft.tail_number || aircraft.id }}
-                  </p>
-                  <p class="mt-1 truncate text-caption text-text-muted">
-                    {{ aircraft.modelName }}
-                  </p>
-                </div>
-                <AirBadge
-                  :label="aircraft.status || 'owned'"
-                  variant="primary-soft"
-                />
-              </div>
-              <p class="mt-2 truncate text-caption text-text-muted">
-                {{ aircraft.baseAirportName }}
-              </p>
-            </div>
-            <p
-              v-if="!isLoading && ownedAircraftRows.length === 0"
-              class="text-body text-text-muted"
-            >
-              No aircraft purchased yet.
-            </p>
-          </div>
-        </div>
-      </aside>
+      <FleetSidebar
+        :can-confirm-purchase="canConfirmPurchase"
+        :edit-tail-number="editTailNumber"
+        :format-money="formatMoney"
+        :format-number="formatNumber"
+        :format-percent="formatPercent"
+        :is-confirming-risk="isConfirmingRisk"
+        :is-preview-loading="isPreviewLoading"
+        :is-purchasing="isPurchasing"
+        :is-tail-saving="isTailSaving"
+        :owned-aircraft="market.ownedAircraft"
+        :preview="preview"
+        :purchase-reasons="purchaseReasons"
+        :reason-label="reasonLabel"
+        :requires-risk-acknowledge="requiresRiskAcknowledge"
+        :selected-aircraft="selectedAircraft"
+        :selected-type="selectedType"
+        :tail-number="tailNumber"
+        :t="t"
+        @close-detail="selectedAircraft = null"
+        @confirm-purchase="confirmPurchase"
+        @load-market="loadMarket"
+        @open-aircraft="openAircraft"
+        @plan-route="planRoute"
+        @save-tail-number="saveTailNumber"
+        @update-confirming-risk="isConfirmingRisk = $event"
+        @update-edit-tail-number="editTailNumber = $event"
+        @update-tail-number="tailNumber = $event"
+      />
     </div>
   </section>
 </template>
