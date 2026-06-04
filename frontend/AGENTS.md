@@ -41,6 +41,7 @@
 - `docs/I18N.md` - спецификация мультиязычности RU/EN: источник локали, хранение строк, fallback и контракт Shell -> MFE.
 - `docs/TESTS.md` - правила создания и запуска тестов frontend-модулей.
 - `docs/bff.md` - спецификация Bun BFF: отдельное расположение вне `apps`, модули `import` и `proxy`, env и правила развития.
+- `docs/events-facilities-admin.md` - правила устойчивых events/notifications, общего airport constraint domain и admin security/readiness.
 - `docs/knowledge-base/` - markdown-источник пользовательской базы знаний; до реализации wiki UI новые инструкции для пользователей добавлять туда и связывать с соответствующими продуктовым сценариями.
 - `docs/map-state.md` - контракт BFF map-state и правила Shell-owned Dashboard -> Map remote visual widget.
 - `docs/passenger-demand-model.md` - реализованная модель пассажирского спроса, формулы, ограничения и связь с Grosche et al.

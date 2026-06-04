@@ -12,11 +12,14 @@ import {
 } from "@airlinesim/game-sdk";
 import { computed, reactive } from "vue";
 
+import { getAdminSession } from "./admin/api/adminSessionApi";
 import { authClient } from "./api";
 import { createOnboardingAirline, getOnboardingSession } from "./onboarding/api";
 
 const state = reactive({
   accessToken: authClient.getAccessToken(),
+  adminCapabilities: [] as string[],
+  adminSessionLoaded: false,
   airline: null as AirlinepbAirlineResponse | null,
   error: null as null | string,
   isRestoringSession: false,
@@ -25,9 +28,12 @@ const state = reactive({
 
 export const authState = {
   accessToken: computed(() => state.accessToken),
+  adminCapabilities: computed(() => state.adminCapabilities),
+  adminSessionLoaded: computed(() => state.adminSessionLoaded),
   airline: computed(() => state.airline),
   airlineName: computed(() => state.airline?.name ?? "AirlineSim"),
   error: computed(() => state.error),
+  isAdminAuthorized: computed(() => state.adminCapabilities.includes("world.manage")),
   isAuthenticated: computed(() => Boolean(state.accessToken)),
   isRestoringSession: computed(() => state.isRestoringSession),
   isSubmitting: computed(() => state.isSubmitting),
@@ -56,6 +62,23 @@ export async function createMyAirline(
     throw error;
   } finally {
     state.isSubmitting = false;
+  }
+}
+
+export async function loadAdminSession(): Promise<void> {
+  if (!state.accessToken) {
+    setAdminSession([], true);
+    return;
+  }
+
+  try {
+    const session = await getAdminSession();
+    setAdminSession(session.authorized ? session.capabilities : [], true);
+  } catch (error) {
+    setAdminSession([], true);
+    if (error instanceof ApiRequestError && error.status === 401) {
+      logout("expired");
+    }
   }
 }
 
@@ -92,6 +115,8 @@ export async function login(request: LoginRequest): Promise<void> {
 export function logout(reason: "expired" | "manual" = "manual"): void {
   authClient.logout();
   state.accessToken = null;
+  state.adminCapabilities = [];
+  state.adminSessionLoaded = false;
   state.airline = null;
   state.error = null;
   airlineSimEventBus.emit("auth:logout", { reason });
@@ -107,10 +132,14 @@ export function restoreAuthSession(): void {
 
   if (accessToken) {
     state.isRestoringSession = true;
+    state.adminSessionLoaded = false;
     airlineSimEventBus.emit("auth:session-restored", { accessToken });
-    void loadMyAirline().finally(() => {
+    void Promise.allSettled([loadMyAirline(), loadAdminSession()]).finally(() => {
       state.isRestoringSession = false;
     });
+  } else {
+    state.adminCapabilities = [];
+    state.adminSessionLoaded = true;
   }
 }
 
@@ -135,6 +164,11 @@ function getAuthErrorMessage(error: unknown): string {
   return "auth.error.default";
 }
 
+function setAdminSession(capabilities: string[], loaded: boolean): void {
+  state.adminCapabilities = capabilities;
+  state.adminSessionLoaded = loaded;
+}
+
 async function submitAuth(
   mode: "login" | "register",
   action: () => Promise<{ accessToken: string }>,
@@ -145,7 +179,8 @@ async function submitAuth(
   try {
     const session = await action();
     state.accessToken = session.accessToken;
-    await loadMyAirline();
+    state.adminSessionLoaded = false;
+    await Promise.all([loadMyAirline(), loadAdminSession()]);
     airlineSimEventBus.emit(
       mode === "login" ? "auth:login-succeeded" : "auth:register-succeeded",
       { accessToken: session.accessToken },

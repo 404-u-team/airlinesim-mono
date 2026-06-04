@@ -890,5 +890,215 @@ export const openApiOperations = [
     "path": "/game/map-state",
     "summary": "",
     "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__events_feed",
+    "path": "/events/feed",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__events_feed__id_",
+    "path": "/events/feed/{id}",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__notifications",
+    "path": "/notifications",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__notifications_summary",
+    "path": "/notifications/summary",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__facilities_base_overview",
+    "path": "/facilities/base-overview",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__facilities_airports__id__constraints",
+    "path": "/facilities/airports/{id}/constraints",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__admin_session",
+    "path": "/admin/session",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__admin_audit",
+    "path": "/admin/audit",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__admin_world_readiness",
+    "path": "/admin/world/readiness",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__admin_import_world_data_status",
+    "path": "/admin/import/world-data/status",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__admin_import_world_data_jobs__id_",
+    "path": "/admin/import/world-data/jobs/{id}",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "PATCH",
+    "operationId": "patch__notifications__id_",
+    "path": "/notifications/{id}",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "POST",
+    "operationId": "post__notifications_read_all",
+    "path": "/notifications/read-all",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "POST",
+    "operationId": "post__admin_import_world_data",
+    "path": "/admin/import/world-data",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__admin_world_airports",
+    "path": "/admin/world/airports",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "POST",
+    "operationId": "post__admin_world_airports",
+    "path": "/admin/world/airports",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "DELETE",
+    "operationId": "delete__admin_world_airports__id_",
+    "path": "/admin/world/airports/{id}",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "PATCH",
+    "operationId": "patch__admin_world_airports__id_",
+    "path": "/admin/world/airports/{id}",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__admin_world_countries",
+    "path": "/admin/world/countries",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "POST",
+    "operationId": "post__admin_world_countries",
+    "path": "/admin/world/countries",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "DELETE",
+    "operationId": "delete__admin_world_countries__id_",
+    "path": "/admin/world/countries/{id}",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "PATCH",
+    "operationId": "patch__admin_world_countries__id_",
+    "path": "/admin/world/countries/{id}",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__admin_world_region_links",
+    "path": "/admin/world/region-links",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "POST",
+    "operationId": "post__admin_world_region_links",
+    "path": "/admin/world/region-links",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "DELETE",
+    "operationId": "delete__admin_world_region_links__id_",
+    "path": "/admin/world/region-links/{id}",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "PATCH",
+    "operationId": "patch__admin_world_region_links__id_",
+    "path": "/admin/world/region-links/{id}",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__admin_world_regions",
+    "path": "/admin/world/regions",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "POST",
+    "operationId": "post__admin_world_regions",
+    "path": "/admin/world/regions",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "DELETE",
+    "operationId": "delete__admin_world_regions__id_",
+    "path": "/admin/world/regions/{id}",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "PATCH",
+    "operationId": "patch__admin_world_regions__id_",
+    "path": "/admin/world/regions/{id}",
+    "summary": "",
+    "tags": []
   }
 ] as const;

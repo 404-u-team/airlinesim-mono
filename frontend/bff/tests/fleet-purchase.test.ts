@@ -48,7 +48,7 @@ test("GET /fleet/purchase-preview blocks invalid tail number and runway mismatch
   expect(response?.status).toBe(200);
   expect(payload.canPurchase).toBe(false);
   expect(codes).toContain("FLEET_TAIL_NUMBER_INVALID");
-  expect(codes).toContain("FLEET_RUNWAY_TOO_SHORT");
+  expect(codes).toContain("AIRPORT_RUNWAY_TOO_SHORT");
 });
 
 test("POST /fleet/aircraft repeats preview validation before backend mutation", async () => {

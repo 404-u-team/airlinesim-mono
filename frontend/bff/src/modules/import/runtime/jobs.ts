@@ -2,6 +2,8 @@ import type { BffConfig } from "../../../config";
 import type { ImportMode, ImportReport } from "../shared/types";
 
 import { runWorldDataImport, type ImportOptions } from "./pipeline";
+import { recordAdminAudit } from "../../admin/audit";
+import { cache } from "../../proxy";
 
 export type ImportJobStatus = {
   error?: string;
@@ -29,7 +31,16 @@ export function getImportJobStatus(jobId: string): ImportJobStatus | null {
   return jobs.get(jobId) ?? null;
 }
 
-export function startWorldDataImportJob(config: BffConfig, options: ImportOptions): ImportJobStatus {
+export function getLatestImportJobStatus(): ImportJobStatus | null {
+  return Array.from(jobs.values()).at(-1) ?? null;
+}
+
+export function startWorldDataImportJob(config: BffConfig, options: ImportOptions, actorId = "authenticated-user"): ImportJobStatus {
+  const activeJob = Array.from(jobs.values()).find((job) => job.status === "queued" || job.status === "running");
+  if (activeJob) {
+    return activeJob;
+  }
+
   const job: ImportJobStatus = {
     id: crypto.randomUUID(),
     mode: options.mode,
@@ -38,12 +49,12 @@ export function startWorldDataImportJob(config: BffConfig, options: ImportOption
   };
 
   jobs.set(job.id, job);
-  void runJob(config, options, job);
+  void runJob(config, options, job, actorId);
 
   return job;
 }
 
-async function runJob(config: BffConfig, options: ImportOptions, job: ImportJobStatus): Promise<void> {
+async function runJob(config: BffConfig, options: ImportOptions, job: ImportJobStatus, actorId: string): Promise<void> {
   job.status = "running";
 
   try {
@@ -51,10 +62,26 @@ async function runJob(config: BffConfig, options: ImportOptions, job: ImportJobS
     job.finishedAt = new Date().toISOString();
     job.report = summarizeReport(result.report);
     job.status = result.report.errors.length > 0 ? "failed" : "succeeded";
+    if (job.status === "succeeded" && job.mode === "import") {
+      cache.clear();
+    }
   } catch (error) {
     job.error = error instanceof Error ? error.message : "World-data import job failed";
     job.finishedAt = new Date().toISOString();
     job.status = "failed";
+  } finally {
+    try {
+      await recordAdminAudit({
+        action: job.mode === "dry-run" ? "import.dry-run" : "import.run",
+        capability: "world.manage",
+        entity_type: "world-data",
+        import_job_id: job.id,
+        success: job.status === "succeeded",
+        user_id: actorId,
+      });
+    } catch (error) {
+      console.warn("Import admin audit write failed:", error);
+    }
   }
 }
 

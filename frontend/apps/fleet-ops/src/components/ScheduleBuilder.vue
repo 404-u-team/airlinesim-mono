@@ -71,6 +71,8 @@ async function activateSchedule(): Promise<void> {
       reason: "schedule-activated",
       source: "fleet-ops",
     });
+    airlineSimEventBus.emit("events:invalidated", { reason: "schedule-activated", source: "fleet-ops" });
+    airlineSimEventBus.emit("notifications:invalidated", { reason: "schedule-activated", source: "fleet-ops" });
     airlineSimEventBus.emit("navigation:intent", {
       source: "mfe",
       targetPath: "/operations/live-flights",

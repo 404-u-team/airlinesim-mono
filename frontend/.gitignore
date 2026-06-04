@@ -40,3 +40,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 storybook-static
 
 docs\layout.html
+
+# BFF-owned runtime overlays
+bff/data/game-state/*.json

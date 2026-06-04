@@ -1,7 +1,8 @@
 <script setup lang="ts">
+/* eslint-disable vue/custom-event-name-casing -- update:modelValue is the Vue v-model contract. */
 import { computed, useId } from "vue";
 
-type TextFieldType = "email" | "password" | "search" | "text";
+type TextFieldType = "email" | "number" | "password" | "search" | "text";
 
 const props = withDefaults(
   defineProps<{

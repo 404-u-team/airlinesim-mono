@@ -1,45 +1,57 @@
 import type { BffConfig } from "../../config";
 import type { ImportMode, ImportRequestBody } from "./shared/types";
 
+import { requireAdminCapability } from "../../auth";
 import { jsonResponse } from "../../http";
-import { getImportJobStatus, startWorldDataImportJob } from "./runtime/jobs";
+import { adminActorId } from "../admin/audit";
+import { getImportJobStatus, getLatestImportJobStatus, startWorldDataImportJob } from "./runtime/jobs";
 
 export async function handleImportRequest(
   request: Request,
   url: URL,
   config: BffConfig,
 ): Promise<null | Response> {
-  if (request.method === "POST" && url.pathname === "/import/world-data") {
+  const path = url.pathname.replace(/^\/admin/, "");
+  if (!path.startsWith("/import/world-data")) {
+    return null;
+  }
+
+  const authError = await requireAdminCapability(request, config, "world.manage");
+  if (authError) {
+    return authError;
+  }
+
+  if (request.method === "POST" && path === "/import/world-data") {
     return importWorldData(request, url, config);
   }
 
-  if (request.method === "POST" && url.pathname === "/import/world-data/dry-run") {
+  if (request.method === "POST" && path === "/import/world-data/dry-run") {
     return importWorldData(request, url, config, "dry-run");
   }
 
-  if (request.method === "POST" && url.pathname === "/import/world-data/run") {
+  if (request.method === "POST" && path === "/import/world-data/run") {
     return importWorldData(request, url, config, "import");
   }
 
-  if (request.method === "GET" && url.pathname === "/import/world-data/status") {
-    return getImportStatus(url);
+  if (request.method === "GET" && path === "/import/world-data/status") {
+    return getImportStatus(url, path);
   }
 
-  if (request.method === "GET" && url.pathname.startsWith("/import/world-data/jobs/")) {
-    return getImportStatus(url);
+  if (request.method === "GET" && path.startsWith("/import/world-data/jobs/")) {
+    return getImportStatus(url, path);
   }
 
   return null;
 }
 
-function getImportStatus(url: URL): Response {
-  const jobId = url.pathname.startsWith("/import/world-data/jobs/")
-    ? url.pathname.slice("/import/world-data/jobs/".length)
+function getImportStatus(url: URL, path: string): Response {
+  const jobId = path.startsWith("/import/world-data/jobs/")
+    ? path.slice("/import/world-data/jobs/".length)
     : url.searchParams.get("jobId");
-  const job = jobId ? getImportJobStatus(jobId) : null;
+  const job = jobId ? getImportJobStatus(jobId) : getLatestImportJobStatus();
 
   if (!job) {
-    return jsonResponse({ error: "Import job not found" }, { status: 404 });
+    return jsonResponse({ error: { code: "IMPORT_JOB_NOT_FOUND", message: "Import job not found.", retryable: false } }, { status: 404 });
   }
 
   return jsonResponse({ job });
@@ -54,16 +66,15 @@ async function importWorldData(
   const body = await readOptionalJson(request);
   const mode = routeMode ?? normalizeMode(url.searchParams.get("mode") ?? body.mode);
   const job = startWorldDataImportJob(config, {
-    dataDir: body.dataDir,
     mode,
     refreshRaw: body.refreshRaw,
     source: body.source,
-  });
+  }, adminActorId(request));
 
   return jsonResponse({
     jobId: job.id,
     status: job.status,
-    statusUrl: `/import/world-data/jobs/${job.id}`,
+    statusUrl: `/admin/import/world-data/jobs/${job.id}`,
   }, { status: 202 });
 }
 

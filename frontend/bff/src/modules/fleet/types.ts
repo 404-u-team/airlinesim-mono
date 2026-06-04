@@ -60,6 +60,7 @@ export type Airport = {
   region_id?: string;
   runway_fee?: number;
   stand_fee?: number;
+  timezone?: string;
   turnaround_point_price?: number;
   works_at_night?: boolean;
 };
@@ -128,6 +129,15 @@ export type FleetReason = {
 };
 
 export type FleetReasonCode =
+  | "AIRCRAFT_MAINTENANCE_LOW"
+  | "AIRCRAFT_NOT_READY"
+  | "AIRCRAFT_RANGE_TOO_SHORT"
+  | "AIRPORT_DATA_INCOMPLETE"
+  | "AIRPORT_NIGHT_OPS_PROHIBITED"
+  | "AIRPORT_RUNWAY_TOO_SHORT"
+  | "AIRPORT_SLOT_CAPACITY_EXCEEDED"
+  | "AIRPORT_SLOT_CAPACITY_LOW"
+  | "AIRPORT_TIMEZONE_MISSING"
   | "FLEET_AIRCRAFT_TYPE_NOT_FOUND"
   | "FLEET_BASE_AIRPORT_NOT_FOUND"
   | "FLEET_INSUFFICIENT_FUNDS"

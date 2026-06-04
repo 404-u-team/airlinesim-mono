@@ -10,6 +10,8 @@ import type {
   FleetReason,
 } from "./types";
 
+import { runwayConstraints } from "../facilities/constraints";
+
 type CompatibilityFlags = {
   canAfford: boolean;
   canPurchase: boolean;
@@ -202,7 +204,7 @@ function getCompatibilityWarnings(
 ): FleetReason[] {
   return [
     ...getPriceWarnings(flags),
-    ...getRunwayWarnings(baseAirport, flags),
+    ...getRunwayWarnings(baseAirport, type),
     ...getBaseWarnings(baseAirport),
     ...getReserveWarnings(flags),
     ...getFirstAircraftWarnings(type, ownedAircraftCount, flags.price),
@@ -241,20 +243,12 @@ function getReserveWarnings(flags: CompatibilityFlags): FleetReason[] {
     : [];
 }
 
-function getRunwayWarnings(baseAirport: Airport | undefined, flags: CompatibilityFlags): FleetReason[] {
+function getRunwayWarnings(baseAirport: Airport | undefined, type: AircraftType): FleetReason[] {
   if (!baseAirport) {
     return [reason("FLEET_BASE_AIRPORT_NOT_FOUND", "Base airport is missing.")];
   }
 
-  if (!flags.hasRunwayData) {
-    return [reason("FLEET_MISSING_RUNWAY_DATA", "Runway compatibility data is missing.")];
-  }
-
-  if (!flags.canUseBase) {
-    return [reason("FLEET_RUNWAY_TOO_SHORT", "Base runway is shorter than this aircraft requires.")];
-  }
-
-  return [];
+  return runwayConstraints(baseAirport, type).map((item) => reason(item.code, item.code));
 }
 
 function hasWarning(warnings: FleetReason[], code: FleetReason["code"]): boolean {

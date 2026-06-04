@@ -4,6 +4,8 @@ import type { Aircraft, Airline, PurchasePayload } from "./types";
 import { getUserAuthorization } from "../../auth";
 import { requestBackendJson } from "../../backend-http";
 import { jsonResponse, readJson } from "../../http";
+import { recordGameEvent } from "../events/producer";
+import { reconcileNotificationsAfterMutation } from "../events/reconcile";
 import { cache } from "../proxy";
 import { buildPurchasePreview } from "./preview";
 import { enrichOwnedAircraft } from "./scoring";
@@ -60,7 +62,11 @@ export async function handlePurchaseAircraft(request: Request, config: BffConfig
 
   cache.clear();
 
-  return jsonResponse(await buildPurchaseResponse(config, authorization, snapshot, response.id, preview));
+  const purchaseResponse = await buildPurchaseResponse(config, authorization, snapshot, response.id, preview);
+  await recordPurchasedAircraftEvent(snapshot, response.id, preview);
+  await reconcileNotificationsAfterMutation(request, config);
+
+  return jsonResponse(purchaseResponse);
 }
 
 export async function handleUpdateTailNumber(request: Request, config: BffConfig, aircraftId: string): Promise<Response> {
@@ -187,4 +193,31 @@ function invalidTailNumberResponse(validation: ReturnType<typeof validateTailNum
     },
     { status: validation.conflict ? 409 : 400 },
   );
+}
+
+async function recordPurchasedAircraftEvent(
+  snapshot: Awaited<ReturnType<typeof loadFleetSnapshot>>,
+  aircraftId: string | undefined,
+  preview: ReturnType<typeof buildPurchasePreview>,
+): Promise<void> {
+  const sourceId = aircraftId ?? preview.tailNumber.normalizedValue;
+  await recordGameEvent({
+    airline_id: snapshot.airline.id ?? "",
+    category: "fleet",
+    code: "AIRCRAFT_PURCHASED",
+    dedupe_key: `aircraft-purchased:${sourceId}`,
+    occurred_at: new Date().toISOString(),
+    parameters: {
+      base_airport_code: preview.baseAirport?.iata_code ?? preview.baseAirport?.icao_code ?? "",
+      model: preview.aircraftType?.model_name ?? "",
+      price: preview.aircraftPrice,
+      remaining_balance: preview.remainingBalance,
+      tail_number: preview.tailNumber.normalizedValue,
+    },
+    related: { aircraft_id: aircraftId },
+    severity: "success",
+    source_id: sourceId,
+    source_type: "aircraft",
+    target_path: "/fleet/aircraft",
+  });
 }

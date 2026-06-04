@@ -34,6 +34,7 @@ export type NavigationChild = {
 };
 
 export type NavigationSection = {
+  adminOnly?: boolean;
   children?: NavigationChild[];
   icon: Component;
   label: string;
@@ -53,6 +54,16 @@ export const navigationSections: NavigationSection[] = [
     label: "Dashboard",
     path: "/dashboard",
     remoteId: "map",
+  },
+  {
+    children: [
+      { label: "Feed", path: "/events/feed" },
+      { label: "Notifications", path: "/events/notifications" },
+    ],
+    icon: Bell,
+    label: "Events",
+    path: "/events",
+    remoteId: "events-news",
   },
   {
     children: [
@@ -114,7 +125,7 @@ export const navigationSections: NavigationSection[] = [
       { enabled: false, label: "Training", path: "/staff/training" },
     ],
     icon: Users,
-    label: "Staff",
+    label: "Base & Facilities",
     path: "/staff",
     remoteId: "hr-facilities",
   },
@@ -128,16 +139,17 @@ export const navigationSections: NavigationSection[] = [
     icon: Settings,
     label: "Settings",
     path: "/settings",
-    remoteId: "events-news",
   },
   {
+    adminOnly: true,
     children: [
+      { label: "World readiness", path: "/admin/overview" },
       { label: "Countries", path: "/admin/countries" },
       { label: "Regions", path: "/admin/regions" },
       { label: "Airports", path: "/admin/airports" },
       { label: "Region links", path: "/admin/region-links" },
       { label: "World data import", path: "/admin/import" },
-      { enabled: false, label: "To be enabled", path: "/admin/future" },
+      { label: "Capabilities", path: "/admin/capabilities" },
     ],
     icon: ShieldCheck,
     label: "Admin",

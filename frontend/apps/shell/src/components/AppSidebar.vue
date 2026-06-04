@@ -12,6 +12,7 @@ const props = defineProps<{
   appLocale: Locale;
   collapsed: boolean;
   companyName: string;
+  isAdminAuthorized: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -23,9 +24,11 @@ const expandedSections = ref<string[]>([]);
 const labelKeysByPath: Record<string, ShellMessageKey> = {
   "/admin": "nav.admin",
   "/admin/airports": "nav.admin.airports",
+  "/admin/capabilities": "nav.admin.capabilities",
   "/admin/countries": "nav.admin.countries",
   "/admin/future": "nav.admin.future",
   "/admin/import": "nav.admin.import",
+  "/admin/overview": "nav.admin.overview",
   "/admin/region-links": "nav.admin.regionLinks",
   "/admin/regions": "nav.admin.regions",
   "/airports": "nav.airports",
@@ -34,6 +37,9 @@ const labelKeysByPath: Record<string, ShellMessageKey> = {
   "/airports/hubs": "nav.airports.hubs",
   "/airports/routes": "nav.airports.routes",
   "/dashboard": "nav.dashboard",
+  "/events": "nav.events",
+  "/events/feed": "nav.events.feed",
+  "/events/notifications": "nav.events.notifications",
   "/finances": "nav.finances",
   "/finances/costs": "nav.finances.costs",
   "/finances/loans-leasing": "nav.finances.loansLeasing",
@@ -69,6 +75,9 @@ const sidebarClass = computed(() => [
   "fixed inset-y-0 left-0 z-40 flex h-screen flex-col overflow-hidden border-r border-border bg-surface transition-[width,transform] duration-200 ease-out lg:static lg:translate-x-0",
   props.collapsed ? "w-16 -translate-x-full lg:translate-x-0" : "w-64 translate-x-0",
 ]);
+const visibleNavigationSections = computed(() =>
+  navigationSections.filter((section) => !section.adminOnly || props.isAdminAuthorized),
+);
 const t = computed(() => (key: ShellMessageKey): string =>
   translate(shellMessages, props.appLocale, key),
 );
@@ -129,7 +138,7 @@ watch(
     <nav class="min-h-0 flex-1 overflow-y-auto px-3 py-4 custom-scrollbar">
       <ul class="space-y-2">
         <li
-          v-for="section in navigationSections"
+          v-for="section in visibleNavigationSections"
           :key="section.path"
         >
           <button

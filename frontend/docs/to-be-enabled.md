@@ -3,18 +3,26 @@
 Админ-панель живёт в `apps/shell` и доступна по `/admin`. Источник истины для включённых
 CRUD-страниц - `docs/swagger.yaml` и сгенерированные типы `packages/api-contracts`.
 Если сущность есть и в OpenAPI, и в ERD, приоритет у OpenAPI. Если сущность есть только в
-`docs/erd.txt`, страница может существовать только как disabled-заготовка.
+`docs/erd.txt`, она показывается только как disabled capability на едином экране
+`/admin/capabilities`. Отдельные legacy routes `/admin/future/*` перенаправляются на этот экран
+и не считаются CRUD-страницами.
 
 ## Включено сейчас
 
 | Страница | Роут | Источник | Условия работы |
 | --- | --- | --- | --- |
-| Countries | `/admin/countries` | OpenAPI `Country` | Нужен admin JWT; используются `GET /countries`, `POST /country`, `PUT /country/{id}`, `DELETE /country/{id}`. |
-| Regions | `/admin/regions` | OpenAPI `Region` | Нужен admin JWT; используется справочник стран; CRUD через `/regions`, `/region`, `/region/{id}`. |
-| Airports | `/admin/airports` | OpenAPI `Airport` | Нужен admin JWT; используются справочники стран и регионов; CRUD через `/airports`, `/airport`, `/airport/{id}`. |
-| Region Links | `/admin/region-links` | OpenAPI `Region Link` | Нужен admin JWT; используется справочник регионов; CRUD через `/region-links`, `/region-link`, `/region-link/{id}`. |
+| Readiness | `/admin/overview` | BFF readiness read model | Требует `world.manage`; показывает blockers, warnings, next actions и последний import job. |
+| Countries | `/admin/countries` | OpenAPI `Country` | Требует `world.manage`; CRUD через `/admin/world/countries`. |
+| Regions | `/admin/regions` | OpenAPI `Region` | Требует `world.manage`; используется справочник стран; CRUD через `/admin/world/regions`. |
+| Airports | `/admin/airports` | OpenAPI `Airport` | Требует `world.manage`; используются справочники стран и регионов; CRUD через `/admin/world/airports`. |
+| Region Links | `/admin/region-links` | OpenAPI `Region Link` | Требует `world.manage`; используется справочник регионов; CRUD через `/admin/world/region-links`. |
+| Import | `/admin/import` | BFF protected import pipeline | Требует `world.manage`; поддерживает dry-run, import, structured report и job status. |
+| Capabilities | `/admin/capabilities` | ERD/OpenAPI gap registry | Единственный экран для всех disabled сущностей. |
 
 ## Disabled до появления OpenAPI
+
+Колонка `Роут` ниже фиксирует прежний идентификатор capability для истории. Все такие routes
+перенаправляются на `/admin/capabilities`; отдельная навигация и pseudo-CRUD для них отсутствуют.
 
 | Страница | Роут | Чего не хватает | Когда включать |
 | --- | --- | --- | --- |

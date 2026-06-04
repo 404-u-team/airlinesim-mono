@@ -19,3 +19,6 @@
 - Тесты должны быть детерминированными: без реальной сети, таймеров и зависимости от порядка запуска.
 - Названия тестов должны описывать проверяемое поведение. Исключение - обязательный placeholder `TEST`.
 - Новые модули обязаны иметь `test`-скрипт в `package.json`, чтобы `bun run test` из корня `frontend` запускал их через Turbo.
+- Для admin endpoints обязательно проверять отдельно `401 AUTH_REQUIRED`, `403 ADMIN_ACCESS_REQUIRED` и успешный capability flow.
+- Для BFF-owned overlays проверять dedupe, изоляцию по `airline_id`, lifecycle и отсутствие дубликатов после повторного reconcile.
+- Для airport constraints проверять runway/range margin, timezone/night window и slot thresholds `80%`/`100%`/`>100%`.

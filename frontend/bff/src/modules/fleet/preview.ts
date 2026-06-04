@@ -19,6 +19,8 @@ export type PurchasePreview = {
 };
 
 const blockingWarningCodes = new Set<FleetReason["code"]>([
+  "AIRPORT_DATA_INCOMPLETE",
+  "AIRPORT_RUNWAY_TOO_SHORT",
   "FLEET_INSUFFICIENT_FUNDS",
   "FLEET_MISSING_PRICE",
   "FLEET_MISSING_RUNWAY_DATA",

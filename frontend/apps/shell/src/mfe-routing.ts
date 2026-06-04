@@ -40,16 +40,16 @@ export const mfeRoutes: MfeRouteDefinition[] = [
     remoteId: "finance-stock",
   },
   {
-    defaultPath: "/staff/overview",
-    label: "Staff",
-    pathPrefix: "/staff",
-    remoteId: "hr-facilities",
+    defaultPath: "/events/feed",
+    label: "Events",
+    pathPrefix: "/events",
+    remoteId: "events-news",
   },
   {
-    defaultPath: "/settings/system",
-    label: "Settings",
-    pathPrefix: "/settings",
-    remoteId: "events-news",
+    defaultPath: "/staff/overview",
+    label: "Base & Facilities",
+    pathPrefix: "/staff",
+    remoteId: "hr-facilities",
   },
 ] as const;
 

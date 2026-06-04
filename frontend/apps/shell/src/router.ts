@@ -48,16 +48,24 @@ export const router = createRouter({
       path: "/dashboard",
     },
     {
+      meta: {
+        requiresAdmin: true,
+      },
       path: "/admin",
-      redirect: "/admin/countries",
+      redirect: "/admin/overview",
     },
     {
-      component: AdminView,
-      name: "admin-future",
+      meta: {
+        requiresAdmin: true,
+      },
       path: "/admin/future/:futureEntity?",
+      redirect: "/admin/capabilities",
     },
     {
       component: AdminView,
+      meta: {
+        requiresAdmin: true,
+      },
       name: "admin",
       path: "/admin/:entity",
     },
@@ -82,6 +90,8 @@ router.beforeEach((to) => {
     authState.isAuthenticated.value,
     authState.isRestoringSession.value,
     authState.airline.value !== null,
+    authState.isAdminAuthorized.value,
+    to.meta.requiresAdmin === true,
   );
 });
 
@@ -99,30 +109,25 @@ function checkMfeRedirect(toPath: string): boolean | string {
   return true;
 }
 
-function getNavigationRedirect(
+function getAuthenticatedNavigationRedirect(
   toPath: string,
-  fullPath: string,
   isPublic: boolean,
-  isAuthenticated: boolean,
-  isRestoringSession: boolean,
   hasAirline: boolean,
-): boolean | string | { path: string; query: { redirect: string } } {
-  if (!isAuthenticated) {
-    if (!isPublic) {
-      return { path: "/login", query: { redirect: fullPath } };
-    }
-    return true;
-  }
-
-  if (isRestoringSession) {
-    return true;
+  isAdminAuthorized: boolean,
+  requiresAdmin: boolean,
+): boolean | string {
+  if (requiresAdmin) {
+    return isAdminAuthorized ? true : playerStartPath(hasAirline);
   }
 
   if (isPublic) {
-    return hasAirline ? defaultRoutePath : "/onboarding/airline";
+    return isAdminAuthorized && !hasAirline ? "/admin" : playerStartPath(hasAirline);
   }
 
   const isOnboardingRoute = toPath === "/onboarding/airline";
+  if (isAdminAuthorized && !hasAirline) {
+    return "/admin";
+  }
   if (!hasAirline) {
     return isOnboardingRoute ? true : "/onboarding/airline";
   }
@@ -132,4 +137,35 @@ function getNavigationRedirect(
   }
 
   return checkMfeRedirect(toPath);
+}
+
+function getNavigationRedirect(
+  toPath: string,
+  fullPath: string,
+  isPublic: boolean,
+  isAuthenticated: boolean,
+  isRestoringSession: boolean,
+  hasAirline: boolean,
+  isAdminAuthorized: boolean,
+  requiresAdmin: boolean,
+): boolean | string | { path: string; query: { redirect: string } } {
+  if (!isAuthenticated) {
+    return isPublic ? true : { path: "/login", query: { redirect: fullPath } };
+  }
+
+  if (isRestoringSession) {
+    return true;
+  }
+
+  return getAuthenticatedNavigationRedirect(
+    toPath,
+    isPublic,
+    hasAirline,
+    isAdminAuthorized,
+    requiresAdmin,
+  );
+}
+
+function playerStartPath(hasAirline: boolean): string {
+  return hasAirline ? defaultRoutePath : "/onboarding/airline";
 }

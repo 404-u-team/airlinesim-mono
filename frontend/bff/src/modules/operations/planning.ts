@@ -1,9 +1,12 @@
+import type { AirportConstraint } from "../facilities/types";
 import type { Aircraft, AircraftType, Airport } from "../fleet/types";
 import type { RoutePlanningSnapshot } from "../routes/planning";
 import type { StoredRoute } from "../routes/types";
 import type { OperationReason, SchedulePattern, SchedulePreview, StoredFlight, StoredSchedule } from "./types";
 
-import { estimateUtilizationHours, estimateWeeklyCost, generateFlightsForSchedule, summarizeWeeklyEconomics } from "./flights";
+import { arrivalLocalDayOffset, arrivalLocalTime, nightOperationConstraints, rangeConstraints, runwayConstraints } from "../facilities/constraints";
+import { buildSlotCapacity, slotCapacityConstraints } from "../facilities/slots";
+import { estimateBlockHours, estimateUtilizationHours, estimateWeeklyCost, generateFlightsForSchedule, summarizeWeeklyEconomics } from "./flights";
 
 export type OperationsSnapshot = RoutePlanningSnapshot & {
   flights: StoredFlight[];
@@ -125,13 +128,27 @@ function addMaintenanceWarning(warnings: OperationReason[], aircraft: Aircraft |
 }
 
 function addNightOpsWarning(
+  blockers: OperationReason[],
   warnings: OperationReason[],
+  route: StoredRoute | undefined,
+  type: AircraftType | undefined,
   origin: Airport | undefined,
   destination: Airport | undefined,
   pattern: SchedulePattern,
 ): void {
-  if (isNightTime(pattern.departure_local_time) && (origin?.works_at_night === false || destination?.works_at_night === false)) {
-    addReason(warnings, "AIRPORT_NIGHT_OPS_LIMITED", "One airport has limited night operations.");
+  const arrivalTime = arrivalLocalTime(
+    pattern.departure_local_time,
+    estimateBlockHours(route, type),
+    origin?.timezone,
+    destination?.timezone,
+  );
+  const constraints = [
+    ...nightOperationConstraints(origin, pattern.departure_local_time),
+    ...(arrivalTime ? nightOperationConstraints(destination, arrivalTime) : nightOperationConstraints(destination, "12:00")),
+  ];
+
+  for (const item of constraints) {
+    (item.blocking ? blockers : warnings).push(toOperationReason(item));
   }
 }
 
@@ -163,15 +180,11 @@ function addPerformanceBlockers(
   origin: Airport | undefined,
   destination: Airport | undefined,
 ): void {
-  if (isRangeTooShort(route, type)) {
-    addReason(blockers, "AIRCRAFT_RANGE_TOO_SHORT", "Aircraft range is below route distance.");
-  }
-  if (isRunwayTooShort(origin, type)) {
-    addReason(blockers, "ORIGIN_RUNWAY_TOO_SHORT", "Origin runway is too short.");
-  }
-  if (isRunwayTooShort(destination, type)) {
-    addReason(blockers, "DESTINATION_RUNWAY_TOO_SHORT", "Destination runway is too short.");
-  }
+  blockers.push(
+    ...rangeConstraints(route?.demand_snapshot.distance_km, type).map(toOperationReason),
+    ...runwayConstraints(origin, type).map(toOperationReason),
+    ...runwayConstraints(destination, type).map(toOperationReason),
+  );
 }
 
 function addReason(reasons: OperationReason[], code: OperationReason["code"], message: string): void {
@@ -184,6 +197,34 @@ function addRouteBlockers(blockers: OperationReason[], route: StoredRoute | unde
   } else if (route.status !== "awaiting_schedule" && route.status !== "scheduled") {
     addReason(blockers, "ROUTE_NOT_READY", "Route is not ready for scheduling.");
   }
+}
+
+function addSlotConstraints(
+  blockers: OperationReason[],
+  snapshot: OperationsSnapshot,
+  route: StoredRoute | undefined,
+  type: AircraftType | undefined,
+  origin: Airport | undefined,
+  destination: Airport | undefined,
+  pattern: SchedulePattern,
+): void {
+  blockers.push(...scheduleSlotConstraints(snapshot, route, type, origin, destination, pattern)
+    .filter((item) => item.blocking)
+    .map(toOperationReason));
+}
+
+function addSlotWarnings(
+  warnings: OperationReason[],
+  snapshot: OperationsSnapshot,
+  route: StoredRoute | undefined,
+  type: AircraftType | undefined,
+  origin: Airport | undefined,
+  destination: Airport | undefined,
+  pattern: SchedulePattern,
+): void {
+  warnings.push(...scheduleSlotConstraints(snapshot, route, type, origin, destination, pattern)
+    .filter((item) => !item.blocking)
+    .map(toOperationReason));
 }
 
 function buildBlockers(
@@ -202,6 +243,8 @@ function buildBlockers(
   addPatternBlockers(blockers, pattern);
   addPerformanceBlockers(blockers, route, type, origin, destination);
   addConflictBlockers(blockers, snapshot, aircraft, pattern);
+  addNightOpsWarning(blockers, [], route, type, origin, destination, pattern);
+  addSlotConstraints(blockers, snapshot, route, type, origin, destination, pattern);
 
   return blockers;
 }
@@ -230,7 +273,8 @@ function buildWarnings(
 ): OperationReason[] {
   const warnings: OperationReason[] = [];
 
-  addNightOpsWarning(warnings, origin, destination, pattern);
+  addNightOpsWarning([], warnings, route, type, origin, destination, pattern);
+  addSlotWarnings(warnings, snapshot, route, type, origin, destination, pattern);
   addOversupplyWarning(warnings, route, type, pattern);
   addCashWarning(warnings, snapshot, route, type, origin, destination, pattern);
   addMaintenanceWarning(warnings, aircraft);
@@ -246,20 +290,6 @@ function hasConflict(snapshot: OperationsSnapshot, aircraftId: string, pattern: 
       schedule.pattern.departure_local_time === pattern.departure_local_time &&
       schedule.pattern.days_of_week.some((day) => pattern.days_of_week.includes(day)),
   );
-}
-
-function isNightTime(time: string): boolean {
-  const hour = Number(time.split(":")[0] ?? "0");
-
-  return hour < 6 || hour >= 22;
-}
-
-function isRangeTooShort(route: StoredRoute | undefined, type: AircraftType | undefined): boolean {
-  return Boolean(route && type && (type.max_range_km ?? 0) < route.demand_snapshot.distance_km);
-}
-
-function isRunwayTooShort(airport: Airport | undefined, type: AircraftType | undefined): boolean {
-  return Boolean(airport && type && (airport.max_runway_length_m ?? 0) < (type.min_runway_length_m ?? 0));
 }
 
 function maintenanceRatio(aircraft: Aircraft): number {
@@ -278,4 +308,38 @@ function normalizeDays(days: number[] | undefined): number[] {
     .filter((day) => Number.isFinite(day));
 
   return Array.from(new Set(normalized)).sort((left, right) => left - right);
+}
+
+function projectedUses(pattern: SchedulePattern, dayOffset = 0): Partial<Record<number, number>> {
+  return Object.fromEntries(pattern.days_of_week.map((day) => [((day + dayOffset) % 7 + 7) % 7, 1]));
+}
+
+function scheduleSlotConstraints(
+  snapshot: OperationsSnapshot,
+  route: StoredRoute | undefined,
+  type: AircraftType | undefined,
+  origin: Airport | undefined,
+  destination: Airport | undefined,
+  pattern: SchedulePattern,
+): AirportConstraint[] {
+  const destinationOffset = arrivalLocalDayOffset(
+    pattern.departure_local_time,
+    estimateBlockHours(route, type),
+    origin?.timezone,
+    destination?.timezone,
+  );
+
+  return [
+    ...slotCapacityConstraints(origin, buildSlotCapacity(origin, snapshot.routes, snapshot.schedules, snapshot.flights, projectedUses(pattern))),
+    ...slotCapacityConstraints(destination, buildSlotCapacity(destination, snapshot.routes, snapshot.schedules, snapshot.flights, projectedUses(pattern, destinationOffset))),
+  ];
+}
+
+function toOperationReason(item: AirportConstraint): OperationReason {
+  return {
+    code: item.code,
+    message: item.code,
+    parameters: item.parameters,
+    target_path: item.target_path,
+  };
 }

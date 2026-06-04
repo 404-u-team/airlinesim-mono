@@ -1,8 +1,12 @@
 <script setup lang="ts">
+import type { Locale } from "@airlinesim/i18n";
+
 import { AirButton, AirSelect, AirTextField } from "@airlinesim/air-ui";
 import { computed } from "vue";
 
 import type { AdminEntityConfig, AdminFormValues, AdminSelectSource } from "../types";
+
+import { adminText, localizeAdminLabel } from "../i18n";
 
 type SelectOption = {
   disabled?: boolean;
@@ -11,6 +15,7 @@ type SelectOption = {
 };
 
 const props = defineProps<{
+  appLocale: Locale;
   config: AdminEntityConfig;
   error: null | string;
   isEditing: boolean;
@@ -25,7 +30,7 @@ const emit = defineEmits<{
   "update:values": [values: AdminFormValues];
 }>();
 
-const title = computed(() => (props.isEditing ? `Edit ${props.config.title}` : `Create ${props.config.title}`));
+const title = computed(() => `${adminText(props.appLocale, props.isEditing ? "edit" : "create")} ${localizeAdminLabel(props.appLocale, props.config.title)}`);
 
 function updateBoolean(key: string, event: Event): void {
   updateValue(key, (event.target as HTMLInputElement).checked ? "true" : "false");
@@ -50,19 +55,19 @@ function updateValue(key: string, value: string): void {
           {{ title }}
         </h2>
         <p class="mt-1 text-body text-text-muted">
-          Uses request fields from the current OpenAPI schema.
+          {{ adminText(appLocale, "technical") }}
         </p>
       </div>
       <div class="flex gap-2">
         <AirButton
-          label="Cancel"
+          :label="adminText(appLocale, 'cancel')"
           size="sm"
           type="button"
           variant="primary-soft"
           @click="emit('cancel')"
         />
         <AirButton
-          :label="isEditing ? 'Save' : 'Create'"
+          :label="adminText(appLocale, isEditing ? 'save' : 'create')"
           size="sm"
           type="submit"
           :disabled="isSubmitting"
@@ -84,10 +89,10 @@ function updateValue(key: string, value: string): void {
       >
         <AirTextField
           v-if="field.kind === 'text' || field.kind === 'number'"
-          :label="field.label"
+          :label="localizeAdminLabel(appLocale, field.label)"
           :model-value="values[field.key] ?? ''"
           :required="field.required"
-          :type="field.kind === 'number' ? 'text' : 'text'"
+          :type="field.kind === 'number' ? 'number' : 'text'"
           @update:model-value="updateValue(field.key, $event)"
         />
 
@@ -96,11 +101,11 @@ function updateValue(key: string, value: string): void {
           class="flex min-w-0 flex-col gap-1.5"
         >
           <span class="text-caption text-text-muted">
-            {{ field.label }}
+            {{ localizeAdminLabel(appLocale, field.label) }}
           </span>
           <AirSelect
             class="w-full"
-            :label="field.label"
+            :label="localizeAdminLabel(appLocale, field.label)"
             :model-value="values[field.key] ?? ''"
             :options="referenceOptions[field.selectSource]"
             @update:model-value="updateValue(field.key, $event)"
@@ -118,7 +123,7 @@ function updateValue(key: string, value: string): void {
             @change="updateBoolean(field.key, $event)"
           />
           <span class="text-body text-text-primary">
-            {{ field.label }}
+            {{ localizeAdminLabel(appLocale, field.label) }}
           </span>
         </label>
       </template>
