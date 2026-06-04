@@ -29,6 +29,7 @@ bun --cwd bff run lint
 
 - `BFF_PORT` - порт BFF, по умолчанию `4200`.
 - `BFF_BACKEND_BASE_URL` - base URL backend API, по умолчанию `https://api.master.stand.airlinesim.ms0ur.dev/`.
+- `BFF_IDLE_TIMEOUT_SECONDS` - максимальное время простоя входящего запроса BFF, по умолчанию `120` секунд. Значение должно быть больше суммарного времени backend retry, иначе Bun оборвет соединение до возврата нормализованной ошибки.
 - `backend_admin_login` / `BACKEND_ADMIN_LOGIN` - backend admin login для служебных операций BFF.
 - `backend_admin_password` / `BACKEND_ADMIN_PASSWORD` - backend admin password для служебных операций BFF.
 

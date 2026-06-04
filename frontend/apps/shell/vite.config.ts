@@ -70,6 +70,7 @@ function createDevServerConfig(shellPort: number, bffTarget: string): NonNullabl
         changeOrigin: true,
         rewrite: rewriteBffPath,
         target: bffTarget,
+        ws: true,
       },
     },
     strictPort: true,

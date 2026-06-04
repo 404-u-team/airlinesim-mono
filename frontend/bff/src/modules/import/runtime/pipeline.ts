@@ -5,6 +5,7 @@ import { planOrImport } from "./importExecutor";
 import { buildWorldData } from "../build";
 import { finishReport, pushError, pushSkip, pushWarning, createReport } from "./report";
 import { ensureImportDirs, getImportPaths, writeJsonFile, writeMappings, writeReport } from "./storage";
+import { progressCounts, type ImportProgressReporter } from "./progress";
 import { prepareReconcileState, reconcileExistingBackend } from "./reconcile";
 import { validateWorldData } from "../validation/worldData";
 
@@ -18,21 +19,29 @@ export type ImportOptions = {
 export async function runWorldDataImport(
   config: BffConfig,
   options: ImportOptions,
+  reportProgress?: ImportProgressReporter,
 ): Promise<ImportResult> {
+  reportProgress?.({ message: "Preparing import workspace", percent: 2, stage: "preparing" });
   const paths = getImportPaths(options.dataDir);
   await ensureImportDirs(paths);
 
   const report = createReport(options.mode);
   const issues = createIssueSink(report);
+  reportProgress?.({ message: "Loading sources and building world data", percent: 8, stage: "building" });
   const data = await buildWorldData(options, issues);
   fillBuildCounts(report, data);
+  reportProgress?.({ counts: progressCounts(report), message: "World data built", percent: 32, stage: "building" });
+  reportProgress?.({ counts: progressCounts(report), message: "Validating world data", percent: 36, stage: "validating" });
   validateWorldData(data, issues);
   await writeJsonFile(`${paths.stageDir}/world-data.latest.json`, data);
 
+  reportProgress?.({ counts: progressCounts(report), message: "Preparing backend reconciliation", percent: 44, stage: "reconciling" });
   const state = await prepareReconcileState(config, options.mode, paths.mappingPath, report);
   await reconcileExistingBackend(config, state, data);
-  await planOrImport(config, state, data, report, options.mode);
+  reportProgress?.({ counts: progressCounts(report), message: "Backend reconciliation completed", percent: 54, stage: "reconciling" });
+  await planOrImport(config, state, data, report, options.mode, reportProgress);
 
+  reportProgress?.({ counts: progressCounts(report), message: "Writing import report", percent: 98, stage: "finalizing" });
   finishReport(report);
   await writeReport(paths, report);
 
@@ -40,6 +49,7 @@ export async function runWorldDataImport(
     await writeMappings(paths.mappingPath, state.mappings);
   }
 
+  reportProgress?.({ counts: progressCounts(report), message: "Import job completed", percent: 100, stage: "finalizing" });
   return { data, report };
 }
 

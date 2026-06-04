@@ -7,6 +7,13 @@ type AircraftTypeSource = AircraftTypePayload & {
   manufacturer_id?: string;
 };
 
+const SEEDED_MANUFACTURER_IDS: Record<string, string> = {
+  Airbus: "22222222-2222-2222-2222-222222222222",
+  ATR: "44444444-4444-4444-4444-444444444444",
+  Boeing: "11111111-1111-1111-1111-111111111111",
+  Embraer: "33333333-3333-3333-3333-333333333333",
+};
+
 type NumberField = keyof Pick<
   AircraftTypePayload,
   | "base_maintenance_points"
@@ -87,6 +94,11 @@ export function buildAircraftTypes(
 
   return aircraftTypes.filter((payload) => {
     const sourceKey = sourceKeyFor(payload);
+
+    if (!payload.manufacturer_id) {
+      issues.skip("aircraft-type", sourceKey, "Aircraft manufacturer is not available in backend; add manufacturer_id manual override");
+      return false;
+    }
 
     if (seenIcao.has(payload.icao_code)) {
       issues.error("aircraft-type", sourceKey, "Duplicate aircraft type ICAO code");
@@ -210,7 +222,7 @@ function aircraftType(
 
 function applyOverride(source: AircraftTypeSource, overrides: Record<string, Record<string, unknown>>): AircraftTypePayload {
   const override = overrides[source.icao_code] ?? overrides[source.model_name] ?? {};
-  const manufacturerId = pickString(override, ["manufacturer_id", "manufacturerId"]);
+  const manufacturerId = pickString(override, ["manufacturer_id", "manufacturerId"]) ?? seededManufacturerId(source.model_name);
   const payload = applyStringOverrides(applyNumberOverrides(source, override), override);
 
   if (manufacturerId) {
@@ -218,6 +230,10 @@ function applyOverride(source: AircraftTypeSource, overrides: Record<string, Rec
   }
 
   return payload;
+}
+
+function seededManufacturerId(modelName: string): string | undefined {
+  return SEEDED_MANUFACTURER_IDS[modelName.split(" ")[0] ?? ""];
 }
 
 function applyNumberOverrides(source: AircraftTypePayload, override: Record<string, unknown>): AircraftTypePayload {

@@ -2,32 +2,16 @@
 import type { Locale } from "@airlinesim/i18n";
 
 import { AirBadge, AirButton, AirMetricCard, AirSelect } from "@airlinesim/air-ui";
-import { createApiClient } from "@airlinesim/game-sdk";
-import { computed, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 
-import { authState } from "../../auth";
-
-type ImportIssue = {
-  entityType: string;
-  message: string;
-  severity: "error" | "warning";
-  sourceKey: string;
-};
-
-type ImportJob = {
-  error?: string;
-  id: string;
-  mode: "dry-run" | "import";
-  report?: {
-    counts: Record<string, number>;
-    errors: number;
-    firstErrors: Array<{ entityType: string; message: string; sourceKey: string }>;
-    firstWarnings: Array<{ entityType: string; message: string; sourceKey: string }>;
-    quality: Record<string, number>;
-    warnings: number;
-  };
-  status: "failed" | "queued" | "running" | "succeeded";
-};
+import {
+  connectImportJobSocket,
+  getImportJob,
+  type ImportIssue,
+  type ImportJob,
+  type ImportJobSocket,
+  startImportJob,
+} from "../api/importApi";
 
 const props = defineProps<{ appLocale: Locale }>();
 const messages = {
@@ -39,9 +23,9 @@ const messages = {
     dryDescription: "Build and validate the dataset without backend mutations.",
     dryRun: "Dry run", dryTitle: "Dry run", entityFilter: "Entity", errors: "Errors", failed: "Failed",
     firstErrors: "First errors", firstWarnings: "First warnings", import: "Import", issues: "First issues", jobId: "Job ID",
-    latest: "Latest job", mode: "Mode",
-    queued: "Queued", refreshAction: "Refresh and import", refreshDescription: "Download source files again, then reconcile and import them.", refreshTitle: "Refresh sources and import", running: "Running",
-    severityFilter: "Severity", startError: "Could not start import.", status: "Status", statusError: "Could not read import status.", succeeded: "Succeeded", title: "World data import", warnings: "Warnings",
+    latest: "Latest job", liveConnected: "Realtime connected", liveDisconnected: "Realtime disconnected", mode: "Mode",
+    progress: "Progress", queued: "Queued", refreshAction: "Refresh and import", refreshDescription: "Download source files again, then reconcile and import them.", refreshTitle: "Refresh sources and import", running: "Running",
+    severityFilter: "Severity", stage: "Stage", startError: "Could not start import.", status: "Status", statusError: "Could not read import status.", succeeded: "Succeeded", title: "World data import", warnings: "Warnings",
   },
   ru: {
     admin: "Админка", allEntities: "Все сущности", allSeverities: "Все уровни", cachedAction: "Запустить импорт", cachedDescription: "Импортировать последние локально сохранённые исходные данные.",
@@ -51,19 +35,20 @@ const messages = {
     dryDescription: "Собрать и проверить набор данных без изменений в backend.",
     dryRun: "Проверочный запуск", dryTitle: "Проверочный запуск", entityFilter: "Сущность", errors: "Ошибки", failed: "Ошибка",
     firstErrors: "Первые ошибки", firstWarnings: "Первые предупреждения", import: "Импорт", issues: "Первые проблемы", jobId: "ID задачи",
-    latest: "Последняя задача", mode: "Режим",
-    queued: "В очереди", refreshAction: "Обновить и импортировать", refreshDescription: "Повторно загрузить исходные файлы, сверить и импортировать их.", refreshTitle: "Обновление источников и импорт", running: "Выполняется",
-    severityFilter: "Уровень", startError: "Не удалось запустить импорт.", status: "Статус", statusError: "Не удалось получить статус импорта.", succeeded: "Завершено", title: "Импорт данных мира", warnings: "Предупреждения",
+    latest: "Последняя задача", liveConnected: "Realtime подключён", liveDisconnected: "Realtime отключён", mode: "Режим",
+    progress: "Прогресс", queued: "В очереди", refreshAction: "Обновить и импортировать", refreshDescription: "Повторно загрузить исходные файлы, сверить и импортировать их.", refreshTitle: "Обновление источников и импорт", running: "Выполняется",
+    severityFilter: "Уровень", stage: "Этап", startError: "Не удалось запустить импорт.", status: "Статус", statusError: "Не удалось получить статус импорта.", succeeded: "Завершено", title: "Импорт данных мира", warnings: "Предупреждения",
   },
 } as const;
 const t = (key: keyof typeof messages.en) => messages[props.appLocale][key];
-const apiClient = createApiClient({ getToken: () => authState.accessToken.value });
 const activeJob = ref<ImportJob | null>(null);
 const error = ref("");
 const isStarting = ref(false);
+const isRealtimeConnected = ref(false);
 const pendingImport = ref<null | { mode: "import"; refreshRaw: boolean }>(null);
 const entityFilter = ref("");
 const severityFilter = ref("");
+let importSocket: ImportJobSocket | null = null;
 let pollTimer: null | ReturnType<typeof setTimeout> = null;
 
 const statusTone = computed(() => {
@@ -73,7 +58,13 @@ const statusTone = computed(() => {
 });
 const modeLabel = computed(() => activeJob.value?.mode === "dry-run" ? t("dryRun") : t("import"));
 const statusLabel = computed(() => activeJob.value ? t(activeJob.value.status) : "");
-const issues = computed<ImportIssue[]>(() => [
+const progressCounts = computed(() => activeJob.value?.progress.counts ?? activeJob.value?.report?.counts ?? {});
+const progressDetail = computed(() => {
+  const progress = activeJob.value?.progress;
+  if (!progress?.current || !progress.total) {return progress?.message ?? "";}
+  return `${progress.message} · ${String(progress.current)} / ${String(progress.total)}`;
+});
+const issues = computed<Array<ImportIssue & { severity: "error" | "warning" }>>(() => [
   ...(activeJob.value?.report?.firstErrors ?? []).map((issue) => ({ ...issue, severity: "error" as const })),
   ...(activeJob.value?.report?.firstWarnings ?? []).map((issue) => ({ ...issue, severity: "warning" as const })),
 ]);
@@ -93,7 +84,23 @@ const filteredIssues = computed(() => issues.value.filter((issue) =>
   (!entityFilter.value || issue.entityType === entityFilter.value) &&
   (!severityFilter.value || issue.severity === severityFilter.value)));
 
+onMounted(() => {
+  importSocket = connectImportJobSocket(
+    (job) => {
+      activeJob.value = job;
+      error.value = "";
+    },
+    (connected) => {
+      isRealtimeConnected.value = connected;
+      if (!connected && activeJob.value && isActive(activeJob.value)) {
+        schedulePoll(activeJob.value.id);
+      }
+    },
+  );
+});
+
 onUnmounted(() => {
+  importSocket?.close();
   if (pollTimer) {clearTimeout(pollTimer);}
 });
 
@@ -105,12 +112,15 @@ async function confirmImport(): Promise<void> {
   }
 }
 
+function isActive(job: ImportJob): boolean {
+  return job.status === "queued" || job.status === "running";
+}
+
 async function pollJob(jobId: string): Promise<void> {
   try {
-    const response = await apiClient.get<{ job: ImportJob }>(`/admin/import/world-data/jobs/${encodeURIComponent(jobId)}`);
-    activeJob.value = response.job;
-    if (response.job.status === "queued" || response.job.status === "running") {
-      pollTimer = setTimeout(() => void pollJob(jobId), 1500);
+    activeJob.value = await getImportJob(jobId);
+    if (!isRealtimeConnected.value && isActive(activeJob.value)) {
+      schedulePoll(jobId);
     }
   } catch {
     error.value = t("statusError");
@@ -121,16 +131,18 @@ function requestImport(refreshRaw: boolean): void {
   pendingImport.value = { mode: "import", refreshRaw };
 }
 
+function schedulePoll(jobId: string): void {
+  if (pollTimer) {clearTimeout(pollTimer);}
+  pollTimer = setTimeout(() => void pollJob(jobId), 1500);
+}
+
 async function startImport(mode: "dry-run" | "import", refreshRaw: boolean): Promise<void> {
   isStarting.value = true;
   error.value = "";
   try {
-    const response = await apiClient.post<{ jobId: string }>("/admin/import/world-data", {
-      mode,
-      refreshRaw,
-      source: "admin-ui",
-    });
-    await pollJob(response.jobId);
+    const jobId = await startImportJob(mode, refreshRaw);
+    importSocket?.subscribe(jobId);
+    await pollJob(jobId);
   } catch {
     error.value = t("startError");
   } finally {
@@ -148,6 +160,11 @@ async function startImport(mode: "dry-run" | "import", refreshRaw: boolean): Pro
     <p class="mt-2 max-w-3xl text-text-muted">
       {{ t("description") }}
     </p>
+    <AirBadge
+      class="mt-3"
+      :label="isRealtimeConnected ? t('liveConnected') : t('liveDisconnected')"
+      :variant="isRealtimeConnected ? 'success-soft' : 'warning-soft'"
+    />
 
     <p v-if="error" class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-error">
       {{ error }}
@@ -230,19 +247,36 @@ async function startImport(mode: "dry-run" | "import", refreshRaw: boolean): Pro
         <AirMetricCard :label="t('mode')" :value="modeLabel" />
         <AirMetricCard :label="t('status')" :tone="statusTone" :value="statusLabel" />
       </div>
+      <div class="mt-4 rounded-lg border border-border bg-surface-subtle p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <strong>{{ t("progress") }}: {{ activeJob.progress.percent }}%</strong>
+          <span class="text-caption text-text-muted">{{ t("stage") }}: {{ activeJob.progress.stage }}</span>
+        </div>
+        <div class="mt-3 h-2 overflow-hidden rounded-full bg-border">
+          <div
+            class="h-full rounded-full bg-primary transition-[width] duration-300"
+            :style="{ width: `${activeJob.progress.percent}%` }"
+          />
+        </div>
+        <p class="mt-2 text-body text-text-muted">
+          {{ progressDetail }}
+        </p>
+      </div>
       <p v-if="activeJob.error" class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-error">
         {{ activeJob.error }}
       </p>
+      <div v-if="Object.keys(progressCounts).length" class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <AirMetricCard
+          v-for="(value, key) in progressCounts"
+          :key="key"
+          :label="key"
+          :value="String(value)"
+        />
+      </div>
       <template v-if="activeJob.report">
         <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <AirMetricCard :label="t('warnings')" tone="warning" :value="String(activeJob.report.warnings)" />
           <AirMetricCard :label="t('errors')" tone="danger" :value="String(activeJob.report.errors)" />
-          <AirMetricCard
-            v-for="(value, key) in activeJob.report.counts"
-            :key="key"
-            :label="key"
-            :value="String(value)"
-          />
         </div>
         <div v-if="issues.length" class="mt-4 rounded-lg border border-border p-3">
           <h3 class="text-subtitle">

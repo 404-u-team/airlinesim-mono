@@ -5,6 +5,7 @@ export type BffConfig = {
   backendAdminLogin?: string;
   backendAdminPassword?: string;
   backendBaseUrl: string;
+  idleTimeoutSeconds?: number;
   port: number;
 };
 
@@ -17,6 +18,7 @@ export function getConfig(): BffConfig {
     backendBaseUrl: normalizeBaseUrl(
       Bun.env.BFF_BACKEND_BASE_URL ?? "https://api.master.stand.airlinesim.ms0ur.dev/",
     ),
+    idleTimeoutSeconds: Number(Bun.env.BFF_IDLE_TIMEOUT_SECONDS ?? "120"),
     port: Number(Bun.env.BFF_PORT ?? "4200"),
   };
 }

@@ -17,6 +17,7 @@ import type {
 import { getBackendAdminToken, invalidateBackendAdminToken } from "../../../auth";
 import { BackendRequestError, backendRequest, extractBackendId } from "../backend/api";
 import { camelPlural, createMapping, getMappedId, type ReconcileState } from "./mapping";
+import { progressCounts, type ImportProgressReporter } from "./progress";
 import { pushError } from "./report";
 import { mappingKey } from "./storage";
 import { stableHash } from "../shared/math";
@@ -27,9 +28,16 @@ export async function planOrImport(
   data: WorldData,
   report: ImportReport,
   mode: ImportMode,
+  reportProgress?: ImportProgressReporter,
 ): Promise<void> {
   if (mode === "dry-run") {
     planEntities(state, data, report);
+    reportProgress?.({
+      counts: progressCounts(report),
+      message: "Dry-run plan completed",
+      percent: 95,
+      stage: "importing",
+    });
     return;
   }
 
@@ -38,20 +46,30 @@ export async function planOrImport(
     return;
   }
 
-  for (const country of data.countries) {
-    await importCountry(config, state, report, country);
-  }
-  for (const aircraftType of data.aircraftTypes) {
-    await importAircraftType(config, state, report, aircraftType);
-  }
-  for (const region of data.regions) {
-    await importRegion(config, state, report, region);
-  }
-  for (const airport of data.airports) {
-    await importAirport(config, state, report, airport);
-  }
-  for (const link of data.regionLinks) {
-    await importRegionLink(config, state, report, link);
+  const groups = [
+    { entityType: "country", items: data.countries, run: importCountry },
+    { entityType: "aircraft-type", items: data.aircraftTypes, run: importAircraftType },
+    { entityType: "region", items: data.regions, run: importRegion },
+    { entityType: "airport", items: data.airports, run: importAirport },
+    { entityType: "region-link", items: data.regionLinks, run: importRegionLink },
+  ] as const;
+  const total = groups.reduce((sum, group) => sum + group.items.length, 0);
+  let current = 0;
+
+  for (const group of groups) {
+    for (const item of group.items) {
+      await group.run(config, state, report, item as never);
+      current += 1;
+      reportProgress?.({
+        counts: progressCounts(report),
+        current,
+        entityType: group.entityType,
+        message: `Importing ${group.entityType} ${String(current)} of ${String(total)}`,
+        percent: 55 + Math.round((current / Math.max(total, 1)) * 40),
+        stage: "importing",
+        total,
+      });
+    }
   }
 }
 

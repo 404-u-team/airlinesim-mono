@@ -38,7 +38,6 @@ export async function backendRequest<TValue>(
         Authorization: `Bearer ${options.token}`,
       },
       method,
-      retryMutating: true, // safe for ETL imports
     });
   } catch (error) {
     if (error instanceof BackendHttpError) {

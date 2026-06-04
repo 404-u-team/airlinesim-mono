@@ -40,6 +40,11 @@ Import endpoints временно не требуют пользовательс
   - Возвращает статус ранее запущенной job.
 - `GET /import/world-data/jobs/<jobId>`
   - То же самое, но с `jobId` в path.
+- `GET /admin/import/world-data/ws?token=<accessToken>&jobId=<jobId>`
+  - Native WebSocket для admin UI. После проверки capability `world.manage` отправляет события
+    `import-job-status` с полным job status, стадией, процентом, текущей сущностью и live-счётчиками.
+  - Клиент может сменить подписку сообщением `{"type":"subscribe","jobId":"<jobId>"}`.
+  - Если `jobId` не задан, соединение получает обновления последней или любой активной job.
 
 `POST` endpoints не возвращают полный report. Они ставят job в in-memory очередь текущего BFF-процесса и отвечают:
 
@@ -219,7 +224,7 @@ Importer содержит tracked справочник реальных попу
 - эксплуатационные расходы и расход топлива.
 - `characteristics` как JSON-строка с range/runway/category классами.
 
-`manual/aircraft-types.json` может переопределять отдельные поля по ICAO или model name. `manufacturer_id` намеренно не задан в базовом справочнике, потому что OpenAPI пока не публикует импорт производителей; его можно добавить manual override, если backend уже содержит нужные manufacturer IDs.
+`manual/aircraft-types.json` может переопределять отдельные поля по ICAO или model name. Для Boeing, Airbus, Embraer и ATR BFF использует стабильные UUID производителей из backend seed. Если производителя нет в backend seed и `manufacturer_id` не задан manual override, тип самолёта будет отмечен как skipped и не отправится в backend, чтобы не нарушать обязательный FK `aircraft_type.manufacturer_id`.
 
 ## Выбор аэропортов
 

@@ -1,6 +1,8 @@
 import type { BffConfig } from "../../../config";
 import type { ImportMode, ImportReport } from "../shared/types";
 
+import type { ImportProgress } from "./progress";
+
 import { runWorldDataImport, type ImportOptions } from "./pipeline";
 import { recordAdminAudit } from "../../admin/audit";
 import { cache } from "../../proxy";
@@ -10,6 +12,7 @@ export type ImportJobStatus = {
   finishedAt?: string;
   id: string;
   mode: ImportMode;
+  progress: ImportProgress;
   report?: ImportJobReportSummary;
   startedAt: string;
   status: "failed" | "queued" | "running" | "succeeded";
@@ -26,6 +29,7 @@ type ImportJobReportSummary = {
 };
 
 const jobs = new Map<string, ImportJobStatus>();
+const listeners = new Set<(job: ImportJobStatus) => void>();
 
 export function getImportJobStatus(jobId: string): ImportJobStatus | null {
   return jobs.get(jobId) ?? null;
@@ -33,6 +37,12 @@ export function getImportJobStatus(jobId: string): ImportJobStatus | null {
 
 export function getLatestImportJobStatus(): ImportJobStatus | null {
   return Array.from(jobs.values()).at(-1) ?? null;
+}
+
+export function subscribeToImportJobs(listener: (job: ImportJobStatus) => void): () => void {
+  listeners.add(listener);
+
+  return () => listeners.delete(listener);
 }
 
 export function startWorldDataImportJob(config: BffConfig, options: ImportOptions, actorId = "authenticated-user"): ImportJobStatus {
@@ -44,32 +54,50 @@ export function startWorldDataImportJob(config: BffConfig, options: ImportOption
   const job: ImportJobStatus = {
     id: crypto.randomUUID(),
     mode: options.mode,
+    progress: { message: "Import job queued", percent: 0, stage: "preparing" },
     startedAt: new Date().toISOString(),
     status: "queued",
   };
 
   jobs.set(job.id, job);
+  publishJob(job);
   void runJob(config, options, job, actorId);
 
   return job;
 }
 
 async function runJob(config: BffConfig, options: ImportOptions, job: ImportJobStatus, actorId: string): Promise<void> {
-  job.status = "running";
+  Object.assign(job, { status: "running" });
+  publishJob(job);
 
   try {
-    const result = await runWorldDataImport(config, options);
-    job.finishedAt = new Date().toISOString();
-    job.report = summarizeReport(result.report);
-    job.status = result.report.errors.length > 0 ? "failed" : "succeeded";
+    let lastPublishedAt = 0;
+    const result = await runWorldDataImport(config, options, (progress) => {
+      const stageChanged = progress.stage !== job.progress.stage;
+      job.progress = progress;
+      if (stageChanged || progress.percent >= 98 || Date.now() - lastPublishedAt >= 100) {
+        lastPublishedAt = Date.now();
+        publishJob(job);
+      }
+    });
+    Object.assign(job, {
+      finishedAt: new Date().toISOString(),
+      report: summarizeReport(result.report),
+      status: result.report.errors.length > 0 ? "failed" : "succeeded",
+    });
     if (job.status === "succeeded" && job.mode === "import") {
       cache.clear();
     }
   } catch (error) {
-    job.error = error instanceof Error ? error.message : "World-data import job failed";
-    job.finishedAt = new Date().toISOString();
-    job.status = "failed";
+    const message = error instanceof Error ? error.message : "World-data import job failed";
+    Object.assign(job, {
+      error: message,
+      finishedAt: new Date().toISOString(),
+      progress: { ...job.progress, message },
+      status: "failed",
+    });
   } finally {
+    publishJob(job);
     try {
       await recordAdminAudit({
         action: job.mode === "dry-run" ? "import.dry-run" : "import.run",
@@ -82,6 +110,12 @@ async function runJob(config: BffConfig, options: ImportOptions, job: ImportJobS
     } catch (error) {
       console.warn("Import admin audit write failed:", error);
     }
+  }
+}
+
+function publishJob(job: ImportJobStatus): void {
+  for (const listener of listeners) {
+    listener(job);
   }
 }
 

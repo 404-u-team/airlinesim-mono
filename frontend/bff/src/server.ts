@@ -1,3 +1,4 @@
+import { requireAdminCapability } from "./auth";
 import { getConfig } from "./config";
 import { jsonResponse, notFound } from "./http";
 import { handleAdminRequest } from "./modules/admin";
@@ -8,6 +9,7 @@ import { handleFinanceRequest } from "./modules/finance";
 import { handleFleetRequest } from "./modules/fleet";
 import { handleGameRequest } from "./modules/game";
 import { handleImportRequest } from "./modules/import";
+import { closeImportSocket, openImportSocket, receiveImportSocketMessage } from "./modules/import/runtime/websocket";
 import { handleOnboardingRequest } from "./modules/onboarding";
 import { handleOperationsRequest } from "./modules/operations";
 import { handleProxyRequest } from "./modules/proxy";
@@ -39,8 +41,8 @@ async function routeRequest(request: Request, url: URL): Promise<Response> {
   );
 }
 
-Bun.serve({
-  async fetch(request) {
+Bun.serve<{ jobId: null | string }>({
+  async fetch(request, bunServer) {
     const url = new URL(request.url);
 
     if (request.method === "GET" && url.pathname === "/health") {
@@ -51,6 +53,21 @@ Bun.serve({
     }
 
     try {
+      if (request.method === "GET" && url.pathname === "/admin/import/world-data/ws") {
+        const token = url.searchParams.get("token");
+        const authRequest = new Request(request, {
+          headers: token ? { Authorization: `Bearer ${token}` } : request.headers,
+        });
+        const authError = await requireAdminCapability(authRequest, config, "world.manage");
+        if (authError) {
+          return authError;
+        }
+        if (bunServer.upgrade(request, { data: { jobId: url.searchParams.get("jobId") } })) {
+          return;
+        }
+        return jsonResponse({ error: "WebSocket upgrade failed" }, { status: 400 });
+      }
+
       return await routeRequest(request, url);
     } catch (error) {
       console.error("Unhandled BFF request error", request.method, url.pathname, error);
@@ -66,7 +83,19 @@ Bun.serve({
       );
     }
   },
+  idleTimeout: config.idleTimeoutSeconds,
   port: config.port,
+  websocket: {
+    close(socket) {
+      closeImportSocket(socket);
+    },
+    message(socket, message) {
+      receiveImportSocketMessage(socket, message);
+    },
+    open(socket) {
+      openImportSocket(socket);
+    },
+  },
 });
 
 console.warn(`BFF listening on http://localhost:${String(config.port)}`);
