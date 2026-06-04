@@ -16,7 +16,7 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
 });
 
-test("generates airport-pair demand and stores it on the region link", async () => {
+test("generates airport-pair demand and lazily creates the region link", async () => {
   const mutations: Array<{ body: unknown; path: string }> = [];
 
   globalThis.fetch = async (input, init) => {
@@ -49,23 +49,10 @@ test("generates airport-pair demand and stores it on the region link", async () 
     }
 
     if (url === "http://backend.test/region-links") {
-      return json({
-        region_links: [
-          {
-            base_daily_demand_ab: -1,
-            base_daily_demand_ba: -1,
-            business: 0.7,
-            diaspora: 0.4,
-            id: "link-1",
-            region_a: "region-a",
-            region_b: "region-b",
-            tourism: 0.8,
-          },
-        ],
-      });
+      return json({ region_links: [] });
     }
 
-    if (url === "http://backend.test/region-link/link-1" && init?.method === "PUT") {
+    if (url === "http://backend.test/region-link" && init?.method === "POST") {
       mutations.push({
         body: JSON.parse(String(init.body)),
         path: url,
@@ -100,7 +87,6 @@ test("generates airport-pair demand and stores it on the region link", async () 
   expect(mutations[0]?.body).toMatchObject({
     base_daily_demand_ab: expect.any(Number),
     base_daily_demand_ba: expect.any(Number),
-    id: "link-1",
     region_a: "region-a",
     region_b: "region-b",
   });

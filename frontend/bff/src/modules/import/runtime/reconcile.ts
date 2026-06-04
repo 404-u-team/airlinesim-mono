@@ -62,8 +62,6 @@ export async function reconcileExistingBackend(
   for (const airport of data.airports) {
     reconcileMapping(state, "airport", airport.sourceKey, airport.payload, airportByIcao.get(airport.payload.icao_code));
   }
-
-  reconcileRegionLinks(state, snapshot.regionLinks);
 }
 
 function reconcileMapping(
@@ -80,27 +78,6 @@ function reconcileMapping(
   }
 
   state.mappings.set(mappingKey(entityType, sourceKey), createMapping(entityType, sourceKey, id, stableHash(payload)));
-}
-
-function reconcileRegionLinks(state: ReconcileState, links: Array<Record<string, unknown>>): void {
-  const regionIdToCode = new Map([...state.mappings.values()].filter((item) => item.entityType === "region").map((item) => [item.backendId, item.sourceKey.replace("region:", "")]));
-
-  for (const link of links) {
-    const left = regionIdToCode.get(stringField(link, "region_a"));
-    const right = regionIdToCode.get(stringField(link, "region_b"));
-    if (!left || !right) {
-      continue;
-    }
-
-    const sortedRegions = [left, right].sort();
-    const sourceRegionA = sortedRegions[0] ?? left;
-    const sourceRegionB = sortedRegions[1] ?? right;
-    const sourceKey = `region-link:${sourceRegionA}:${sourceRegionB}`;
-    const id = stringField(link, "id");
-    if (id) {
-      state.mappings.set(mappingKey("region-link", sourceKey), createMapping("region-link", sourceKey, id, "backend-reconciled"));
-    }
-  }
 }
 
 function reportMissingCredentials(mode: ImportMode, report: ImportReport): void {

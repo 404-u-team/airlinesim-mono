@@ -1,5 +1,5 @@
 import type { AirportRow, RawSources, RegionRow } from "../runtime/sources";
-import type { FinalAirport, FinalCountry, FinalRegion, FinalRegionLink, SourceIssueSink } from "../shared/types";
+import type { FinalAirport, FinalCountry, FinalRegion, SourceIssueSink } from "../shared/types";
 
 export type AirportShell = Omit<FinalAirport, "payload"> & {
   row: AirportRow;
@@ -19,13 +19,6 @@ export type CountryStats = {
   globalMedianGdp: number;
   populationMax: number;
   populationMin: number;
-};
-
-export type LinkCandidate = FinalRegionLink & {
-  distanceKm: number;
-  rawBusiness: number;
-  rawDiaspora: number;
-  rawTourism: number;
 };
 
 export type RegionDraft = {

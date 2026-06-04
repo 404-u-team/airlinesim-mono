@@ -4,7 +4,6 @@ import type { ImportLogger } from "../runtime/logger";
 import { buildAirportShells, finalizeAirports, selectAirportRows } from "./airports";
 import { buildAircraftTypes } from "./aircraftTypes";
 import { buildCountries } from "./countries";
-import { buildRegionLinks } from "./regionLinks";
 import { buildRegions } from "./regions";
 import { buildRunwayMap } from "./runways";
 import { clean } from "./shared";
@@ -22,7 +21,6 @@ export async function buildWorldData(options: BuildOptions, issues: SourceIssueS
   const airportShells = buildAirportShells(selectedRows, runways);
   const regions = buildRegions(context, selectedRegions, airportShells, countries);
   const airports = finalizeAirports(context, airportShells, countries, regions);
-  const regionLinks = buildRegionLinks(context, countries, regions);
 
-  return { aircraftTypes, airports, countries, regionLinks, regions };
+  return { aircraftTypes, airports, countries, regionLinks: [], regions };
 }

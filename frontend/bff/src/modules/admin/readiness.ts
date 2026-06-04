@@ -72,7 +72,7 @@ export async function buildWorldReadiness(request: Request, config: BffConfig): 
     ...regionIssues(regions, countries),
     ...airportIssues(airports, countries, regions),
     ...regionLinkIssues(links, regions),
-    ...productIssues(airports, regions, links, aircraftTypes),
+    ...productIssues(airports, regions, aircraftTypes),
   ];
   const warnings = demandCacheWarnings(links);
 
@@ -250,15 +250,14 @@ function positive(value: number | undefined): boolean {
 function productIssues(
   airports: Airport[],
   regions: Region[],
-  links: RegionLink[],
   aircraftTypes: AircraftType[],
 ): ReadinessIssue[] {
   const usableAirports = airports.filter((airport) => positive(airport.max_runway_length_m) && positive(airport.max_runway_uses_per_day));
   const hasCompatibleAircraft = usableAirports.some((airport) =>
     aircraftTypes.some((type) => positive(type.min_runway_length_m) && (type.min_runway_length_m ?? 0) <= (airport.max_runway_length_m ?? 0)),
   );
-  const regionIdsWithLinks = new Set(links.flatMap((link) => [link.region_a, link.region_b]));
-  const hasOpportunity = usableAirports.some((airport) => airport.region_id && regionIdsWithLinks.has(airport.region_id));
+  const usableRegionIds = new Set(usableAirports.map((airport) => airport.region_id).filter(Boolean));
+  const hasOpportunity = usableRegionIds.size >= 2;
 
   return [
     ...(!hasCompatibleAircraft ? [issue("PRODUCT_NO_COMPATIBLE_AIRCRAFT", "product", "/admin/airports", {})] : []),
@@ -294,10 +293,6 @@ function regionIssues(regions: Region[], countries: Country[]): ReadinessIssue[]
 function regionLinkIssues(links: RegionLink[], regions: Region[]): ReadinessIssue[] {
   const regionIds = new Set(regions.map((region) => region.id));
   const pairs = new Set<string>();
-  if (links.length === 0) {
-    return [issue("REGION_LINKS_EMPTY", "region_link", "/admin/region-links", {})];
-  }
-
   return links.flatMap((link) => {
     const pair = [link.region_a ?? "", link.region_b ?? ""].sort().join(":");
     const invalid = !link.region_a || !link.region_b || link.region_a === link.region_b || pairs.has(pair) ||

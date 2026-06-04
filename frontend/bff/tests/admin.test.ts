@@ -168,6 +168,22 @@ test("world readiness accepts a minimally valid world with lazy demand warning",
   expect(payload.blockers).toEqual([]);
 });
 
+test("world readiness accepts an empty lazy region-link cache", async () => {
+  installReadinessFetch({
+    aircraftTypes: [{ id: "type-1", min_runway_length_m: 1800 }],
+    airports: [validAirport("airport-1", "region-1"), validAirport("airport-2", "region-2")],
+    countries: [{ id: "country-1", iso: "KR" }],
+    regions: [validRegion("region-1"), validRegion("region-2")],
+  });
+
+  const response = await adminRequest("/admin/world/readiness");
+  const payload = await response?.json();
+
+  expect(response?.status).toBe(200);
+  expect(payload.status).toBe("ready");
+  expect(payload.blockers).toEqual([]);
+});
+
 test("world readiness blocks incomplete airports and duplicate symmetric links", async () => {
   const incompleteAirport = validAirport("airport-1", "region-1");
   delete incompleteAirport.geog;

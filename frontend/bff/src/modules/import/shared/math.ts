@@ -35,17 +35,6 @@ export function normalizeLog(value: number, min: number, max: number): number {
   );
 }
 
-export function percentile95(values: number[]): number {
-  if (values.length === 0) {
-    return 0;
-  }
-
-  const sorted = [...values].sort((a, b) => a - b);
-  const index = Math.ceil(sorted.length * 0.95) - 1;
-
-  return sorted[clamp(index, 0, sorted.length - 1)] ?? 0;
-}
-
 export function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
@@ -60,14 +49,6 @@ export function safeDiv(numerator: number, denominator: null | number | undefine
   }
 
   return numerator / denominator;
-}
-
-export function scaleByP95(value: number, p95: number): number {
-  if (p95 <= 0) {
-    return 0;
-  }
-
-  return clamp(value / p95, 0, 1);
 }
 
 export function stableHash(value: unknown): string {

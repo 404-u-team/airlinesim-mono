@@ -6,10 +6,8 @@ import type {
   FinalAirport,
   FinalCountry,
   FinalRegion,
-  FinalRegionLink,
   ImportMode,
   ImportReport,
-  RegionLinkPayload,
   RegionPayload,
   WorldData,
 } from "../shared/types";
@@ -53,7 +51,6 @@ export async function planOrImport(
     { entityType: "aircraft-type", items: data.aircraftTypes, run: importAircraftType },
     { entityType: "region", items: data.regions, run: importRegion },
     { entityType: "airport", items: data.airports, run: importAirport },
-    { entityType: "region-link", items: data.regionLinks, run: importRegionLink },
   ] as const;
   const total = groups.reduce((sum, group) => sum + group.items.length, 0);
   let current = 0;
@@ -236,37 +233,6 @@ async function importRegion(
   incrementCreateCount(report, "regionsToCreate", id, existedBefore);
 }
 
-async function importRegionLink(
-  config: BffConfig,
-  state: ReconcileState,
-  report: ImportReport,
-  link: FinalRegionLink,
-  log?: ImportLogger,
-): Promise<void> {
-  const leftId = getMappedId(state, "region", `region:${link.sourceRegionA}`);
-  const rightId = getMappedId(state, "region", `region:${link.sourceRegionB}`);
-
-  if (!leftId || !rightId || leftId === rightId) {
-    pushError(report, { entityType: "region-link", message: "Skipping link because region backend ids are missing or equal", sourceKey: link.sourceKey });
-    return;
-  }
-
-  const sortedRegionIds = [leftId, rightId].sort();
-  const regionA = sortedRegionIds[0] ?? leftId;
-  const regionB = sortedRegionIds[1] ?? rightId;
-  const existedBefore = state.mappings.has(mappingKey("region-link", link.sourceKey));
-  const payload: RegionLinkPayload = { ...link.values, region_a: regionA, region_b: regionB };
-  const id = await importEntity(config, state, report, {
-    createPath: "/region-link",
-    entityType: "region-link",
-    payload,
-    sourceKey: link.sourceKey,
-    updatePath: (backendId) => `/region-link/${backendId}`,
-  }, log);
-
-  incrementCreateCount(report, "regionLinksToCreate", id, existedBefore);
-}
-
 function incrementCreateCount(report: ImportReport, key: string, id: null | string, existedBefore: boolean): void {
   if (id && !existedBefore) {
     report.counts[key] = (report.counts[key] ?? 0) + 1;
@@ -285,9 +251,6 @@ function planEntities(state: ReconcileState, data: WorldData, report: ImportRepo
   }
   for (const airport of data.airports) {
     planEntity(state, report, "airport", airport.sourceKey, airport.payload, "airportsToCreate");
-  }
-  for (const link of data.regionLinks) {
-    planEntity(state, report, "region-link", link.sourceKey, link.values, "regionLinksToCreate");
   }
 }
 

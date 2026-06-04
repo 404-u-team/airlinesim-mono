@@ -54,6 +54,7 @@ export type ImportLogEntry = {
 export type LatestImportJob = Pick<ImportJob, "finishedAt" | "id" | "mode" | "startedAt" | "status">;
 
 const apiClient = createApiClient({ getToken: () => authState.accessToken.value });
+const MAX_VISIBLE_IMPORT_LOGS = 50;
 
 export function connectImportJobSocket(
   onJob: (job: ImportJob) => void,
@@ -84,7 +85,7 @@ export function connectImportJobSocket(
       try {
         const payload = JSON.parse(String(event.data)) as { job?: ImportJob; type?: string };
         if (payload.type === "import-job-status" && payload.job) {
-          onJob(payload.job);
+          onJob(limitJobLogs(payload.job));
         }
       } catch {
         onConnectionChange(false);
@@ -111,7 +112,9 @@ export function connectImportJobSocket(
 }
 
 export async function getImportJob(jobId: string): Promise<ImportJob> {
-  return (await apiClient.get<{ job: ImportJob }>(`/admin/import/world-data/jobs/${encodeURIComponent(jobId)}`)).job;
+  const { job } = await apiClient.get<{ job: ImportJob }>(`/admin/import/world-data/jobs/${encodeURIComponent(jobId)}`);
+
+  return limitJobLogs(job);
 }
 
 export async function getLatestImportJob(): Promise<LatestImportJob | null> {
@@ -143,6 +146,10 @@ function buildImportSocketUrl(): string {
   }
 
   return base.toString();
+}
+
+function limitJobLogs(job: ImportJob): ImportJob {
+  return { ...job, logs: job.logs.slice(-MAX_VISIBLE_IMPORT_LOGS) };
 }
 
 function sendSubscription(socket: WebSocket, jobId: string): void {

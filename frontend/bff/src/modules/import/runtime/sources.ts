@@ -57,7 +57,6 @@ export type ManualOverrides = {
   aircraftTypes: Record<string, Record<string, unknown>>;
   airports: Record<string, Record<string, unknown>>;
   countries: Record<string, Record<string, unknown>>;
-  regionLinks: Record<string, Record<string, unknown>>;
   regions: Record<string, Record<string, unknown>>;
 };
 
@@ -181,15 +180,14 @@ async function loadJson<TValue>(path: string, url: string, refreshRaw: boolean, 
 }
 
 async function loadManual(manualDir: string): Promise<ManualOverrides> {
-  const [countries, regions, airports, regionLinks, aircraftTypes] = await Promise.all([
+  const [countries, regions, airports, aircraftTypes] = await Promise.all([
     readJsonFile<Record<string, Record<string, unknown>>>(`${manualDir}/countries.json`, {}),
     readJsonFile<Record<string, Record<string, unknown>>>(`${manualDir}/regions.json`, {}),
     readJsonFile<Record<string, Record<string, unknown>>>(`${manualDir}/airports.json`, {}),
-    readJsonFile<Record<string, Record<string, unknown>>>(`${manualDir}/region-links.json`, {}),
     readJsonFile<Record<string, Record<string, unknown>>>(`${manualDir}/aircraft-types.json`, {}),
   ]);
 
-  return { aircraftTypes, airports, countries, regionLinks, regions };
+  return { aircraftTypes, airports, countries, regions };
 }
 
 async function loadWorldBankCountries(path: string, refreshRaw: boolean, log?: ImportLogger): Promise<Map<string, WorldBankCountry>> {

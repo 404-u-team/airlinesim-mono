@@ -11,10 +11,10 @@
 
 - `index.ts` - HTTP endpoints модуля.
 - `cli.ts` - CLI-вход для dry-run и импорта.
-- `build/` - нормализация и синтез AircraftType, Country, Region, Airport, RegionLink.
+- `build/` - нормализация и синтез AircraftType, Country, Region и Airport.
   - `index.ts` - orchestration сборки dataset.
   - `aircraftTypes.ts` - справочник реальных типов самолетов и игровые поля эксплуатации.
-  - `countries.ts`, `regions.ts`, `airports.ts`, `regionLinks.ts`, `runways.ts` - доменные этапы сборки.
+  - `countries.ts`, `regions.ts`, `airports.ts`, `runways.ts` - доменные этапы сборки.
   - `shared.ts`, `types.ts` - helpers и типы, относящиеся именно к build-слою.
 - `runtime/` - orchestration выполнения, storage и отчеты.
   - `pipeline.ts` - верхнеуровневый run: build, validate, reconcile, plan/import, report.
@@ -113,7 +113,7 @@ bun src/modules/import/cli.ts --import
 
 Dry-run может построить dataset без admin env, но не сможет сверить уже существующие backend entities через list endpoints. Import mode без admin credentials запишет ошибку в report и не будет мутировать backend.
 
-Важно: dry-run не отправляет create/update запросы в backend. Реальная отправка выполняется только в `import` mode: `POST /import/world-data/run`, `POST /import/world-data?mode=import` или `bun run import:world-data`. В import mode сущности отправляются в backend по одной, строго в порядке Country -> AircraftType -> Region -> Airport -> RegionLink. Если import job завершается слишком быстро, сначала проверь status endpoint: чаще всего там будет ошибка про отсутствующие backend admin credentials или backend request failure.
+Важно: dry-run не отправляет create/update запросы в backend. Реальная отправка выполняется только в `import` mode: `POST /import/world-data/run`, `POST /import/world-data?mode=import` или `bun run import:world-data`. В import mode сущности отправляются в backend по одной, строго в порядке Country -> AircraftType -> Region -> Airport. RegionLink не импортируются и создаются demand-модулем лениво при первом запросе пары аэропортов. Если import job завершается слишком быстро, сначала проверь status endpoint: чаще всего там будет ошибка про отсутствующие backend admin credentials или backend request failure.
 
 ## Runtime storage
 
@@ -131,7 +131,6 @@ frontend/bff/data/import/world-data
   - `countries.json`
   - `regions.json`
   - `airports.json`
-  - `region-links.json`
 - `stage/world-data.latest.json` - последний построенный внутренний dataset.
 - `reports/` - JSON reports каждого dry-run/import.
 - `mappings/source-mapping.json` - persisted mapping source entity -> backend id + payload hash.
@@ -169,16 +168,14 @@ Importer использует:
 2. AircraftType
 3. Region
 4. Airport
-5. RegionLink
 
 Зависимости:
 
 - Region требует backend `country_id`.
 - Airport требует backend `country_id` и `region_id`.
-- RegionLink требует два backend ID регионов.
 - AircraftType не зависит от world-data сущностей и сверяется с backend по `icao_code`.
 
-`RegionLink` симметричен. Importer сортирует backend UUID регионов лексикографически перед отправкой payload, потому что в backend DB есть `CHECK (region_a < region_b)`.
+`RegionLink` симметричен и создаётся BFF demand-модулем по необходимости. Demand-модуль сортирует backend UUID регионов лексикографически перед отправкой payload, потому что в backend DB есть `CHECK (region_a < region_b)`.
 Для AircraftType в текущем OpenAPI есть `POST /aircraft-types` и `GET /aircraft-types`, но нет update endpoint; если payload уже импортированного типа изменится, importer запишет ошибку в report вместо попытки несуществующего PUT.
 
 ## Стабильные source keys
@@ -188,7 +185,6 @@ Importer использует:
 - Country: `country:<ISO2>`, пример `country:RU`.
 - Region: `region:<LOCAL_CODE>`, пример `region:US-NY`.
 - Airport: `airport:<ICAO>`, пример `airport:UUEE`.
-- RegionLink: `region-link:<A>:<B>`, коды регионов отсортированы лексикографически.
 - AircraftType: `aircraft-type:<ICAO>`, пример `aircraft-type:A20N`.
 
 Эти ключи используются в отчетах, mappings, разрешении зависимостей и идемпотентности.
@@ -211,7 +207,6 @@ Importer использует:
   - Country по `iso`.
   - Region по `local_code`.
   - Airport по `icao_code`.
-  - RegionLink через mapped backend IDs регионов.
   - AircraftType по `icao_code`.
 
 Это предотвращает слепые повторные `POST` запросы.
@@ -303,26 +298,9 @@ Manual region overrides имеют приоритет для явных знач
 
 Manual airport overrides имеют приоритет для отдельных payload fields.
 
-## Сборка RegionLink
+## Ленивые RegionLink
 
-Importer строит разреженный граф, а не полную матрицу.
-
-Генерация кандидатов:
-
-- Пары внутри одной страны.
-- Пары в радиусе `1500 km`.
-- Top 40 ближайших регионов для каждого региона.
-- Top business/tourism регионы, соединенные на расстоянии до `10000 km`.
-
-Raw scores считаются для:
-
-- diaspora
-- business
-- tourism
-
-Затем каждый score нормализуется по dataset P95 и округляется до 2 знаков. Слабые non-domestic links отсекаются. Плотность графа ограничена максимум 50 links на регион.
-
-Manual region-link overrides применяются после нормализации.
+World-data importer не строит и не сверяет RegionLink. При первом запросе спроса для пары аэропортов demand-модуль рассчитывает `business`, `diaspora`, `tourism` и базовый спрос из данных регионов и аэропортов, затем создаёт симметричную связь в backend. Последующие запросы используют сохранённую связь.
 
 ## Валидация
 
@@ -331,7 +309,6 @@ Manual region-link overrides применяются после нормализ�
 - Countries: ISO2, names, диапазоны tax, диапазоны permission price, duplicate ISO.
 - Regions: local code, country reference, минимумы population/GDP, диапазоны scores, duplicates.
 - Airports: ICAO/IATA, names, timezone, continent, elevation, runway, fees, fuel multiplier, WKT, references, duplicates.
-- RegionLinks: существующие regions, запрет self-links, запрет duplicate unordered pair, диапазоны scores.
 
 Validation errors записываются в report. Import mode не стоит использовать, если report содержит errors.
 

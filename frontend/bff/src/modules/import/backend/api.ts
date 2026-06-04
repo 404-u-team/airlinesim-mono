@@ -7,7 +7,6 @@ export type BackendSnapshot = {
   aircraftTypes: BackendEntity[];
   airports: BackendEntity[];
   countries: BackendEntity[];
-  regionLinks: BackendEntity[];
   regions: BackendEntity[];
 };
 
@@ -95,11 +94,10 @@ export function extractBackendId(payload: unknown): null | string {
 }
 
 export async function loadBackendSnapshot(config: BffConfig, token: string, log?: ImportLogger): Promise<BackendSnapshot> {
-  const [countries, regions, airports, regionLinks, aircraftTypes] = await Promise.all([
+  const [countries, regions, airports, aircraftTypes] = await Promise.all([
     backendRequest<{ countries?: BackendEntity[] }>(config, "/countries", { log, token }),
     backendRequest<{ regions?: BackendEntity[] }>(config, "/regions", { log, token }),
     backendRequest<{ airports?: BackendEntity[] }>(config, "/airports", { log, token }),
-    backendRequest<{ region_links?: BackendEntity[] }>(config, "/region-links", { log, token }),
     backendRequest<{ items?: BackendEntity[] }>(config, "/aircraft-types", { log, token }),
   ]);
 
@@ -107,7 +105,6 @@ export async function loadBackendSnapshot(config: BffConfig, token: string, log?
     aircraftTypes: aircraftTypes.items ?? [],
     airports: airports.airports ?? [],
     countries: countries.countries ?? [],
-    regionLinks: regionLinks.region_links ?? [],
     regions: regions.regions ?? [],
   };
 }

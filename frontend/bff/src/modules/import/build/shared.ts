@@ -2,7 +2,7 @@ import type { GeoCity, RestCountry } from "../runtime/sources";
 import type { AirportType, FinalAirport, FinalCountry, FinalRegion, Point } from "../shared/types";
 import type { RunwayInfo } from "./types";
 
-import { clamp, distanceKm } from "../shared/math";
+import { clamp } from "../shared/math";
 
 export function airportCapacityIndex(
   type: AirportType,
@@ -101,14 +101,6 @@ export function groupBy<TValue>(values: TValue[], getKey: (value: TValue) => str
   return result;
 }
 
-export function linkScore(link: FinalRegion | { values: { business: number; diaspora: number; tourism: number } }): number {
-  if ("values" in link) {
-    return 0.4 * link.values.business + 0.35 * link.values.tourism + 0.25 * link.values.diaspora;
-  }
-
-  return link.payload.business_score + link.payload.tourism_score;
-}
-
 export function localCountryName(rest?: RestCountry): null | string {
   const nativeName = Object.values(rest?.name?.nativeName ?? {})[0]?.common;
 
@@ -127,28 +119,6 @@ export function median(values: number[]): number {
 
 export function min(values: number[], fallback = 0): number {
   return values.length > 0 ? Math.min(...values) : fallback;
-}
-
-export function nearbyRegions(
-  region: FinalRegion,
-  regions: FinalRegion[],
-): Array<{ distance: number; region: FinalRegion }> {
-  if (!region.centroid) {
-    return [];
-  }
-
-  return regions
-    .filter((candidate) => candidate !== region && candidate.centroid)
-    .map((candidate) => ({
-      distance: distanceKm(
-        region.centroid?.latitude ?? 0,
-        region.centroid?.longitude ?? 0,
-        candidate.centroid?.latitude ?? 0,
-        candidate.centroid?.longitude ?? 0,
-      ),
-      region: candidate,
-    }))
-    .sort((a, b) => a.distance - b.distance);
 }
 
 export function overrideFor(
