@@ -83,7 +83,7 @@ test("GET /fleet/market keeps blocked aircraft visible with reasons", async () =
   expect(response?.status).toBe(200);
   expect(blocked.compatibility.status).toBe("blocked");
   expect(blocked.compatibility.warnings.map((warning: { code: string }) => warning.code)).toContain(
-    "FLEET_RUNWAY_TOO_SHORT",
+    "AIRPORT_RUNWAY_TOO_SHORT",
   );
   expect(blocked.compatibility.warnings.map((warning: { code: string }) => warning.code)).toContain(
     "FLEET_INSUFFICIENT_FUNDS",

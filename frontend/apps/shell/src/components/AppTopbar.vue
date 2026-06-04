@@ -12,6 +12,7 @@ import { getStatusMetrics } from "../navigation";
 
 const props = defineProps<{
   appLocale: Locale;
+  unreadNotifications: number;
 }>();
 
 defineEmits<{
@@ -96,7 +97,12 @@ function signOut(): void {
         @click="requestPanel('notifications')"
       >
         <Bell :size="18" />
-        <span class="absolute right-1.5 top-1.5 size-2 rounded-full bg-error" />
+        <span
+          v-if="unreadNotifications > 0"
+          class="absolute -right-1 -top-1 min-w-4 rounded-full bg-error px-1 text-center text-[10px] font-semibold leading-4 text-white"
+        >
+          {{ unreadNotifications > 99 ? "99+" : unreadNotifications }}
+        </span>
       </button>
 
       <button

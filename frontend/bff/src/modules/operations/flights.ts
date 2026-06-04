@@ -25,6 +25,10 @@ export function currentFlightStatus(flight: StoredFlight, now = new Date()): Sto
   return "scheduled";
 }
 
+export function estimateBlockHours(route: StoredRoute | undefined, type: AircraftType | undefined): number {
+  return Math.max(0.75, (route?.demand_snapshot.distance_km ?? 900) / (type?.cruising_speed_kph ?? 740) + 0.35);
+}
+
 export function estimateUtilizationHours(route: StoredRoute | undefined, type: AircraftType | undefined, daysPerWeek: number): number {
   return Number((estimateBlockHours(route, type) * Math.max(daysPerWeek, 0)).toFixed(1));
 }
@@ -149,10 +153,6 @@ function buildStoredFlight(
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
-}
-
-function estimateBlockHours(route: StoredRoute | undefined, type: AircraftType | undefined): number {
-  return Math.max(0.75, (route?.demand_snapshot.distance_km ?? 900) / (type?.cruising_speed_kph ?? 740) + 0.35);
 }
 
 function estimateFlightFinancials(route: StoredRoute, type: AircraftType, origin: Airport, destination: Airport, daysPerWeek: number): FlightFinancials {

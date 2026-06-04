@@ -1,5 +1,3 @@
-import { parse } from "yaml";
-
 type JsonSchema = {
   $ref?: string;
   additionalProperties?: boolean | JsonSchema;
@@ -127,7 +125,7 @@ async function loadSwagger(): Promise<SwaggerDocument> {
   }
 
   if (await fileExists(docsYamlPath)) {
-    return parse(await Bun.file(docsYamlPath).text()) as SwaggerDocument;
+    return Bun.YAML.parse(await Bun.file(docsYamlPath).text()) as SwaggerDocument;
   }
 
   if (await fileExists(docsJsonPath)) {

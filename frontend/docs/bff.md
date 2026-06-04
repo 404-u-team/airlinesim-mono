@@ -38,7 +38,7 @@ BFF проверяет токен обычного пользователя из
 
 Для служебных backend-действий BFF не использует пользовательский token. Например, `import` логинится в backend через `backend_admin_login` / `backend_admin_password`, кеширует admin access token в памяти процесса и отправляет данные в backend с этим admin token.
 
-Временное правило для `import`: endpoints импорта пока не требуют пользовательский `Authorization` token. Они защищены только необходимостью backend admin credentials для реального import mode. До появления отдельной admin-авторизации на BFF эти endpoints нельзя выставлять в публичный контур.
+Все browser-facing admin/import endpoints требуют пользовательский `Authorization` token и capability `world.manage`. Service admin credentials используются только внутри реального import pipeline и никогда не возвращаются клиенту.
 
 ## Модули
 
@@ -66,11 +66,14 @@ Browser-facing приложения не должны реализовывать
 
 HTTP endpoints:
 
-- `POST /import/world-data`
-- `POST /import/world-data/dry-run`
-- `POST /import/world-data/run`
-- `GET /import/world-data/status?jobId=<jobId>`
-- `GET /import/world-data/jobs/<jobId>`
+- `POST /admin/import/world-data`
+- `POST /admin/import/world-data/dry-run`
+- `POST /admin/import/world-data/run`
+- `GET /admin/import/world-data/status?jobId=<jobId>`
+- `GET /admin/import/world-data/jobs/<jobId>`
+
+Legacy aliases без `/admin` сохраняются для совместимости, но проходят ту же server-side
+проверку `world.manage`.
 
 `POST` endpoints запускают in-memory job и отвечают `202 Accepted` с `jobId`, `status` и `statusUrl`. Полный отчет не возвращается в стартовом ответе. Статус и краткий summary нужно получать через status endpoint; полный JSON report пишется в `bff/data/import/world-data/reports`.
 
@@ -222,7 +225,7 @@ HTTP endpoints:
 - `GET /game/map-state?scope=dashboard&include_opportunities=true` - GeoJSON/read model для карты Dashboard: стартовая база, важные аэропорты, будущие route lines и selected airport detail.
 - `GET /game/finance-overview` - баланс авиакомпании, стоимость флота, maintenance reserve, credit/safety/reputation.
 - `GET /game/facilities-overview` - starting airport, базированные борта, совместимые типы самолетов, слоты и ground costs.
-- `GET /game/events-feed` - синтетическая лента событий из airline/fleet/demand-cache состояния.
+- `GET /game/events-feed` - compatibility wrapper устойчивой event feed из `events` overlay.
 - `GET /game/network-opportunities?origin_airport_id=<id>` - список route opportunities из airports, regions и region-links. Если `origin_airport_id` не передан, используется `airline.starting_airport_id`.
 
 Правило развития: если backend позже откроет read-only world-data routes для обычного пользователя, `game` должен перестать использовать admin-token для чтения этих справочников.
@@ -322,6 +325,40 @@ HTTP endpoints:
 - после успешного создания авиакомпании BFF возвращает `recommendedNextRoute`; для пустого флота это `/fleet/overview`.
 
 ## Правила развития
+
+### `facilities`
+
+`bff/src/modules/facilities` является единственным источником правил runway, range, night operations, slot planning headroom и airport costs.
+
+- `GET /facilities/base-overview` возвращает продуктовый read model стартовой базы.
+- `GET /facilities/airports/:id/constraints` возвращает diagnostics для выбранного airport/aircraft/type/route.
+- Night window MVP: `23:00-06:00` local.
+- Slot utilization `80-100%` создает warning, projected utilization выше `100%` блокирует schedule activation.
+- `GET /game/facilities-overview` оставлен как compatibility wrapper.
+
+### `events`
+
+`bff/src/modules/events` хранит immutable event feed и notification lifecycle в runtime overlays.
+
+- `GET /events/feed`, `GET /events/feed/:id`.
+- `GET /notifications`, `GET /notifications/summary`.
+- `PATCH /notifications/:id`, `POST /notifications/read-all`.
+- Mutation events пишутся идемпотентно по dedupe key.
+- Notification reconcile запускается при открытии notification endpoints и после ключевых mutations.
+- Dashboard alerts читаются из notification read model.
+
+### `admin`
+
+Admin surface отделен namespace `/admin`.
+
+- `GET /admin/session` возвращает capability probe.
+- `GET /admin/audit` возвращает ограниченный BFF audit trail без токенов и credentials.
+- `GET /admin/world/readiness` проверяет минимальный игровой мир.
+- `/admin/world/countries|regions|airports|region-links` являются защищенными CRUD wrappers.
+- `/admin/import/world-data` и job status защищены `world.manage`.
+- После world mutation/import очищается list cache.
+- Import job status хранится в памяти процесса и теряется после restart; итоговые import reports и BFF admin audit сохраняются на диск.
+- Capability probe является переходным решением до появления явного backend identity/capabilities endpoint.
 
 - Не добавлять библиотеки без явной необходимости; Bun уже дает HTTP server, fetch, env и файловые API.
 - Новые модули добавлять в `bff/src/modules/<module-name>`.

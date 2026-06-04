@@ -17,6 +17,10 @@ export type AirlineSimEvents = {
   "auth:session-restored": {
     accessToken: string;
   };
+  "events:invalidated": {
+    reason: "aircraft-purchased" | "flight-completed" | "risk-changed" | "route-created" | "schedule-activated";
+    source: "events-news" | "finance-stock" | "fleet-ops" | "network-planner" | "shell";
+  };
   "fleet:aircraft-purchased": {
     aircraftId?: string;
     baseAirportId?: string;
@@ -60,6 +64,10 @@ export type AirlineSimEvents = {
   "notification:created": {
     message: string;
     severity: "error" | "info" | "success" | "warning";
+  };
+  "notifications:invalidated": {
+    reason: "aircraft-purchased" | "flight-completed" | "read-state-changed" | "risk-changed" | "route-created" | "schedule-activated";
+    source: "events-news" | "finance-stock" | "fleet-ops" | "network-planner" | "shell";
   };
   "route:created": {
     destinationAirportId: string;

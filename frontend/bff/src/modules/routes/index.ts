@@ -3,6 +3,8 @@ import type { RouteOpportunity, StoredRoute } from "./types";
 
 import { BackendHttpError } from "../../backend-http";
 import { jsonResponse, readJson } from "../../http";
+import { recordGameEvent } from "../events/producer";
+import { reconcileNotificationsAfterMutation } from "../events/reconcile";
 import { buildRouteListItem, buildRouteOpportunities, buildRouteOpportunity, createStoredRouteFromOpportunity } from "./planning";
 import { loadRoutePlanningSnapshot } from "./snapshot";
 import { deleteRoute, findRoute, listRoutesForAirline, saveRoute } from "./storage";
@@ -65,6 +67,26 @@ async function createRoute(request: Request, config: BffConfig): Promise<Respons
     selectedAircraftTypeId: payload.selected_aircraft_type_id,
   });
   await saveRoute(route);
+  await recordGameEvent({
+    airline_id: snapshot.airline.id ?? "",
+    category: "route",
+    code: "ROUTE_CREATED",
+    dedupe_key: `route-created:${route.id}`,
+    occurred_at: route.created_at,
+    parameters: {
+      destination_code: opportunity.destination_airport.iata_code ?? opportunity.destination_airport.icao_code ?? "",
+      expected_profit: opportunity.economics.estimated_profit_per_flight,
+      origin_code: opportunity.origin_airport.iata_code ?? opportunity.origin_airport.icao_code ?? "",
+      recommendation: opportunity.recommendation,
+      route_status: route.status,
+    },
+    related: { route_id: route.id },
+    severity: opportunity.recommendation === "blocked" ? "warning" : "success",
+    source_id: route.id,
+    source_type: "route",
+    target_path: "/operations/schedule",
+  });
+  await reconcileNotificationsAfterMutation(request, config);
 
   return jsonResponse({
     route: buildRouteListItem(route, snapshot),

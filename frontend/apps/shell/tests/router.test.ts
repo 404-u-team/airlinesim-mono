@@ -33,11 +33,13 @@ mock.module("../src/views/SystemSettingsView.vue", () => ({ default: { name: "Sy
 // 3. Mock the auth module to control isAuthenticated and airline refs in tests
 mock.module("../src/auth", () => {
   const isAuthenticated = ref(false);
+  const isAdminAuthorized = ref(false);
   const isRestoringSession = ref(false);
   const airline = ref<any>(null);
   return {
     authState: {
       airline,
+      isAdminAuthorized,
       isAuthenticated,
       isRestoringSession,
     },
@@ -50,6 +52,7 @@ const { authState } = await import("../src/auth");
 
 test("Router Guard - unauthenticated redirects to /login", async () => {
   (authState.isAuthenticated as any).value = false;
+  (authState.isAdminAuthorized as any).value = false;
   (authState.isRestoringSession as any).value = false;
   (authState.airline as any).value = null;
 
@@ -59,6 +62,7 @@ test("Router Guard - unauthenticated redirects to /login", async () => {
 
 test("Router Guard - authenticated without airline redirects to /onboarding/airline", async () => {
   (authState.isAuthenticated as any).value = true;
+  (authState.isAdminAuthorized as any).value = false;
   (authState.isRestoringSession as any).value = false;
   (authState.airline as any).value = null;
 
@@ -71,6 +75,7 @@ test("Router Guard - authenticated without airline redirects to /onboarding/airl
 
 test("Router Guard - authenticated while restoring session does not redirect to onboarding early", async () => {
   (authState.isAuthenticated as any).value = true;
+  (authState.isAdminAuthorized as any).value = false;
   (authState.isRestoringSession as any).value = true;
   (authState.airline as any).value = null;
 
@@ -82,6 +87,7 @@ test("Router Guard - authenticated while restoring session does not redirect to 
 
 test("Router Guard - authenticated with airline redirects away from onboarding/airline", async () => {
   (authState.isAuthenticated as any).value = true;
+  (authState.isAdminAuthorized as any).value = false;
   (authState.isRestoringSession as any).value = false;
   (authState.airline as any).value = { id: "airline-1", name: "Capital Fly" };
 
@@ -94,4 +100,26 @@ test("Router Guard - authenticated with airline redirects away from onboarding/a
   // Move to a public route, should redirect to dashboard
   await router.push("/login");
   expect(router.currentRoute.value.path).toBe("/dashboard");
+});
+
+test("Router Guard - regular player cannot open admin routes", async () => {
+  (authState.isAuthenticated as any).value = true;
+  (authState.isAdminAuthorized as any).value = false;
+  (authState.isRestoringSession as any).value = false;
+  (authState.airline as any).value = { id: "airline-1", name: "Capital Fly" };
+
+  await router.push("/admin/countries");
+
+  expect(router.currentRoute.value.path).toBe("/dashboard");
+});
+
+test("Router Guard - admin without airline can open admin routes", async () => {
+  (authState.isAuthenticated as any).value = true;
+  (authState.isAdminAuthorized as any).value = true;
+  (authState.isRestoringSession as any).value = false;
+  (authState.airline as any).value = null;
+
+  await router.push("/admin/countries");
+
+  expect(router.currentRoute.value.path).toBe("/admin/countries");
 });

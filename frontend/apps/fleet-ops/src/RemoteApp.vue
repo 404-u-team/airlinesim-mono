@@ -212,6 +212,8 @@ function handlePurchaseSuccess(aircraft: FleetOwnedAircraftCard | null, price: n
     reason: "aircraft-purchased",
     source: "fleet-ops",
   });
+  airlineSimEventBus.emit("events:invalidated", { reason: "aircraft-purchased", source: "fleet-ops" });
+  airlineSimEventBus.emit("notifications:invalidated", { reason: "aircraft-purchased", source: "fleet-ops" });
   airlineSimEventBus.emit("map:network-refresh-requested", {
     reason: "aircraft-purchased",
     source: "fleet-ops",

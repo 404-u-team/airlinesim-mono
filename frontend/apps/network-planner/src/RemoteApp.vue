@@ -90,6 +90,8 @@ async function createSelectedRoute(): Promise<void> {
       reason: "route-created",
       source: "network-planner",
     });
+    airlineSimEventBus.emit("events:invalidated", { reason: "route-created", source: "network-planner" });
+    airlineSimEventBus.emit("notifications:invalidated", { reason: "route-created", source: "network-planner" });
     airlineSimEventBus.emit("map:network-refresh-requested", {
       reason: "route-created",
       source: "network-planner",

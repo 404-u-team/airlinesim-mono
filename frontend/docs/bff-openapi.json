@@ -3434,6 +3434,448 @@
           "500": {}
         }
       }
+    },
+    "/events/feed": {
+      "get": {
+        "description": "Returns persistent immutable events for the current airline.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "403": {},
+          "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/events/feed/{id}": {
+      "get": {
+        "description": "Returns one event owned by the current airline.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "403": {},
+          "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "description": "Returns active or resolved notifications after deterministic risk reconciliation.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "403": {},
+          "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/notifications/summary": {
+      "get": {
+        "description": "Returns active and unread notification counts for Shell.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "403": {},
+          "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/facilities/base-overview": {
+      "get": {
+        "description": "Returns the starting base constraints, slots, costs and aircraft compatibility read model.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "403": {},
+          "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/facilities/airports/{id}/constraints": {
+      "get": {
+        "description": "Returns constraint diagnostics for an airport and optional aircraft/type/route.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "403": {},
+          "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/admin/session": {
+      "get": {
+        "description": "Returns the current user admin capability probe.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "403": {},
+          "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/admin/audit": {
+      "get": {
+        "description": "Returns the retained BFF admin audit trail. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "403": {},
+          "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/admin/world/readiness": {
+      "get": {
+        "description": "Returns blockers and warnings for the minimum playable world.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "403": {},
+          "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/admin/import/world-data/status": {
+      "get": {
+        "description": "Returns the latest protected import job status.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "403": {},
+          "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/admin/import/world-data/jobs/{id}": {
+      "get": {
+        "description": "Returns one protected import job status.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "403": {},
+          "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/notifications/{id}": {
+      "patch": {
+        "description": "Marks a notification read or unread without changing risk resolution.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/notifications/read-all": {
+      "post": {
+        "description": "Marks all active notifications for the current airline as read.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "500": {}
+        }
+      }
+    },
+    "/admin/import/world-data": {
+      "post": {
+        "description": "Starts one protected dry-run or import job. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "202": {},
+          "401": {},
+          "403": {},
+          "500": {}
+        }
+      }
+    },
+    "/admin/world/airports": {
+      "get": {
+        "description": "Lists protected admin world resource airports. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "403": {},
+          "500": {}
+        }
+      },
+      "post": {
+        "description": "Creates protected admin world resource airports. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "201": {},
+          "400": {},
+          "401": {},
+          "403": {},
+          "409": {},
+          "500": {}
+        }
+      }
+    },
+    "/admin/world/airports/{id}": {
+      "delete": {
+        "description": "Deletes protected admin world resource airports. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "204": {},
+          "401": {},
+          "403": {},
+          "409": {},
+          "500": {}
+        }
+      },
+      "patch": {
+        "description": "Updates protected admin world resource airports. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "400": {},
+          "401": {},
+          "403": {},
+          "409": {},
+          "500": {}
+        }
+      }
+    },
+    "/admin/world/countries": {
+      "get": {
+        "description": "Lists protected admin world resource countries. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "403": {},
+          "500": {}
+        }
+      },
+      "post": {
+        "description": "Creates protected admin world resource countries. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "201": {},
+          "400": {},
+          "401": {},
+          "403": {},
+          "409": {},
+          "500": {}
+        }
+      }
+    },
+    "/admin/world/countries/{id}": {
+      "delete": {
+        "description": "Deletes protected admin world resource countries. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "204": {},
+          "401": {},
+          "403": {},
+          "409": {},
+          "500": {}
+        }
+      },
+      "patch": {
+        "description": "Updates protected admin world resource countries. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "400": {},
+          "401": {},
+          "403": {},
+          "409": {},
+          "500": {}
+        }
+      }
+    },
+    "/admin/world/region-links": {
+      "get": {
+        "description": "Lists protected admin world resource region-links. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "403": {},
+          "500": {}
+        }
+      },
+      "post": {
+        "description": "Creates protected admin world resource region-links. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "201": {},
+          "400": {},
+          "401": {},
+          "403": {},
+          "409": {},
+          "500": {}
+        }
+      }
+    },
+    "/admin/world/region-links/{id}": {
+      "delete": {
+        "description": "Deletes protected admin world resource region-links. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "204": {},
+          "401": {},
+          "403": {},
+          "409": {},
+          "500": {}
+        }
+      },
+      "patch": {
+        "description": "Updates protected admin world resource region-links. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "400": {},
+          "401": {},
+          "403": {},
+          "409": {},
+          "500": {}
+        }
+      }
+    },
+    "/admin/world/regions": {
+      "get": {
+        "description": "Lists protected admin world resource regions. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "403": {},
+          "500": {}
+        }
+      },
+      "post": {
+        "description": "Creates protected admin world resource regions. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "201": {},
+          "400": {},
+          "401": {},
+          "403": {},
+          "409": {},
+          "500": {}
+        }
+      }
+    },
+    "/admin/world/regions/{id}": {
+      "delete": {
+        "description": "Deletes protected admin world resource regions. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "204": {},
+          "401": {},
+          "403": {},
+          "409": {},
+          "500": {}
+        }
+      },
+      "patch": {
+        "description": "Updates protected admin world resource regions. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "400": {},
+          "401": {},
+          "403": {},
+          "409": {},
+          "500": {}
+        }
+      }
     }
   },
   "schemes": [

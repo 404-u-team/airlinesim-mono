@@ -1,6 +1,6 @@
 import type { BffConfig } from "../../config";
 
-import { getUserAuthorization, requireValidUserToken } from "../../auth";
+import { getUserAuthorization, requireAdminCapability, requireValidUserToken } from "../../auth";
 import { BackendHttpError, requestBackend } from "../../backend-http";
 import { jsonResponse } from "../../http";
 
@@ -83,6 +83,13 @@ export async function handleProxyRequest(
   url: URL,
   config: BffConfig,
 ): Promise<null | Response> {
+  if (isAdminMutation(request, url)) {
+    const authError = await requireAdminCapability(request, config, "world.manage");
+    if (authError) {
+      return authError;
+    }
+  }
+
   const cacheableRoute = cacheableRoutes.find((route) => route.path === url.pathname);
 
   if (request.method === "GET" && cacheableRoute) {
@@ -105,6 +112,14 @@ export async function handleProxyRequest(
   }
 
   return response;
+}
+
+function isAdminMutation(request: Request, url: URL): boolean {
+  if (request.method === "GET" || request.method === "HEAD") {
+    return false;
+  }
+
+  return /^\/(?:airport|country|region|region-link)(?:\/|$)/.test(url.pathname);
 }
 
 function buildBackendHeaders(request: Request): Headers {

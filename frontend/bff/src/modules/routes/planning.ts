@@ -10,6 +10,7 @@ import type {
   StoredRoute,
 } from "./types";
 
+import { rangeConstraints, runwayConstraints } from "../facilities/constraints";
 import { buildRouteEconomics } from "./economics";
 import { buildDistanceKm, toRouteAirport } from "./geometry";
 
@@ -170,15 +171,11 @@ function addTypeCompatibilityReasons(
     addReason(blockers, "MISSING_AIRCRAFT_TYPE", "Aircraft type is missing.");
     return;
   }
-  if ((type.max_range_km ?? 0) < buildDistanceKm(origin, destination)) {
-    addReason(blockers, "DISTANCE_EXCEEDS_RANGE", "Aircraft range is below route distance.");
-  }
-  if ((origin.max_runway_length_m ?? 0) < (type.min_runway_length_m ?? 0)) {
-    addReason(blockers, "ORIGIN_RUNWAY_TOO_SHORT", "Origin runway is too short.");
-  }
-  if ((destination.max_runway_length_m ?? 0) < (type.min_runway_length_m ?? 0)) {
-    addReason(blockers, "DESTINATION_RUNWAY_TOO_SHORT", "Destination runway is too short.");
-  }
+  blockers.push(
+    ...rangeConstraints(buildDistanceKm(origin, destination), type).map(toRouteReason),
+    ...runwayConstraints(origin, type).map(toRouteReason),
+    ...runwayConstraints(destination, type).map(toRouteReason),
+  );
 }
 
 function buildAircraftOption(
@@ -383,5 +380,12 @@ function toRouteListItem(route: StoredRoute, snapshot: RoutePlanningSnapshot): R
     destination_airport: destination ? toRouteAirport(destination) : null,
     next_action: getRouteNextAction(route.status),
     origin_airport: origin ? toRouteAirport(origin) : null,
+  };
+}
+
+function toRouteReason(reason: ReturnType<typeof runwayConstraints>[number]): RouteReason {
+  return {
+    code: reason.code,
+    message: reason.code,
   };
 }

@@ -1,5 +1,4 @@
-import { parse } from "yaml";
-
+/* eslint-disable max-lines */
 import { addFleetOverlay } from "./openapi-fleet";
 
 type JsonSchema = {
@@ -86,8 +85,87 @@ function addBffOverlay(swagger: SwaggerDocument): SwaggerDocument {
   addFleetOverlay(swagger);
   addFinanceOverlay(swagger);
   addGameOverlay(swagger);
+  addEventsFacilitiesAdminOverlay(swagger);
 
   return swagger;
+}
+
+function addEventsFacilitiesAdminOverlay(swagger: SwaggerDocument): void {
+  swagger.paths ??= {};
+  const getPaths = [
+    ["/events/feed", "Returns persistent immutable events for the current airline."],
+    ["/events/feed/{id}", "Returns one event owned by the current airline."],
+    ["/notifications", "Returns active or resolved notifications after deterministic risk reconciliation."],
+    ["/notifications/summary", "Returns active and unread notification counts for Shell."],
+    ["/facilities/base-overview", "Returns the starting base constraints, slots, costs and aircraft compatibility read model."],
+    ["/facilities/airports/{id}/constraints", "Returns constraint diagnostics for an airport and optional aircraft/type/route."],
+    ["/admin/session", "Returns the current user admin capability probe."],
+    ["/admin/audit", "Returns the retained BFF admin audit trail. Requires world.manage."],
+    ["/admin/world/readiness", "Returns blockers and warnings for the minimum playable world."],
+    ["/admin/import/world-data/status", "Returns the latest protected import job status."],
+    ["/admin/import/world-data/jobs/{id}", "Returns one protected import job status."],
+  ] as const;
+  for (const [path, description] of getPaths) {
+    swagger.paths[path] = {
+      get: {
+        description,
+        produces: ["application/json"],
+        responses: { "200": {}, "401": {}, "403": {}, "404": {}, "500": {} },
+      },
+    };
+  }
+  swagger.paths["/notifications/{id}"] = {
+    patch: {
+      description: "Marks a notification read or unread without changing risk resolution.",
+      produces: ["application/json"],
+      responses: { "200": {}, "401": {}, "404": {}, "500": {} },
+    },
+  };
+  swagger.paths["/notifications/read-all"] = {
+    post: {
+      description: "Marks all active notifications for the current airline as read.",
+      produces: ["application/json"],
+      responses: { "200": {}, "401": {}, "500": {} },
+    },
+  };
+  swagger.paths["/admin/import/world-data"] = {
+    post: {
+      description: "Starts one protected dry-run or import job. Requires world.manage.",
+      produces: ["application/json"],
+      responses: { "202": {}, "401": {}, "403": {}, "500": {} },
+    },
+  };
+  addAdminWorldOverlay(swagger);
+}
+
+function addAdminWorldOverlay(swagger: SwaggerDocument): void {
+  swagger.paths ??= {};
+  for (const collection of ["airports", "countries", "region-links", "regions"]) {
+    swagger.paths[`/admin/world/${collection}`] = {
+      get: {
+        description: `Lists protected admin world resource ${collection}. Requires world.manage.`,
+        produces: ["application/json"],
+        responses: { "200": {}, "401": {}, "403": {}, "500": {} },
+      },
+      post: {
+        description: `Creates protected admin world resource ${collection}. Requires world.manage.`,
+        produces: ["application/json"],
+        responses: { "200": {}, "201": {}, "400": {}, "401": {}, "403": {}, "409": {}, "500": {} },
+      },
+    };
+    swagger.paths[`/admin/world/${collection}/{id}`] = {
+      delete: {
+        description: `Deletes protected admin world resource ${collection}. Requires world.manage.`,
+        produces: ["application/json"],
+        responses: { "200": {}, "204": {}, "401": {}, "403": {}, "409": {}, "500": {} },
+      },
+      patch: {
+        description: `Updates protected admin world resource ${collection}. Requires world.manage.`,
+        produces: ["application/json"],
+        responses: { "200": {}, "400": {}, "401": {}, "403": {}, "409": {}, "500": {} },
+      },
+    };
+  }
 }
 
 function addFinanceOverlay(swagger: SwaggerDocument): void {
@@ -313,7 +391,7 @@ function getListItemSchema(
 
 async function loadSwagger(): Promise<SwaggerDocument> {
   if (await fileExists(docsYamlPath)) {
-    return parse(await Bun.file(docsYamlPath).text()) as SwaggerDocument;
+    return Bun.YAML.parse(await Bun.file(docsYamlPath).text()) as SwaggerDocument;
   }
 
   if (await fileExists(docsJsonPath)) {

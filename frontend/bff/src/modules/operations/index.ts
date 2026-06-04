@@ -3,6 +3,8 @@ import type { StoredFlight, StoredSchedule } from "./types";
 
 import { BackendHttpError } from "../../backend-http";
 import { jsonResponse, readJson } from "../../http";
+import { recordGameEvent } from "../events/producer";
+import { reconcileNotificationsAfterMutation } from "../events/reconcile";
 import { reconcileCompletedFlight } from "../finance/ledger";
 import { buildRouteListItem } from "../routes/planning";
 import { loadRoutePlanningSnapshot } from "../routes/snapshot";
@@ -66,6 +68,28 @@ async function activateSchedule(request: Request, config: BffConfig): Promise<Re
       updated_at: new Date().toISOString(),
     });
   }
+  if (schedule.status === "active") {
+    await recordGameEvent({
+      airline_id: snapshot.airline.id ?? "",
+      category: "operations",
+      code: "SCHEDULE_ACTIVATED",
+      dedupe_key: `schedule-activated:${schedule.id}`,
+      occurred_at: schedule.created_at,
+      parameters: {
+        aircraft_id: schedule.aircraft_id,
+        flights_generated: flights.length,
+        route_id: schedule.route_id,
+        weekly_frequency: schedule.pattern.days_of_week.length,
+        weekly_profit: preview.economics.weekly_profit,
+      },
+      related: { aircraft_id: schedule.aircraft_id, route_id: schedule.route_id, schedule_id: schedule.id },
+      severity: "success",
+      source_id: schedule.id,
+      source_type: "schedule",
+      target_path: "/operations/live-flights",
+    });
+  }
+  await reconcileNotificationsAfterMutation(request, config);
 
   return jsonResponse({ flights, preview, schedule }, { status: 201 });
 }
@@ -85,7 +109,9 @@ async function completeFlight(request: Request, config: BffConfig, flightId: str
     updated_at: new Date().toISOString(),
   };
   await saveFlights([completedFlight]);
-  await reconcileCompletedFlight(completedFlight);
+  const ledgerTransactions = await reconcileCompletedFlight(completedFlight);
+  await recordCompletedFlightEvents(snapshot.airline.id ?? "", completedFlight, ledgerTransactions.length);
+  await reconcileNotificationsAfterMutation(request, config);
 
   return jsonResponse({ flight: completedFlight });
 }
@@ -209,6 +235,54 @@ async function operationRequest(request: Request, url: URL, config: BffConfig): 
   }
 
   return scheduleRequest(request, url, config);
+}
+
+async function recordCompletedFlightEvents(airlineId: string, completedFlight: StoredFlight & { actual: NonNullable<StoredFlight["actual"]> }, transactionCount: number): Promise<void> {
+  await recordGameEvent({
+    airline_id: airlineId,
+    category: "operations",
+    code: "FLIGHT_COMPLETED",
+    dedupe_key: `flight-completed:${completedFlight.id}`,
+    occurred_at: completedFlight.arrival_at,
+    parameters: {
+      cost: completedFlight.actual.cost,
+      flight_number: completedFlight.flight_number,
+      load_factor: completedFlight.actual.load_factor,
+      passengers: completedFlight.actual.passengers,
+      profit: completedFlight.actual.profit,
+      revenue: completedFlight.actual.revenue,
+    },
+    related: {
+      aircraft_id: completedFlight.aircraft_id,
+      flight_id: completedFlight.id,
+      route_id: completedFlight.route_id,
+      schedule_id: completedFlight.schedule_id,
+    },
+    severity: completedFlight.actual.profit >= 0 ? "success" : "warning",
+    source_id: completedFlight.id,
+    source_type: "flight",
+    target_path: `/finances/routes?route_id=${encodeURIComponent(completedFlight.route_id)}`,
+  });
+  await recordGameEvent({
+    airline_id: airlineId,
+    category: "finance",
+    code: "FINANCE_RESULT_RECORDED",
+    dedupe_key: `finance-result:${completedFlight.id}`,
+    occurred_at: completedFlight.arrival_at,
+    parameters: {
+      profit: completedFlight.actual.profit,
+      transaction_count: transactionCount,
+    },
+    related: {
+      flight_id: completedFlight.id,
+      route_id: completedFlight.route_id,
+      schedule_id: completedFlight.schedule_id,
+    },
+    severity: completedFlight.actual.profit >= 0 ? "success" : "warning",
+    source_id: completedFlight.id,
+    source_type: "flight",
+    target_path: `/finances/profit?flight_id=${encodeURIComponent(completedFlight.id)}`,
+  });
 }
 
 async function scheduleRequest(request: Request, url: URL, config: BffConfig): Promise<Response> {

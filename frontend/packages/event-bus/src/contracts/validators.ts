@@ -18,6 +18,10 @@ export const airlineSimEventValidators: ValidatorMap<AirlineSimEvents> = {
   "auth:register-failed": hasString("message"),
   "auth:register-succeeded": hasString("accessToken"),
   "auth:session-restored": hasString("accessToken"),
+  "events:invalidated": (payload): payload is AirlineSimEvents["events:invalidated"] =>
+    isRecord(payload) &&
+    isOneOf(payload.reason, ["aircraft-purchased", "flight-completed", "risk-changed", "route-created", "schedule-activated"]) &&
+    isOneOf(payload.source, ["events-news", "finance-stock", "fleet-ops", "network-planner", "shell"]),
   "fleet:aircraft-purchased": (payload): payload is AirlineSimEvents["fleet:aircraft-purchased"] =>
     isRecord(payload) &&
     hasOptionalStringValue(payload, "aircraftId") &&
@@ -70,6 +74,10 @@ export const airlineSimEventValidators: ValidatorMap<AirlineSimEvents> = {
     isRecord(payload) &&
     typeof payload.message === "string" &&
     isOneOf(payload.severity, ["error", "info", "success", "warning"]),
+  "notifications:invalidated": (payload): payload is AirlineSimEvents["notifications:invalidated"] =>
+    isRecord(payload) &&
+    isOneOf(payload.reason, ["aircraft-purchased", "flight-completed", "read-state-changed", "risk-changed", "route-created", "schedule-activated"]) &&
+    isOneOf(payload.source, ["events-news", "finance-stock", "fleet-ops", "network-planner", "shell"]),
   "route:created": (payload): payload is AirlineSimEvents["route:created"] =>
     isRecord(payload) &&
     typeof payload.destinationAirportId === "string" &&

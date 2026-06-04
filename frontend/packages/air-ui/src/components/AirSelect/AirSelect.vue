@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable vue/custom-event-name-casing -- update:modelValue is the Vue v-model contract. */
 import { computed } from "vue";
 
 export type AirSelectOption = {

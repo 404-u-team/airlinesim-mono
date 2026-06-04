@@ -7,19 +7,30 @@ import {
   normalizeLocale,
   translate,
 } from "@airlinesim/i18n";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { RouterView, useRoute, useRouter } from "vue-router";
+
+import type { Notification } from "./notifications/types";
 
 import { authState } from "./auth";
 import AppSidebar from "./components/AppSidebar.vue";
 import AppTopbar from "./components/AppTopbar.vue";
+import NotificationPanel from "./components/NotificationPanel.vue";
 import { type ShellMessageKey, shellMessages } from "./i18n/messages";
+import {
+  clearNotifications,
+  markAllRead,
+  markRead,
+  notificationState,
+  refreshNotifications,
+} from "./notifications/state";
 
 type AppTheme = "dark" | "light";
 
 const THEME_STORAGE_KEY = "airlinesim:theme";
 
 const isSidebarOpen = ref(false);
+const isNotificationPanelOpen = ref(false);
 const locale = ref<Locale>("en");
 const theme = ref<AppTheme>("light");
 const companyName = computed(() => authState.airlineName.value);
@@ -28,6 +39,8 @@ const router = useRouter();
 const t = computed(() => (key: ShellMessageKey): string =>
   translate(shellMessages, locale.value, key),
 );
+let unsubscribeNotificationsInvalidated: (() => void) | null = null;
+let unsubscribePanelRequested: (() => void) | null = null;
 
 function closeSidebar(): void {
   isSidebarOpen.value = false;
@@ -76,7 +89,32 @@ function toggleSidebar(): void {
 onMounted(() => {
   locale.value = getPreferredLocale();
   theme.value = getPreferredTheme();
+  unsubscribePanelRequested = airlineSimEventBus.on("shell:panel-requested", (event) => {
+    if (event.panel === "notifications") {
+      isNotificationPanelOpen.value = true;
+      void refreshNotifications();
+    }
+  });
+  unsubscribeNotificationsInvalidated = airlineSimEventBus.on("notifications:invalidated", () => {
+    void refreshNotifications();
+  });
 });
+
+onUnmounted(() => {
+  unsubscribeNotificationsInvalidated?.();
+  unsubscribePanelRequested?.();
+});
+
+async function markAllNotificationsRead(): Promise<void> {
+  await markAllRead();
+  airlineSimEventBus.emit("notifications:invalidated", { reason: "read-state-changed", source: "shell" });
+}
+
+async function openNotification(notification: Notification): Promise<void> {
+  await markRead(notification.id);
+  isNotificationPanelOpen.value = false;
+  await router.push(notification.target_path);
+}
 
 watch(
   locale,
@@ -84,6 +122,19 @@ watch(
     document.documentElement.lang = nextLocale;
     localStorage.setItem(LOCALE_STORAGE_KEY, nextLocale);
     airlineSimEventBus.emit("i18n:locale-changed", { locale: nextLocale });
+  },
+  { immediate: true },
+);
+
+watch(
+  () => authState.isAuthenticated.value,
+  (isAuthenticated) => {
+    if (isAuthenticated) {
+      void refreshNotifications();
+    } else {
+      clearNotifications();
+      isNotificationPanelOpen.value = false;
+    }
   },
   { immediate: true },
 );
@@ -101,15 +152,21 @@ watch(
   [
     () => authState.isRestoringSession.value,
     () => authState.isAuthenticated.value,
+    () => authState.isAdminAuthorized.value,
     () => authState.airline.value,
     () => route.path,
   ],
-  ([isRestoringSession, isAuthenticated, airline]) => {
+  ([isRestoringSession, isAuthenticated, isAdminAuthorized, airline]) => {
     if (isRestoringSession || !isAuthenticated) {
       return;
     }
 
-    if (!airline && route.path !== "/onboarding/airline") {
+    if (isAdminAuthorized && !airline && !route.path.startsWith("/admin")) {
+      void router.replace("/admin");
+      return;
+    }
+
+    if (!airline && !isAdminAuthorized && route.path !== "/onboarding/airline") {
       void router.replace("/onboarding/airline");
       return;
     }
@@ -168,13 +225,22 @@ watch(
         :app-locale="locale"
         :collapsed="!isSidebarOpen"
         :company-name="companyName"
+        :is-admin-authorized="authState.isAdminAuthorized.value"
         @toggle="toggleSidebar"
       />
 
       <div class="flex h-full min-w-0 flex-col overflow-hidden">
         <AppTopbar
           :app-locale="locale"
+          :unread-notifications="notificationState.unreadCount.value"
           @toggle-menu="toggleSidebar"
+        />
+        <NotificationPanel
+          v-if="isNotificationPanelOpen"
+          :app-locale="locale"
+          @close="isNotificationPanelOpen = false"
+          @mark-all="markAllNotificationsRead"
+          @open="openNotification"
         />
         <RouterView
           class="min-h-0 flex-1 overflow-hidden"

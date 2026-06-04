@@ -11,14 +11,23 @@ export type FlightStatus = "boarding" | "cancelled" | "completed" | "in_flight" 
 export type OperationReason = {
   code: OperationReasonCode;
   message: string;
+  parameters?: Record<string, boolean | number | string>;
+  target_path?: string;
 };
 
 export type OperationReasonCode =
   | "AIRCRAFT_CONFLICT"
+  | "AIRCRAFT_MAINTENANCE_LOW"
   | "AIRCRAFT_NOT_FOUND"
   | "AIRCRAFT_NOT_READY"
   | "AIRCRAFT_RANGE_TOO_SHORT"
+  | "AIRPORT_DATA_INCOMPLETE"
   | "AIRPORT_NIGHT_OPS_LIMITED"
+  | "AIRPORT_NIGHT_OPS_PROHIBITED"
+  | "AIRPORT_RUNWAY_TOO_SHORT"
+  | "AIRPORT_SLOT_CAPACITY_EXCEEDED"
+  | "AIRPORT_SLOT_CAPACITY_LOW"
+  | "AIRPORT_TIMEZONE_MISSING"
   | "CASH_RESERVE_LOW"
   | "DESTINATION_RUNWAY_TOO_SHORT"
   | "NO_DAYS_SELECTED"

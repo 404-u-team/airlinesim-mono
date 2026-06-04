@@ -2,6 +2,7 @@
 import type { Locale } from "@airlinesim/i18n";
 
 import { AirBadge, AirButton, AirMetricCard } from "@airlinesim/air-ui";
+import { airlineSimEventBus } from "@airlinesim/event-bus";
 import { computed, onMounted, ref } from "vue";
 
 import type { FleetMessageKey } from "../i18n";
@@ -32,6 +33,8 @@ onMounted(() => {
 async function complete(id: string): Promise<void> {
   try {
     await completeFlight(id);
+    airlineSimEventBus.emit("events:invalidated", { reason: "flight-completed", source: "fleet-ops" });
+    airlineSimEventBus.emit("notifications:invalidated", { reason: "flight-completed", source: "fleet-ops" });
     await loadFlights();
   } catch (loadError) {
     error.value = loadError instanceof Error ? loadError.message : props.t("error.operations");

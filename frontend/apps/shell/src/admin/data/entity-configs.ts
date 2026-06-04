@@ -9,9 +9,9 @@ export const adminEntityConfigs: AdminEntityConfig[] = [
       { key: "intl_name", label: "International name" },
       { key: "aircraft_tail_code", label: "Tail code" },
     ],
-    createPath: "/country",
+    createPath: "/admin/world/countries",
     description: "Countries, tax rates and permission pricing from the OpenAPI Country schema.",
-    editPath: (id) => `/country/${id}`,
+    editPath: (id) => `/admin/world/countries/${id}`,
     fields: [
       { key: "iso", kind: "text", label: "ISO code", required: true },
       { key: "local_name", kind: "text", label: "Local name", required: true },
@@ -28,7 +28,7 @@ export const adminEntityConfigs: AdminEntityConfig[] = [
       { key: "wikipedia_link", kind: "text", label: "Wikipedia link" },
     ],
     id: "countries",
-    listPath: "/countries",
+    listPath: "/admin/world/countries",
     title: "Countries",
   },
   {
@@ -39,9 +39,9 @@ export const adminEntityConfigs: AdminEntityConfig[] = [
       { key: "intl_name", label: "International name" },
       { key: "country_id", label: "Country" },
     ],
-    createPath: "/region",
+    createPath: "/admin/world/regions",
     description: "Regions, demand scores and country ownership from the OpenAPI Region schema.",
-    editPath: (id) => `/region/${id}`,
+    editPath: (id) => `/admin/world/regions/${id}`,
     fields: [
       { key: "local_code", kind: "text", label: "Local code", required: true },
       { key: "local_name", kind: "text", label: "Local name", required: true },
@@ -60,7 +60,7 @@ export const adminEntityConfigs: AdminEntityConfig[] = [
       { key: "wikipedia_link", kind: "text", label: "Wikipedia link" },
     ],
     id: "regions",
-    listPath: "/regions",
+    listPath: "/admin/world/regions",
     title: "Regions",
   },
   {
@@ -71,9 +71,9 @@ export const adminEntityConfigs: AdminEntityConfig[] = [
       { key: "intl_name", label: "International name" },
       { key: "municipality", label: "Municipality" },
     ],
-    createPath: "/airport",
+    createPath: "/admin/world/airports",
     description: "Airport catalog, fees and geospatial fields from the OpenAPI Airport schema.",
-    editPath: (id) => `/airport/${id}`,
+    editPath: (id) => `/admin/world/airports/${id}`,
     fields: [
       { key: "icao_code", kind: "text", label: "ICAO code", required: true },
       { key: "iata_code", kind: "text", label: "IATA code", required: true },
@@ -112,7 +112,7 @@ export const adminEntityConfigs: AdminEntityConfig[] = [
       { key: "geom", kind: "text", label: "Geometry" },
     ],
     id: "airports",
-    listPath: "/airports",
+    listPath: "/admin/world/airports",
     title: "Airports",
   },
   {
@@ -124,9 +124,9 @@ export const adminEntityConfigs: AdminEntityConfig[] = [
       { key: "business", label: "Business" },
       { key: "tourism", label: "Tourism" },
     ],
-    createPath: "/region-link",
+    createPath: "/admin/world/region-links",
     description: "Symmetric demand links between regions from the OpenAPI Region Link schema.",
-    editPath: (id) => `/region-link/${id}`,
+    editPath: (id) => `/admin/world/region-links/${id}`,
     fields: [
       {
         key: "region_a",
@@ -147,7 +147,7 @@ export const adminEntityConfigs: AdminEntityConfig[] = [
       { key: "tourism", kind: "number", label: "Tourism" },
     ],
     id: "region-links",
-    listPath: "/region-links",
+    listPath: "/admin/world/region-links",
     title: "Region Links",
   },
 ];

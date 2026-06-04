@@ -1,10 +1,15 @@
 <script setup lang="ts">
+import type { Locale } from "@airlinesim/i18n";
+
 import { AirBadge, AirButton } from "@airlinesim/air-ui";
 import { computed } from "vue";
 
 import type { FutureEntity } from "../types";
 
+import { adminText } from "../i18n";
+
 const props = defineProps<{
+  appLocale: Locale;
   entities: FutureEntity[];
   entity?: FutureEntity;
 }>();
@@ -17,19 +22,18 @@ const visibleEntities = computed(() => (props.entity ? [props.entity] : props.en
     <div class="flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-start lg:justify-between">
       <div>
         <AirBadge
-          label="Disabled"
+          :label="adminText(appLocale, 'disabled')"
           variant="warning-soft"
         />
         <h1 class="mt-4 text-h2 text-text-primary">
-          To Be Enabled
+          {{ adminText(appLocale, "toBeEnabled") }}
         </h1>
         <p class="mt-2 max-w-3xl text-body text-text-muted">
-          These pages are scaffolded from the ERD, but actions stay disabled until OpenAPI becomes
-          the source of truth for each entity.
+          {{ adminText(appLocale, "capabilitiesDescription") }}
         </p>
       </div>
       <AirButton
-        label="Create"
+        :label="adminText(appLocale, 'create')"
         size="sm"
         disabled
         variant="warning"
@@ -48,11 +52,11 @@ const visibleEntities = computed(() => (props.entity ? [props.entity] : props.en
               {{ futureEntity.title }}
             </h2>
             <p class="mt-2 text-body text-text-muted">
-              {{ futureEntity.description }}
+              {{ appLocale === "ru" ? adminText(appLocale, "capabilitiesDescription") : futureEntity.description }}
             </p>
           </div>
           <AirBadge
-            label="Locked"
+            :label="adminText(appLocale, 'locked')"
             size="sm"
             variant="warning-soft"
           />
@@ -61,7 +65,7 @@ const visibleEntities = computed(() => (props.entity ? [props.entity] : props.en
         <div class="mt-4 grid gap-4 md:grid-cols-2">
           <div>
             <p class="text-caption text-text-muted">
-              Missing
+              {{ adminText(appLocale, "missing") }}
             </p>
             <ul class="mt-2 space-y-1 text-body text-text-primary">
               <li
@@ -74,7 +78,7 @@ const visibleEntities = computed(() => (props.entity ? [props.entity] : props.en
           </div>
           <div>
             <p class="text-caption text-text-muted">
-              Enable when
+              {{ adminText(appLocale, "unlock") }}
             </p>
             <ul class="mt-2 space-y-1 text-body text-text-primary">
               <li
@@ -89,12 +93,12 @@ const visibleEntities = computed(() => (props.entity ? [props.entity] : props.en
 
         <div class="mt-4 flex gap-2">
           <AirButton
-            label="Create"
+            :label="adminText(appLocale, 'create')"
             size="sm"
             disabled
           />
           <AirButton
-            label="Edit"
+            :label="adminText(appLocale, 'edit')"
             size="sm"
             disabled
             variant="primary-soft"

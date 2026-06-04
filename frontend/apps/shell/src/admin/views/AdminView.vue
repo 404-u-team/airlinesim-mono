@@ -10,6 +10,7 @@ import AdminFuturePage from "../components/AdminFuturePage.vue";
 import { adminEntityConfigs, defaultAdminEntity } from "../data/entity-configs";
 import { futureEntities } from "../data/future-entities";
 import AdminImportPage from "./AdminImportPage.vue";
+import AdminOverviewPage from "./AdminOverviewPage.vue";
 
 defineProps<{ appLocale: Locale }>();
 
@@ -21,38 +22,33 @@ const entitySlug = computed(() => {
   return typeof value === "string" ? value : defaultAdminEntity.id;
 });
 
-const futureSlug = computed(() => {
-  const value = route.params.futureEntity;
-
-  return typeof value === "string" ? value : undefined;
-});
-
 const activeEntity = computed(
   () => adminEntityConfigs.find((config) => config.id === entitySlug.value) ?? defaultAdminEntity,
 );
-const activeFutureEntity = computed(() =>
-  futureEntities.find((entity) => entity.route.endsWith(`/${futureSlug.value ?? ""}`)),
-);
-const isFutureRoute = computed(() => route.path.startsWith("/admin/future"));
+const isCapabilitiesRoute = computed(() => route.path === "/admin/capabilities");
 const isImportRoute = computed(() => route.path === "/admin/import");
+const isOverviewRoute = computed(() => route.path === "/admin/overview");
 </script>
 
 <template>
   <main class="grid min-h-0 grid-cols-1 overflow-hidden bg-background text-body text-text-primary lg:grid-cols-[260px_1fr]">
     <AdminEntityNav
       :active-path="route.path"
+      :app-locale="appLocale"
       :entities="adminEntityConfigs"
       :future-entities="futureEntities"
     />
 
-    <AdminImportPage v-if="isImportRoute" :app-locale="appLocale" />
+    <AdminOverviewPage v-if="isOverviewRoute" :app-locale="appLocale" />
+    <AdminImportPage v-else-if="isImportRoute" :app-locale="appLocale" />
     <AdminFuturePage
-      v-else-if="isFutureRoute"
+      v-else-if="isCapabilitiesRoute"
       :entities="futureEntities"
-      :entity="activeFutureEntity"
+      :app-locale="appLocale"
     />
     <AdminEntityPage
       v-else
+      :app-locale="appLocale"
       :config="activeEntity"
     />
   </main>
