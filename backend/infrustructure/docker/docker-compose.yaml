@@ -92,6 +92,8 @@ services:
             - ./.env
         ports:
             - "9092:9092"
+        volumes:
+            - ./log4j2.yaml:/etc/confluent/docker/log4j2.yaml.template:ro
         environment:
             # KRaft mode configuration
             KAFKA_NODE_ID: 1
