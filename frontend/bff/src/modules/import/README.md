@@ -46,6 +46,8 @@ Import endpoints временно не требуют пользовательс
   - Клиент может сменить подписку сообщением `{"type":"subscribe","jobId":"<jobId>"}`.
   - Если `jobId` не задан, соединение получает обновления последней или любой активной job.
 
+Job status содержит последние 250 структурированных записей `logs`. BFF пишет те же записи в stdout с `importJobId`. Журнал содержит stage, operation, entity/source key, URL или backend path, длительность и безопасные детали ошибки; authorization headers и полные payload не логируются.
+
 `POST` endpoints не возвращают полный report. Они ставят job в in-memory очередь текущего BFF-процесса и отвечают:
 
 ```json

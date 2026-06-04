@@ -1,5 +1,6 @@
 import type { BffConfig } from "../../../config";
 import type { EntityType, ImportMode, ImportReport, WorldData } from "../shared/types";
+import type { ImportLogger } from "./logger";
 
 import { getBackendAdminToken } from "../../../auth";
 import { loadBackendSnapshot } from "../backend/api";
@@ -35,13 +36,14 @@ export async function reconcileExistingBackend(
   config: BffConfig,
   state: ReconcileState,
   data: WorldData,
+  log?: ImportLogger,
 ): Promise<void> {
   const token = state.backendToken;
   if (!token) {
     return;
   }
 
-  const snapshot = await loadBackendSnapshot(config, token);
+  const snapshot = await loadBackendSnapshot(config, token, log);
   const countryByIso = new Map(snapshot.countries.map((country) => [stringField(country, "iso"), country]));
   const regionByCode = new Map(snapshot.regions.map((region) => [stringField(region, "local_code"), region]));
   const airportByIcao = new Map(snapshot.airports.map((airport) => [stringField(airport, "icao_code"), airport]));

@@ -23,7 +23,7 @@ const messages = {
     dryDescription: "Build and validate the dataset without backend mutations.",
     dryRun: "Dry run", dryTitle: "Dry run", entityFilter: "Entity", errors: "Errors", failed: "Failed",
     firstErrors: "First errors", firstWarnings: "First warnings", import: "Import", issues: "First issues", jobId: "Job ID",
-    latest: "Latest job", liveConnected: "Realtime connected", liveDisconnected: "Realtime disconnected", mode: "Mode",
+    latest: "Latest job", liveConnected: "Realtime connected", liveDisconnected: "Realtime disconnected", logs: "Import log", mode: "Mode",
     progress: "Progress", queued: "Queued", refreshAction: "Refresh and import", refreshDescription: "Download source files again, then reconcile and import them.", refreshTitle: "Refresh sources and import", running: "Running",
     severityFilter: "Severity", stage: "Stage", startError: "Could not start import.", status: "Status", statusError: "Could not read import status.", succeeded: "Succeeded", title: "World data import", warnings: "Warnings",
   },
@@ -35,7 +35,7 @@ const messages = {
     dryDescription: "Собрать и проверить набор данных без изменений в backend.",
     dryRun: "Проверочный запуск", dryTitle: "Проверочный запуск", entityFilter: "Сущность", errors: "Ошибки", failed: "Ошибка",
     firstErrors: "Первые ошибки", firstWarnings: "Первые предупреждения", import: "Импорт", issues: "Первые проблемы", jobId: "ID задачи",
-    latest: "Последняя задача", liveConnected: "Realtime подключён", liveDisconnected: "Realtime отключён", mode: "Режим",
+    latest: "Последняя задача", liveConnected: "Realtime подключён", liveDisconnected: "Realtime отключён", logs: "Журнал импорта", mode: "Режим",
     progress: "Прогресс", queued: "В очереди", refreshAction: "Обновить и импортировать", refreshDescription: "Повторно загрузить исходные файлы, сверить и импортировать их.", refreshTitle: "Обновление источников и импорт", running: "Выполняется",
     severityFilter: "Уровень", stage: "Этап", startError: "Не удалось запустить импорт.", status: "Статус", statusError: "Не удалось получить статус импорта.", succeeded: "Завершено", title: "Импорт данных мира", warnings: "Предупреждения",
   },
@@ -83,6 +83,7 @@ const severityOptions = computed(() => [
 const filteredIssues = computed(() => issues.value.filter((issue) =>
   (!entityFilter.value || issue.entityType === entityFilter.value) &&
   (!severityFilter.value || issue.severity === severityFilter.value)));
+const reversedLogs = computed(() => [...(activeJob.value?.logs ?? [])].reverse());
 
 onMounted(() => {
   importSocket = connectImportJobSocket(
@@ -272,6 +273,31 @@ async function startImport(mode: "dry-run" | "import", refreshRaw: boolean): Pro
           :label="key"
           :value="String(value)"
         />
+      </div>
+      <div v-if="reversedLogs.length" class="mt-4 rounded-lg border border-border p-3">
+        <h3 class="text-subtitle">
+          {{ t("logs") }}
+        </h3>
+        <div class="mt-3 max-h-96 space-y-2 overflow-y-auto font-mono text-caption">
+          <article
+            v-for="(item, index) in reversedLogs"
+            :key="`${item.timestamp}-${item.operation}-${index}`"
+            class="rounded-md border p-3"
+            :class="item.level === 'error' ? 'border-error bg-error-bg' : item.level === 'warning' ? 'border-warning bg-warning-bg' : 'border-border bg-surface-subtle'"
+          >
+            <div class="flex flex-wrap gap-x-2 gap-y-1">
+              <strong>{{ item.level.toUpperCase() }}</strong>
+              <span>{{ new Date(item.timestamp).toLocaleTimeString(appLocale) }}</span>
+              <span>{{ item.stage }} / {{ item.operation }}</span>
+              <span v-if="item.entityType">{{ item.entityType }}</span>
+              <span v-if="item.sourceKey">{{ item.sourceKey }}</span>
+            </div>
+            <p class="mt-1 break-words">
+              {{ item.message }}
+            </p>
+            <pre v-if="item.details" class="mt-2 overflow-x-auto whitespace-pre-wrap break-words text-text-muted">{{ JSON.stringify(item.details, null, 2) }}</pre>
+          </article>
+        </div>
       </div>
       <template v-if="activeJob.report">
         <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

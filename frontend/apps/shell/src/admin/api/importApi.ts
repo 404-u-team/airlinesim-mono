@@ -12,6 +12,7 @@ export type ImportJob = {
   error?: string;
   finishedAt?: string;
   id: string;
+  logs: ImportLogEntry[];
   mode: "dry-run" | "import";
   progress: {
     counts?: Record<string, number>;
@@ -37,6 +38,17 @@ export type ImportJob = {
 export type ImportJobSocket = {
   close: () => void;
   subscribe: (jobId: string) => void;
+};
+
+export type ImportLogEntry = {
+  details?: Record<string, unknown>;
+  entityType?: string;
+  level: "error" | "info" | "warning";
+  message: string;
+  operation: string;
+  sourceKey?: string;
+  stage: string;
+  timestamp: string;
 };
 
 export type LatestImportJob = Pick<ImportJob, "finishedAt" | "id" | "mode" | "startedAt" | "status">;

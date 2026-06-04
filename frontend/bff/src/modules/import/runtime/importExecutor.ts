@@ -16,9 +16,10 @@ import type {
 
 import { getBackendAdminToken, invalidateBackendAdminToken } from "../../../auth";
 import { BackendRequestError, backendRequest, extractBackendId } from "../backend/api";
+import type { ImportLogger } from "./logger";
 import { camelPlural, createMapping, getMappedId, type ReconcileState } from "./mapping";
 import { progressCounts, type ImportProgressReporter } from "./progress";
-import { pushError } from "./report";
+import { pushError, pushSkip } from "./report";
 import { mappingKey } from "./storage";
 import { stableHash } from "../shared/math";
 
@@ -29,6 +30,7 @@ export async function planOrImport(
   report: ImportReport,
   mode: ImportMode,
   reportProgress?: ImportProgressReporter,
+  log?: ImportLogger,
 ): Promise<void> {
   if (mode === "dry-run") {
     planEntities(state, data, report);
@@ -58,7 +60,7 @@ export async function planOrImport(
 
   for (const group of groups) {
     for (const item of group.items) {
-      await group.run(config, state, report, item as never);
+      await group.run(config, state, report, item as never, log);
       current += 1;
       reportProgress?.({
         counts: progressCounts(report),
@@ -84,6 +86,7 @@ async function importEntity(
     sourceKey: string;
     updatePath?: (id: string) => string;
   },
+  log?: ImportLogger,
 ): Promise<null | string> {
   const hash = stableHash(input.payload);
   const key = mappingKey(input.entityType, input.sourceKey);
@@ -94,9 +97,27 @@ async function importEntity(
     return existing.backendId;
   }
 
-  return existing
-    ? updateEntity(config, state, report, input, existing.backendId, hash)
-    : createEntity(config, state, report, input, hash);
+  try {
+    return existing
+      ? await updateEntity(config, state, report, input, existing.backendId, hash, log)
+      : await createEntity(config, state, report, input, hash, log);
+  } catch (error) {
+    if (!(error instanceof BackendRequestError) || error.status !== 409) {
+      throw error;
+    }
+    report.counts.conflicts = (report.counts.conflicts ?? 0) + 1;
+    pushSkip(report, { entityType: input.entityType, message: error.message, sourceKey: input.sourceKey });
+    log?.({
+      details: { code: error.code, status: error.status },
+      entityType: input.entityType,
+      level: "warning",
+      message: `Skipping entity after backend conflict: ${error.message}`,
+      operation: "entity.conflict",
+      sourceKey: input.sourceKey,
+      stage: "importing",
+    });
+    return null;
+  }
 }
 
 async function createEntity(
@@ -105,11 +126,12 @@ async function createEntity(
   report: ImportReport,
   input: Parameters<typeof importEntity>[3],
   hash: string,
+  log?: ImportLogger,
 ): Promise<null | string> {
   const response = await importBackendRequest(config, state, input.createPath, {
     body: input.payload,
     method: "POST",
-  });
+  }, input, log);
   const id = extractBackendId(response);
 
   if (!id) {
@@ -127,6 +149,7 @@ async function importAircraftType(
   state: ReconcileState,
   report: ImportReport,
   aircraftType: FinalAircraftType,
+  log?: ImportLogger,
 ): Promise<void> {
   const existedBefore = state.mappings.has(mappingKey("aircraft-type", aircraftType.sourceKey));
   const id = await importEntity(config, state, report, {
@@ -134,7 +157,7 @@ async function importAircraftType(
     entityType: "aircraft-type",
     payload: aircraftType.payload,
     sourceKey: aircraftType.sourceKey,
-  });
+  }, log);
 
   incrementCreateCount(report, "aircraftTypesToCreate", id, existedBefore);
 }
@@ -144,6 +167,7 @@ async function importAirport(
   state: ReconcileState,
   report: ImportReport,
   airport: FinalAirport,
+  log?: ImportLogger,
 ): Promise<void> {
   const countryId = getMappedId(state, "country", airport.payload.country_id);
   const regionId = getMappedId(state, "region", airport.payload.region_id);
@@ -161,7 +185,7 @@ async function importAirport(
     payload,
     sourceKey: airport.sourceKey,
     updatePath: (backendId) => `/airport/${backendId}`,
-  });
+  }, log);
 
   incrementCreateCount(report, "airportsToCreate", id, existedBefore);
 }
@@ -171,6 +195,7 @@ async function importCountry(
   state: ReconcileState,
   report: ImportReport,
   country: FinalCountry,
+  log?: ImportLogger,
 ): Promise<void> {
   const existedBefore = state.mappings.has(mappingKey("country", country.sourceKey));
   const id = await importEntity(config, state, report, {
@@ -179,7 +204,7 @@ async function importCountry(
     payload: country.payload,
     sourceKey: country.sourceKey,
     updatePath: (backendId) => `/country/${backendId}`,
-  });
+  }, log);
 
   incrementCreateCount(report, "countriesToCreate", id, existedBefore);
 }
@@ -189,6 +214,7 @@ async function importRegion(
   state: ReconcileState,
   report: ImportReport,
   region: FinalRegion,
+  log?: ImportLogger,
 ): Promise<void> {
   const countryId = getMappedId(state, "country", region.payload.country_id);
 
@@ -205,7 +231,7 @@ async function importRegion(
     payload,
     sourceKey: region.sourceKey,
     updatePath: (backendId) => `/region/${backendId}`,
-  });
+  }, log);
 
   incrementCreateCount(report, "regionsToCreate", id, existedBefore);
 }
@@ -215,6 +241,7 @@ async function importRegionLink(
   state: ReconcileState,
   report: ImportReport,
   link: FinalRegionLink,
+  log?: ImportLogger,
 ): Promise<void> {
   const leftId = getMappedId(state, "region", `region:${link.sourceRegionA}`);
   const rightId = getMappedId(state, "region", `region:${link.sourceRegionB}`);
@@ -235,7 +262,7 @@ async function importRegionLink(
     payload,
     sourceKey: link.sourceKey,
     updatePath: (backendId) => `/region-link/${backendId}`,
-  });
+  }, log);
 
   incrementCreateCount(report, "regionLinksToCreate", id, existedBefore);
 }
@@ -291,6 +318,7 @@ async function updateEntity(
   input: Parameters<typeof importEntity>[3],
   backendId: string,
   hash: string,
+  log?: ImportLogger,
 ): Promise<null | string> {
   const token = state.backendToken;
   if (!token) {
@@ -307,7 +335,7 @@ async function updateEntity(
   const response = await importBackendRequest(config, state, input.updatePath(backendId), {
     body: { ...input.payload, id: backendId },
     method: "PUT",
-  });
+  }, input, log);
   const responseId = extractBackendId(response) ?? backendId;
   state.mappings.set(mappingKey(input.entityType, input.sourceKey), createMapping(input.entityType, input.sourceKey, responseId, hash));
 
@@ -322,6 +350,8 @@ async function importBackendRequest<TValue>(
     body: Record<string, unknown>;
     method: "POST" | "PUT";
   },
+  input: Parameters<typeof importEntity>[3],
+  log?: ImportLogger,
 ): Promise<TValue> {
   const token = state.backendToken;
   if (!token) {
@@ -329,7 +359,13 @@ async function importBackendRequest<TValue>(
   }
 
   try {
-    return await backendRequest<TValue>(config, path, { ...options, token });
+    return await backendRequest<TValue>(config, path, {
+      ...options,
+      entityType: input.entityType,
+      log,
+      sourceKey: input.sourceKey,
+      token,
+    });
   } catch (error) {
     if (!(error instanceof BackendRequestError) || (error.status !== 401 && error.status !== 403)) {
       throw error;
@@ -339,7 +375,13 @@ async function importBackendRequest<TValue>(
     const refreshedToken = await getBackendAdminToken(config);
     setBackendToken(state, refreshedToken);
 
-    return backendRequest<TValue>(config, path, { ...options, token: refreshedToken });
+    return backendRequest<TValue>(config, path, {
+      ...options,
+      entityType: input.entityType,
+      log,
+      sourceKey: input.sourceKey,
+      token: refreshedToken,
+    });
   }
 }
 

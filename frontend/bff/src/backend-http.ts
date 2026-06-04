@@ -94,6 +94,9 @@ export async function requestBackend(
 
       lastError = new Error(`Request to ${path} failed with status ${String(status)}`);
     } catch (error) {
+      if (error instanceof BackendHttpError) {
+        throw error;
+      }
       lastError = error;
     } finally {
       clearTimeout(timeout);
@@ -148,6 +151,7 @@ function getInitialErrorCodeAndMessage(
 ): { code: string; message: string } {
   const isAuth = pathname.includes("/auth/");
   const isAirline = pathname.includes("/airline") || pathname.includes("/onboarding/airline");
+  const isAirport = pathname === "/airport" || pathname.startsWith("/airport/");
   const isOnboarding = pathname.includes("/onboarding");
 
   if (status >= 500) {
@@ -167,6 +171,9 @@ function getInitialErrorCodeAndMessage(
   }
   if (isAirline || isOnboarding) {
     return normalizeAirlineError(status, body);
+  }
+  if (isAirport) {
+    return normalizeAirportError(status, body);
   }
   return normalizeGenericError(status);
 }
@@ -214,6 +221,20 @@ function normalizeAirlineError(status: number, body: unknown): { code: string; m
   return { code: "UNKNOWN_ERROR", message: "An unknown airline error occurred." };
 }
 
+function normalizeAirportError(status: number, body: unknown): { code: string; message: string } {
+  if (status === 409) {
+    const errorCode = numericErrorCode(body);
+    if (errorCode === 4) {
+      return { code: "AIRPORT_ICAO_EXISTS", message: "Airport with this ICAO code already exists." };
+    }
+    if (errorCode === 5) {
+      return { code: "AIRPORT_IATA_EXISTS", message: "Airport with this IATA code already exists." };
+    }
+    return { code: "AIRPORT_CONFLICT", message: "Airport with this ICAO or IATA code already exists." };
+  }
+  return normalizeGenericError(status);
+}
+
 function normalizeAuthError(status: number): { code: string; message: string } {
   if (status === 400 || status === 401) {
     return { code: "AUTH_INVALID_CREDENTIALS", message: "Check credentials and try again." };
@@ -234,7 +255,18 @@ function normalizeGenericError(status: number): { code: string; message: string 
   if (status === 404) {
     return { code: "NOT_FOUND", message: "Resource not found." };
   }
+  if (status === 409) {
+    return { code: "CONFLICT", message: "Resource already exists or conflicts with existing data." };
+  }
   return { code: "UNKNOWN_ERROR", message: "An unknown error occurred." };
+}
+
+function numericErrorCode(body: unknown): null | number {
+  if (!body || typeof body !== "object") {
+    return null;
+  }
+  const value = (body as Record<string, unknown>).error;
+  return typeof value === "number" ? value : null;
 }
 
 function shouldRetryAttempt(

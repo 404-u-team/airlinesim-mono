@@ -1,4 +1,5 @@
 import type { BuildOptions } from "../shared/types";
+import type { ImportLogger } from "./logger";
 
 import {
   fetchCachedText,
@@ -97,7 +98,7 @@ const URLS = {
     "https://api.worldbank.org/v2/country/all/indicator/ST.INT.ARVL?format=json&per_page=20000&MRV=1",
 };
 
-export async function loadRawSources(options: BuildOptions): Promise<RawSources> {
+export async function loadRawSources(options: BuildOptions, log?: ImportLogger): Promise<RawSources> {
   const paths = getImportPaths(options.dataDir);
   const refreshRaw = options.refreshRaw ?? options.source === "fetch";
   const [
@@ -116,19 +117,19 @@ export async function loadRawSources(options: BuildOptions): Promise<RawSources>
     geoCities,
     manual,
   ] = await Promise.all([
-    loadCsv(`${paths.rawDir}/opensky-aircraft-metadata.csv`, URLS.aircraftMetadata, refreshRaw),
-    loadCsv(`${paths.rawDir}/airports.csv`, URLS.airports, refreshRaw),
-    loadCsv(`${paths.rawDir}/countries.csv`, URLS.countries, refreshRaw),
-    loadCsv(`${paths.rawDir}/regions.csv`, URLS.regions, refreshRaw),
-    loadCsv(`${paths.rawDir}/runways.csv`, URLS.runways, refreshRaw),
-    loadJson<RestCountry[]>(`${paths.rawDir}/rest-countries-a.json`, URLS.restCountriesA, refreshRaw),
-    loadJson<RestCountry[]>(`${paths.rawDir}/rest-countries-b.json`, URLS.restCountriesB, refreshRaw),
-    loadWorldBankCountries(`${paths.rawDir}/worldbank-countries.json`, refreshRaw),
-    loadWorldBankValues(`${paths.rawDir}/worldbank-population.json`, URLS.wbPopulation, refreshRaw),
-    loadWorldBankValues(`${paths.rawDir}/worldbank-gdp.json`, URLS.wbGdp, refreshRaw),
-    loadWorldBankValues(`${paths.rawDir}/worldbank-tourism.json`, URLS.wbTourism, refreshRaw),
-    loadGeoAdmin1(`${paths.rawDir}/admin1CodesASCII.txt`, refreshRaw),
-    loadGeoCities(`${paths.rawDir}/cities5000.zip`, refreshRaw),
+    loadCsv(`${paths.rawDir}/opensky-aircraft-metadata.csv`, URLS.aircraftMetadata, refreshRaw, log),
+    loadCsv(`${paths.rawDir}/airports.csv`, URLS.airports, refreshRaw, log),
+    loadCsv(`${paths.rawDir}/countries.csv`, URLS.countries, refreshRaw, log),
+    loadCsv(`${paths.rawDir}/regions.csv`, URLS.regions, refreshRaw, log),
+    loadCsv(`${paths.rawDir}/runways.csv`, URLS.runways, refreshRaw, log),
+    loadJson<RestCountry[]>(`${paths.rawDir}/rest-countries-a.json`, URLS.restCountriesA, refreshRaw, log),
+    loadJson<RestCountry[]>(`${paths.rawDir}/rest-countries-b.json`, URLS.restCountriesB, refreshRaw, log),
+    loadWorldBankCountries(`${paths.rawDir}/worldbank-countries.json`, refreshRaw, log),
+    loadWorldBankValues(`${paths.rawDir}/worldbank-population.json`, URLS.wbPopulation, refreshRaw, log),
+    loadWorldBankValues(`${paths.rawDir}/worldbank-gdp.json`, URLS.wbGdp, refreshRaw, log),
+    loadWorldBankValues(`${paths.rawDir}/worldbank-tourism.json`, URLS.wbTourism, refreshRaw, log),
+    loadGeoAdmin1(`${paths.rawDir}/admin1CodesASCII.txt`, refreshRaw, log),
+    loadGeoCities(`${paths.rawDir}/cities5000.zip`, refreshRaw, log),
     loadManual(paths.manualDir),
   ]);
 
@@ -149,18 +150,18 @@ export async function loadRawSources(options: BuildOptions): Promise<RawSources>
   };
 }
 
-async function loadCsv(path: string, url: string, refreshRaw: boolean): Promise<Array<Record<string, string>>> {
-  return parseCsv(await fetchCachedText(path, url, refreshRaw));
+async function loadCsv(path: string, url: string, refreshRaw: boolean, log?: ImportLogger): Promise<Array<Record<string, string>>> {
+  return parseCsv(await fetchCachedText(path, url, refreshRaw, log));
 }
 
-async function loadGeoAdmin1(path: string, refreshRaw: boolean): Promise<Map<string, string>> {
-  const rows = parseTsv(await fetchCachedText(path, URLS.geoAdmin1, refreshRaw));
+async function loadGeoAdmin1(path: string, refreshRaw: boolean, log?: ImportLogger): Promise<Map<string, string>> {
+  const rows = parseTsv(await fetchCachedText(path, URLS.geoAdmin1, refreshRaw, log));
 
   return new Map(rows.map((row) => [row[0] ?? "", normalizeName(row[2] ?? row[1] ?? "")]));
 }
 
-async function loadGeoCities(path: string, refreshRaw: boolean): Promise<GeoCity[]> {
-  const rows = parseTsv(await fetchCachedZipText(path, URLS.geoCities, "cities5000.txt", refreshRaw));
+async function loadGeoCities(path: string, refreshRaw: boolean, log?: ImportLogger): Promise<GeoCity[]> {
+  const rows = parseTsv(await fetchCachedZipText(path, URLS.geoCities, "cities5000.txt", refreshRaw, log));
 
   return rows.map((row) => ({
     admin1Code: row[10] ?? "",
@@ -173,8 +174,8 @@ async function loadGeoCities(path: string, refreshRaw: boolean): Promise<GeoCity
   }));
 }
 
-async function loadJson<TValue>(path: string, url: string, refreshRaw: boolean): Promise<TValue> {
-  const text = await fetchCachedText(path, url, refreshRaw);
+async function loadJson<TValue>(path: string, url: string, refreshRaw: boolean, log?: ImportLogger): Promise<TValue> {
+  const text = await fetchCachedText(path, url, refreshRaw, log);
 
   return JSON.parse(text) as TValue;
 }
@@ -191,15 +192,15 @@ async function loadManual(manualDir: string): Promise<ManualOverrides> {
   return { aircraftTypes, airports, countries, regionLinks, regions };
 }
 
-async function loadWorldBankCountries(path: string, refreshRaw: boolean): Promise<Map<string, WorldBankCountry>> {
-  const payload = await loadJson<unknown[]>(path, URLS.wbCountries, refreshRaw);
+async function loadWorldBankCountries(path: string, refreshRaw: boolean, log?: ImportLogger): Promise<Map<string, WorldBankCountry>> {
+  const payload = await loadJson<unknown[]>(path, URLS.wbCountries, refreshRaw, log);
   const rows = Array.isArray(payload[1]) ? (payload[1] as WorldBankCountry[]) : [];
 
   return new Map(rows.filter((row) => row.iso2Code).map((row) => [row.iso2Code ?? "", row]));
 }
 
-async function loadWorldBankValues(path: string, url: string, refreshRaw: boolean): Promise<Map<string, number>> {
-  const payload = await loadJson<unknown[]>(path, url, refreshRaw);
+async function loadWorldBankValues(path: string, url: string, refreshRaw: boolean, log?: ImportLogger): Promise<Map<string, number>> {
+  const payload = await loadJson<unknown[]>(path, url, refreshRaw, log);
   const rows = Array.isArray(payload[1]) ? (payload[1] as WorldBankValue[]) : [];
 
   return new Map(

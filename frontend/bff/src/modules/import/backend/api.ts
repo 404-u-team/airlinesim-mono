@@ -1,6 +1,7 @@
 import type { BffConfig } from "../../../config";
 import type { BackendEntity } from "../shared/types";
 import { BackendHttpError, requestBackendJson } from "../../../backend-http";
+import { errorDetails, type ImportLogger } from "../runtime/logger";
 
 export type BackendSnapshot = {
   aircraftTypes: BackendEntity[];
@@ -12,7 +13,10 @@ export type BackendSnapshot = {
 
 type RequestOptions = {
   body?: unknown;
+  entityType?: string;
+  log?: ImportLogger;
   method?: "GET" | "POST" | "PUT";
+  sourceKey?: string;
   token: string;
 };
 
@@ -20,8 +24,10 @@ export class BackendRequestError extends Error {
   constructor(
     message: string,
     public readonly status?: number,
+    public readonly code?: string,
   ) {
     super(message);
+    this.name = "BackendRequestError";
   }
 }
 
@@ -31,17 +37,47 @@ export async function backendRequest<TValue>(
   options: RequestOptions,
 ): Promise<TValue> {
   const method = options.method ?? "GET";
+  const startedAt = performance.now();
+  options.log?.({
+    details: { method, path },
+    entityType: options.entityType,
+    level: "info",
+    message: "Calling backend",
+    operation: "backend.request",
+    sourceKey: options.sourceKey,
+    stage: "importing",
+  });
   try {
-    return await requestBackendJson<TValue>(config, path, {
+    const result = await requestBackendJson<TValue>(config, path, {
       body: options.body,
       headers: {
         Authorization: `Bearer ${options.token}`,
       },
       method,
     });
+    options.log?.({
+      details: { durationMs: Math.round(performance.now() - startedAt), method, path },
+      entityType: options.entityType,
+      level: "info",
+      message: "Backend request completed",
+      operation: "backend.request",
+      sourceKey: options.sourceKey,
+      stage: "importing",
+    });
+    return result;
   } catch (error) {
+    const isConflict = error instanceof BackendHttpError && error.status === 409;
+    options.log?.({
+      details: { ...errorDetails(error), durationMs: Math.round(performance.now() - startedAt), method, path },
+      entityType: options.entityType,
+      level: isConflict ? "warning" : "error",
+      message: isConflict ? "Backend request conflict" : "Backend request failed",
+      operation: "backend.request",
+      sourceKey: options.sourceKey,
+      stage: "importing",
+    });
     if (error instanceof BackendHttpError) {
-      throw new BackendRequestError(error.message, error.status);
+      throw new BackendRequestError(error.message, error.status, error.code);
     }
     throw error;
   }
@@ -58,13 +94,13 @@ export function extractBackendId(payload: unknown): null | string {
   return typeof id === "string" && id ? id : null;
 }
 
-export async function loadBackendSnapshot(config: BffConfig, token: string): Promise<BackendSnapshot> {
+export async function loadBackendSnapshot(config: BffConfig, token: string, log?: ImportLogger): Promise<BackendSnapshot> {
   const [countries, regions, airports, regionLinks, aircraftTypes] = await Promise.all([
-    backendRequest<{ countries?: BackendEntity[] }>(config, "/countries", { token }),
-    backendRequest<{ regions?: BackendEntity[] }>(config, "/regions", { token }),
-    backendRequest<{ airports?: BackendEntity[] }>(config, "/airports", { token }),
-    backendRequest<{ region_links?: BackendEntity[] }>(config, "/region-links", { token }),
-    backendRequest<{ items?: BackendEntity[] }>(config, "/aircraft-types", { token }),
+    backendRequest<{ countries?: BackendEntity[] }>(config, "/countries", { log, token }),
+    backendRequest<{ regions?: BackendEntity[] }>(config, "/regions", { log, token }),
+    backendRequest<{ airports?: BackendEntity[] }>(config, "/airports", { log, token }),
+    backendRequest<{ region_links?: BackendEntity[] }>(config, "/region-links", { log, token }),
+    backendRequest<{ items?: BackendEntity[] }>(config, "/aircraft-types", { log, token }),
   ]);
 
   return {

@@ -1,7 +1,7 @@
 import type { ImportMapping, ImportReport } from "../shared/types";
-
 import { mkdir } from "node:fs/promises";
 import { inflateRawSync } from "node:zlib";
+import { errorDetails, type ImportLogger } from "./logger";
 
 const DEFAULT_DATA_DIR = "data/import/world-data";
 
@@ -39,16 +39,18 @@ export async function fetchCachedText(
   path: string,
   url: string,
   refreshRaw: boolean,
+  log?: ImportLogger,
 ): Promise<string> {
   if (!refreshRaw) {
     const cached = await readTextIfExists(path);
 
     if (cached != null) {
+      log?.({ details: { path }, level: "info", message: "Using cached source", operation: "source.cache", stage: "building" });
       return cached;
     }
   }
 
-  const response = await fetch(url);
+  const response = await fetchSource(url, path, log);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch ${url}: ${String(response.status)}`);
@@ -65,6 +67,7 @@ export async function fetchCachedZipText(
   url: string,
   fileName: string,
   refreshRaw: boolean,
+  log?: ImportLogger,
 ): Promise<string> {
   const textPath = path.replace(/\.zip$/u, ".txt");
 
@@ -72,11 +75,12 @@ export async function fetchCachedZipText(
     const cached = await readTextIfExists(textPath);
 
     if (cached != null) {
+      log?.({ details: { path: textPath }, level: "info", message: "Using cached source", operation: "source.cache", stage: "building" });
       return cached;
     }
   }
 
-  const response = await fetch(url);
+  const response = await fetchSource(url, path, log);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch ${url}: ${String(response.status)}`);
@@ -89,6 +93,31 @@ export async function fetchCachedZipText(
   await Bun.write(textPath, text);
 
   return text;
+}
+
+async function fetchSource(url: string, path: string, log?: ImportLogger): Promise<Response> {
+  const startedAt = performance.now();
+  log?.({ details: { path, url }, level: "info", message: "Downloading import source", operation: "source.fetch", stage: "building" });
+  try {
+    const response = await fetch(url);
+    log?.({
+      details: { durationMs: Math.round(performance.now() - startedAt), path, status: response.status, url },
+      level: response.ok ? "info" : "error",
+      message: response.ok ? "Import source downloaded" : "Import source request failed",
+      operation: "source.fetch",
+      stage: "building",
+    });
+    return response;
+  } catch (error) {
+    log?.({
+      details: { ...errorDetails(error), durationMs: Math.round(performance.now() - startedAt), path, url },
+      level: "error",
+      message: "Import source download failed",
+      operation: "source.fetch",
+      stage: "building",
+    });
+    throw error;
+  }
 }
 
 export async function readJsonFile<TValue>(path: string, fallback: TValue): Promise<TValue> {
