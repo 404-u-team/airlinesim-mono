@@ -84,9 +84,37 @@ function addBffOverlay(swagger: SwaggerDocument): SwaggerDocument {
 
   addDemandOverlay(swagger);
   addFleetOverlay(swagger);
+  addFinanceOverlay(swagger);
   addGameOverlay(swagger);
 
   return swagger;
+}
+
+function addFinanceOverlay(swagger: SwaggerDocument): void {
+  swagger.paths ??= {};
+  const financeGetPaths = [
+    ["/finance/overview", "Returns available cash, operational result, fleet value, recent transactions and risks."],
+    ["/finance/ledger", "Returns the current airline income and expense ledger."],
+    ["/finance/routes", "Returns profitability aggregated by route."],
+    ["/finance/flights/{id}", "Returns financial result and ledger transactions for a flight."],
+  ] as const;
+
+  for (const [path, description] of financeGetPaths) {
+    swagger.paths[path] = {
+      get: {
+        description,
+        produces: ["application/json"],
+        responses: { "200": {}, "401": {}, "404": {}, "500": {} },
+      },
+    };
+  }
+  swagger.paths["/finance/recalculate"] = {
+    post: {
+      description: "Idempotently reconciles completed flights into the BFF finance ledger.",
+      produces: ["application/json"],
+      responses: { "200": {}, "401": {}, "500": {} },
+    },
+  };
 }
 
 function addDemandOverlay(swagger: SwaggerDocument): void {

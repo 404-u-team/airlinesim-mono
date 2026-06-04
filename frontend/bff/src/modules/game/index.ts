@@ -677,7 +677,7 @@ async function loadGameSnapshot(config: BffConfig, userAuthorization: string): P
     requestBackendJson<{ items?: AircraftType[] }>(config, "/aircraft-types", { token }),
     requestBackendJson<{ airports?: Airport[] }>(config, "/airports", { token }),
     requestBackendJson<{ regions?: Region[] }>(config, "/regions", { token }),
-    requestBackendJson<{ region_links?: RegionLink[] }>(config, "/region-links", { token }),
+    loadOptionalRegionLinks(config, token),
   ]);
 
   return {
@@ -688,6 +688,18 @@ async function loadGameSnapshot(config: BffConfig, userAuthorization: string): P
     regionLinks: regionLinks.region_links ?? [],
     regions: regions.regions ?? [],
   };
+}
+
+async function loadOptionalRegionLinks(
+  config: BffConfig,
+  token: string,
+): Promise<{ region_links?: RegionLink[] }> {
+  try {
+    return await requestBackendJson<{ region_links?: RegionLink[] }>(config, "/region-links", { token });
+  } catch (error) {
+    console.warn("BFF game snapshot is using an empty region-link fallback:", error);
+    return { region_links: [] };
+  }
 }
 
 async function loadOverlayOperations(airlineId: string): Promise<OverlayOperations> {

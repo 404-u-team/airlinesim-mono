@@ -25,6 +25,7 @@ const labelKeysByPath: Record<string, ShellMessageKey> = {
   "/admin/airports": "nav.admin.airports",
   "/admin/countries": "nav.admin.countries",
   "/admin/future": "nav.admin.future",
+  "/admin/import": "nav.admin.import",
   "/admin/region-links": "nav.admin.regionLinks",
   "/admin/regions": "nav.admin.regions",
   "/airports": "nav.airports",
@@ -188,12 +189,20 @@ watch(
               :key="child.path"
             >
               <RouterLink
+                v-if="child.enabled !== false"
                 :to="child.path"
                 class="block rounded-md px-2 py-1.5 text-body transition hover:bg-surface-subtle"
                 :class="route.path === child.path ? 'text-primary font-medium' : 'text-text-muted'"
               >
                 {{ getNavLabel(child.path, child.label) }}
               </RouterLink>
+              <span
+                v-else
+                class="block cursor-not-allowed rounded-md px-2 py-1.5 text-body text-text-muted opacity-45"
+                :title="t('nav.disabled')"
+              >
+                {{ getNavLabel(child.path, child.label) }}
+              </span>
             </li>
           </ul>
         </li>

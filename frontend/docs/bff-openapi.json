@@ -3293,6 +3293,75 @@
         }
       }
     },
+    "/finance/overview": {
+      "get": {
+        "description": "Returns available cash, operational result, fleet value, recent transactions and risks.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/finance/ledger": {
+      "get": {
+        "description": "Returns the current airline income and expense ledger.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/finance/routes": {
+      "get": {
+        "description": "Returns profitability aggregated by route.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/finance/flights/{id}": {
+      "get": {
+        "description": "Returns financial result and ledger transactions for a flight.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "404": {},
+          "500": {}
+        }
+      }
+    },
+    "/finance/recalculate": {
+      "post": {
+        "description": "Idempotently reconciles completed flights into the BFF finance ledger.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {},
+          "401": {},
+          "500": {}
+        }
+      }
+    },
     "/game/dashboard-summary": {
       "get": {
         "description": "Returns the shell Dashboard read model: airline status, base, fleet, route/flight empty capabilities, alerts, navigation progress and next best action.",

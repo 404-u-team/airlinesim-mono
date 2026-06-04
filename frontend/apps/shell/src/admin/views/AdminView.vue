@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { Locale } from "@airlinesim/i18n";
+
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 
@@ -7,6 +9,9 @@ import AdminEntityPage from "../components/AdminEntityPage.vue";
 import AdminFuturePage from "../components/AdminFuturePage.vue";
 import { adminEntityConfigs, defaultAdminEntity } from "../data/entity-configs";
 import { futureEntities } from "../data/future-entities";
+import AdminImportPage from "./AdminImportPage.vue";
+
+defineProps<{ appLocale: Locale }>();
 
 const route = useRoute();
 
@@ -29,6 +34,7 @@ const activeFutureEntity = computed(() =>
   futureEntities.find((entity) => entity.route.endsWith(`/${futureSlug.value ?? ""}`)),
 );
 const isFutureRoute = computed(() => route.path.startsWith("/admin/future"));
+const isImportRoute = computed(() => route.path === "/admin/import");
 </script>
 
 <template>
@@ -39,8 +45,9 @@ const isFutureRoute = computed(() => route.path.startsWith("/admin/future"));
       :future-entities="futureEntities"
     />
 
+    <AdminImportPage v-if="isImportRoute" :app-locale="appLocale" />
     <AdminFuturePage
-      v-if="isFutureRoute"
+      v-else-if="isFutureRoute"
       :entities="futureEntities"
       :entity="activeFutureEntity"
     />

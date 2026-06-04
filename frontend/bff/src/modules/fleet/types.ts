@@ -33,8 +33,12 @@ export type AircraftType = {
 
 export type Airline = {
   balance?: number;
+  credit_rating?: number;
   id?: string;
+  is_bankrupt?: boolean;
   name?: string;
+  reputation?: number;
+  safety_rating?: number;
   starting_airport_id?: string;
 };
 

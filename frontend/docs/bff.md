@@ -124,6 +124,8 @@ Dry-run не вызывает create/update endpoints backend. Реальный 
 
 BFF хранит ответы этих backend list endpoints в памяти процесса. Запрос `?refresh=true` принудительно обновляет кэш. Любая успешная non-GET мутация через BFF сбрасывает весь list cache.
 
+Если backend `/region-links` временно недоступен, BFF отвечает пустой коллекцией с `meta.degraded=true`. Это позволяет Dashboard, Map, Routes и Operations продолжать работу без route opportunities до восстановления backend.
+
 Для кэшируемых endpoints доступны:
 
 - `q` - поиск по всем строковым полям объекта.
@@ -276,6 +278,28 @@ HTTP endpoints:
 - BFF проверяет range/runway/status/conflicts/night ops/oversupply/cash reserve;
 - Dashboard, Events и Map читают operations overlay для next action, flight counts и route status;
 - expected flight financials являются MVP estimate и готовят вход для финансового раздела.
+
+### `finance`
+
+Папка: `bff/src/modules/finance`.
+
+Модуль реализует финансовый контур MVP поверх существующего backend-баланса и BFF-owned operations overlay. Backend не меняется: завершенные рейсы идемпотентно превращаются в проводки, которые хранятся в `bff/data/game-state/ledger.json`.
+
+HTTP endpoints:
+
+- `GET /finance/overview` - доступный баланс, результат операций, стоимость флота, недельные метрики и финансовые риски.
+- `GET /finance/ledger` - журнал доходов и расходов текущей авиакомпании.
+- `GET /finance/routes` - прибыльность маршрутов по завершенным рейсам.
+- `GET /finance/flights/:id` - финансовый результат конкретного рейса.
+- `POST /finance/recalculate` - повторная безопасная сверка завершенных рейсов с журналом.
+
+Правила:
+
+- backend balance является базовой суммой, BFF ledger хранит только операционный delta;
+- проводки одного рейса защищены idempotency key и не дублируются при повторной сверке;
+- выручка, топливо, аэропортовые сборы и резерв обслуживания создаются только для завершенных рейсов;
+- UI показывает финансовые риски с переходом к проблемному разделу;
+- фондовый рынок и кредиты не входят в MVP и остаются отключенными в навигации.
 
 ### `onboarding`
 

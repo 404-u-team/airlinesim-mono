@@ -7,6 +7,7 @@ import { jsonResponse } from "../../http";
 type CacheableRouteConfig = {
   backendPath: string;
   collectionKey: string;
+  fallbackEmptyOnError?: boolean;
   path: string;
   requiresAuth: boolean;
 };
@@ -46,6 +47,7 @@ const cacheableRoutes: CacheableRouteConfig[] = [
   {
     backendPath: "/region-links",
     collectionKey: "region_links",
+    fallbackEmptyOnError: true,
     path: "/region-links",
     requiresAuth: true,
   },
@@ -204,6 +206,9 @@ async function handleCacheableRoute(
     try {
       payload = await loadCacheableRouteInternal(request, config, route);
     } catch (error) {
+      if (route.fallbackEmptyOnError) {
+        return degradedListResponse(route, error);
+      }
       if (error instanceof BackendHttpError) {
         return jsonResponse(error.toNormalizedJson(), { status: error.status });
       }
@@ -232,6 +237,19 @@ async function handleCacheableRoute(
       total: payload.items.length,
     },
     [route.collectionKey]: filteredItems,
+  });
+}
+
+function degradedListResponse(route: CacheableRouteConfig, error: unknown): Response {
+  return jsonResponse({
+    meta: {
+      cached: false,
+      degraded: true,
+      error_code: error instanceof BackendHttpError ? error.code : "BACKEND_UNAVAILABLE",
+      fetched_at: new Date().toISOString(),
+      total: 0,
+    },
+    [route.collectionKey]: [],
   });
 }
 

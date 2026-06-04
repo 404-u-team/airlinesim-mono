@@ -28,6 +28,7 @@ import type { ShellMessageKey } from "./i18n/messages";
 import { resolveRemoteId } from "./mfe-routing";
 
 export type NavigationChild = {
+  enabled?: boolean;
   label: string;
   path: string;
 };
@@ -57,9 +58,9 @@ export const navigationSections: NavigationSection[] = [
     children: [
       { label: "Overview", path: "/fleet/overview" },
       { label: "Aircraft", path: "/fleet/aircraft" },
-      { label: "Orders", path: "/fleet/orders" },
-      { label: "Configurations", path: "/fleet/configurations" },
-      { label: "Maintenance", path: "/fleet/maintenance" },
+      { enabled: false, label: "Orders", path: "/fleet/orders" },
+      { enabled: false, label: "Configurations", path: "/fleet/configurations" },
+      { enabled: false, label: "Maintenance", path: "/fleet/maintenance" },
     ],
     icon: Plane,
     label: "Fleet",
@@ -68,10 +69,10 @@ export const navigationSections: NavigationSection[] = [
   },
   {
     children: [
-      { label: "My Hubs", path: "/airports/hubs" },
+      { enabled: false, label: "My Hubs", path: "/airports/hubs" },
       { label: "Routes", path: "/airports/routes" },
-      { label: "Fees & Slots", path: "/airports/fees-slots" },
-      { label: "Contracts", path: "/airports/contracts" },
+      { enabled: false, label: "Fees & Slots", path: "/airports/fees-slots" },
+      { enabled: false, label: "Contracts", path: "/airports/contracts" },
     ],
     icon: Map,
     label: "Airports",
@@ -82,9 +83,9 @@ export const navigationSections: NavigationSection[] = [
     children: [
       { label: "Live flights", path: "/operations/live-flights" },
       { label: "Schedule", path: "/operations/schedule" },
-      { label: "Fuel", path: "/operations/fuel" },
-      { label: "Ground services", path: "/operations/ground-services" },
-      { label: "R&D", path: "/operations/research" },
+      { enabled: false, label: "Fuel", path: "/operations/fuel" },
+      { enabled: false, label: "Ground services", path: "/operations/ground-services" },
+      { enabled: false, label: "R&D", path: "/operations/research" },
     ],
     icon: Gauge,
     label: "Operations",
@@ -96,8 +97,8 @@ export const navigationSections: NavigationSection[] = [
       { label: "Overview", path: "/finances/overview" },
       { label: "R&F profit", path: "/finances/profit" },
       { label: "Costs", path: "/finances/costs" },
-      { label: "Loans & leasing", path: "/finances/loans-leasing" },
-      { label: "Stock market", path: "/finances/stock-market" },
+      { enabled: false, label: "Loans & leasing", path: "/finances/loans-leasing" },
+      { enabled: false, label: "Stock market", path: "/finances/stock-market" },
     ],
     icon: CircleDollarSign,
     label: "Finances",
@@ -107,10 +108,10 @@ export const navigationSections: NavigationSection[] = [
   {
     children: [
       { label: "Overview", path: "/staff/overview" },
-      { label: "Crew", path: "/staff/crew" },
-      { label: "Ground staff", path: "/staff/ground-staff" },
-      { label: "Rosters", path: "/staff/rosters" },
-      { label: "Training", path: "/staff/training" },
+      { enabled: false, label: "Crew", path: "/staff/crew" },
+      { enabled: false, label: "Ground staff", path: "/staff/ground-staff" },
+      { enabled: false, label: "Rosters", path: "/staff/rosters" },
+      { enabled: false, label: "Training", path: "/staff/training" },
     ],
     icon: Users,
     label: "Staff",
@@ -119,9 +120,9 @@ export const navigationSections: NavigationSection[] = [
   },
   {
     children: [
-      { label: "Company", path: "/settings/company" },
-      { label: "Access", path: "/settings/access" },
-      { label: "Notifications", path: "/settings/notifications" },
+      { enabled: false, label: "Company", path: "/settings/company" },
+      { enabled: false, label: "Access", path: "/settings/access" },
+      { enabled: false, label: "Notifications", path: "/settings/notifications" },
       { label: "System", path: "/settings/system" },
     ],
     icon: Settings,
@@ -135,7 +136,8 @@ export const navigationSections: NavigationSection[] = [
       { label: "Regions", path: "/admin/regions" },
       { label: "Airports", path: "/admin/airports" },
       { label: "Region links", path: "/admin/region-links" },
-      { label: "To be enabled", path: "/admin/future" },
+      { label: "World data import", path: "/admin/import" },
+      { enabled: false, label: "To be enabled", path: "/admin/future" },
     ],
     icon: ShieldCheck,
     label: "Admin",

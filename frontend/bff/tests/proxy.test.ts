@@ -138,6 +138,27 @@ test("refresh=true reloads a cached list route from backend", async () => {
   expect(backendListCalls).toBe(2);
 });
 
+test("returns a degraded empty region-link list when backend is unavailable", async () => {
+  globalThis.fetch = async (input) => {
+    if (String(input) === "http://backend.test/airline/me") {
+      return json({ id: "airline-1" });
+    }
+
+    return json({ error: "internal" }, 500);
+  };
+
+  const response = await getProtected("http://bff.test/region-links?refresh=true");
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({
+    meta: {
+      degraded: true,
+      total: 0,
+    },
+    region_links: [],
+  });
+});
+
 async function getProtected(url: string): Promise<Response> {
   const request = new Request(url, {
     headers: {

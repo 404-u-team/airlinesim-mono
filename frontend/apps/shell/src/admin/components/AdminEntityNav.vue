@@ -31,6 +31,13 @@ defineProps<{
         </p>
         <div class="mt-2 space-y-1">
           <RouterLink
+            to="/admin/import"
+            class="block rounded-md px-2 py-2 text-body transition hover:bg-surface-subtle"
+            :class="activePath === '/admin/import' ? 'text-primary font-medium' : 'text-text-muted'"
+          >
+            World data import
+          </RouterLink>
+          <RouterLink
             v-for="entity in entities"
             :key="entity.id"
             :to="`/admin/${entity.id}`"
@@ -47,15 +54,14 @@ defineProps<{
           To be enabled
         </p>
         <div class="mt-2 space-y-1">
-          <RouterLink
+          <span
             v-for="entity in futureEntities"
             :key="entity.route"
-            :to="entity.route"
-            class="block rounded-md px-2 py-2 text-body transition hover:bg-surface-subtle"
-            :class="activePath === entity.route ? 'text-primary font-medium' : 'text-text-muted'"
+            aria-disabled="true"
+            class="block cursor-not-allowed rounded-md px-2 py-2 text-body text-text-muted opacity-50"
           >
             {{ entity.title }}
-          </RouterLink>
+          </span>
         </div>
       </div>
     </nav>

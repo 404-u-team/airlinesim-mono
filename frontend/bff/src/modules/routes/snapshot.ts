@@ -32,7 +32,7 @@ export async function loadRoutePlanningSnapshot(
   const adminToken = await getBackendAdminToken(config);
   const [regions, regionLinks] = await Promise.all([
     requestBackendJson<{ regions?: Region[] }>(config, "/regions", { token: adminToken }),
-    requestBackendJson<{ region_links?: RegionLink[] }>(config, "/region-links", { token: adminToken }),
+    loadOptionalRegionLinks(config, adminToken),
   ]);
 
   return {
@@ -40,4 +40,16 @@ export async function loadRoutePlanningSnapshot(
     regionLinks: regionLinks.region_links ?? [],
     regions: regions.regions ?? [],
   };
+}
+
+async function loadOptionalRegionLinks(
+  config: BffConfig,
+  token: string,
+): Promise<{ region_links?: RegionLink[] }> {
+  try {
+    return await requestBackendJson<{ region_links?: RegionLink[] }>(config, "/region-links", { token });
+  } catch (error) {
+    console.warn("BFF route planning is using an empty region-link fallback:", error);
+    return { region_links: [] };
+  }
 }

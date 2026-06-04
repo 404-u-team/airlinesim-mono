@@ -1,200 +1,186 @@
 <script setup lang="ts">
 import { AirBadge, AirButton, AirMetricCard } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
-import { ApiRequestError, createApiClient, createAuthClient } from "@airlinesim/game-sdk";
+import { type Locale } from "@airlinesim/i18n";
 import { computed, onMounted, ref } from "vue";
 
-type FinanceOverview = {
-  airline?: {
-    balance?: number;
-    credit_rating?: number;
-    is_bankrupt?: boolean;
-    name?: string;
-    reputation?: number;
-    safety_rating?: number;
-  };
-  metrics?: {
-    average_maintenance_ratio?: number;
-    balance?: number;
-    credit_rating?: number;
-    daily_maintenance_reserve?: number;
-    fleet_value?: number;
-    owned_aircraft?: number;
-  };
-};
+import type { FinanceOverview, LedgerTransaction, RouteProfitability } from "./types";
 
-type Metric = {
-  hint?: string;
-  label: string;
-  tone?: "danger" | "neutral" | "success" | "warning";
-  value: string;
-};
+import { getFinanceLedger, getFinanceOverview, getRouteProfitability } from "./api";
+import { financeText } from "./i18n";
 
-const authClient = createAuthClient();
-const apiClient = createApiClient({
-  getToken: authClient.getAccessToken,
-});
-const overview = ref<FinanceOverview>({});
+const props = defineProps<{ appLocale: Locale; shellPath?: string }>();
+const overview = ref<FinanceOverview | null>(null);
+const ledger = ref<LedgerTransaction[]>([]);
+const routes = ref<RouteProfitability[]>([]);
 const error = ref("");
 const isLoading = ref(false);
-
-const runway = computed<Metric[]>(() => [
-  {
-    label: "Balance",
-    tone: (overview.value.metrics?.balance ?? 0) < 5_000_000 ? "warning" : "success",
-    value: formatMoney(overview.value.metrics?.balance),
-  },
-  {
-    label: "Fleet value",
-    value: formatMoney(overview.value.metrics?.fleet_value),
-  },
-  {
-    hint: "Estimated maintenance reserve for active utilization.",
-    label: "Daily reserve",
-    value: formatMoney(overview.value.metrics?.daily_maintenance_reserve),
-  },
-  {
-    label: "Aircraft owned",
-    value: formatNumber(overview.value.metrics?.owned_aircraft),
-  },
-]);
+const view = computed(() => props.shellPath?.split("/")[2] ?? "overview");
+const t = computed(() => (key: Parameters<typeof financeText>[1]) => financeText(props.appLocale, key));
 
 onMounted(() => {
   airlineSimEventBus.emit("mfe:ready", { remoteId: "finance-stock" });
   void loadFinance();
 });
 
-function apiMessage(value: unknown): string {
-  if (value instanceof ApiRequestError && value.status === 401) {
-    return "Sign in to view finances.";
-  }
-
-  return value instanceof Error ? value.message : "Could not load finance overview.";
-}
-
-function formatMoney(value: number | undefined): string {
-  return new Intl.NumberFormat("en", {
+function formatMoney(value = 0, signed = false): string {
+  const formatted = new Intl.NumberFormat(props.appLocale, {
     currency: "USD",
     maximumFractionDigits: 0,
+    signDisplay: signed ? "exceptZero" : "auto",
     style: "currency",
-  }).format(value ?? 0);
-}
-
-function formatNumber(value: number | undefined): string {
-  return new Intl.NumberFormat("en", { maximumFractionDigits: 0 }).format(value ?? 0);
-}
-
-function formatPercent(value: number | undefined): string {
-  return new Intl.NumberFormat("en", {
-    maximumFractionDigits: 0,
-    style: "percent",
-  }).format(value ?? 0);
+  }).format(value);
+  return formatted;
 }
 
 async function loadFinance(): Promise<void> {
   isLoading.value = true;
   error.value = "";
-
   try {
-    overview.value = await apiClient.get<FinanceOverview>("/game/finance-overview");
+    const [overviewResponse, ledgerResponse, routesResponse] = await Promise.all([
+      getFinanceOverview(),
+      getFinanceLedger(),
+      getRouteProfitability(),
+    ]);
+    overview.value = overviewResponse;
+    ledger.value = ledgerResponse.transactions;
+    routes.value = routesResponse.routes;
   } catch (loadError) {
-    error.value = apiMessage(loadError);
+    error.value = loadError instanceof Error ? loadError.message : "Finance request failed.";
   } finally {
     isLoading.value = false;
   }
 }
+
+function openTarget(path: string): void {
+  airlineSimEventBus.emit("navigation:intent", { source: "mfe", targetPath: path });
+}
+
+function riskLabel(code: FinanceOverview["risks"][number]["code"]): string {
+  const keys = {
+    BANKRUPTCY_FLAG: "riskBankruptcy",
+    LOW_BALANCE: "riskLowBalance",
+    ROUTE_LOSS: "riskRouteLoss",
+    WEEKLY_OPERATING_LOSS: "riskWeeklyLoss",
+  } as const;
+  return t.value(keys[code]);
+}
+
+function transactionAmount(transaction: LedgerTransaction): number {
+  return transaction.direction === "credit" ? transaction.amount : -transaction.amount;
+}
+
+function transactionLabel(code: string): string {
+  const keys = {
+    FINANCE_AIRPORT_FEES: "transactionAirportFees",
+    FINANCE_FLIGHT_REVENUE: "transactionFlightRevenue",
+    FINANCE_FUEL_COST: "transactionFuelCost",
+    FINANCE_MAINTENANCE_RESERVE: "transactionMaintenanceReserve",
+    FINANCE_SYSTEM_ADJUSTMENT: "transactionSystemAdjustment",
+  } as const;
+  return code in keys ? t.value(keys[code as keyof typeof keys]) : code.replaceAll("_", " ");
+}
 </script>
 
 <template>
-  <section class="min-h-full overflow-x-hidden bg-background p-4 text-body text-text-primary sm:p-6">
-    <div class="flex flex-col gap-5 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
-      <div class="min-w-0">
-        <AirBadge
-          label="Finance & Stock"
-          variant="success-soft"
-        />
+  <section class="h-full overflow-y-auto bg-background p-4 text-body text-text-primary sm:p-6">
+    <header class="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <AirBadge label="Finance & Stock" variant="success-soft" />
         <h1 class="mt-4 text-h2">
-          Finance Overview
+          {{ t("overview") }}
         </h1>
-        <p class="mt-2 max-w-2xl text-body text-text-muted">
-          Airline cash position, fleet capital and maintenance reserve based on backend fleet data.
+        <p class="mt-2 max-w-3xl text-text-muted">
+          {{ t("subtitle") }}
         </p>
       </div>
       <AirButton
         :disabled="isLoading"
-        :label="isLoading ? 'Loading' : 'Refresh'"
+        :label="isLoading ? t('loading') : t('refresh')"
         size="sm"
         variant="success"
         @click="loadFinance"
       />
-    </div>
+    </header>
 
-    <div
-      v-if="error"
-      class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-slate-950"
-    >
+    <p v-if="error" class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-error">
       {{ error }}
+    </p>
+
+    <div v-if="view === 'stock-market'" class="mt-6 rounded-lg border border-border bg-surface p-6">
+      <h2 class="text-h3">
+        {{ t("stockTitle") }}
+      </h2>
+      <p class="mt-2 text-text-muted">
+        {{ t("stockDisabled") }}
+      </p>
     </div>
 
-    <div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <AirMetricCard
-        v-for="metric in runway"
-        :key="metric.label"
-        :hint="metric.hint"
-        :label="metric.label"
-        :tone="metric.tone"
-        :value="metric.value"
-      />
-    </div>
+    <template v-else-if="overview">
+      <div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <AirMetricCard :label="t('available')" tone="success" :value="formatMoney(overview.balance.available)" />
+        <AirMetricCard :label="t('operationsDelta')" :tone="overview.balance.operations_delta < 0 ? 'danger' : 'success'" :value="formatMoney(overview.balance.operations_delta, true)" />
+        <AirMetricCard :label="t('fleetValue')" :value="formatMoney(overview.metrics.fleet_value)" />
+        <AirMetricCard :label="t('completed')" :value="String(overview.metrics.completed_flights)" />
+      </div>
 
-    <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
-      <div class="rounded-lg border border-border bg-surface p-4">
+      <div v-if="overview.risks.length" class="mt-5 grid gap-3 md:grid-cols-2">
+        <button
+          v-for="risk in overview.risks"
+          :key="risk.code"
+          class="rounded-lg border border-warning bg-warning-bg p-4 text-left text-slate-950"
+          type="button"
+          @click="openTarget(risk.target_path)"
+        >
+          <strong>{{ riskLabel(risk.code) }}</strong>
+          <span v-if="risk.value != null" class="mt-1 block">{{ formatMoney(risk.value, true) }}</span>
+        </button>
+      </div>
+
+      <div v-if="view === 'profit'" class="mt-5 rounded-lg border border-border bg-surface p-4">
         <h2 class="text-subtitle">
-          Capital Health
+          {{ t("routes") }}
         </h2>
-        <div class="mt-4 grid gap-3 sm:grid-cols-3">
-          <AirMetricCard
-            label="Credit rating"
-            :value="formatNumber(overview.metrics?.credit_rating)"
-          />
-          <AirMetricCard
-            label="Reputation"
-            :value="formatNumber(overview.airline?.reputation)"
-          />
-          <AirMetricCard
-            label="Safety"
-            :value="formatNumber(overview.airline?.safety_rating)"
-          />
+        <div class="mt-4 grid gap-3">
+          <article v-for="route in routes" :key="route.route_id" class="grid gap-2 rounded-lg border border-border bg-background p-3 sm:grid-cols-5">
+            <strong>{{ route.origin_airport_id.slice(0, 8) }} → {{ route.destination_airport_id.slice(0, 8) }}</strong>
+            <span>{{ t("completed") }}: {{ route.flights_completed }}</span>
+            <span>{{ t("revenue") }}: {{ formatMoney(route.revenue) }}</span>
+            <span>{{ t("costs") }}: {{ formatMoney(route.costs) }}</span>
+            <span :class="route.profit < 0 ? 'text-error' : 'text-success'">{{ t("profit") }}: {{ formatMoney(route.profit, true) }}</span>
+          </article>
+          <p v-if="routes.length === 0" class="text-text-muted">
+            {{ t("empty") }}
+          </p>
         </div>
       </div>
 
-      <aside class="rounded-lg border border-border bg-surface p-4">
-        <h2 class="text-subtitle">
-          Risk Signals
-        </h2>
-        <dl class="mt-4 grid gap-3">
-          <div class="flex items-center justify-between gap-3">
-            <dt class="text-text-muted">
-              Bankrupt flag
-            </dt>
-            <dd>{{ overview.airline?.is_bankrupt ? "Yes" : "No" }}</dd>
+      <div v-else class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <section class="rounded-lg border border-border bg-surface p-4">
+          <h2 class="text-subtitle">
+            {{ view === "costs" ? t("costs") : t("recent") }}
+          </h2>
+          <div class="mt-4 grid gap-2">
+            <article v-for="transaction in ledger" :key="transaction.id" class="flex items-center justify-between gap-3 rounded-lg border border-border bg-background p-3">
+              <div class="min-w-0">
+                <strong class="block truncate">{{ transactionLabel(transaction.label_code) }}</strong>
+                <span class="text-caption text-text-muted">{{ new Intl.DateTimeFormat(props.appLocale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(transaction.occurred_at)) }}</span>
+              </div>
+              <strong :class="transaction.direction === 'credit' ? 'text-success' : 'text-error'">{{ formatMoney(transactionAmount(transaction), true) }}</strong>
+            </article>
+            <p v-if="ledger.length === 0" class="text-text-muted">
+              {{ t("empty") }}
+            </p>
           </div>
-          <div class="flex items-center justify-between gap-3">
-            <dt class="text-text-muted">
-              Maintenance cover
-            </dt>
-            <dd>{{ formatPercent(overview.metrics?.average_maintenance_ratio) }}</dd>
-          </div>
-          <div class="flex items-center justify-between gap-3">
-            <dt class="text-text-muted">
-              Airline
-            </dt>
-            <dd class="truncate">
-              {{ overview.airline?.name ?? "-" }}
-            </dd>
-          </div>
-        </dl>
-      </aside>
-    </div>
+        </section>
+
+        <aside class="grid gap-3">
+          <AirMetricCard :label="`${t('revenue')} · ${t('weekly')}`" tone="success" :value="formatMoney(overview.metrics.weekly.revenue)" />
+          <AirMetricCard :label="`${t('costs')} · ${t('weekly')}`" tone="warning" :value="formatMoney(overview.metrics.weekly.costs)" />
+          <AirMetricCard :label="`${t('profit')} · ${t('weekly')}`" :tone="overview.metrics.weekly.profit < 0 ? 'danger' : 'success'" :value="formatMoney(overview.metrics.weekly.profit, true)" />
+          <AirMetricCard :label="t('baseline')" :value="formatMoney(overview.balance.backend_baseline)" />
+        </aside>
+      </div>
+    </template>
   </section>
 </template>

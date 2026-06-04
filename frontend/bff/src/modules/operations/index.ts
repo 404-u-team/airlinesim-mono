@@ -3,6 +3,7 @@ import type { StoredFlight, StoredSchedule } from "./types";
 
 import { BackendHttpError } from "../../backend-http";
 import { jsonResponse, readJson } from "../../http";
+import { reconcileCompletedFlight } from "../finance/ledger";
 import { buildRouteListItem } from "../routes/planning";
 import { loadRoutePlanningSnapshot } from "../routes/snapshot";
 import { listRoutesForAirline, saveRoute } from "../routes/storage";
@@ -84,6 +85,7 @@ async function completeFlight(request: Request, config: BffConfig, flightId: str
     updated_at: new Date().toISOString(),
   };
   await saveFlights([completedFlight]);
+  await reconcileCompletedFlight(completedFlight);
 
   return jsonResponse({ flight: completedFlight });
 }

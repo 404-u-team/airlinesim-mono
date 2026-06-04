@@ -240,6 +240,53 @@ test("builds dashboard summary with route planning action when aircraft exists",
   expect(payload.alerts.some((alert: { code: string }) => alert.code === "LOW_BALANCE")).toBe(true);
 });
 
+test("keeps dashboard available when backend region-links fail", async () => {
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+
+    if (url === "http://backend.test/airline/me") {
+      return json({
+        balance: 20_000_000,
+        id: "airline-1",
+        name: "Seoul Air",
+        starting_airport_id: "airport-1",
+      });
+    }
+    if (url === "http://backend.test/auth/login") {
+      return json({ access_token: token() });
+    }
+    if (url === "http://backend.test/aircrafts") {
+      return json({ items: [] });
+    }
+    if (url === "http://backend.test/aircraft-types") {
+      return json({ items: [] });
+    }
+    if (url === "http://backend.test/airports") {
+      return json({ airports: [{ id: "airport-1", region_id: "region-1" }] });
+    }
+    if (url === "http://backend.test/regions") {
+      return json({ regions: [{ id: "region-1" }] });
+    }
+    if (url === "http://backend.test/region-links") {
+      return json({ error: "internal" }, 500);
+    }
+
+    return json({ error: "unexpected" }, 500);
+  };
+
+  const response = await handleGameRequest(
+    authorizedRequest("http://bff.test/game/dashboard-summary"),
+    new URL("http://bff.test/game/dashboard-summary"),
+    config,
+  );
+
+  expect(response?.status).toBe(200);
+  expect(await response?.json()).toMatchObject({
+    airline: { id: "airline-1" },
+    routes: { active_routes: 0 },
+  });
+});
+
 test("builds map state with base and opportunity airport features", async () => {
   globalThis.fetch = async (input) => {
     const url = String(input);

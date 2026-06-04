@@ -33,7 +33,7 @@ CREATE TABLE region_link (
     business NUMERIC CHECK (business >= 0 AND business <= 1),
     tourism NUMERIC CHECK (tourism >= 0 AND tourism <= 1),
     base_daily_demand_ab NUMERIC NOT NULL DEFAULT -1,
-    base_daily_demand_ba NUMERIC NOT NULL -1,
+    base_daily_demand_ba NUMERIC NOT NULL DEFAULT -1,
     demand_cache_updated_at TIMESTAMP NOT NULL DEFAULT now(),
     CHECK (region_a < region_b),                      -- enforce symmetry, avoid duplicates
     UNIQUE (region_a, region_b)        

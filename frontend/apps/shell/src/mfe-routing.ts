@@ -22,7 +22,7 @@ export const mfeRoutes: MfeRouteDefinition[] = [
     remoteId: "fleet-ops",
   },
   {
-    defaultPath: "/airports/hubs",
+    defaultPath: "/airports/routes",
     label: "Airports",
     pathPrefix: "/airports",
     remoteId: "network-planner",
@@ -46,7 +46,7 @@ export const mfeRoutes: MfeRouteDefinition[] = [
     remoteId: "hr-facilities",
   },
   {
-    defaultPath: "/settings/company",
+    defaultPath: "/settings/system",
     label: "Settings",
     pathPrefix: "/settings",
     remoteId: "events-news",
