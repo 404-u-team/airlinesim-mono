@@ -844,6 +844,41 @@ export const openApiOperations = [
   },
   {
     "method": "GET",
+    "operationId": "get__finance_overview",
+    "path": "/finance/overview",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__finance_ledger",
+    "path": "/finance/ledger",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__finance_routes",
+    "path": "/finance/routes",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
+    "operationId": "get__finance_flights__id_",
+    "path": "/finance/flights/{id}",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "POST",
+    "operationId": "post__finance_recalculate",
+    "path": "/finance/recalculate",
+    "summary": "",
+    "tags": []
+  },
+  {
+    "method": "GET",
     "operationId": "get__game_dashboard_summary",
     "path": "/game/dashboard-summary",
     "summary": "",

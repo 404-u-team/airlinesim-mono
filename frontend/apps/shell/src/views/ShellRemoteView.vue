@@ -18,15 +18,9 @@ const props = defineProps<{
 const route = useRoute();
 const isRouteLoading = ref(false);
 
-const activeRemoteId = computed<RemoteId | undefined>(() => {
-  const { remoteId } = route.meta;
-
-  if (typeof remoteId === "string") {
-    return remoteId as RemoteId;
-  }
-
-  return getRemoteIdByPath(route.path);
-});
+// URL is the only reliable source of truth while Vue Router reuses this view
+// between different MFE route records.
+const activeRemoteId = computed<RemoteId | undefined>(() => getRemoteIdByPath(route.path));
 
 const createMap = async (
   target: HTMLElement,

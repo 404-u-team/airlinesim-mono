@@ -1,479 +1,302 @@
 # TODO7: Деньги и результат операций
 
-Источник: раздел 7 `TODO_MVP.md` - "Деньги и результат операций".
+Источник: раздел 7 `TODO_MVP.md` — «Деньги и результат операций».
 
-Исходное допущение пользователя: разделы 1-6 уже реализованы. Значит у игрока есть авиакомпания, база, самолет, маршрут, активное расписание и сгенерированные рейсы.
+Разделы 1–6 считаются реализованными. У игрока есть авиакомпания, самолет, маршрут, активное расписание и рейсы.
 
-Backend не меняем. Так как backend transaction/flight financial endpoints отсутствуют, финансовый результат рейсов и ledger реализуем как BFF-owned overlay. При этом backend остается источником истины для airline baseline balance, fleet ownership и aircraft purchase effects.
+Backend не меняем. Backend balance остается базовой суммой после поддержанных backend-действий, а результат BFF-owned рейсов учитывается в BFF ledger. Все browser-facing запросы идут только в BFF; BFF обращается к backend через централизованный helper с retry для безопасных чтений.
 
-## Цель раздела
+## Результат раздела
 
-Игрок должен увидеть, как действия меняют деньги: покупка самолета уже отражается backend balance, а запуск/завершение рейсов должен отражаться в BFF MVP ledger, финансовом обзоре, событиях и Dashboard.
+Игрок должен доверять финансовой модели и понимать:
 
-MVP этого раздела заканчивается тем, что игрок видит баланс, прибыль/убыток рейсов, журнал операций, риски и понятные действия.
+- сколько денег доступно;
+- что изменило баланс;
+- сколько заработали и потратили рейсы;
+- какие маршруты прибыльны;
+- какие риски требуют действия.
 
-## Продуктовый Definition of Done
+Успешный финал: completed flight один раз создает объяснимые проводки, Finance/Dashboard/Operations/Events показывают согласованные значения, а риск ведет к конкретному действию.
 
-- [ ] Finance overview показывает последствия покупки самолета и рейсов.
-- [ ] После завершения рейса появляется revenue/cost/profit.
-- [ ] Игрок видит журнал операций.
-- [ ] Баланс объясним: baseline backend balance + BFF ledger delta.
-- [ ] Риск-сигналы ведут к действиям.
-- [ ] Stock market не мешает MVP и может быть hidden/disabled.
-- [ ] Dashboard, Events и Operations используют одинаковые financial values.
+## Что уже реализовано
 
-## Финансовая модель MVP
+- [x] BFF-модуль `finance`.
+- [x] Ledger в `bff/data/game-state/ledger.json`.
+- [x] Idempotency keys для проводок completed flight.
+- [x] Endpoints:
+  - `GET /finance/overview`;
+  - `GET /finance/ledger`;
+  - `GET /finance/routes`;
+  - `GET /finance/flights/:id`;
+  - `POST /finance/recalculate`.
+- [x] Available balance = backend baseline + BFF operations delta.
+- [x] Flight revenue, fuel, airport fee и maintenance reserve.
+- [x] Базовые risk signals.
+- [x] Finance Overview, recent ledger, route profitability и disabled stock market.
+- [x] Базовая локализация `ru`/`en`.
 
-### 1. Источники данных
+## Главные пробелы текущего baseline
 
-- Backend:
-  - `/airline/me` - baseline balance, ratings, bankruptcy flags;
-  - `/aircrafts` - owned aircraft;
-  - `/aircraft-types` - fleet value, fuel/maintenance parameters;
-  - `/airports` - fees and operating costs.
+- [ ] UI показывает внутреннее понятие «Backend balance», что неприемлемо как финальный продуктовый текст.
+- [ ] Cost split сейчас процентный после общей суммы, а не результат единого детального calculator.
+- [ ] Route preview, schedule preview и actual flight могут использовать отличающиеся формулы.
+- [ ] Автоматически завершенный по времени рейс может попасть в ledger только при последующем чтении Finance/Operations.
+- [ ] Ledger pagination/filtering неполные; нет running balance и понятных linked entity labels.
+- [ ] Route profitability показывает обрезанные raw airport ids.
+- [ ] Нет forecast/runway и объяснения достаточности денег на ближайший период.
+- [ ] Нет reconciliation baseline/version; изменение backend balance может быть ошибочно интерпретировано.
+- [ ] `POST /finance/recalculate` требует более четкой защиты и версии формулы.
+- [ ] Файловое хранилище не защищено от конкурентных записей.
 
-- BFF-owned:
-  - routes from TODO5;
-  - schedules/flights from TODO6;
-  - ledger transactions from TODO7.
+## Обязательные архитектурные работы
 
-- Derived:
-  - MVP available balance = backend airline balance + sum(BFF ledger amounts after baseline).
+### BFF-first и retry
 
-### 2. BFF ledger storage
+- [ ] Провести аудит Finance, Dashboard, Operations, Events и связанных shared API.
+- [ ] Удалить прямые backend-запросы и raw backend DTO из browser-facing логики.
+- [ ] Все финансовые UI используют `/finance/*` или согласованные BFF read models.
+- [ ] Backend balance/fleet reads выполняются через `requestBackendJson` с safe retry.
+- [ ] Ledger mutations являются BFF-owned, идемпотентными и не зависят от unsafe backend retry.
+- [ ] Ошибки нормализовать и локализовать; Retry показывать только для retryable.
 
-- [ ] Добавить BFF module `bff/src/modules/finance`.
+### Единый финансовый источник истины
 
-  Предлагаемые файлы:
-  - `index.ts` - HTTP router;
-  - `types.ts` - finance/ledger contracts;
-  - `storage.ts` - ledger persistence;
-  - `snapshot.ts` - backend + BFF state load;
-  - `calculator.ts` - revenue/cost/profit;
-  - `risk.ts` - risk signals;
-  - `reconciliation.ts` - baseline balance and duplicate prevention;
-  - `errors.ts`.
+- [ ] Создать versioned shared finance calculator, используемый TODO5, TODO6 и TODO7.
+- [ ] Разделить forecast/expected и actual; completed actual immutable.
+- [ ] Каждая сумма должна иметь currency, formula version, source entity и occurred_at.
+- [ ] Зафиксировать политику rounding и timezone.
+- [ ] Не учитывать backend purchase второй раз в BFF ledger.
+- [ ] Задокументировать reconciliation при изменении backend baseline.
 
-- [ ] Добавить persistence в `bff/data/game-state/ledger.json`.
+### Надежность ledger
 
-  Минимальный transaction:
+- [ ] Добавить schema version, formula version и миграции.
+- [ ] Добавить serialized writes/lock и защиту от lost update.
+- [ ] Сохранять пачку проводок одного рейса атомарно.
+- [ ] Проверять баланс проводок рейса и idempotency до записи.
+- [ ] Добавить repair/reconciliation report, не меняющий данные молча.
+- [ ] Ограничить recalculate текущей airline и явным безопасным сценарием.
 
-  ```ts
-  type LedgerTransaction = {
-    id: string;
-    airline_id: string;
-    source_type:
-      | "aircraft_purchase"
-      | "flight_revenue"
-      | "flight_cost"
-      | "maintenance_reserve"
-      | "airport_fee"
-      | "fuel_cost"
-      | "adjustment";
-    source_id?: string;
-    flight_id?: string;
-    route_id?: string;
-    schedule_id?: string;
-    amount: number;
-    currency: "USD";
-    direction: "credit" | "debit";
-    category: "revenue" | "fleet" | "operations" | "maintenance" | "airport" | "fuel" | "system";
-    label_code: string;
-    description?: string;
-    occurred_at: string;
-    created_at: string;
-    idempotency_key: string;
-  };
-  ```
+## Полная финансовая модель MVP
 
-- [ ] Не дублировать backend aircraft purchase.
+### 1. Денежные понятия
 
-  Если backend уже списывает стоимость самолета, BFF ledger не должен второй раз вычитать aircraft purchase из MVP balance. Можно показывать покупку в журнале как imported/backend event с amount `0` или separate display-only event, но не учитывать в overlay delta.
+- [ ] В продукте использовать:
+  - «Доступные средства»;
+  - «Результат полетов»;
+  - «Стоимость флота»;
+  - «Доходы»;
+  - «Операционные расходы»;
+  - «Прибыль/убыток».
+- [ ] Не показывать пользователю слова `backend`, `ledger_delta`, `baseline`, `source_type`.
+- [ ] В detail/help можно объяснить, что доступные средства учитывают покупки и результат завершенных рейсов, без технической архитектуры.
 
-- [ ] Idempotency обязательна.
+### 2. Единый расчет рейса
 
-  Для flight completion ledger:
-  - `flight:<flight_id>:revenue`;
-  - `flight:<flight_id>:fuel`;
-  - `flight:<flight_id>:airport`;
-  - `flight:<flight_id>:maintenance`.
+- [ ] Actual passengers определяются детерминированно и фиксируются при completion.
+- [ ] Revenue = passengers × actual fare с согласованными modifiers.
+- [ ] Fuel cost рассчитывается из distance/block hours, aircraft fuel burn и единой цены топлива.
+- [ ] Airport cost рассчитывается из реальных доступных сборов origin/destination.
+- [ ] Maintenance reserve рассчитывается из block hours и aircraft type cost.
+- [ ] Дополнительные недоступные данные либо явно остаются вне MVP, либо входят как named fixed operations cost.
+- [ ] Profit = revenue − сумма детальных расходов.
+- [ ] Сумма breakdown всегда совпадает с headline profit.
 
-  Повторное completion не создает повторные транзакции.
+### 3. Forecast и actual
 
-### 3. BFF endpoints
+- [ ] TODO5 показывает route-level estimate с confidence.
+- [ ] TODO6 показывает weekly schedule forecast.
+- [ ] TODO7 показывает actual completed flight и агрегаты.
+- [ ] Разница forecast/actual объяснима пассажирской загрузкой и зафиксированными факторами.
+- [ ] Изменение формулы не переписывает historical actual без явной миграции.
 
-- [ ] `GET /finance/overview`
+## Полный BFF-план
 
-  Заменяет/расширяет текущий `/game/finance-overview` для finance-stock.
+### 1. Completion → ledger
 
-  Ответ:
-  - backend baseline balance;
-  - BFF ledger delta;
-  - MVP available balance;
-  - fleet value;
-  - daily/weekly operating reserve;
-  - revenue today/week;
-  - costs today/week;
-  - profit today/week;
-  - completed flights count;
-  - risk signals;
-  - next actions.
-
-- [ ] `GET /finance/ledger`
-
-  Query:
-  - `from`;
-  - `to`;
-  - `category`;
-  - `route_id`;
-  - `flight_id`;
-  - `limit`;
-  - `cursor`.
-
-  Ответ:
-  - transactions;
-  - totals by category;
-  - balance_before/after if feasible;
-  - pagination.
-
-- [ ] `GET /finance/routes`
-
-  Profitability by route:
-  - route;
-  - flights completed;
-  - revenue;
-  - cost;
-  - profit;
-  - load factor;
-  - recommendation.
-
-- [ ] `GET /finance/flights/:id`
-
-  Детальный financial breakdown рейса:
-  - passengers;
-  - fare;
-  - revenue;
-  - fuel;
-  - airport fees;
-  - maintenance reserve;
-  - profit.
-
-- [ ] `POST /finance/recalculate`
-
-  MVP/admin-safe endpoint для пересчета ledger из completed flights без дубликатов. Нужен для восстановления после изменения formulas. Можно ограничить dev/admin token later; для MVP protected user endpoint пересчитывает только свою airline.
-
-### 4. Flight completion -> ledger
-
-- [ ] Интегрировать TODO6 completion с finance ledger.
-
-  Когда flight становится `completed`, BFF должен:
-  - зафиксировать actual passengers/load factor;
-  - посчитать revenue;
-  - посчитать costs;
-  - записать ledger transactions idempotently;
-  - обновить flight.actual;
-  - emit/return finance invalidation metadata.
-
-- [ ] Разделить revenue и costs.
-
-  Минимум:
-  - `flight_revenue` credit;
-  - `fuel_cost` debit;
-  - `airport_fee` debit;
-  - `maintenance_reserve` debit.
-
-- [ ] Формула passengers/load factor.
-
-  Для MVP:
-  - base demand from route snapshot;
-  - weekly frequency;
-  - aircraft seats;
-  - deterministic variance by flight id/date;
-  - clamp to 0..seats.
-
-  Важно: результат должен быть deterministic, чтобы refresh не менял выполненный рейс.
-
-- [ ] Формула revenue.
-
-  MVP:
-  - fare per passenger from route economics snapshot;
-  - passengers * fare;
-  - optional reputation multiplier.
-
-- [ ] Формула costs.
-
-  MVP:
-  - fuel cost = distance * aircraft fuel parameter fallback;
-  - airport fees = origin/destination runway/gate/stand/turnaround fees;
-  - maintenance reserve = flight hours * aircraft type maintenance cost;
-  - optional fixed crew/ground service placeholder, если нужны реалистичные расходы.
-
-- [ ] Profit classification.
-
-  По completed flight:
-  - profitable;
-  - near break-even;
-  - loss-making.
-
-  Использовать для Events/Risk.
-
-## Frontend: Finance & Stock
-
-### 1. Разделить finance app на MVP views
-
-- [ ] `apps/finance-stock/src/RemoteApp.vue` сейчас один обзор с hardcoded EN.
-
-  Разбить:
-  - `api.ts`;
-  - `types.ts`;
-  - `i18n/en.ts`, `i18n/ru.ts`;
-  - `components/FinanceOverview.vue`;
-  - `components/LedgerTable.vue`;
-  - `components/RouteProfitability.vue`;
-  - `components/RiskSignals.vue`;
-  - `components/StockMarketPlaceholder.vue`.
-
-- [ ] Route-aware rendering по `shellPath`.
-
-  - `/finances/overview` - overview + risk + recent ledger;
-  - `/finances/profit` - route/flight profitability;
-  - `/finances/costs` - cost breakdown;
-  - `/finances/loans-leasing` - MVP disabled unless needed;
-  - `/finances/stock-market` - hidden/disabled placeholder.
+- [ ] Reconciliation запускается при progression рейсов, а не только при открытии Finance.
+- [ ] Для каждого completed flight создается одна атомарная группа:
+  - revenue credit;
+  - fuel debit;
+  - airport fees debit;
+  - maintenance reserve debit;
+  - optional named operations debit.
+- [ ] Group имеет `flight_id`, `route_id`, `schedule_id`, `formula_version`.
+- [ ] Повторная обработка возвращает существующий результат и не создает дубли.
+- [ ] Cancelled flight не создает обычную выручку; правила cancellation cost документированы.
 
 ### 2. Finance overview
 
-- [ ] Показывать понятный баланс.
-
-  Metrics:
-  - available balance;
-  - backend baseline balance;
-  - operations delta;
+- [ ] `GET /finance/overview` возвращает:
+  - available cash;
+  - operations result;
   - fleet value;
-  - revenue today/week;
-  - costs today/week;
-  - profit today/week;
-  - completed flights.
+  - today/7d revenue, costs, profit;
+  - completed flights;
+  - forecast next 7 days;
+  - cash runway;
+  - recent transactions;
+  - risks и next actions.
+- [ ] Backend baseline остается внутренней диагностикой, а не обязательным UI-полем.
+- [ ] Добавить `updated_at`, data freshness и degraded flags.
 
-- [ ] Объяснить баланс.
+### 3. Ledger
 
-  UI copy:
-  - "Баланс backend после покупок";
-  - "Результат операций MVP";
-  - "Доступный баланс в симуляции".
+- [ ] `GET /finance/ledger` поддерживает:
+  - from/to;
+  - category;
+  - route_id;
+  - flight_id;
+  - direction;
+  - cursor/limit.
+- [ ] Возвращать linked labels для flight, route и airports.
+- [ ] Возвращать running balance или balance after transaction.
+- [ ] Группировать проводки рейса для понятного drill-down.
+- [ ] Экспорт не обязателен для MVP; если добавляется, только через BFF и текущую airline.
 
-  Не показывать это как техническую проблему; объяснить как текущую MVP-модель, если нужно.
+### 4. Profitability
 
-- [ ] Recent ledger.
+- [ ] Route profitability включает airport labels, flights, passengers, avg load, revenue, costs, profit и margin.
+- [ ] Flight detail показывает полный breakdown expected vs actual.
+- [ ] Cost breakdown агрегирует fuel/airport/maintenance/operations.
+- [ ] Маршрут без completed flights получает `insufficient_data`, а не «нулевую прибыльность».
+- [ ] Рекомендации используют минимальный объем данных и не объявляют маршрут убыточным по одному рейсу без пояснения.
 
-  Последние 10-20 операций:
-  - дата;
-  - категория;
-  - описание;
-  - route/flight link;
-  - credit/debit;
-  - running balance optional.
+### 5. Риски и действия
 
-- [ ] Risk signals.
+- [ ] Low cash: CTA в costs/расписание.
+- [ ] Negative weekly result: CTA в route profitability.
+- [ ] Loss-making route: CTA в route detail/schedule.
+- [ ] Low load factor: CTA изменить частоту.
+- [ ] High maintenance cost: CTA Fleet.
+- [ ] Bankruptcy flag: отдельное понятное состояние.
+- [ ] Risk содержит code, severity, explanation inputs и actionable target.
 
-  Минимум:
-  - low balance;
-  - weekly operating loss;
-  - negative route profitability;
-  - high maintenance reserve;
-  - low load factor;
-  - bankruptcy flag from backend.
+## Полный UX-план Finance & Stock
 
-  Каждый сигнал должен иметь CTA:
-  - open route;
-  - reduce schedule;
-  - open fleet;
-  - open finance costs.
+### Overview
 
-### 3. Profitability views
+- [ ] Первый экран показывает доступные средства, результат полетов, доходы, расходы, прибыль и стоимость флота.
+- [ ] Показать период каждой метрики.
+- [ ] Показать краткое объяснение изменения денег.
+- [ ] Risks размещены по приоритету и ведут к действию.
+- [ ] Recent operations группируются по рейсам и категориям.
+- [ ] Loading/error/empty/degraded states не показывают ложные нули.
 
-- [ ] Route profitability.
+### Journal
 
-  Для каждого route:
-  - flights completed;
-  - avg load factor;
-  - revenue;
-  - cost;
-  - profit;
-  - trend/status;
-  - CTA to schedule or route detail.
+- [ ] Отдельный понятный журнал операций.
+- [ ] Фильтры по периоду, категории, маршруту и рейсу.
+- [ ] Каждая строка показывает дату, понятное описание, связанный объект, доход/расход и баланс после.
+- [ ] Клик открывает flight financial detail.
+- [ ] На mobile журнал отображается карточками или адаптивными строками без overflow.
 
-- [ ] Costs breakdown.
+### Profit and costs
 
-  Категории:
-  - fuel;
-  - airport fees;
-  - maintenance;
-  - fleet;
-  - other/system.
+- [ ] `/finances/profit` показывает маршрутную прибыльность с labels, а не ids.
+- [ ] `/finances/costs` показывает категории расходов и их доли.
+- [ ] Route/flight drill-down объясняет формулу и expected vs actual.
+- [ ] Периоды и фильтры одинаковы между overview/profit/costs.
 
-- [ ] Flight financial detail.
+### Stock market
 
-  Из flight board можно открыть breakdown в finance или inline drawer.
+- [ ] Оставить disabled в navigation до отдельного продуктового раздела.
+- [ ] Если route открыт напрямую, показать локализованное future state без ложных действий.
+- [ ] Stock market не влияет на Definition of Done MVP.
 
-### 4. Stock market не блокирует MVP
+## Интеграции
 
-- [ ] Скрыть или явно disabled stock market.
+- [ ] Dashboard использует available cash и finance risks, а не только raw airline balance.
+- [ ] Operations показывает expected для future и actual для completed.
+- [ ] Route detail показывает profitability после появления данных.
+- [ ] Events создает first revenue, profitable/loss flight, low cash и route loss события с действиями.
+- [ ] Все экраны используют один calculator/formula version.
+- [ ] Invalidation events обновляют Finance после completion без reload.
 
-  Варианты:
-  - оставить nav item, но показывать "Будет позже";
-  - скрыть для обычного MVP;
-  - оставить read-only placeholder с explanation.
+## Продуктовые состояния
 
-- [ ] Не давать CTA, который уводит от первого операционного цикла.
+- [ ] Нет completed flights: объяснить, что actual появится после завершения рейса.
+- [ ] Есть schedule, но нет completed: показать forecast отдельно.
+- [ ] Нет маршрутов: CTA к планированию.
+- [ ] Убыточный рейс/маршрут: объяснить основные cost drivers.
+- [ ] Данных недостаточно: честный insufficient-data state.
+- [ ] Reconciliation/degraded: сохранить последние надежные данные и предложить Retry.
+- [ ] Истекшая сессия: единый auth flow.
 
-  Если раздел остается видимым, он должен говорить: "Сначала запустите рейсы и получите операционную историю".
+## I18N, форматирование и доступность
 
-## Dashboard, Operations, Events integration
-
-- [ ] Dashboard summary.
-
-  Добавить:
-  - operations profit today/week;
-  - completed flights today;
-  - low balance risk from finance module;
-  - next action after first completed flight: view finance overview.
-
-- [ ] Operations flight board.
-
-  Flight rows должны показывать actual financials for completed flights and expected for upcoming.
-
-- [ ] Events.
-
-  Добавить события:
-  - flight completed profitable;
-  - flight completed loss-making;
-  - low balance warning;
-  - route losing money;
-  - first revenue earned.
-
-- [ ] Event bus.
-
-  События:
-  - `finance:ledger-updated`;
-  - `finance:risk-created`;
-  - `flight:financials-posted`;
-  - `game:snapshot-invalidated`.
-
-## I18N и тексты
-
-- [ ] Все finance строки на `ru` и `en`.
-
-  Категории:
-  - metrics;
-  - ledger categories;
-  - transaction labels;
-  - risk codes;
-  - empty states;
-  - disabled stock market;
-  - MVP balance explanation.
-
-- [ ] Форматирование.
-
-  Использовать locale-aware:
-  - currency USD;
-  - percentages;
-  - dates/times;
-  - signed money values.
-
-- [ ] Не показывать raw backend/BFF terms.
-
-  Запрещено в UI:
-  - `ledger_delta`;
-  - `source_type`;
-  - `baseline`;
-  - raw id без label.
-
-## BFF consistency rules
-
-- [ ] Единый finance calculator.
-
-  Route preview (TODO5), schedule preview (TODO6), flight completion (TODO7), finance overview должны использовать совместимые формулы. Нельзя, чтобы route preview обещал прибыль, а completed flight считал по другой логике без объяснения.
-
-- [ ] Immutable completed flight financials.
-
-  После completion actual financials не меняются при refresh. Если формула меняется, нужен explicit recalculation endpoint.
-
-- [ ] No double counting.
-
-  Проверить:
-  - aircraft purchase backend balance не дублируется ledger overlay;
-  - completed flight revenue не записывается дважды;
-  - recalculation idempotent.
-
-- [ ] Time windows.
-
-  Все totals today/week должны использовать единый timezone policy. Для MVP можно UTC, но UI должен форматировать понятно.
+- [ ] Заменить «Баланс backend» и другие технические формулировки.
+- [ ] Удалить fallback raw codes/ids из UI.
+- [ ] Локализовать categories, transactions, risks, periods, empty/error states.
+- [ ] Использовать единые locale-aware currency, signed values, percentages, dates.
+- [ ] Цвет не является единственным признаком дохода/расхода/риска.
+- [ ] Проверить desktop/tablet/mobile, keyboard и screen-reader labels.
 
 ## Тесты
 
-### BFF tests
+### BFF
 
-- [ ] ledger write/read by airline id.
-- [ ] completed flight creates revenue and cost transactions.
-- [ ] repeated completion does not duplicate ledger.
-- [ ] finance overview combines backend balance + ledger delta.
-- [ ] route profitability aggregates completed flights.
-- [ ] risk signals low balance/loss-making route.
-- [ ] stock market endpoint/view disabled if no backend support.
-- [ ] recalculate endpoint idempotent.
+- [ ] Единый calculator дает согласованные route/schedule/actual значения.
+- [ ] Completed flight создает сбалансированную атомарную группу проводок.
+- [ ] Повторная completion/reconcile не создает дубли.
+- [ ] Concurrent reconcile безопасен.
+- [ ] Backend purchase не учитывается второй раз.
+- [ ] Overview корректно объединяет baseline и ledger.
+- [ ] Ledger filters/pagination/running balance.
+- [ ] Route/flight profitability и insufficient data.
+- [ ] Risks и action targets.
+- [ ] Airline isolation, migration, corrupt storage, safe retries.
 
-### Frontend tests
+### Frontend
 
-- [ ] finance overview renders all metrics.
-- [ ] ledger renders credits/debits and empty state.
-- [ ] risk signals show CTA.
-- [ ] route profitability table/cards render.
-- [ ] stock market placeholder does not look broken.
-- [ ] locale formatting in ru/en.
+- [ ] Overview metrics, periods, risks и empty/degraded states.
+- [ ] Ledger filters, grouped flight entries и detail.
+- [ ] Route profitability labels вместо ids.
+- [ ] Costs breakdown.
+- [ ] Disabled stock market.
+- [ ] RU/EN parity и locale formatting.
+- [ ] Finance обновляется после flight completion event.
 
-### Manual QA
+### E2E/ручная приемка
 
-- [ ] Запустить schedule из TODO6.
-- [ ] Дождаться/завершить рейс.
-- [ ] Открыть `/finances/overview`.
-- [ ] Увидеть revenue/cost/profit.
-- [ ] Открыть ledger и увидеть операции рейса.
-- [ ] Dashboard показывает измененный финансовый результат.
-- [ ] Events показывают результат рейса.
+- [ ] Завершить рейс из TODO6.
+- [ ] Увидеть результат без ручного пересчета и reload.
+- [ ] Сумма breakdown совпадает с profit и изменением доступных средств.
+- [ ] Открыть маршрут и понять его прибыльность.
+- [ ] Нажать risk и попасть к исправляющему действию.
+- [ ] Повторное открытие/обновление не дублирует деньги.
 
-## Документация
+## Документация и база знаний
 
-- [ ] Обновить `docs/bff.md`: BFF-owned finance ledger overlay.
-- [ ] Обновить BFF OpenAPI overlay для `/finance/*`.
-- [ ] Обновить будущую базу знаний:
-  - "Как понять прибыльность рейса";
-  - "Почему меняется баланс";
-  - "Что делать при финансовых предупреждениях".
-- [ ] Явно задокументировать, что stock market вне MVP.
+- [ ] Обновить `docs/bff.md`, OpenAPI и finance source-of-truth.
+- [ ] Документировать formula version, rounding, timezone, idempotency и reconciliation.
+- [ ] Добавить статьи:
+  - «Почему меняется баланс»;
+  - «Как читать журнал операций»;
+  - «Как понять прибыльность рейса и маршрута»;
+  - «Что делать при финансовых предупреждениях».
+- [ ] Добавить контекстные help links из Overview, Journal, Profit и Costs.
 
 ## Порядок реализации
 
-1. Добавить finance storage и ledger contracts.
-2. Реализовать finance calculator shared with operations.
-3. Интегрировать flight completion -> ledger.
-4. Реализовать `/finance/overview`.
-5. Реализовать `/finance/ledger`.
-6. Реализовать route/flight profitability endpoints.
-7. Обновить Dashboard/Events/Operations integrations.
-8. Разбить finance-stock на views/components/i18n.
-9. Реализовать overview, ledger, profitability, disabled stock.
-10. Добавить тесты.
-11. Обновить docs/OpenAPI.
+1. Зафиксировать продуктовые денежные понятия и единый finance calculator.
+2. Закрыть BFF-first/retry и укрепить ledger storage.
+3. Реализовать надежный completion → actual → ledger pipeline.
+4. Расширить overview, ledger, profitability и risks contracts.
+5. Перевести Dashboard/Operations/Routes/Events на единые значения.
+6. Переработать Finance Overview и технические тексты.
+7. Реализовать Journal, Profit, Costs и drill-down.
+8. Завершить i18n, responsive и accessibility.
+9. Добавить тесты, OpenAPI и пользовательскую документацию.
 
-## Definition of Done для TODO7
+## Definition of Done
 
-- [ ] Finance работает через BFF-owned ledger без backend changes.
-- [ ] Completed flights создают idempotent financial transactions.
-- [ ] Баланс и операции объяснимы пользователю.
-- [ ] Finance overview, ledger и route profitability работают.
-- [ ] Risk signals ведут к действиям.
-- [ ] Stock market не блокирует MVP.
-- [ ] Dashboard/Operations/Events используют те же financial values.
-- [ ] Все тексты локализованы на `ru` и `en`.
-- [ ] Есть BFF/frontend тесты.
+- [ ] Все browser-facing финансовые запросы идут только через BFF.
+- [ ] Safe backend reads используют retry; ledger mutations идемпотентны.
+- [ ] Completed flight влияет на деньги ровно один раз.
+- [ ] Доступные средства и каждая операция объяснимы игроку.
+- [ ] Forecast, expected и actual различены и согласованы.
+- [ ] Overview, Journal, Profit, Costs, Dashboard, Operations и Events показывают единые значения.
+- [ ] Риски ведут к конкретному действию.
+- [ ] В UI нет raw ids и технических терминов BFF/backend.
+- [ ] Сценарий локализован, адаптивен и покрыт тестами.

@@ -58,10 +58,6 @@ export function createMfeRouteRecords(component: RouteComponent): RouteRecordRaw
     const path = `${route.pathPrefix}/:mfePath(.*)*`;
     const remoteRoute: RouteRecordRaw = {
       component,
-      meta: {
-        defaultPath: route.defaultPath,
-        remoteId: route.remoteId,
-      },
       path,
     };
 

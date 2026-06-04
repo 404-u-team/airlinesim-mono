@@ -151,6 +151,9 @@ HTTP endpoint:
 
 - `GET /demand/airport-pair?origin_airport_id=<id>&destination_airport_id=<id>`
 
+Подробная формула, ограничения и сравнение с Grosche et al. описаны в
+`docs/passenger-demand-model.md`.
+
 Правила:
 
 - endpoint требует пользовательский `Authorization: Bearer ...` и проверяет его через backend;

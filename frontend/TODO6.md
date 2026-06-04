@@ -1,508 +1,263 @@
 # TODO6: Расписание и запуск рейсов
 
-Источник: раздел 6 `TODO_MVP.md` - "Расписание и запуск рейсов".
-
-Исходное допущение пользователя: разделы 1-5 уже реализованы. Значит у игрока есть авиакомпания, база, самолет, созданный route в BFF-owned state и route status `awaiting_schedule`.
-
-Backend не меняем. Так как backend schedule/flight endpoints отсутствуют, MVP-расписания и рейсы реализуем как BFF-owned overlay поверх существующих backend/BFF данных: airline, aircrafts, aircraft-types, airports, routes, demand, finance estimates.
-
-## Цель раздела
-
-Игрок должен назначить самолет на созданный маршрут, выбрать простое расписание, пройти проверку ограничений, активировать расписание и увидеть ближайшие/первые рейсы.
-
-MVP этого раздела заканчивается состоянием, когда route имеет активное расписание, а BFF сгенерировал upcoming/live/completed flight instances, которые видны в Operations и Dashboard.
-
-## Продуктовый Definition of Done
-
-- [ ] Игрок выбирает route awaiting schedule.
-- [ ] Игрок выбирает конкретный купленный самолет.
-- [ ] Игрок выбирает простую частоту: ежедневно, 3 раза в неделю, 1 раз в неделю или custom days.
-- [ ] Игрок выбирает время вылета.
-- [ ] UI показывает проверку ограничений до активации.
-- [ ] Игрок активирует расписание.
-- [ ] Route переходит в `scheduled` или `active`.
-- [ ] Появляется список ближайших рейсов.
-- [ ] Dashboard показывает upcoming/live flights.
-- [ ] Если расписание невозможно, UI объясняет причину и дает действие.
-
-## BFF-owned schedule/flight state
-
-### 1. Хранилище расписаний
-
-- [ ] Добавить BFF module `bff/src/modules/operations`.
-
-  Предлагаемые файлы:
-  - `index.ts` - HTTP router;
-  - `types.ts` - schedules/flights contracts;
-  - `storage.ts` - persistence;
-  - `snapshot.ts` - загрузка airline/routes/fleet/airports;
-  - `schedule-validation.ts` - проверки ограничений;
-  - `flight-generation.ts` - материализация рейсов;
-  - `economics.ts` - expected flight economics;
-  - `time.ts` - date/time helpers;
-  - `errors.ts` - operation error codes.
-
-- [ ] Добавить persistence в `bff/data/game-state/schedules.json`.
-
-  Минимальный schedule:
-
-  ```ts
-  type StoredSchedule = {
-    id: string;
-    airline_id: string;
-    route_id: string;
-    aircraft_id: string;
-    status: "draft" | "active" | "paused";
-    pattern: {
-      mode: "daily" | "weekly";
-      days_of_week: number[];
-      departure_local_time: string;
-      timezone?: string;
-      turnaround_minutes: number;
-    };
-    validity: {
-      starts_on: string;
-      ends_on?: string;
-    };
-    checks_snapshot: ScheduleCheck[];
-    created_at: string;
-    updated_at: string;
-  };
-  ```
-
-- [ ] Добавить persistence в `bff/data/game-state/flights.json`.
-
-  Минимальный flight:
-
-  ```ts
-  type StoredFlight = {
-    id: string;
-    airline_id: string;
-    route_id: string;
-    schedule_id: string;
-    aircraft_id: string;
-    origin_airport_id: string;
-    destination_airport_id: string;
-    status: "scheduled" | "boarding" | "in_flight" | "completed" | "cancelled";
-    departure_at: string;
-    arrival_at: string;
-    expected: {
-      passengers: number;
-      load_factor: number;
-      revenue: number;
-      cost: number;
-      profit: number;
-    };
-    actual?: {
-      passengers: number;
-      load_factor: number;
-      revenue: number;
-      cost: number;
-      profit: number;
-    };
-    created_at: string;
-    updated_at: string;
-  };
-  ```
-
-- [ ] Использовать airline_id как boundary.
-
-  Все schedules/flights читаются и пишутся только для текущей backend airline. Клиент не передает trusted airline id.
-
-- [ ] Поддержать deterministic MVP flight generation.
-
-  Рейсы генерируются на ближайшие 7-14 дней при активации schedule и/или при `GET /operations/flights`. Не нужна real-time симуляция, но статусы должны обновляться на основе текущего времени:
-  - до departure: `scheduled`;
-  - departure window: `boarding` или `in_flight`;
-  - after arrival: `completed`.
-
-### 2. BFF endpoints
-
-- [ ] `GET /operations/schedule-options?route_id=<id>`
-
-  Возвращает данные для формы:
-  - route;
-  - compatible aircraft;
-  - default patterns;
-  - recommended frequency;
-  - airport constraints;
-  - estimated duration;
-  - estimated economics per flight/week.
-
-- [ ] `POST /operations/schedule-preview`
-
-  Body:
-
-  ```ts
-  type SchedulePreviewRequest = {
-    route_id: string;
-    aircraft_id: string;
-    days_of_week: number[];
-    departure_local_time: string;
-    turnaround_minutes?: number;
-    starts_on?: string;
-  };
-  ```
-
-  Ответ:
-  - canActivate;
-  - blocking reasons;
-  - warnings;
-  - generated sample flights;
-  - weekly utilization;
-  - expected weekly revenue/cost/profit;
-  - aircraft utilization impact.
-
-- [ ] `POST /operations/schedules`
-
-  Создает и активирует schedule или создает draft.
-
-  Для MVP можно делать сразу active, если checks passed:
-  - route exists and belongs to airline;
-  - route status is `awaiting_schedule` or `scheduled`;
-  - aircraft belongs to airline;
-  - aircraft compatible;
-  - no aircraft time conflict;
-  - airport slots available in MVP model;
-  - route demand enough for selected frequency;
-  - cash reserve above threshold.
-
-- [ ] `GET /operations/schedules`
-
-  Список расписаний airline.
-
-- [ ] `GET /operations/schedules/:id`
-
-  Деталь расписания + ближайшие рейсы.
-
-- [ ] `PATCH /operations/schedules/:id`
-
-  Для MVP:
-  - pause/resume;
-  - update pattern only if future flights can be regenerated;
-  - cancel future generated flights when paused.
-
-- [ ] `GET /operations/flights`
-
-  Query:
-  - `status`;
-  - `route_id`;
-  - `aircraft_id`;
-  - `from`;
-  - `to`;
-  - `limit`.
-
-  Ответ:
-  - live;
-  - upcoming;
-  - completed;
-  - summary counts.
-
-- [ ] `POST /operations/flights/:id/complete`
-
-  Для manual QA/demo можно добавить deterministic completion endpoint, если time-based completion неудобен. Endpoint должен быть dev/MVP-safe и idempotent: повторное completion не дублирует ledger.
-
-### 3. Проверки ограничений
-
-- [ ] Aircraft route compatibility.
-
-  Проверить:
-  - distance <= range;
-  - origin runway >= min runway;
-  - destination runway >= min runway;
-  - aircraft status not maintenance;
-  - maintenance ratio above threshold.
-
-- [ ] Aircraft schedule conflict.
-
-  Для каждого active schedule same aircraft:
-  - рассчитать flight block time;
-  - добавить turnaround before/after;
-  - проверить overlap для ближайших 14 дней.
-
-- [ ] Airport constraints.
-
-  MVP checks:
-  - origin/destination daily slot capacity;
-  - night operations: если departure/arrival ночью и airport `works_at_night === false`, warning/block;
-  - runway fees included in cost.
-
-- [ ] Route demand/frequency fit.
-
-  Если weekly offered seats сильно превышают weekly demand, warning `OVERSUPPLY_RISK`.
-
-- [ ] Cash reserve check.
-
-  До активации показать:
-  - estimated weekly operating cost;
-  - current MVP balance;
-  - reserve after first week;
-  - warning/block if negative or below threshold.
-
-- [ ] Route state check.
-
-  Нельзя активировать schedule для deleted/paused route. Если route already scheduled, разрешить update через edit flow, но не дублировать без предупреждения.
-
-### 4. Flight generation
-
-- [ ] Рассчитать block time.
-
-  Формула MVP:
-  - distance / cruising speed;
-  - добавить taxi/turnaround buffer;
-  - округлить до 5/15 минут.
-
-- [ ] Генерировать flight numbers.
-
-  Использовать airline IATA/ICAO:
-  - если IATA есть: `XX101`;
-  - иначе ICAO prefix;
-  - стабильный sequence per route/schedule.
-
-- [ ] Expected load factor.
-
-  На основе:
-  - daily demand route;
-  - weekly frequency;
-  - aircraft seats;
-  - route reputation fallback;
-  - clamp 35-95% для MVP.
-
-- [ ] Expected financials per flight.
-
-  Эти значения нужны TODO7:
-  - passengers;
-  - revenue;
-  - airport fees;
-  - fuel cost;
-  - maintenance reserve;
-  - total cost;
-  - profit.
-
-- [ ] Idempotency.
-
-  Повторная генерация не должна создавать дубликаты flight instances для того же schedule/date/direction.
-
-## Frontend: Operations / Schedule
-
-### 1. Разделить `fleet-ops` по shellPath
-
-- [ ] Сейчас Fleet & Ops remote обслуживает `/fleet/*` и `/operations/*`.
-
-  Добавить route-aware rendering:
-  - `/fleet/*` - fleet market/aircraft;
-  - `/operations/schedule` - schedule builder/list;
-  - `/operations/live-flights` - flight board;
-  - `/operations/fuel`, `/operations/ground-services`, `/operations/research` - MVP disabled/empty states.
-
-- [ ] Создать структуру:
-  - `src/operations/api.ts`;
-  - `src/operations/types.ts`;
-  - `src/operations/i18n.ts`;
-  - `src/operations/components/ScheduleBuilder.vue`;
-  - `src/operations/components/SchedulePreview.vue`;
-  - `src/operations/components/FlightBoard.vue`;
-  - `src/operations/components/ScheduleList.vue`.
-
-### 2. Schedule builder
-
-- [ ] Entry state.
-
-  Если есть route awaiting schedule, выбрать его по умолчанию. Если route_id передан через query/event, открыть его. Если маршрутов нет, показать empty state с CTA `/airports/routes`.
-
-- [ ] Route selector.
-
-  Показывать:
-  - route pair;
-  - status;
-  - demand;
-  - assigned/recommended aircraft;
-  - next action.
-
-- [ ] Aircraft selector.
-
-  Показывать только owned aircraft, с badges:
-  - compatible;
-  - risky;
-  - blocked.
-
-  Для blocked aircraft показать причину.
-
-- [ ] Frequency controls.
-
-  MVP controls:
-  - segmented control: daily / 3 weekly / weekly / custom;
-  - custom day checkboxes;
-  - departure time input;
-  - turnaround select/stepper.
-
-- [ ] Preview before activation.
-
-  После изменения формы делать debounced `POST /operations/schedule-preview`. Показывать:
-  - can activate;
-  - warnings/blockers;
-  - first generated flights;
-  - weekly economics;
-  - utilization.
-
-- [ ] Activation.
-
-  CTA disabled until no blockers. On success:
-  - show success notification;
-  - emit `schedule:activated`;
-  - emit `game:snapshot-invalidated`;
-  - navigate to `/operations/live-flights` or show created flights inline.
-
-### 3. Flight board
-
-- [ ] `/operations/live-flights` показывает flight board.
-
-  Sections:
-  - Live / Boarding;
-  - Upcoming;
-  - Completed;
-  - Cancelled/Issues.
-
-- [ ] Flight row/card.
-
-  Minimum:
-  - flight number;
-  - route;
-  - aircraft tail number;
-  - departure/arrival;
-  - status;
-  - expected passengers/load factor;
-  - expected revenue/cost/profit.
-
-- [ ] Empty states.
-
-  - no routes -> CTA route planning;
-  - route exists no schedule -> CTA schedule builder;
-  - schedule active no upcoming -> refresh/generate message.
-
-- [ ] Manual completion for MVP/demo.
-
-  If BFF exposes `POST /operations/flights/:id/complete`, add small action for scheduled/live flights in non-production or MVP mode. It must not be the only way to complete flights if time-based logic exists.
-
-## Dashboard, Map, Events integration
-
-- [ ] Dashboard summary.
-
-  Update `/game/dashboard-summary`:
-  - routes awaiting schedule count decreases;
-  - upcoming flights count;
-  - live flights count;
-  - completed today;
-  - next action becomes `VIEW_LIVE_FLIGHTS` or `CHECK_FINANCES`.
-
-- [ ] Map state.
-
-  Add route status:
-  - scheduled/active route line style;
-  - upcoming flights optional markers in MVP if available;
-  - selected route/flight support.
-
-- [ ] Events.
-
-  Add events:
-  - schedule activated;
-  - first flights scheduled;
-  - flight completed;
-  - schedule blocked/risky.
-
-- [ ] Event bus.
-
-  Events:
-  - `schedule:activated`;
-  - `flight:completed`;
-  - `operations:flight-selected`;
-  - `finance:ledger-invalidated`;
-  - `game:snapshot-invalidated`.
-
-## I18N и тексты
-
-- [ ] Добавить `ru/en` тексты operations.
-
-  Категории:
-  - schedule statuses;
-  - flight statuses;
-  - day names;
-  - frequency modes;
+Источник: раздел 6 `TODO_MVP.md` — «Расписание и запуск рейсов».
+
+Разделы 1–5 считаются реализованными. У игрока есть авиакомпания, база, самолет и маршрут в статусе `awaiting_schedule`.
+
+Backend не меняем. Расписания и экземпляры рейсов остаются BFF-owned overlay до появления backend endpoints. Все browser-facing запросы идут только в BFF; обращения BFF к backend используют общий retry/error helper.
+
+## Результат раздела
+
+Игрок назначает самолет на маршрут, выбирает простую частоту и время, видит проверку ограничений, активирует расписание и получает понятный список ближайших, текущих и завершенных рейсов.
+
+Успешный финал: active schedule существует, будущие рейсы материализованы, Dashboard/Map/Events обновлены, а completed flights готовы к финансовому учету TODO7.
+
+## Что уже реализовано
+
+- [x] BFF-модуль `operations`.
+- [x] Хранилища `schedules.json` и `flights.json` с изоляцией по airline.
+- [x] Endpoints schedule options, preview, create/list schedules, list/complete flights.
+- [x] Проверки route/aircraft, range, runway, maintenance, простого конфликта, night ops, oversupply и cash reserve.
+- [x] Генерация рейсов на 14 дней и расчет expected financials.
+- [x] Time-based статусы scheduled/boarding/in_flight/completed.
+- [x] Базовый Schedule Builder и Flight Board.
+- [x] Dashboard и Events читают operations overlay.
+- [x] Completed flight интегрирован с finance ledger.
+
+## Главные пробелы текущего baseline
+
+- [ ] Проверка конфликтов сравнивает только одинаковое время и день, а не реальные интервалы block time + turnaround.
+- [ ] Нет обратного рейса; текущий рейс фактически односторонний.
+- [ ] Не учитываются timezone аэропортов, переход суток и локальное время прибытия.
+- [ ] Не реализованы полноценные slot capacity и одновременные ограничения аэропорта.
+- [ ] Нельзя редактировать, приостанавливать, возобновлять или корректно удалить расписание.
+- [ ] Генерация ограничена первыми 14 днями и не поддерживает rolling horizon.
+- [ ] Time-based completion меняет статус в read model, но не гарантирует запись actual/ledger без открытия Finance.
+- [ ] Кнопка ручного завершения доступна обычному игроку; это должно быть dev/demo действием.
+- [ ] Flight Board не показывает route/airport labels и tail number, только технические данные.
+- [ ] Нет cancel/delay/issue состояний и понятного операционного действия.
+- [ ] Файловые записи не защищены от конкуренции и частичного межфайлового обновления.
+
+## Обязательные архитектурные работы
+
+### BFF-first и retry
+
+- [ ] Провести аудит Fleet & Ops, Dashboard, Map, Events и Finance: никаких прямых backend-запросов.
+- [ ] Все product-facing операции используют `/operations/*`.
+- [ ] Backend snapshot reads выполняются через `requestBackendJson` с retry для safe reads.
+- [ ] BFF-owned mutations получают idempotency key и не зависят от unsafe backend retry.
+- [ ] Ошибки нормализовать с `retryable`, reason codes и next action.
+- [ ] Добавить автоматическую проверку запрета browser-facing backend URL.
+
+### Надежность operations overlay
+
+- [ ] Добавить schema version и миграции schedules/flights.
+- [ ] Добавить serialized writes и защиту от lost update.
+- [ ] Операции route status + schedule + generated flights выполнять как согласованную транзакцию или recoverable saga.
+- [ ] Добавить reconciliation job/read repair для route/schedule/flight связей.
+- [ ] Стабильные ids рейсов строить из schedule + direction + departure, а не `crypto.randomUUID`.
+- [ ] Зафиксировать миграцию overlay в будущий backend.
+
+## Полный BFF-план
+
+### 1. Модель расписания
+
+- [ ] Поддержать шаблоны:
+  - ежедневно;
+  - 3 раза в неделю;
+  - раз в неделю;
+  - custom days.
+- [ ] Хранить локальное время вылета, timezone origin, UTC departure/arrival и validity period.
+- [ ] Явно определить маршрут как round trip для MVP либо честно обозначить one-way; рекомендуемый MVP — генерировать парные outbound/return legs.
+- [ ] Для return leg учитывать turnaround и доступность самолета.
+- [ ] Добавить статусы schedule: `draft`, `active`, `paused`, `ended`.
+- [ ] Route state синхронизировать со schedule state.
+
+### 2. Schedule options и preview
+
+- [ ] `GET /operations/schedule-options` возвращает только принадлежащие airline routes и aircraft.
+- [ ] Поддержать `route_id` из query/deep link.
+- [ ] Возвращать рекомендуемый самолет и рекомендуемую частоту.
+- [ ] `POST /operations/schedule-preview` возвращает:
   - blockers/warnings;
-  - economics labels;
-  - empty states;
-  - CTA.
+  - sample outbound/return flights;
+  - UTC и local times;
+  - weekly utilization;
+  - offered seats против спроса;
+  - expected weekly revenue/cost/profit;
+  - cash after first week;
+  - affected existing schedules.
+- [ ] Preview имеет revision/snapshot version и повторно проверяется при активации.
 
-- [ ] Тексты должны объяснять решение.
+### 3. Полные проверки ограничений
 
-  Примеры:
-  - "Самолет занят в это время";
-  - "Аэропорт назначения не работает ночью";
-  - "Вы предлагаете больше мест, чем ожидаемый спрос";
-  - "После первой недели останется примерно $...".
+- [ ] Принадлежность route/aircraft текущей airline.
+- [ ] Статус route допускает расписание.
+- [ ] Самолет исправен, in service и не назначен несовместимым образом.
+- [ ] Дальность с согласованным operational reserve.
+- [ ] ВПП origin/destination.
+- [ ] Реальное пересечение интервалов: departure, block time, turnaround, return leg.
+- [ ] Night operations для локального времени вылета и прибытия.
+- [ ] Slot capacity по аэропорту, дню и временному окну.
+- [ ] Weekly utilization не превышает согласованный предел.
+- [ ] Offered seats не превышают спрос без предупреждения.
+- [ ] Денежный резерв выдерживает первую неделю.
+- [ ] Missing critical data не трактуется как успешная проверка.
+
+### 4. Создание и жизненный цикл schedule
+
+- [ ] `POST /operations/schedules` идемпотентен.
+- [ ] Risky activation требует acknowledged warning codes.
+- [ ] Blocked preview нельзя активировать.
+- [ ] Реализовать `GET /operations/schedules/:id`.
+- [ ] Реализовать `PATCH /operations/schedules/:id`:
+  - изменение будущего pattern;
+  - pause/resume;
+  - изменение самолета;
+  - effective-from date;
+  - revision check.
+- [ ] При изменении отменять/перегенерировать только будущие рейсы; completed immutable.
+- [ ] При pause отменять или помечать future flights согласованным статусом.
+- [ ] Запретить удаление расписания с историей; разрешить завершение.
+
+### 5. Rolling flight generation и progression
+
+- [ ] Поддерживать rolling horizon минимум 14 дней вперед при чтении/активации/reconciliation.
+- [ ] Генерация идемпотентна и не создает дубли.
+- [ ] Статусы должны материализоваться, а не только вычисляться в ответе.
+- [ ] При переходе в completed один раз фиксировать deterministic actual и проводить TODO7 ledger.
+- [ ] Добавить internal reconciliation endpoint/job для обновления статусов и ledger.
+- [ ] Ручное `complete` ограничить dev/demo env и скрыть в production UI.
+- [ ] Actual passengers/financials после completion immutable.
+
+### 6. Flight read model
+
+- [ ] `GET /operations/flights` поддерживает status, route, aircraft, date range, cursor/limit.
+- [ ] Возвращать enriched labels: airports, route, aircraft tail/model, schedule.
+- [ ] Разделять expected и actual.
+- [ ] Возвращать issue/action codes.
+- [ ] Добавить `GET /operations/flights/:id`.
+- [ ] Добавить cancel только если продуктово требуется MVP; отмена должна отражаться в finance/events.
+
+## Полный UX-план
+
+### Schedule Builder
+
+- [ ] Deep link с `route_id` автоматически выбирает нужный маршрут.
+- [ ] Route selector показывает pair, demand, status и recommendation.
+- [ ] Aircraft selector показывает tail/model, availability, utilization и причины блокировки.
+- [ ] Частота задается segmented control + custom days с локализованными названиями дней.
+- [ ] Время — корректный time control; turnaround — stepper/select с допустимым диапазоном.
+- [ ] Preview обновляется debounced, имеет loading/error/stale states.
+- [ ] В preview показывать первый полный round trip и недельную сводку.
+- [ ] Перед активацией показать confirmation с предупреждениями и последствиями.
+- [ ] Success ведет на Flight Board и сохраняет контекст.
+
+### Flight Board
+
+- [ ] Режимы: Live, Upcoming, Completed, Issues/Cancelled.
+- [ ] Flight card показывает номер, pair, tail/model, local departure/arrival, статус, load и expected/actual result.
+- [ ] Для completed показывать actual; для future — expected.
+- [ ] Route/aircraft/flight открываются по клику через typed navigation events.
+- [ ] Фильтры по route, aircraft, status и date.
+- [ ] Empty state различает отсутствие route, schedule и flights.
+- [ ] Обычный игрок не видит кнопку «Завершить рейс» в production.
+
+## Интеграции
+
+- [ ] Dashboard next action меняется `CREATE_SCHEDULE` → `VIEW_LIVE_FLIGHTS`.
+- [ ] Dashboard counts используют материализованные актуальные статусы.
+- [ ] Map отображает active routes и при необходимости выбранный рейс.
+- [ ] Fleet aircraft detail показывает schedule/utilization/next flight.
+- [ ] Events получает schedule activated, flight started/completed/cancelled и blockers.
+- [ ] Finance получает completed flight ровно один раз.
+- [ ] Изменение/пауза schedule обновляет route, Dashboard, Events и Finance forecast.
+
+## Продуктовые состояния
+
+- [ ] Нет routes: CTA в Network Planner.
+- [ ] Нет совместимого самолета: причины + CTA Fleet.
+- [ ] Конфликт самолета: показать конфликтующий рейс/расписание.
+- [ ] Ночные ограничения: предложить допустимое время.
+- [ ] Oversupply: предложить меньшую частоту/самолет.
+- [ ] Низкий баланс: показать оценку и CTA Finance.
+- [ ] Stale preview: пересчитать перед активацией.
+- [ ] BFF/backend недоступен: Retry без потери формы.
+- [ ] Истекшая сессия: auth flow с восстановлением draft формы.
+
+## I18N, UX и доступность
+
+- [ ] Удалить hardcoded `Route`, `Aircraft`, `Utilization`, `Live`, `Upcoming`, `Completed`, `blocked`, номера дней.
+- [ ] Локализовать статусы, blockers, warnings, units, days и error states.
+- [ ] Показать timezone и различие local/UTC там, где оно важно.
+- [ ] Использовать единые formatters денег, дат, времени, процентов и длительности.
+- [ ] Проверить keyboard/touch, focus, длинные labels, desktop/tablet/mobile.
 
 ## Тесты
 
-### BFF tests
+### BFF
 
-- [ ] schedule options for route awaiting schedule.
-- [ ] preview compatible daily schedule.
-- [ ] preview blocks range/runway mismatch.
-- [ ] preview warns oversupply.
-- [ ] preview blocks aircraft conflict.
-- [ ] create active schedule.
-- [ ] generated flights are idempotent.
-- [ ] flight status changes based on time.
-- [ ] complete flight endpoint is idempotent.
-- [ ] dashboard summary reflects active schedule/flights.
+- [ ] Options только для текущей airline.
+- [ ] Preview daily/custom/round trip.
+- [ ] Range/runway/night/slots/cash/oversupply blockers и warnings.
+- [ ] Реальное interval overlap, включая return leg и переход суток.
+- [ ] Create idempotency и stale preview.
+- [ ] Pause/resume/edit с корректной регенерацией future flights.
+- [ ] Rolling generation без дублей.
+- [ ] Time progression один раз фиксирует actual и ledger.
+- [ ] Airline isolation, concurrent writes, recovery.
+- [ ] Safe backend retries и отсутствие unsafe mutation retry.
 
-### Frontend tests
+### Frontend
 
-- [ ] schedule builder loads awaiting routes.
-- [ ] route selector empty state links to route planning.
-- [ ] aircraft selector shows blockers.
-- [ ] preview renders weekly economics.
-- [ ] activate schedule success navigates/updates state.
-- [ ] flight board renders upcoming/live/completed.
+- [ ] Deep link route selection.
+- [ ] Frequency/custom days/time controls.
+- [ ] Preview loading/error/blocker/warning/success.
+- [ ] Activation confirmation и success navigation.
+- [ ] Flight Board groups, filters, expected/actual.
+- [ ] Production скрывает manual complete.
+- [ ] RU/EN parity и responsive layout.
 
-### Manual QA
+### E2E/ручная приемка
 
-- [ ] Создать route в TODO5.
-- [ ] Открыть `/operations/schedule`.
-- [ ] Выбрать самолет, частоту, время.
-- [ ] Увидеть preview и ограничения.
-- [ ] Активировать расписание.
-- [ ] Увидеть рейсы на `/operations/live-flights`.
-- [ ] Dashboard показывает upcoming/live flights.
+- [ ] Из route detail открыть Schedule Builder.
+- [ ] Выбрать самолет и допустимое расписание.
+- [ ] Увидеть понятные ограничения и недельную экономику.
+- [ ] Активировать schedule один раз без дублей.
+- [ ] Увидеть будущие рейсы, затем completed результат.
+- [ ] Dashboard, Fleet, Map, Events и Finance согласованы.
 
-## Документация
+## Документация и база знаний
 
-- [ ] Обновить `docs/bff.md`: BFF-owned schedules/flights overlay.
-- [ ] Обновить BFF OpenAPI overlay для `/operations/*`.
-- [ ] Обновить future knowledge base: "Как запустить расписание".
-- [ ] Отметить, что это MVP-simulation до появления backend schedule/flight endpoints.
+- [ ] Обновить `docs/bff.md`, OpenAPI и state machine.
+- [ ] Документировать timezone policy, rolling generation, idempotency и completion reconciliation.
+- [ ] Добавить статьи:
+  - «Как создать расписание»;
+  - «Как выбрать частоту и время»;
+  - «Почему самолет занят»;
+  - «Как читать статусы рейсов».
+- [ ] Добавить контекстные ссылки из Schedule Builder и Flight Board.
 
 ## Порядок реализации
 
-1. Добавить operations storage для schedules/flights.
-2. Реализовать snapshot загрузку routes/fleet/airports.
-3. Реализовать schedule checks.
-4. Реализовать schedule preview.
-5. Реализовать create/list schedule endpoints.
-6. Реализовать flight generation/list/status.
-7. Подключить Dashboard/Map/Events.
-8. Разделить Fleet & Ops remote на fleet/operations views.
-9. Реализовать schedule builder.
-10. Реализовать flight board.
-11. Добавить тесты и документацию.
+1. Зафиксировать schedule/flight state machines и round-trip правило.
+2. Закрыть BFF-first/retry/idempotency и укрепить storage.
+3. Реализовать точные interval/timezone/slot проверки.
+4. Расширить preview и activation validation.
+5. Реализовать edit/pause/resume и rolling generation.
+6. Реализовать надежное progression/completion/ledger reconciliation.
+7. Завершить Schedule Builder и Flight Board UX.
+8. Подключить Dashboard/Map/Fleet/Events/Finance.
+9. Завершить i18n, responsive и accessibility.
+10. Добавить тесты и документацию.
 
-## Definition of Done для TODO6
+## Definition of Done
 
-- [ ] Schedule/flight state хранится в BFF и изолирован по airline.
-- [ ] Игрок может активировать простое расписание.
-- [ ] Перед активацией видны blockers/warnings/economics.
-- [ ] Ближайшие рейсы отображаются в Operations.
-- [ ] Dashboard и Events отражают schedule/flight state.
-- [ ] Финансовые expected values готовы для TODO7.
-- [ ] Все тексты локализованы на `ru` и `en`.
-- [ ] Есть BFF/frontend тесты.
+- [ ] Игрок активирует допустимое расписание и понимает все ограничения.
+- [ ] Самолет не может одновременно находиться в двух рейсах.
+- [ ] Время, turnaround, return leg и ограничения аэропортов согласованы.
+- [ ] Рейсы генерируются и продлеваются без дублей.
+- [ ] Completion и финансовые проводки происходят ровно один раз.
+- [ ] Все browser-запросы идут через BFF; backend reads используют retry.
+- [ ] Schedule/Flight state согласован с Route, Dashboard, Fleet, Events и Finance.
+- [ ] Полный сценарий локализован, адаптивен и покрыт тестами.

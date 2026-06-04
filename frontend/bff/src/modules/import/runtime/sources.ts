@@ -9,6 +9,7 @@ import {
   readJsonFile,
 } from "./storage";
 
+export type AircraftMetadataRow = Record<string, string>;
 export type AirportRow = Record<string, string>;
 export type CountryRow = Record<string, string>;
 export type RegionRow = Record<string, string>;
@@ -60,6 +61,7 @@ export type ManualOverrides = {
 };
 
 export type RawSources = {
+  aircraftMetadata: AircraftMetadataRow[];
   airports: AirportRow[];
   countries: CountryRow[];
   geoAdmin1: Map<string, string>;
@@ -75,6 +77,7 @@ export type RawSources = {
 };
 
 const URLS = {
+  aircraftMetadata: "https://opensky-network.org/datasets/metadata/aircraftDatabase.csv",
   airports: "https://davidmegginson.github.io/ourairports-data/airports.csv",
   countries: "https://davidmegginson.github.io/ourairports-data/countries.csv",
   geoAdmin1: "https://download.geonames.org/export/dump/admin1CodesASCII.txt",
@@ -98,6 +101,7 @@ export async function loadRawSources(options: BuildOptions): Promise<RawSources>
   const paths = getImportPaths(options.dataDir);
   const refreshRaw = options.refreshRaw ?? options.source === "fetch";
   const [
+    aircraftMetadata,
     airports,
     countries,
     regions,
@@ -112,6 +116,7 @@ export async function loadRawSources(options: BuildOptions): Promise<RawSources>
     geoCities,
     manual,
   ] = await Promise.all([
+    loadCsv(`${paths.rawDir}/opensky-aircraft-metadata.csv`, URLS.aircraftMetadata, refreshRaw),
     loadCsv(`${paths.rawDir}/airports.csv`, URLS.airports, refreshRaw),
     loadCsv(`${paths.rawDir}/countries.csv`, URLS.countries, refreshRaw),
     loadCsv(`${paths.rawDir}/regions.csv`, URLS.regions, refreshRaw),
@@ -128,6 +133,7 @@ export async function loadRawSources(options: BuildOptions): Promise<RawSources>
   ]);
 
   return {
+    aircraftMetadata,
     airports,
     countries,
     geoAdmin1,

@@ -47,6 +47,7 @@ mock.module("../src/auth", () => {
 // 4. Import router after DOM and module mocks setup
 const { router } = await import("../src/router");
 const { authState } = await import("../src/auth");
+const { resolveRemoteId } = await import("../src/mfe-routing");
 
 test("Router Guard - unauthenticated redirects to /login", async () => {
   (authState.isAuthenticated as any).value = false;
@@ -94,4 +95,20 @@ test("Router Guard - authenticated with airline redirects away from onboarding/a
   // Move to a public route, should redirect to dashboard
   await router.push("/login");
   expect(router.currentRoute.value.path).toBe("/dashboard");
+});
+
+test("MFE route resolution follows the current URL across remote transitions", async () => {
+  (authState.isAuthenticated as any).value = true;
+  (authState.isRestoringSession as any).value = false;
+  (authState.airline as any).value = { id: "airline-1", name: "Capital Fly" };
+
+  await router.push("/finances/overview");
+  expect(resolveRemoteId(router.currentRoute.value.path)).toBe("finance-stock");
+  expect(router.currentRoute.value.meta.remoteId).toBeUndefined();
+
+  await router.push("/fleet/overview");
+  expect(resolveRemoteId(router.currentRoute.value.path)).toBe("fleet-ops");
+
+  await router.push("/airports/routes");
+  expect(resolveRemoteId(router.currentRoute.value.path)).toBe("network-planner");
 });

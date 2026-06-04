@@ -1,4 +1,5 @@
 import type { AircraftTypePayload, FinalAircraftType, SourceIssueSink } from "../shared/types";
+import type { AircraftMetadataRow } from "../runtime/sources";
 
 import { clean, pickNumber, pickString } from "./shared";
 
@@ -75,8 +76,13 @@ const STRING_OVERRIDE_FIELDS: Array<OverrideField<StringField>> = [
   { aliases: ["model_name", "modelName"], field: "model_name" },
 ];
 
-export function buildAircraftTypes(issues: SourceIssueSink, overrides: Record<string, Record<string, unknown>>): FinalAircraftType[] {
-  const aircraftTypes = AIRCRAFT_TYPES.map((source) => applyOverride(source, overrides));
+export function buildAircraftTypes(
+  issues: SourceIssueSink,
+  overrides: Record<string, Record<string, unknown>>,
+  metadataRows: AircraftMetadataRow[] = [],
+): FinalAircraftType[] {
+  const metadata = aggregateMetadata(metadataRows);
+  const aircraftTypes = AIRCRAFT_TYPES.map((source) => enrichFromMetadata(applyOverride(source, overrides), metadata, issues));
   const seenIcao = new Set<string>();
 
   return aircraftTypes.filter((payload) => {
@@ -94,6 +100,73 @@ export function buildAircraftTypes(issues: SourceIssueSink, overrides: Record<st
     payload,
     sourceKey: sourceKeyFor(payload),
   }));
+}
+
+type AircraftMetadata = {
+  manufacturer: string;
+  model: string;
+  observedAircraft: number;
+};
+
+function aggregateMetadata(rows: AircraftMetadataRow[]): Map<string, AircraftMetadata> {
+  const groups = new Map<string, AircraftMetadata>();
+
+  for (const row of rows) {
+    const typeCode = clean(row.typecode ?? row.typeCode ?? row.icao_code).toUpperCase();
+    if (!typeCode) {
+      continue;
+    }
+
+    const existing = groups.get(typeCode);
+    groups.set(typeCode, {
+      manufacturer: existing?.manufacturer || row.manufacturername || row.manufacturerName || "",
+      model: existing?.model || row.model || "",
+      observedAircraft: (existing?.observedAircraft ?? 0) + 1,
+    });
+  }
+
+  return groups;
+}
+
+function enrichFromMetadata(
+  payload: AircraftTypePayload,
+  metadata: Map<string, AircraftMetadata>,
+  issues: SourceIssueSink,
+): AircraftTypePayload {
+  const observed = metadata.get(clean(payload.icao_code).toUpperCase());
+
+  if (!observed) {
+    if (metadata.size > 0) {
+      issues.warn("aircraft-type", sourceKeyFor(payload), "ICAO type was not found in the OpenSky aircraft metadata snapshot");
+    }
+    return payload;
+  }
+
+  issues.reportQuality?.("aircraftTypesVerifiedByOpenSky");
+
+  return {
+    ...payload,
+    characteristics: JSON.stringify({
+      ...parseCharacteristics(payload.characteristics),
+      realWorldMetadata: {
+        manufacturer: observed.manufacturer,
+        model: observed.model,
+        observedAircraft: observed.observedAircraft,
+        source: "OpenSky Aircraft Metadata Database",
+      },
+    }),
+  };
+}
+
+function parseCharacteristics(value: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
 }
 
 function aircraftType(

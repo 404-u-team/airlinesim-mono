@@ -43,6 +43,8 @@
 - `docs/bff.md` - спецификация Bun BFF: отдельное расположение вне `apps`, модули `import` и `proxy`, env и правила развития.
 - `docs/knowledge-base/` - markdown-источник пользовательской базы знаний; до реализации wiki UI новые инструкции для пользователей добавлять туда и связывать с соответствующими продуктовым сценариями.
 - `docs/map-state.md` - контракт BFF map-state и правила Shell-owned Dashboard -> Map remote visual widget.
+- `docs/passenger-demand-model.md` - реализованная модель пассажирского спроса, формулы, ограничения и связь с Grosche et al.
+- `docs/application-modules.md` - Mermaid-схема актуальных модулей приложения, BFF, backend и внешних источников.
 - `docs/swagger.yaml` - OpenAPI/Swagger контракт backend API; `docs/swagger.json` лежит рядом как fallback для генерации.
 - `docs/erd.txt` - доменная ERD модель.
 - `docs/to-be-enabled.md` - матрица shell admin страниц: что уже включено по OpenAPI, какие ERD-сущности пока disabled и условия их включения.
