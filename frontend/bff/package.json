@@ -13,6 +13,9 @@
     "start": "bun src/server.ts",
     "test": "bun test"
   },
+  "dependencies": {
+    "socket.io-client": "^4.8.1"
+  },
   "devDependencies": {
     "@airlinesim/eslint-config": "workspace:*",
     "@types/bun": "latest",

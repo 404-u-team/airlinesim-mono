@@ -27,6 +27,7 @@ type Airport = {
   works_at_night?: boolean;
 };
 type Country = {
+  aircraft_tail_code?: string;
   corp_tax_rate?: number;
   flythrough_permission_price?: number;
   id?: string;
@@ -103,8 +104,14 @@ function airportIssues(airports: Airport[], countries: Country[], regions: Regio
     issues.push(issue("AIRPORTS_INSUFFICIENT", "airport", "/admin/airports", { count: airports.length }));
   }
   for (const airport of airports) {
-    if (!hasCompleteAirportData(airport) || invalidAirportCode(airport, iataCounts, icaoCounts)) {
-      issues.push(entityIssue("AIRPORT_DATA_INCOMPLETE", "airport", airport.id, airport.iata_code, "/admin/airports"));
+    if (!hasAirportIdentity(airport)) {
+      issues.push(entityIssue("AIRPORT_IDENTITY_INCOMPLETE", "airport", airport.id, airport.iata_code, "/admin/airports"));
+    }
+    if (!hasAirportOperations(airport)) {
+      issues.push(entityIssue("AIRPORT_OPERATIONS_INCOMPLETE", "airport", airport.id, airport.iata_code, "/admin/airports"));
+    }
+    if (invalidAirportCode(airport, iataCounts, icaoCounts)) {
+      issues.push(entityIssue("AIRPORT_CODE_INVALID", "airport", airport.id, airport.iata_code, "/admin/airports"));
     }
     if (invalidAirportReference(airport, countryIds, regionIds, regionById)) {
       issues.push(entityIssue("AIRPORT_REFERENCE_INVALID", "airport", airport.id, airport.iata_code, "/admin/airports"));
@@ -113,19 +120,43 @@ function airportIssues(airports: Airport[], countries: Country[], regions: Regio
   return issues;
 }
 
+function countryFinanceIssues(country: Country): ReadinessIssue[] {
+  return [
+    ...(invalidOptionalMoney(country.flythrough_permission_price) || invalidOptionalMoney(country.land_permission_price)
+      ? [entityIssue("COUNTRY_PERMISSION_PRICE_INVALID", "country", country.id, country.iso, "/admin/countries")]
+      : []),
+    ...(invalidOptionalRate(country.corp_tax_rate) || invalidOptionalRate(country.vat_rate)
+      ? [entityIssue("COUNTRY_TAX_RATE_INVALID", "country", country.id, country.iso, "/admin/countries")]
+      : []),
+  ];
+}
+
+function countryIsoIssues(
+  country: Country,
+  isoCounts: Map<string | undefined, number>,
+): ReadinessIssue[] {
+  return !country.iso || !/^[A-Z]{2}$/.test(country.iso) || (isoCounts.get(country.iso) ?? 0) > 1
+    ? [entityIssue("COUNTRY_ISO_INVALID", "country", country.id, country.iso, "/admin/countries")]
+    : [];
+}
+
 function countryIssues(countries: Country[]): ReadinessIssue[] {
   if (countries.length === 0) {
     return [issue("COUNTRIES_EMPTY", "country", "/admin/countries", {})];
   }
   const isoCounts = countValues(countries.map((country) => country.iso));
 
-  return countries.flatMap((country) =>
-    !country.iso || !/^[A-Z]{2}$/.test(country.iso) || (isoCounts.get(country.iso) ?? 0) > 1 ||
-      invalidOptionalMoney(country.flythrough_permission_price) || invalidOptionalMoney(country.land_permission_price) ||
-      invalidOptionalRate(country.corp_tax_rate) || invalidOptionalRate(country.vat_rate)
-      ? [entityIssue("COUNTRY_ISO_INVALID", "country", country.id, country.iso, "/admin/countries")]
-      : [],
-  );
+  return countries.flatMap((country) => [
+    ...countryIsoIssues(country, isoCounts),
+    ...countryFinanceIssues(country),
+    ...countryTailIssues(country),
+  ]);
+}
+
+function countryTailIssues(country: Country): ReadinessIssue[] {
+  return country.aircraft_tail_code && !/^[A-Z0-9-]{1,6}$/.test(country.aircraft_tail_code)
+    ? [entityIssue("COUNTRY_TAIL_CODE_INVALID", "country", country.id, country.iso, "/admin/countries")]
+    : [];
 }
 
 function countValues(values: Array<string | undefined>): Map<string | undefined, number> {
@@ -187,16 +218,12 @@ function hasAirportOperations(airport: Airport): boolean {
     nonNegative(airport.gate_fee) && nonNegative(airport.stand_fee);
 }
 
-function hasCompleteAirportData(airport: Airport): boolean {
-  return hasAirportIdentity(airport) && hasAirportOperations(airport);
-}
-
 function invalidAirportCode(
   airport: Airport,
   iataCounts: Map<string | undefined, number>,
   icaoCounts: Map<string | undefined, number>,
 ): boolean {
-  return !/^[A-Z]{3}$/.test(airport.iata_code ?? "") || !/^[A-Z]{4}$/.test(airport.icao_code ?? "") ||
+  return !/^[A-Z0-9]{3}$/.test(airport.iata_code ?? "") || !/^[A-Z0-9]{4}$/.test(airport.icao_code ?? "") ||
     (iataCounts.get(airport.iata_code) ?? 0) > 1 || (icaoCounts.get(airport.icao_code) ?? 0) > 1;
 }
 
@@ -215,7 +242,7 @@ function invalidOptionalMoney(value: number | undefined): boolean {
 }
 
 function invalidOptionalRate(value: number | undefined): boolean {
-  return value !== undefined && !score(value);
+  return value !== undefined && (value < 0 || value > 100);
 }
 
 function issue(

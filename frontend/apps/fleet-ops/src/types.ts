@@ -43,6 +43,7 @@ export type FleetMarketAircraftType = {
   iata_code?: string;
   icao_code?: string;
   id?: string;
+  image_url?: string;
   maint_cost_per_flight_hour?: number;
   max_planned_seat_capacity?: number;
   max_range_km?: number;
@@ -183,6 +184,18 @@ export type FlightsResponse = {
     live: number;
     upcoming: number;
   };
+};
+
+export type FuelHistoryResponse = {
+  history: FuelPriceSnapshot[];
+};
+
+export type FuelPriceSnapshot = {
+  price: number;
+  recorded_at: string;
+  source: "backend-realtime" | "fallback" | "storage";
+  unit_price: number;
+  updated_at: string;
 };
 
 export type OperationAircraftOption = {

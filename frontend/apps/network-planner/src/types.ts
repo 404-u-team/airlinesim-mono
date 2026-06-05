@@ -6,6 +6,7 @@ export type RouteAircraftOption = {
   aircraft: {
     id?: string;
     tail_number?: string;
+    type_id?: string;
   };
   blockers: RouteReason[];
   isCompatible: boolean;
@@ -17,6 +18,10 @@ export type RouteAircraftOption = {
 };
 
 export type RouteAirport = {
+  coordinates?: null | {
+    latitude: number;
+    longitude: number;
+  };
   iata_code?: string;
   icao_code?: string;
   id?: string;

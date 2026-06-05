@@ -4,8 +4,11 @@
 
 Для типов воздушных судов OpenSky Aircraft Metadata Database используется как
 внешний реальный источник идентичности и наблюдаемого флота по ICAO typecode.
-Дальность, вместимость, расход, ВПП, стоимость и maintenance остаются курируемыми
-игровыми параметрами: OpenSky не предоставляет полный надежный набор этих полей.
+Статический список заранее созданных AircraftType не используется: импорт агрегирует
+OpenSky rows по ICAO typecode, фильтрует поддерживаемых производителей и оценивает
+игровые параметры по семейству модели. Wikipedia/Wikimedia summary используется для
+визуальных metadata (`characteristics.visual.imageUrl`, `pageUrl`, `source`), потому
+что backend `image_upload_id` сейчас является UUID-полем, а не URL-хранилищем.
 
 ## Где находится код
 
@@ -13,7 +16,7 @@
 - `cli.ts` - CLI-вход для dry-run и импорта.
 - `build/` - нормализация и синтез AircraftType, Country, Region и Airport.
   - `index.ts` - orchestration сборки dataset.
-  - `aircraftTypes.ts` - справочник реальных типов самолетов и игровые поля эксплуатации.
+  - `aircraftTypes.ts` - генерация реальных типов самолетов из OpenSky metadata, игровые поля эксплуатации и Wikipedia visual metadata.
   - `countries.ts`, `regions.ts`, `airports.ts`, `runways.ts` - доменные этапы сборки.
   - `shared.ts`, `types.ts` - helpers и типы, относящиеся именно к build-слою.
 - `runtime/` - orchestration выполнения, storage и отчеты.

@@ -7,6 +7,7 @@ import { useRouter } from "vue-router";
 
 import { logout } from "../auth";
 import { dashboardState } from "../dashboard/state";
+import { fuelState } from "../fuel/state";
 import { type ShellMessageKey, shellMessages } from "../i18n/messages";
 import { getStatusMetrics } from "../navigation";
 
@@ -24,7 +25,9 @@ const t = computed(() => (key: ShellMessageKey): string =>
   translate(shellMessages, props.appLocale, key),
 );
 const now = ref(new Date());
-const statusMetrics = computed(() => getStatusMetrics(t.value, dashboardState.statusSummary.value, props.appLocale));
+const statusMetrics = computed(() =>
+  getStatusMetrics(t.value, dashboardState.statusSummary.value, fuelState.current.value, props.appLocale),
+);
 const formattedNow = computed(() =>
   new Intl.DateTimeFormat(props.appLocale, {
     day: "2-digit",

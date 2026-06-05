@@ -55,6 +55,7 @@ export const router = createRouter({
     },
     {
       meta: {
+        adminLayout: true,
         requiresAdmin: true,
       },
       path: "/admin",
@@ -62,6 +63,7 @@ export const router = createRouter({
     },
     {
       meta: {
+        adminLayout: true,
         requiresAdmin: true,
       },
       path: "/admin/future/:futureEntity?",
@@ -70,6 +72,7 @@ export const router = createRouter({
     {
       component: AdminView,
       meta: {
+        adminLayout: true,
         requiresAdmin: true,
       },
       name: "admin",

@@ -3,6 +3,8 @@ import type { StoredRoute } from "../routes/types";
 import type { OperationsSnapshot } from "./planning";
 import type { FlightFinancials, SchedulePattern, SchedulePreview, StoredFlight } from "./types";
 
+import { getCurrentFuelUnitPrice } from "../fuel/price";
+
 export function currentFlightStatus(flight: StoredFlight, now = new Date()): StoredFlight["status"] {
   if (flight.status === "cancelled" || flight.status === "completed") {
     return flight.status;
@@ -185,7 +187,7 @@ function estimateFlightFinancials(route: StoredRoute, type: AircraftType, origin
   const revenue = Math.round(route.economics_snapshot.estimated_fare_per_passenger * passengers);
   const blockHours = estimateBlockHours(route, type);
   const cost = Math.round(
-    (type.fuel_consumption_per_hour ?? 2.8) * blockHours * 950 +
+    (type.fuel_consumption_per_hour ?? 2.8) * blockHours * getCurrentFuelUnitPrice() +
       (type.maint_cost_per_flight_hour ?? 600) * blockHours +
       (origin.runway_fee ?? 0) +
       (origin.gate_fee ?? 0) +

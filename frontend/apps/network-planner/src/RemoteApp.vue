@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import type { Locale } from "@airlinesim/i18n";
 
-import { AirButton, AirMetricCard, AirStatePanel, AirTextField } from "@airlinesim/air-ui";
+import { AirButton, AirMetricCard, AirSelect, AirStatePanel, AirTextField } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 
 import type { RouteOpportunity, StoredRoute } from "./types";
 
 import { createRoute, getRouteOpportunities, getRoutePreview, getRoutes } from "./api";
 import RouteListPanel from "./components/RouteListPanel.vue";
+import RouteMapPanel from "./components/RouteMapPanel.vue";
 import RouteOpportunityGrid from "./components/RouteOpportunityGrid.vue";
 import RoutePreviewPanel from "./components/RoutePreviewPanel.vue";
 import { type NetworkMessageKey, t as translateNetwork } from "./i18n";
@@ -34,11 +35,30 @@ const filters = reactive({
   onlyCompatible: false,
   onlyProfitable: false,
 });
+let filterDebounce: null | ReturnType<typeof setTimeout> = null;
 
 const currentPreview = computed(() => preview.value ?? selectedOpportunity.value ?? null);
 const selectedOpportunity = computed(() =>
   opportunities.value.find((opportunity) => opportunity.destination_airport.id === selectedDestinationId.value) ?? null,
 );
+const aircraftOptions = computed(() => {
+  const seen = new Set<string>();
+  const options = [{ label: tr("filter.aircraft.all"), value: "" }];
+
+  for (const option of opportunities.value.flatMap((opportunity) => opportunity.compatible_aircraft)) {
+    const aircraftId = option.aircraft.id ?? "";
+    if (!aircraftId || seen.has(aircraftId)) {
+      continue;
+    }
+    seen.add(aircraftId);
+    options.push({
+      label: `${option.aircraft.tail_number ?? aircraftId} · ${option.type?.model_name ?? option.aircraft.type_id ?? "-"}`,
+      value: aircraftId,
+    });
+  }
+
+  return options;
+});
 const topMetrics = computed(() => [
   {
     label: tr("metric.weekDemand"),
@@ -59,6 +79,19 @@ onMounted(() => {
   airlineSimEventBus.emit("mfe:ready", { remoteId: "network-planner" });
   void loadData();
 });
+
+onUnmounted(() => {
+  if (filterDebounce) {
+    clearTimeout(filterDebounce);
+  }
+});
+
+watch([filters, selectedAircraftId], () => {
+  if (filterDebounce) {
+    clearTimeout(filterDebounce);
+  }
+  filterDebounce = setTimeout(() => void loadData(), 300);
+}, { deep: true });
 
 async function createSelectedRoute(): Promise<void> {
   const selected = currentPreview.value;
@@ -126,12 +159,14 @@ async function loadData(): Promise<void> {
 
   try {
     const [opportunityResponse, routeResponse] = await Promise.all([
-      getRouteOpportunities(filters),
+      getRouteOpportunities({ ...filters, aircraftId: selectedAircraftId.value }),
       getRoutes(),
     ]);
     opportunities.value = opportunityResponse.opportunities;
     routes.value = routeResponse.routes;
-    selectedDestinationId.value ||= opportunities.value[0]?.destination_airport.id ?? "";
+    if (!opportunities.value.some((opportunity) => opportunity.destination_airport.id === selectedDestinationId.value)) {
+      selectedDestinationId.value = opportunities.value[0]?.destination_airport.id ?? "";
+    }
     await loadPreview();
   } catch (loadError) {
     error.value = errorMessage(loadError);
@@ -182,7 +217,7 @@ function recommendationVariant(value: RouteOpportunity["recommendation"]): "dang
 
 function selectOpportunity(opportunity: RouteOpportunity): void {
   selectedDestinationId.value = opportunity.destination_airport.id ?? "";
-  selectedAircraftId.value = opportunity.compatible_aircraft.find((option) => option.isCompatible)?.aircraft.id ?? "";
+  selectedAircraftId.value ||= opportunity.compatible_aircraft.find((option) => option.isCompatible)?.aircraft.id ?? "";
   void loadPreview();
 }
 
@@ -250,7 +285,17 @@ const tMap = {
 
     <div class="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_28rem]">
       <div class="min-w-0">
-        <div class="grid gap-3 rounded-lg border border-border bg-surface p-4 md:grid-cols-4">
+        <div class="grid gap-3 rounded-lg border border-border bg-surface p-4 md:grid-cols-2 xl:grid-cols-5">
+          <div class="flex min-w-0 flex-col gap-1.5">
+            <span class="text-caption text-text-muted">{{ tr("filter.aircraft") }}</span>
+            <AirSelect
+              class="w-full"
+              :label="tr('filter.aircraft')"
+              :model-value="selectedAircraftId"
+              :options="aircraftOptions"
+              @update:model-value="selectedAircraftId = $event"
+            />
+          </div>
           <AirTextField
             v-model="filters.minDemand"
             :label="tr('filter.minDemand')"
@@ -277,19 +322,31 @@ const tMap = {
             />
             {{ tr("filter.profitable") }}
           </label>
+          <div class="flex min-h-11 items-center rounded-lg border border-border bg-background px-3 text-caption text-text-muted">
+            {{ tr("filter.autoApply") }}
+          </div>
         </div>
 
-        <RouteOpportunityGrid
-          :format-money="formatMoney"
-          :format-number="formatNumber"
-          :is-loading="isLoading"
-          :opportunities="opportunities"
-          :recommendation-label="recommendationLabel"
-          :recommendation-variant="recommendationVariant"
-          :selected-destination-id="selectedDestinationId"
-          :t="tr"
-          @select-opportunity="selectOpportunity"
-        />
+        <div class="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <RouteMapPanel
+            :opportunities="opportunities"
+            :selected-destination-id="selectedDestinationId"
+            :t="tr"
+            @select-opportunity="selectOpportunity"
+          />
+
+          <RouteOpportunityGrid
+            :format-money="formatMoney"
+            :format-number="formatNumber"
+            :is-loading="isLoading"
+            :opportunities="opportunities"
+            :recommendation-label="recommendationLabel"
+            :recommendation-variant="recommendationVariant"
+            :selected-destination-id="selectedDestinationId"
+            :t="tr"
+            @select-opportunity="selectOpportunity"
+          />
+        </div>
 
         <RouteListPanel
           :format-number="formatNumber"

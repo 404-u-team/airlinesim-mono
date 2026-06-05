@@ -51,6 +51,9 @@ const activeVueRemote = computed(() => {
 
   return remoteComponents[activeRemoteId.value];
 });
+const remoteInstanceKey = computed(() =>
+  activeRemoteId.value ? `${activeRemoteId.value}:${route.fullPath}` : route.fullPath,
+);
 const t = computed(() => (key: ShellMessageKey): string =>
   translate(shellMessages, props.appLocale, key),
 );
@@ -90,19 +93,19 @@ watch(
     />
     <template v-if="activeRemoteId === 'map'">
       <SvelteWrapper
-        :key="route.path"
+        :key="remoteInstanceKey"
         :create-fn="createMap"
-        :component-props="{ appLocale: props.appLocale, controls: false, remoteId: activeRemoteId, rotation: false, shellPath: route.path, theme: props.appTheme }"
+        :component-props="{ appLocale: props.appLocale, controls: false, remoteId: activeRemoteId, rotation: false, shellPath: route.fullPath, theme: props.appTheme }"
       />
       <MapControls :app-locale="props.appLocale" />
     </template>
     <Suspense v-else-if="activeRemoteId">
       <component
         :is="activeVueRemote"
-        :key="route.path"
+        :key="remoteInstanceKey"
         :remote-id="activeRemoteId"
         :app-locale="props.appLocale"
-        :shell-path="route.path"
+        :shell-path="route.fullPath"
       />
       <template #fallback>
         <AppLoader :label="t('remote.loading')" />

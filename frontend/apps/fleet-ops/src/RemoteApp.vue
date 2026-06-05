@@ -55,6 +55,12 @@ let marketDebounce: null | ReturnType<typeof setTimeout> = null;
 let previewDebounce: null | ReturnType<typeof setTimeout> = null;
 let unsubscribeAirportSelected: (() => void) | null = null;
 
+const operationModeByPrefix = [
+  ["/operations/live-flights", "flights"],
+  ["/operations/fuel", "fuel"],
+  ["/operations/schedule", "schedule"],
+] as const;
+
 const canConfirmPurchase = computed(() =>
   Boolean(preview.value?.canPurchase) &&
   !isPurchasing.value &&
@@ -80,16 +86,9 @@ const sortOptions = computed(() => [
 const t = computed(() => (key: FleetMessageKey | string): string =>
   translate(fleetMessages, props.appLocale, key as FleetMessageKey),
 );
-const activeMode = computed<"fleet" | "flights" | "schedule">(() => {
-  if (props.shellPath?.startsWith("/operations/live-flights")) {
-    return "flights";
-  }
-  if (props.shellPath?.startsWith("/operations/schedule")) {
-    return "schedule";
-  }
-
-  return "fleet";
-});
+const activeMode = computed<"fleet" | "flights" | "fuel" | "schedule">(() =>
+  operationModeByPrefix.find(([prefix]) => props.shellPath?.startsWith(prefix))?.[1] ?? "fleet",
+);
 
 onMounted(() => {
   airlineSimEventBus.emit("mfe:ready", { remoteId: "fleet-ops" });

@@ -1,6 +1,8 @@
 import type { Airport } from "../fleet/types";
 import type { RouteAirport } from "./types";
 
+import { parseGeoPoint } from "../../geo";
+
 export function buildDistanceKm(origin: Airport, destination: Airport): number {
   const originPoint = pointFromAirport(origin);
   const destinationPoint = pointFromAirport(destination);
@@ -13,16 +15,7 @@ export function buildDistanceKm(origin: Airport, destination: Airport): number {
 }
 
 export function pointFromAirport(airport: Airport): null | { latitude: number; longitude: number } {
-  const match = /POINT\s*\(\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*\)/i.exec(airport.geog ?? airport.geom ?? "");
-
-  if (!match?.[1] || !match[2]) {
-    return null;
-  }
-
-  return {
-    latitude: Number(match[2]),
-    longitude: Number(match[1]),
-  };
+  return parseGeoPoint(airport.geog, airport.geom);
 }
 
 export function toRouteAirport(airport: Airport): RouteAirport {

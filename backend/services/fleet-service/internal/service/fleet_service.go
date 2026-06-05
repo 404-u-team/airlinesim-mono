@@ -187,7 +187,14 @@ func (s *fleetService) CreateAircraftType(ctx context.Context, payload *fleetpb.
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == "23505" {
-				return nil, customerrors.ErrInternal
+				switch pgErr.ConstraintName {
+				case "aircraft_type_icao_code_key":
+					return nil, customerrors.ErrAircraftTypeIcaoConflict
+				case "aircraft_type_iata_code_key":
+					return nil, customerrors.ErrAircraftTypeIataConflict
+				default:
+					return nil, customerrors.ErrAircraftTypeIcaoConflict
+				}
 			}
 			if pgErr.Code == "23503" {
 				return nil, customerrors.ErrInternal

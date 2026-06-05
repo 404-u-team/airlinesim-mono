@@ -9,13 +9,12 @@ import AirportCard from "./StartingAirportPicker/AirportCard.vue";
 
 const props = defineProps<{
   appLocale: Locale;
-  modelValue: string;
 }>();
 
 const emit = defineEmits<{
-  (e: "update:modelValue", value: string): void;
   (e: "select-airport", airport: null | OnboardingAirportOption): void;
 }>();
+const model = defineModel<string>({ required: true });
 
 const airports = ref<OnboardingAirportOption[]>([]);
 const loading = ref(false);
@@ -60,14 +59,14 @@ async function performSearch(query: string) {
 
 // Watch modelValue and airports list to find selected airport details
 watch(
-  [() => props.modelValue, airports],
+  [model, airports],
   () => {
-    if (!props.modelValue) {
+    if (!model.value) {
       selectedAirport.value = null;
       emit("select-airport", null);
       return;
     }
-    const found = airports.value.find((a) => a.id === props.modelValue);
+    const found = airports.value.find((a) => a.id === model.value);
     if (found) {
       selectedAirport.value = found;
       emit("select-airport", found);
@@ -89,7 +88,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="space-y-4">
     <AirCombobox
-      :model-value="modelValue"
+      :model-value="model"
       :options="comboboxOptions"
       :label="t('airline.startingAirportId')"
       :placeholder="t('onboarding.airport.searchPlaceholder')"
@@ -97,7 +96,7 @@ onBeforeUnmount(() => {
       :loading-text="t('onboarding.airport.loading')"
       :error="error"
       :empty-text="t('onboarding.airport.empty')"
-      @update:model-value="emit('update:modelValue', $event)"
+      @update:model-value="model = $event"
       @search="onSearch"
     >
       <!-- Custom Option Rendering Slot -->

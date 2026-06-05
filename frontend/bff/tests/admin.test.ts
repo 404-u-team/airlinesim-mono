@@ -202,7 +202,7 @@ test("world readiness blocks incomplete airports and duplicate symmetric links",
 
   expect(response?.status).toBe(200);
   expect(payload.status).toBe("blocked");
-  expect(blockerCodes).toContain("AIRPORT_DATA_INCOMPLETE");
+  expect(blockerCodes).toContain("AIRPORT_IDENTITY_INCOMPLETE");
   expect(blockerCodes).toContain("REGION_LINK_INVALID");
 });
 

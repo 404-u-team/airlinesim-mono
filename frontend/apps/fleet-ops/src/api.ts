@@ -8,6 +8,8 @@ import type {
   FleetPurchasePreviewResponse,
   FleetPurchaseResponse,
   FlightsResponse,
+  FuelHistoryResponse,
+  FuelPriceSnapshot,
   ScheduleOptionsResponse,
   SchedulePreviewResponse,
 } from "./types";
@@ -91,6 +93,14 @@ export async function getFleetPurchasePreview(
 
 export async function getFlights(): Promise<FlightsResponse> {
   return apiClient.get<FlightsResponse>("/operations/flights");
+}
+
+export async function getFuelHistory(): Promise<FuelHistoryResponse> {
+  return apiClient.get<FuelHistoryResponse>("/fuel/history");
+}
+
+export async function getFuelPrice(): Promise<FuelPriceSnapshot> {
+  return apiClient.get<FuelPriceSnapshot>("/fuel/price");
 }
 
 export async function getScheduleOptions(routeId?: string): Promise<ScheduleOptionsResponse> {

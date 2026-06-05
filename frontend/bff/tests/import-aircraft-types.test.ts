@@ -4,18 +4,23 @@ import type { ReportItem, SourceIssueSink } from "../src/modules/import/shared/t
 
 import { buildAircraftTypes } from "../src/modules/import/build/aircraftTypes";
 
-test("builds real aircraft type payloads for import", () => {
+test("builds aircraft type payloads from OpenSky metadata rows", async () => {
   const errors: ReportItem[] = [];
   const skipped: ReportItem[] = [];
-  const aircraftTypes = buildAircraftTypes(issueSink(errors, skipped), {
+  const aircraftTypes = await buildAircraftTypes(issueSink(errors, skipped), {
     A20N: {
+      iata_code: "32N",
       manufacturer_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
     },
-  });
+  }, [
+    { manufacturername: "Airbus", model: "A320-271N", typecode: "A20N" },
+    { manufacturername: "Boeing", model: "737-800", typecode: "B738" },
+    { manufacturername: "ATR", model: "72-600", typecode: "AT76" },
+  ]);
 
   expect(errors).toHaveLength(0);
   expect(skipped).toHaveLength(0);
-  expect(aircraftTypes.length).toBeGreaterThan(10);
+  expect(aircraftTypes).toHaveLength(3);
   expect(aircraftTypes.every((item) => Boolean(item.payload.manufacturer_id))).toBe(true);
   expect(aircraftTypes.find((item) => item.payload.icao_code === "B738")?.payload.manufacturer_id)
     .toBe("11111111-1111-1111-1111-111111111111");
@@ -24,17 +29,18 @@ test("builds real aircraft type payloads for import", () => {
   expect(aircraftTypes).toContainEqual(
     expect.objectContaining({
       payload: expect.objectContaining({
+        iata_code: "32N",
         icao_code: "A20N",
         manufacturer_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-        model_name: "Airbus A320neo",
+        model_name: "Airbus A320-271N",
       }),
       sourceKey: "aircraft-type:A20N",
     }),
   );
 });
 
-test("enriches curated aircraft types with observed OpenSky metadata", () => {
-  const aircraftTypes = buildAircraftTypes(issueSink([]), {}, [
+test("enriches generated aircraft types with observed OpenSky metadata", async () => {
+  const aircraftTypes = await buildAircraftTypes(issueSink([]), {}, [
     { manufacturername: "Airbus", model: "A320-271N", typecode: "A20N" },
     { manufacturername: "Airbus", model: "A320-271N", typecode: "A20N" },
   ]);
@@ -49,7 +55,7 @@ test("enriches curated aircraft types with observed OpenSky metadata", () => {
     observedAircraft: 2,
     source: "OpenSky Aircraft Metadata Database",
   });
-  expect(a320?.payload.max_range_km).toBe(6500);
+  expect(a320?.payload.max_range_km).toBe(6200);
 });
 
 function issueSink(errors: ReportItem[], skipped: ReportItem[] = []): SourceIssueSink {

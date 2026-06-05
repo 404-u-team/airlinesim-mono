@@ -127,8 +127,8 @@ async function refreshDashboard(): Promise<void> {
 </script>
 
 <template>
-  <main class="h-full overflow-y-auto bg-background text-text-primary">
-    <div class="flex min-h-full flex-col gap-5 p-3 sm:p-4 lg:p-5">
+  <main class="h-full overflow-hidden bg-background text-text-primary">
+    <div class="flex h-full min-h-0 flex-col gap-3 p-3 sm:p-4">
       <section
         v-if="isLoading"
         class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]"
@@ -168,8 +168,8 @@ async function refreshDashboard(): Promise<void> {
       </section>
 
       <template v-else-if="summary">
-        <section class="grid min-h-[calc(100vh-6.5rem)] gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
-          <div class="relative min-h-[34rem] overflow-hidden rounded-lg border border-border bg-surface">
+        <section class="grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(0,1fr)_23rem]">
+          <div class="relative min-h-[30rem] overflow-hidden rounded-lg border border-border bg-surface">
             <SvelteWrapper
               :create-fn="createMap"
               :component-props="{ appLocale: props.appLocale, controls: false, mapState, mode: 'dashboard', remoteId: 'map', rotation: false, selectedAirportId, shellPath: '/dashboard', theme: props.appTheme }"
@@ -213,7 +213,7 @@ async function refreshDashboard(): Promise<void> {
             />
           </div>
 
-          <aside class="grid min-w-0 content-start gap-4">
+          <aside class="grid min-h-0 min-w-0 content-start gap-3 overflow-hidden">
             <DashboardMetricStrip
               :app-locale="props.appLocale"
               :summary="summary"
@@ -252,7 +252,7 @@ async function refreshDashboard(): Promise<void> {
             </section>
 
             <div class="grid gap-3">
-              <article class="rounded-lg border border-border bg-surface p-4">
+              <article class="rounded-lg border border-border bg-surface p-3">
                 <div class="flex items-center gap-2 text-text-muted">
                   <Building2 :size="18" />
                   <span class="text-caption">{{ t("dashboard.base.title") }}</span>
@@ -268,7 +268,7 @@ async function refreshDashboard(): Promise<void> {
                 </p>
               </article>
 
-              <article class="rounded-lg border border-border bg-surface p-4">
+              <article class="rounded-lg border border-border bg-surface p-3">
                 <div class="flex items-center gap-2 text-text-muted">
                   <Plane :size="18" />
                   <span class="text-caption">{{ t("dashboard.fleet.title") }}</span>
@@ -281,7 +281,7 @@ async function refreshDashboard(): Promise<void> {
                 </p>
               </article>
 
-              <article class="rounded-lg border border-border bg-surface p-4">
+              <article class="rounded-lg border border-border bg-surface p-3">
                 <div class="flex items-center gap-2 text-text-muted">
                   <Route :size="18" />
                   <span class="text-caption">{{ t("dashboard.routes.title") }}</span>

@@ -138,15 +138,14 @@ function countryPayload(
   const hubFactor = 1 + airportScoreNorm * 0.35;
   const taxOverride = pickNumber(input.override, ["corp_tax_rate", "corpTaxRate"]);
   const vatOverride = pickNumber(input.override, ["vat_rate", "vatRate"]);
-  const tailCode = pickString(input.override, ["aircraft_tail_code", "aircraftTailCode"]) ?? "";
+  const tailCode = buildTailCode(
+    input.iso,
+    pickString(input.override, ["aircraft_tail_code", "aircraftTailCode"]),
+  );
 
   if (taxOverride == null || vatOverride == null) {
     context.issues.reportQuality?.("countriesUsingTaxFallback");
   }
-  if (!tailCode) {
-    context.issues.reportQuality?.("countriesWithoutTailCode");
-  }
-
   return {
     aircraft_tail_code: tailCode,
     corp_tax_rate: clamp(taxOverride ?? fallbackCorpTax(input.incomeLevelCode), 0, 60),
@@ -158,4 +157,14 @@ function countryPayload(
     vat_rate: clamp(vatOverride ?? fallbackVat(input.incomeLevelCode, input.continent), 0, 35),
     wikipedia_link: pickString(input.override, ["wikipedia_link", "wikipediaLink"]) ?? clean(input.row?.wikipedia_link),
   };
+}
+
+function buildTailCode(iso: string, override: null | string | undefined): string {
+  const normalizedOverride = clean(override).toUpperCase();
+
+  if (normalizedOverride) {
+    return normalizedOverride;
+  }
+
+  return clean(iso).toUpperCase();
 }

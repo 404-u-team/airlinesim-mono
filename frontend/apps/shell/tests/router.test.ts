@@ -51,6 +51,7 @@ mock.module("../src/auth", () => {
 const { router } = await import("../src/router");
 const { authState } = await import("../src/auth");
 const { resolveRemoteId } = await import("../src/mfe-routing");
+const { navigationSections } = await import("../src/navigation");
 
 test("Router Guard - unauthenticated redirects to /login", async () => {
   (authState.isAuthenticated as any).value = false;
@@ -141,4 +142,16 @@ test("Router Guard - admin without airline can open admin routes", async () => {
   await router.push("/admin/countries");
 
   expect(router.currentRoute.value.path).toBe("/admin/countries");
+});
+
+test("Admin routes use standalone layout and stay out of main navigation", async () => {
+  (authState.isAuthenticated as any).value = true;
+  (authState.isAdminAuthorized as any).value = true;
+  (authState.isRestoringSession as any).value = false;
+  (authState.airline as any).value = null;
+
+  await router.push("/admin/countries");
+
+  expect(router.currentRoute.value.meta.adminLayout).toBe(true);
+  expect(navigationSections.some((section: { path: string }) => section.path === "/admin")).toBe(false);
 });

@@ -41,11 +41,17 @@ const messages = {
   },
 };
 const issueMessages: Record<string, Record<Locale, string>> = {
+  AIRPORT_CODE_INVALID: { en: "Airport IATA or ICAO code is missing, invalid, or duplicated.", ru: "Код IATA или ICAO аэропорта отсутствует, некорректен или дублируется." },
   AIRPORT_DATA_INCOMPLETE: { en: "Airport operational data is incomplete.", ru: "Операционные данные аэропорта неполны." },
+  AIRPORT_IDENTITY_INCOMPLETE: { en: "Airport identity, timezone, or coordinates are incomplete.", ru: "Идентификатор, часовой пояс или координаты аэропорта неполны." },
+  AIRPORT_OPERATIONS_INCOMPLETE: { en: "Airport runway, slot, or fee data is incomplete.", ru: "Данные ВПП, слотов или сборов аэропорта неполны." },
   AIRPORT_REFERENCE_INVALID: { en: "Airport country or region reference is invalid.", ru: "Связь аэропорта со страной или регионом некорректна." },
   AIRPORTS_INSUFFICIENT: { en: "At least two usable airports are required.", ru: "Требуется минимум два пригодных аэропорта." },
   COUNTRIES_EMPTY: { en: "No countries exist.", ru: "Страны отсутствуют." },
   COUNTRY_ISO_INVALID: { en: "Country ISO code is missing, invalid, or duplicated.", ru: "ISO-код страны отсутствует, некорректен или дублируется." },
+  COUNTRY_PERMISSION_PRICE_INVALID: { en: "Country permission price is invalid.", ru: "Стоимость разрешений страны некорректна." },
+  COUNTRY_TAIL_CODE_INVALID: { en: "Country aircraft tail code is invalid.", ru: "Префикс бортового номера страны некорректен." },
+  COUNTRY_TAX_RATE_INVALID: { en: "Country tax rate is invalid.", ru: "Налоговая ставка страны некорректна." },
   PRODUCT_NO_COMPATIBLE_AIRCRAFT: { en: "No aircraft type is compatible with a usable airport.", ru: "Нет типа самолета, совместимого с пригодным аэропортом." },
   PRODUCT_NO_ROUTE_OPPORTUNITY: { en: "No first route opportunity can be built.", ru: "Нельзя построить первое маршрутное направление." },
   REGION_DATA_INVALID: { en: "Region reference or demand data is invalid.", ru: "Связь региона или данные спроса некорректны." },

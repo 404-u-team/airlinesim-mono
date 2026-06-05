@@ -12,7 +12,6 @@ const props = defineProps<{
   appLocale: Locale;
   collapsed: boolean;
   companyName: string;
-  isAdminAuthorized: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -76,9 +75,7 @@ const sidebarClass = computed(() => [
   "fixed inset-y-0 left-0 z-40 flex h-screen flex-col overflow-hidden border-r border-border bg-surface transition-[width,transform] duration-200 ease-out lg:static lg:translate-x-0",
   props.collapsed ? "w-16 -translate-x-full lg:translate-x-0" : "w-64 translate-x-0",
 ]);
-const visibleNavigationSections = computed(() =>
-  navigationSections.filter((section) => !section.adminOnly || props.isAdminAuthorized),
-);
+const visibleNavigationSections = computed(() => navigationSections);
 const t = computed(() => (key: ShellMessageKey): string =>
   translate(shellMessages, props.appLocale, key),
 );

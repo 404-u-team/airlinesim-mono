@@ -7,6 +7,7 @@ import { handleEventsRequest } from "./modules/events";
 import { handleFacilitiesRequest } from "./modules/facilities";
 import { handleFinanceRequest } from "./modules/finance";
 import { handleFleetRequest } from "./modules/fleet";
+import { handleFuelRequest, initializeFuelModule } from "./modules/fuel";
 import { handleGameRequest } from "./modules/game";
 import { handleImportRequest } from "./modules/import";
 import { closeImportSocket, openImportSocket, receiveImportSocketMessage } from "./modules/import/runtime/websocket";
@@ -17,6 +18,8 @@ import { handleRoutesRequest } from "./modules/routes";
 
 const config = getConfig();
 
+void initializeFuelModule(config);
+
 async function routeProductRequest(request: Request, url: URL): Promise<null | Response> {
   return (
     (await handleAdminRequest(request, url, config)) ??
@@ -26,6 +29,7 @@ async function routeProductRequest(request: Request, url: URL): Promise<null | R
     (await handleEventsRequest(request, url, config)) ??
     (await handleOnboardingRequest(request, url, config)) ??
     (await handleFleetRequest(request, url, config)) ??
+    (await handleFuelRequest(request, url, config)) ??
     (await handleRoutesRequest(request, url, config)) ??
     (await handleOperationsRequest(request, url, config)) ??
     (await handleFinanceRequest(request, url, config)) ??

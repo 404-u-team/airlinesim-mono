@@ -16,6 +16,8 @@ import { authState } from "./auth";
 import AppSidebar from "./components/AppSidebar.vue";
 import AppTopbar from "./components/AppTopbar.vue";
 import NotificationPanel from "./components/NotificationPanel.vue";
+import { refreshDashboardSummary, setDashboardSummary } from "./dashboard/state";
+import { refreshFuelPrice, startFuelRealtime, stopFuelRealtime } from "./fuel/state";
 import { type ShellMessageKey, shellMessages } from "./i18n/messages";
 import {
   clearNotifications,
@@ -42,6 +44,7 @@ const t = computed(() => (key: ShellMessageKey): string =>
 let unsubscribeNotificationsInvalidated: (() => void) | null = null;
 let unsubscribeNotificationCreated: (() => void) | null = null;
 let unsubscribePanelRequested: (() => void) | null = null;
+let unsubscribeSnapshotInvalidated: (() => void) | null = null;
 
 function closeSidebar(): void {
   isSidebarOpen.value = false;
@@ -99,6 +102,9 @@ onMounted(() => {
   unsubscribeNotificationsInvalidated = airlineSimEventBus.on("notifications:invalidated", () => {
     void refreshNotifications();
   });
+  unsubscribeSnapshotInvalidated = airlineSimEventBus.on("game:snapshot-invalidated", () => {
+    void refreshDashboardSummary();
+  });
   unsubscribeNotificationCreated = airlineSimEventBus.on("notification:created", () => {
     void refreshNotifications();
   });
@@ -108,6 +114,7 @@ onUnmounted(() => {
   unsubscribeNotificationCreated?.();
   unsubscribeNotificationsInvalidated?.();
   unsubscribePanelRequested?.();
+  unsubscribeSnapshotInvalidated?.();
 });
 
 async function markAllNotificationsRead(): Promise<void> {
@@ -136,8 +143,13 @@ watch(
   (isAuthenticated) => {
     if (isAuthenticated) {
       void refreshNotifications();
+      void refreshDashboardSummary();
+      void refreshFuelPrice();
+      startFuelRealtime(() => authState.accessToken.value);
     } else {
       clearNotifications();
+      setDashboardSummary(null);
+      stopFuelRealtime();
       isNotificationPanelOpen.value = false;
     }
   },
@@ -212,6 +224,20 @@ watch(
       @toggle-locale="toggleLocale"
     />
   </RouterView>
+  <RouterView
+    v-else-if="route.meta.adminLayout"
+    v-slot="{ Component }"
+  >
+    <component
+      :is="Component"
+      class="h-screen overflow-hidden"
+      :app-locale="locale"
+      :app-theme="theme"
+      @reset-system-preferences="resetSystemPreferences"
+      @set-locale="setLocale"
+      @set-theme="setTheme"
+    />
+  </RouterView>
   <div
     v-else
     class="h-screen overflow-hidden bg-background text-body text-text-primary"
@@ -230,7 +256,6 @@ watch(
         :app-locale="locale"
         :collapsed="!isSidebarOpen"
         :company-name="companyName"
-        :is-admin-authorized="authState.isAdminAuthorized.value"
         @toggle="toggleSidebar"
       />
 
@@ -248,6 +273,7 @@ watch(
           @open="openNotification"
         />
         <RouterView
+          :key="route.fullPath"
           class="min-h-0 flex-1 overflow-hidden"
           :app-locale="locale"
           :app-theme="theme"

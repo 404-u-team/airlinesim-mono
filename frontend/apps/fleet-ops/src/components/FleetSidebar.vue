@@ -57,7 +57,7 @@ const tailNumberModel = computed({
 </script>
 
 <template>
-  <aside class="grid min-w-0 gap-5">
+  <aside class="grid min-w-0 content-start gap-5 xl:sticky xl:top-4">
     <section class="rounded-lg border border-border bg-surface p-4">
       <h2 class="text-subtitle">
         {{ t("purchase.preview") }}
@@ -70,6 +70,21 @@ const tailNumberModel = computed({
       </p>
 
       <template v-else>
+        <div class="mt-3 overflow-hidden rounded-md border border-border bg-background">
+          <img
+            v-if="selectedType.image_url"
+            :alt="selectedType.model_name || 'Aircraft type'"
+            class="h-40 w-full object-cover"
+            loading="lazy"
+            :src="selectedType.image_url"
+          />
+          <div
+            v-else
+            class="flex h-32 items-center justify-center text-h3 text-text-muted"
+          >
+            {{ selectedType.icao_code || "----" }}
+          </div>
+        </div>
         <p class="mt-2 text-body text-text-muted">
           {{ selectedType.model_name }}
         </p>
@@ -176,6 +191,13 @@ const tailNumberModel = computed({
                 {{ aircraft.baseAirportName }}
               </p>
             </div>
+            <img
+              v-if="aircraft.type?.image_url"
+              :alt="aircraft.modelName"
+              class="hidden h-14 w-20 shrink-0 rounded-md border border-border object-cover sm:block"
+              loading="lazy"
+              :src="aircraft.type.image_url"
+            />
             <AirBadge
               :label="aircraft.status || 'owned'"
               variant="primary-soft"

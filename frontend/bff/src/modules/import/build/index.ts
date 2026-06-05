@@ -12,7 +12,7 @@ import { loadRawSources } from "../runtime/sources";
 export async function buildWorldData(options: BuildOptions, issues: SourceIssueSink, log?: ImportLogger): Promise<WorldData> {
   const raw = await loadRawSources(options, log);
   const context = { issues, raw };
-  const aircraftTypes = buildAircraftTypes(issues, raw.manual.aircraftTypes, raw.aircraftMetadata);
+  const aircraftTypes = await buildAircraftTypes(issues, raw.manual.aircraftTypes, raw.aircraftMetadata, options);
   const runways = buildRunwayMap(raw, issues);
   const selectedRows = selectAirportRows(raw.airports, runways, issues);
   const selectedCountries = new Set(selectedRows.map((row) => clean(row.iso_country).toUpperCase()));

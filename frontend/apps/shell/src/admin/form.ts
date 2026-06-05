@@ -80,7 +80,7 @@ export function validateForm(config: AdminEntityConfig, values: AdminFormValues,
 }
 
 function invalidScoreField(key: string, kind: AdminFieldKind, value: string): boolean {
-  const scoreKeys = ["business", "corp_tax_rate", "diaspora", "tourism", "vat_rate"];
+  const scoreKeys = ["business", "diaspora", "tourism"];
   const isScore = key.endsWith("_score") || scoreKeys.includes(key);
 
   return kind === "number" && isScore && value !== "" && Number(value) > 1;

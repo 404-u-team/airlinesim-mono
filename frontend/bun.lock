@@ -193,6 +193,9 @@
     "bff": {
       "name": "@airlinesim/bff",
       "version": "0.0.0",
+      "dependencies": {
+        "socket.io-client": "^4.8.1",
+      },
       "devDependencies": {
         "@airlinesim/eslint-config": "workspace:*",
         "@types/bun": "latest",

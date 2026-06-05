@@ -1,6 +1,8 @@
 import type { AircraftType, Airport } from "../fleet/types";
 import type { RouteDemandSnapshot, RouteEconomics } from "./types";
 
+import { getCurrentFuelUnitPrice } from "../fuel/price";
+
 export function buildRouteEconomics(
   demand: RouteDemandSnapshot,
   type: AircraftType | null,
@@ -42,7 +44,7 @@ function getFlightHours(distance: number, type: AircraftType | null): number {
 }
 
 function getFuelCost(type: AircraftType | null, flightHours: number): number {
-  return (type?.fuel_consumption_per_hour ?? 2.8) * flightHours * 950;
+  return (type?.fuel_consumption_per_hour ?? 2.8) * flightHours * getCurrentFuelUnitPrice();
 }
 
 function getMaintenanceCost(type: AircraftType | null, flightHours: number): number {

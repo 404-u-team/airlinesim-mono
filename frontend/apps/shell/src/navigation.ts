@@ -10,6 +10,7 @@ import {
   CalendarDays,
   CircleDollarSign,
   ClipboardList,
+  Fuel,
   Gauge,
   Home,
   Map,
@@ -24,6 +25,7 @@ import {
 } from "@lucide/vue";
 
 import type { ShellStatusSummary } from "./dashboard/types";
+import type { FuelPriceSnapshot } from "./fuel/types";
 import type { ShellMessageKey } from "./i18n/messages";
 
 import { resolveRemoteId } from "./mfe-routing";
@@ -35,7 +37,6 @@ export type NavigationChild = {
 };
 
 export type NavigationSection = {
-  adminOnly?: boolean;
   children?: NavigationChild[];
   icon: Component;
   label: string;
@@ -95,7 +96,7 @@ export const navigationSections: NavigationSection[] = [
     children: [
       { label: "Live flights", path: "/operations/live-flights" },
       { label: "Schedule", path: "/operations/schedule" },
-      { enabled: false, label: "Fuel", path: "/operations/fuel" },
+      { label: "Fuel", path: "/operations/fuel" },
       { enabled: false, label: "Ground services", path: "/operations/ground-services" },
       { enabled: false, label: "R&D", path: "/operations/research" },
     ],
@@ -146,26 +147,12 @@ export const navigationSections: NavigationSection[] = [
     label: "Knowledge Base",
     path: "/knowledge-base",
   },
-  {
-    adminOnly: true,
-    children: [
-      { label: "World readiness", path: "/admin/overview" },
-      { label: "Countries", path: "/admin/countries" },
-      { label: "Regions", path: "/admin/regions" },
-      { label: "Airports", path: "/admin/airports" },
-      { label: "Region links", path: "/admin/region-links" },
-      { label: "World data import", path: "/admin/import" },
-      { label: "Capabilities", path: "/admin/capabilities" },
-    ],
-    icon: ShieldCheck,
-    label: "Admin",
-    path: "/admin",
-  },
 ];
 
 export function getStatusMetrics(
   t: (key: ShellMessageKey) => string,
   status: null | ShellStatusSummary,
+  fuel: FuelPriceSnapshot | null = null,
   locale = "en",
 ): StatusMetric[] {
   return [
@@ -173,6 +160,11 @@ export function getStatusMetrics(
       icon: CircleDollarSign,
       label: t("status.account"),
       value: status ? formatMoney(status.balance, locale) : "-",
+    },
+    {
+      icon: Fuel,
+      label: t("status.fuel"),
+      value: fuel ? formatMoney(fuel.unit_price, locale) : "-",
     },
     {
       icon: PlaneTakeoff,

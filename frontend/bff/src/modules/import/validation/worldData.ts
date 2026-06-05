@@ -14,6 +14,7 @@ export function validateWorldData(data: WorldData, issues: SourceIssueSink): boo
 
 function validateAircraftTypes(aircraftTypes: FinalAircraftType[], issues: SourceIssueSink): boolean {
   const icaoCodes = new Set<string>();
+  const iataCodes = new Set<string>();
   let ok = true;
 
   for (const aircraftType of aircraftTypes) {
@@ -24,6 +25,9 @@ function validateAircraftTypes(aircraftTypes: FinalAircraftType[], issues: Sourc
     }
     if (icaoCodes.has(payload.icao_code)) {
       ok = fail(issues, "aircraft-type", sourceKey, "Duplicate aircraft type ICAO code");
+    }
+    if (iataCodes.has(payload.iata_code)) {
+      ok = fail(issues, "aircraft-type", sourceKey, `Duplicate aircraft type IATA code: ${payload.iata_code}`);
     }
     if (!payload.model_name || !payload.characteristics) {
       ok = fail(issues, "aircraft-type", sourceKey, "Aircraft type model name or characteristics is empty");
@@ -49,6 +53,7 @@ function validateAircraftTypes(aircraftTypes: FinalAircraftType[], issues: Sourc
     }
 
     icaoCodes.add(payload.icao_code);
+    iataCodes.add(payload.iata_code);
   }
 
   return ok;
