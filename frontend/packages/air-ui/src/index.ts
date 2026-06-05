@@ -6,4 +6,5 @@ export { default as AirFormPanel } from "./components/AirFormPanel";
 export { default as AirIconButton } from "./components/AirIconButton";
 export { default as AirMetricCard } from "./components/AirMetricCard";
 export { default as AirSelect } from "./components/AirSelect";
+export { default as AirStatePanel } from "./components/AirStatePanel";
 export { default as AirTextField } from "./components/AirTextField";

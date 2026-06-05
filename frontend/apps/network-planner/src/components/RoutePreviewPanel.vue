@@ -4,7 +4,7 @@ import { AirBadge, AirButton, AirMetricCard } from "@airlinesim/air-ui";
 import type { NetworkMessageKey } from "../i18n";
 import type { RouteOpportunity } from "../types";
 
-defineProps<{
+const props = defineProps<{
   currentPreview: null | RouteOpportunity;
   formatMoney: (value: number | undefined) => string;
   formatNumber: (value: number | undefined) => string;
@@ -18,6 +18,11 @@ defineProps<{
 const emit = defineEmits<{
   "create-selected-route": [];
 }>();
+
+function reasonLabel(reason: { code: string; message: string }): string {
+  // BFF sends reason.message === code; translate by code, fall back to the raw code.
+  return props.t(`reason.${reason.code}` as NetworkMessageKey) || reason.message;
+}
 </script>
 
 <template>
@@ -58,7 +63,7 @@ const emit = defineEmits<{
       </div>
       <div
         v-if="currentPreview.constraints.length"
-        class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-slate-950"
+        class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-error"
       >
         <p class="text-subtitle">
           {{ t("preview.blockers") }}
@@ -68,7 +73,7 @@ const emit = defineEmits<{
             v-for="reason in currentPreview.constraints"
             :key="reason.code"
           >
-            {{ reason.message }}
+            {{ reasonLabel(reason) }}
           </li>
         </ul>
       </div>

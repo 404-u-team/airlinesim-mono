@@ -6,7 +6,7 @@ import type { OperationReason, SchedulePattern, SchedulePreview, StoredFlight, S
 
 import { arrivalLocalDayOffset, arrivalLocalTime, nightOperationConstraints, rangeConstraints, runwayConstraints } from "../facilities/constraints";
 import { buildSlotCapacity, slotCapacityConstraints } from "../facilities/slots";
-import { estimateBlockHours, estimateUtilizationHours, estimateWeeklyCost, generateFlightsForSchedule, summarizeWeeklyEconomics } from "./flights";
+import { estimateBlockHours, estimateUtilizationHours, estimateWeeklyCost, generateFlightsForSchedule, stableScheduleId, summarizeWeeklyEconomics } from "./flights";
 
 export type OperationsSnapshot = RoutePlanningSnapshot & {
   flights: StoredFlight[];
@@ -58,6 +58,8 @@ export function createScheduleFromPreview(snapshot: OperationsSnapshot, input: S
   const days = normalizeDays(input.days_of_week);
   const pattern = buildPattern(days, input.departure_local_time, input.turnaround_minutes);
   const now = new Date().toISOString();
+  const startsOn = input.starts_on ?? now.slice(0, 10);
+  const scheduleId = stableScheduleId(route?.id ?? "", aircraft?.id, pattern, startsOn);
 
   if (!route || !aircraft || !type) {
     throw new Error("Cannot create schedule without route and aircraft.");
@@ -68,20 +70,17 @@ export function createScheduleFromPreview(snapshot: OperationsSnapshot, input: S
     airline_id: snapshot.airline.id ?? "",
     checks_snapshot: [...preview.blockers, ...preview.warnings],
     created_at: now,
-    id: crypto.randomUUID(),
+    id: scheduleId,
     pattern,
     route_id: route.id,
     status: preview.canActivate ? "active" : "draft",
     updated_at: now,
     validity: {
-      starts_on: input.starts_on ?? now.slice(0, 10),
+      starts_on: startsOn,
     },
   };
   const flights = preview.canActivate
-    ? generateFlightsForSchedule(snapshot, route, aircraft, type, pattern, input.starts_on, 14).map((flight) => ({
-      ...flight,
-      schedule_id: schedule.id,
-    }))
+    ? generateFlightsForSchedule(snapshot, route, aircraft, type, pattern, startsOn, 14, schedule.id)
     : [];
 
   return { flights, schedule };

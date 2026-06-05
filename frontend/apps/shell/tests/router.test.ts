@@ -25,6 +25,7 @@ globalThis.document = {
 
 // 2. Mock Vue SFC imports to return dummy components for vue-router
 mock.module("../src/views/AuthView.vue", () => ({ default: { name: "AuthView" } }));
+mock.module("../src/views/KnowledgeBaseView.vue", () => ({ default: { name: "KnowledgeBaseView" } }));
 mock.module("../src/views/ShellRemoteView.vue", () => ({ default: { name: "ShellRemoteView" } }));
 mock.module("../src/admin/views/AdminView.vue", () => ({ default: { name: "AdminView" } }));
 mock.module("../src/dashboard/DashboardView.vue", () => ({ default: { name: "DashboardView" } }));

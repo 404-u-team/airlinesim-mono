@@ -43,8 +43,10 @@ export type LedgerTransaction = {
 
 export type RouteProfitability = FinanceSummary & {
   destination_airport_id: string;
+  destination_airport_label?: string;
   flights_completed: number;
   origin_airport_id: string;
+  origin_airport_label?: string;
   recommendation: "healthy" | "insufficient_data" | "review";
   route_id: string;
 };

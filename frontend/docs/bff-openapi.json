@@ -1133,7 +1133,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Returns a list of available aircraft types\n\nBFF caches this list in memory, retries backend 500 responses up to 4 attempts, and supports exact field filters plus q search across text fields.",
+        "description": "Returns a list of available aircraft types\n\nBFF caches this list in memory, retries safe backend failures within BFF_BACKEND_MAX_SAFE_ATTEMPTS, and supports exact field filters plus q search across text fields.",
         "produces": [
           "application/json"
         ],
@@ -1920,7 +1920,7 @@
     },
     "/airports": {
       "get": {
-        "description": "Returns all airports\n\nBFF caches this list in memory, retries backend 500 responses up to 4 attempts, and supports exact field filters plus q search across text fields.",
+        "description": "Returns all airports\n\nBFF caches this list in memory, retries safe backend failures within BFF_BACKEND_MAX_SAFE_ATTEMPTS, and supports exact field filters plus q search across text fields.",
         "produces": [
           "application/json"
         ],
@@ -2249,7 +2249,7 @@
     },
     "/countries": {
       "get": {
-        "description": "Returns all countries\n\nBFF caches this list in memory, retries backend 500 responses up to 4 attempts, and supports exact field filters plus q search across text fields.",
+        "description": "Returns all countries\n\nBFF caches this list in memory, retries safe backend failures within BFF_BACKEND_MAX_SAFE_ATTEMPTS, and supports exact field filters plus q search across text fields.",
         "produces": [
           "application/json"
         ],
@@ -2741,7 +2741,7 @@
     },
     "/region-links": {
       "get": {
-        "description": "Returns all region links\n\nBFF caches this list in memory, retries backend 500 responses up to 4 attempts, and supports exact field filters plus q search across text fields.",
+        "description": "Returns all region links\n\nBFF caches this list in memory, retries safe backend failures within BFF_BACKEND_MAX_SAFE_ATTEMPTS, and supports exact field filters plus q search across text fields.",
         "produces": [
           "application/json"
         ],
@@ -2956,7 +2956,7 @@
     },
     "/regions": {
       "get": {
-        "description": "Returns all regions\n\nBFF caches this list in memory, retries backend 500 responses up to 4 attempts, and supports exact field filters plus q search across text fields.",
+        "description": "Returns all regions\n\nBFF caches this list in memory, retries safe backend failures within BFF_BACKEND_MAX_SAFE_ATTEMPTS, and supports exact field filters plus q search across text fields.",
         "produces": [
           "application/json"
         ],

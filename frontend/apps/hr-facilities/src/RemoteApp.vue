@@ -71,7 +71,7 @@ function navigate(targetPath: string): void {
 </script>
 
 <template>
-  <section class="min-h-full overflow-x-hidden bg-background p-4 text-body text-text-primary sm:p-6">
+  <section class="h-full overflow-y-auto overflow-x-hidden bg-background p-4 text-body text-text-primary sm:p-6">
     <header class="flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
       <div>
         <AirBadge :label="message(`status.${overview?.status ?? 'missing'}`)" :variant="overview?.status === 'ready' ? 'success-soft' : overview?.status === 'blocked' ? 'danger-soft' : 'warning-soft'" />
@@ -90,7 +90,7 @@ function navigate(targetPath: string): void {
       />
     </header>
 
-    <div v-if="error" class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-slate-950">
+    <div v-if="error" class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-error">
       {{ error }}
     </div>
     <div v-else-if="isLoading && !overview" class="mt-6 rounded-lg border border-border bg-surface p-8 text-center text-text-muted">

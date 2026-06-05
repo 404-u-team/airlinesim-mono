@@ -3,10 +3,11 @@ import type { Locale } from "@airlinesim/i18n";
 const messages = {
   en: {
     available: "Available balance",
-    baseline: "Backend balance",
+    baseline: "Current balance",
     completed: "Completed flights",
     costs: "Costs",
     empty: "No completed flight transactions yet.",
+    errorLoad: "Finance data is unavailable. Refresh the screen or continue with the last known dashboard values.",
     fleetValue: "Fleet value",
     ledger: "Operations ledger",
     loading: "Loading finances",
@@ -34,10 +35,11 @@ const messages = {
   },
   ru: {
     available: "Доступный баланс",
-    baseline: "Баланс backend",
+    baseline: "Текущий баланс",
     completed: "Завершено рейсов",
     costs: "Расходы",
     empty: "Операций по завершённым рейсам пока нет.",
+    errorLoad: "Финансовые данные недоступны. Обновите экран или продолжайте с последними значениями на панели.",
     fleetValue: "Стоимость флота",
     ledger: "Журнал операций",
     loading: "Загрузка финансов",

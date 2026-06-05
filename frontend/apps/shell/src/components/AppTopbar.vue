@@ -2,7 +2,7 @@
 import { airlineSimEventBus } from "@airlinesim/event-bus";
 import { type Locale, translate } from "@airlinesim/i18n";
 import { Bell, LogOut, Menu, Search, UserRound } from "@lucide/vue";
-import { computed } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
 
 import { logout } from "../auth";
@@ -23,7 +23,32 @@ const router = useRouter();
 const t = computed(() => (key: ShellMessageKey): string =>
   translate(shellMessages, props.appLocale, key),
 );
-const statusMetrics = computed(() => getStatusMetrics(t.value, dashboardState.statusSummary.value));
+const now = ref(new Date());
+const statusMetrics = computed(() => getStatusMetrics(t.value, dashboardState.statusSummary.value, props.appLocale));
+const formattedNow = computed(() =>
+  new Intl.DateTimeFormat(props.appLocale, {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "2-digit",
+    timeZone: "UTC",
+    timeZoneName: "short",
+    year: "numeric",
+  }).format(now.value),
+);
+let clockTimer: null | ReturnType<typeof setInterval> = null;
+
+onMounted(() => {
+  clockTimer = setInterval(() => {
+    now.value = new Date();
+  }, 30_000);
+});
+
+onUnmounted(() => {
+  if (clockTimer) {
+    clearInterval(clockTimer);
+  }
+});
 
 function requestPanel(panel: "notifications" | "profile"): void {
   airlineSimEventBus.emit("shell:panel-requested", {
@@ -86,7 +111,7 @@ function signOut(): void {
       </label>
 
       <div class="hidden whitespace-nowrap text-monospace text-text-muted sm:block">
-        14:36 UTC · 03.12.2025
+        {{ formattedNow }}
       </div>
 
       <button

@@ -18,6 +18,7 @@ type AccessTokenResponse = {
 let adminAccessToken: null | string = null;
 let adminAccessTokenExpiresAt: null | number = null;
 let adminLoginPromise: null | Promise<string> = null;
+const userAirlineByRequest = new WeakMap<Request, { airline: unknown; authorization: string }>();
 
 export async function getAdminCapabilityProbe(
   request: Request,
@@ -93,6 +94,26 @@ export function getUserAuthorization(request: Request): null | string {
   return authorization;
 }
 
+export async function getValidatedUserAirline<TAirline>(
+  request: Request,
+  config: BffConfig,
+): Promise<TAirline> {
+  const authorization = getUserAuthorization(request);
+  if (!authorization) {
+    throw new BackendHttpError("Authentication required.", 401, "AUTH_REQUIRED", false);
+  }
+
+  const cached = userAirlineByRequest.get(request);
+  if (cached?.authorization === authorization) {
+    return cached.airline as TAirline;
+  }
+
+  const airline = await requestBackendJson<TAirline>(config, "/airline/me", { token: authorization });
+  userAirlineByRequest.set(request, { airline, authorization });
+
+  return airline;
+}
+
 export function invalidateBackendAdminToken(): void {
   adminAccessToken = null;
   adminAccessTokenExpiresAt = null;
@@ -144,14 +165,7 @@ export async function requireValidUserToken(
   }
 
   try {
-    // GET request will be retried automatically by requestBackend
-    const response = await requestBackend(config, "/airline/me", {
-      token: authorization,
-    });
-
-    if (response.status === 401 || response.status === 403) {
-      return jsonResponse({ error: "Invalid user token" }, { status: 401 });
-    }
+    await getValidatedUserAirline(request, config);
   } catch (error) {
     if (error instanceof BackendHttpError) {
       if (error.status === 401 || error.status === 403) {

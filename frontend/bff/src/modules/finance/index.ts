@@ -28,8 +28,10 @@ type FinanceSummary = {
 
 type RouteProfitability = FinanceSummary & {
   destination_airport_id: string;
+  destination_airport_label: string;
   flights_completed: number;
   origin_airport_id: string;
+  origin_airport_label: string;
   recommendation: "healthy" | "insufficient_data" | "review";
   route_id: string;
 };
@@ -69,6 +71,14 @@ export async function handleFinanceRequest(
   } catch (error) {
     return financeError(error);
   }
+}
+
+function airportLabel(airport: FleetSnapshot["airports"][number] | undefined, fallback: string): string {
+  if (!airport) {
+    return fallback;
+  }
+
+  return `${airport.iata_code ?? airport.icao_code ?? "----"} - ${airport.intl_name ?? airport.local_name ?? "Airport"}`;
 }
 
 function financeError(error: unknown): Response {
@@ -132,7 +142,7 @@ async function loadFinanceSnapshot(request: Request, config: BffConfig): Promise
 
 async function overview(request: Request, config: BffConfig): Promise<Response> {
   const snapshot = await loadFinanceSnapshot(request, config);
-  const routeProfits = routeProfitability(snapshot.ledger, snapshot.routes);
+  const routeProfits = routeProfitability(snapshot.ledger, snapshot.routes, snapshot.fleet.airports);
   const weekly = inWindow(snapshot.ledger, 7);
   const today = inWindow(snapshot.ledger, 1);
   const ledgerDelta = sumLedger(snapshot.ledger);
@@ -171,7 +181,13 @@ function recommendationForProfit(profit: number): RouteProfitability["recommenda
   return "insufficient_data";
 }
 
-function routeProfitability(transactions: LedgerTransaction[], routesList: StoredRoute[]): RouteProfitability[] {
+function routeProfitability(
+  transactions: LedgerTransaction[],
+  routesList: StoredRoute[],
+  airports: FleetSnapshot["airports"] = [],
+): RouteProfitability[] {
+  const airportById = new Map(airports.map((airport) => [airport.id, airport]));
+
   return routesList.map((route) => {
     const routeTransactions = transactions.filter((transaction) => transaction.route_id === route.id);
     const flightIds = new Set(routeTransactions.map((transaction) => transaction.flight_id).filter(Boolean));
@@ -179,8 +195,10 @@ function routeProfitability(transactions: LedgerTransaction[], routesList: Store
 
     return {
       destination_airport_id: route.destination_airport_id,
+      destination_airport_label: airportLabel(airportById.get(route.destination_airport_id), route.destination_airport_id),
       flights_completed: flightIds.size,
       origin_airport_id: route.origin_airport_id,
+      origin_airport_label: airportLabel(airportById.get(route.origin_airport_id), route.origin_airport_id),
       recommendation: recommendationForProfit(summary.profit),
       route_id: route.id,
       ...summary,
@@ -191,7 +209,7 @@ function routeProfitability(transactions: LedgerTransaction[], routesList: Store
 async function routes(request: Request, config: BffConfig): Promise<Response> {
   const snapshot = await loadFinanceSnapshot(request, config);
 
-  return jsonResponse({ routes: routeProfitability(snapshot.ledger, snapshot.routes) });
+  return jsonResponse({ routes: routeProfitability(snapshot.ledger, snapshot.routes, snapshot.fleet.airports) });
 }
 
 function summarize(transactions: LedgerTransaction[]): FinanceSummary {

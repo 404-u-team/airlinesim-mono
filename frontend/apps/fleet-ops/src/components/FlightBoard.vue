@@ -113,7 +113,7 @@ function statusVariant(status: FlightCard["status"]): "danger-soft" | "primary-s
 
     <div
       v-if="error"
-      class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-slate-950"
+      class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-error"
     >
       {{ error }}
     </div>

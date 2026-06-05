@@ -18,7 +18,7 @@ export type MapAirportFeature = {
     properties: {
         id?: string;
         label?: string;
-        role?: "base" | "opportunity";
+        role?: "base" | "opportunity" | "route_destination";
     };
     type: "Feature";
 };
@@ -36,6 +36,10 @@ export type MapManagerSnapshot = {
 export type MapState = {
     airports?: {
         features: MapAirportFeature[];
+        type: "FeatureCollection";
+    };
+    flights?: {
+        features: Array<Record<string, unknown>>;
         type: "FeatureCollection";
     };
     routes?: {
@@ -248,11 +252,14 @@ export class MapManager {
         }
 
         const airportData = this.mapState?.airports ?? { features: [], type: "FeatureCollection" as const };
+        const flightData = this.mapState?.flights ?? { features: [], type: "FeatureCollection" as const };
         const routeData = this.mapState?.routes ?? { features: [], type: "FeatureCollection" as const };
 
         this.upsertGeoJsonSource("airlinesim-routes", routeData);
+        this.upsertGeoJsonSource("airlinesim-flights", flightData);
         this.upsertGeoJsonSource("airlinesim-airports", airportData);
         this.ensureRouteLayer();
+        this.ensureFlightLayer();
         this.ensureAirportLayers();
     }
 
@@ -290,6 +297,8 @@ export class MapManager {
                         ["get", "role"],
                         "base",
                         "#2563eb",
+                        "route_destination",
+                        "#10b981",
                         "opportunity",
                         "#f59e0b",
                         "#64748b",
@@ -299,6 +308,8 @@ export class MapManager {
                         ["get", "role"],
                         "base",
                         8,
+                        "route_destination",
+                        7,
                         5,
                     ],
                     "circle-stroke-color": "#ffffff",
@@ -329,6 +340,37 @@ export class MapManager {
 
         this.map.off("click", "airlinesim-airport-points", this.handleAirportClick);
         this.map.on("click", "airlinesim-airport-points", this.handleAirportClick);
+    }
+
+    private ensureFlightLayer(): void {
+        if (!this.map) {
+            return;
+        }
+
+        if (!this.map.getLayer("airlinesim-flight-points")) {
+            this.map.addLayer({
+                id: "airlinesim-flight-points",
+                paint: {
+                    "circle-color": [
+                        "match",
+                        ["get", "status"],
+                        "in_flight",
+                        "#16a34a",
+                        "boarding",
+                        "#f59e0b",
+                        "#38bdf8",
+                    ],
+                    "circle-radius": 6,
+                    "circle-stroke-color": "#ffffff",
+                    "circle-stroke-width": 2,
+                },
+                source: "airlinesim-flights",
+                type: "circle",
+            });
+        }
+
+        this.map.off("click", "airlinesim-flight-points", this.handleFlightClick);
+        this.map.on("click", "airlinesim-flight-points", this.handleFlightClick);
     }
 
     private ensureRouteLayer(): void {
@@ -380,6 +422,17 @@ export class MapManager {
         if (airportId) {
             airlineSimEventBus.emit("map:airport-selected", {
                 airportId,
+                source: "map",
+            });
+        }
+    };
+
+    private readonly handleFlightClick = (event: { features?: Array<{ properties?: { id?: string } }> }): void => {
+        const flightId = event.features?.[0]?.properties?.id;
+
+        if (flightId) {
+            airlineSimEventBus.emit("flight:selected", {
+                flightId,
                 source: "map",
             });
         }

@@ -10,8 +10,10 @@ import {
 
 test("creates a balanced operational ledger for a completed flight", () => {
   const transactions = buildFlightTransactions(flight());
+  const repeated = buildFlightTransactions(flight());
 
   expect(transactions).toHaveLength(4);
+  expect(transactions.map((item) => item.id)).toEqual(repeated.map((item) => item.id));
   expect(new Set(transactions.map((item) => item.idempotency_key)).size).toBe(4);
   expect(sumLedger(transactions)).toBe(4_000);
   expect(transactions.filter((item) => item.direction === "debit").reduce((sum, item) => sum + item.amount, 0)).toBe(6_000);

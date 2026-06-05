@@ -171,7 +171,7 @@ async function startImport(mode: "dry-run" | "import", refreshRaw: boolean): Pro
       {{ error }}
     </p>
 
-    <div v-if="pendingImport" class="mt-4 rounded-lg border border-warning bg-warning-bg p-4 text-slate-950">
+    <div v-if="pendingImport" class="mt-4 rounded-lg border border-warning bg-warning-bg p-4 text-warning">
       <strong>{{ pendingImport.refreshRaw ? t("confirmRefresh") : t("confirmCached") }}</strong>
       <p class="mt-1 text-body">
         {{ t("confirmDescription") }}
@@ -222,7 +222,7 @@ async function startImport(mode: "dry-run" | "import", refreshRaw: boolean): Pro
           @click="requestImport(false)"
         />
       </article>
-      <article class="rounded-lg border border-warning bg-warning-bg p-4 text-slate-950">
+      <article class="rounded-lg border border-warning bg-warning-bg p-4 text-warning">
         <h2 class="text-subtitle">
           {{ t("refreshTitle") }}
         </h2>

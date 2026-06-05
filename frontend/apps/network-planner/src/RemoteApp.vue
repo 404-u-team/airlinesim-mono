@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Locale } from "@airlinesim/i18n";
 
-import { AirBadge, AirButton, AirMetricCard, AirTextField } from "@airlinesim/air-ui";
+import { AirButton, AirMetricCard, AirStatePanel, AirTextField } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
 import { computed, onMounted, reactive, ref } from "vue";
 
@@ -105,7 +105,7 @@ async function createSelectedRoute(): Promise<void> {
 }
 
 function errorMessage(value: unknown): string {
-  return value instanceof Error ? value.message : "Could not load route data.";
+  return value instanceof Error ? value.message : tr("error.load");
 }
 
 function formatMoney(value: number | undefined): string {
@@ -208,11 +208,7 @@ const tMap = {
   <section class="h-full overflow-y-auto bg-background p-4 text-body text-text-primary sm:p-6">
     <div class="flex flex-col gap-5 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
       <div class="min-w-0">
-        <AirBadge
-          label="Network Planner"
-          variant="warning-soft"
-        />
-        <h1 class="mt-4 text-h2">
+        <h1 class="text-h2">
           {{ tr("title") }}
         </h1>
         <p class="mt-2 max-w-2xl text-body text-text-muted">
@@ -228,13 +224,19 @@ const tMap = {
       />
     </div>
 
-    <div
-      v-if="error || message"
-      class="mt-4 rounded-lg border p-3"
-      :class="error ? 'border-error bg-error-bg text-slate-950' : 'border-success bg-success-bg text-slate-950'"
-    >
-      {{ error || message }}
-    </div>
+    <AirStatePanel
+      v-if="error"
+      class="mt-4"
+      :title="tr('error.load')"
+      :body="error"
+      tone="danger"
+    />
+    <AirStatePanel
+      v-else-if="message"
+      class="mt-4"
+      :title="message"
+      tone="success"
+    />
 
     <div class="mt-6 grid gap-3 sm:grid-cols-3">
       <AirMetricCard
@@ -259,16 +261,18 @@ const tMap = {
             :label="tr('filter.maxDistance')"
             placeholder="3500"
           />
-          <label class="flex items-center gap-2 text-body text-text-muted">
+          <label class="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 text-body text-text-muted">
             <input
               v-model="filters.onlyCompatible"
+              class="size-4 accent-primary"
               type="checkbox"
             />
             {{ tr("filter.compatible") }}
           </label>
-          <label class="flex items-center gap-2 text-body text-text-muted">
+          <label class="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 text-body text-text-muted">
             <input
               v-model="filters.onlyProfitable"
+              class="size-4 accent-primary"
               type="checkbox"
             />
             {{ tr("filter.profitable") }}

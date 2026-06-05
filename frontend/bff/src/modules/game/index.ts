@@ -1,8 +1,9 @@
 /* eslint-disable complexity, max-lines */
 import type { BffConfig } from "../../config";
 
-import { getBackendAdminToken, getUserAuthorization, requireValidUserToken } from "../../auth";
+import { getBackendAdminToken, getUserAuthorization, getValidatedUserAirline, requireValidUserToken } from "../../auth";
 import { requestBackendJson } from "../../backend-http";
+import { parseGeoPoint } from "../../geo";
 import { jsonResponse } from "../../http";
 import { reconcileNotificationsForDashboard, reconcileNotificationsForRequest } from "../events/reconcile";
 import { listEventsForAirline } from "../events/storage";
@@ -76,10 +77,13 @@ type GameSnapshot = {
 type OverlayFlight = {
   arrival_at?: string;
   departure_at?: string;
+  destination_airport_id?: string;
   expected?: {
     profit?: number;
   };
+  flight_number?: string;
   id?: string;
+  origin_airport_id?: string;
   route_id?: string;
   status?: string;
 };
@@ -129,6 +133,62 @@ type RouteOpportunity = {
   score: number;
 };
 
+export function buildMapState(
+  snapshot: GameSnapshot,
+  searchParams: URLSearchParams,
+  routes: OverlayRoute[] = [],
+  operations: OverlayOperations = { flights: [], schedules: [] },
+): Record<string, unknown> {
+  const baseAirport = getBaseAirport(snapshot);
+  const includeOpportunities = searchParams.get("include_opportunities") !== "false";
+  const requestedSelectedAirportId = searchParams.get("selected_airport_id");
+  const opportunities = includeOpportunities
+    ? buildRouteOpportunities(snapshot, baseAirport?.id ?? null).slice(0, 12)
+    : [];
+  const selectedAirport =
+    snapshot.airports.find((airport) => airport.id === requestedSelectedAirportId) ??
+    opportunities[0]?.airport ??
+    baseAirport;
+  const routeDestinations = routes
+    .map((route) => snapshot.airports.find((airport) => airport.id === route.destination_airport_id))
+    .filter((airport): airport is Airport => Boolean(airport));
+  const airportFeatures = buildMapAirportFeatures(baseAirport, opportunities, routeDestinations);
+
+  const warnings = [
+    ...(baseAirport && !pointFromAirport(baseAirport) ? ["MISSING_BASE_COORDINATES"] : []),
+    ...(airportFeatures.size === 0 ? ["NO_MAP_AIRPORTS"] : []),
+  ];
+  const routeFeatures = routes
+    .map((route) => toRouteFeature(route, snapshot))
+    .filter((feature): feature is Record<string, unknown> => feature !== null);
+  const flightFeatures = operations.flights
+    .map((flight) => toFlightFeature(flight, snapshot))
+    .filter((feature): feature is Record<string, unknown> => feature !== null);
+
+  return {
+    airports: {
+      features: Array.from(airportFeatures.values()),
+      type: "FeatureCollection",
+    },
+    capabilities: {
+      flights: "configured",
+      routes: "configured",
+    },
+    flights: {
+      features: flightFeatures,
+      type: "FeatureCollection",
+    },
+    routes: {
+      features: routeFeatures,
+      type: "FeatureCollection",
+    },
+    scope: searchParams.get("scope") ?? "dashboard",
+    selected: selectedAirport ? toSelectedAirport(selectedAirport, snapshot, baseAirport) : null,
+    viewport: buildViewport(Array.from(airportFeatures.values())),
+    warnings,
+  };
+}
+
 export async function handleGameRequest(
   request: Request,
   url: URL,
@@ -148,7 +208,7 @@ export async function handleGameRequest(
     return jsonResponse({ error: "Missing user token" }, { status: 401 });
   }
 
-  const snapshot = await loadGameSnapshot(config, userAuthorization);
+  const snapshot = await loadGameSnapshot(config, request, userAuthorization);
 
   if (url.pathname === "/game/dashboard-summary") {
     const [routes, operations] = await Promise.all([
@@ -175,9 +235,12 @@ export async function handleGameRequest(
   }
 
   if (url.pathname === "/game/map-state") {
-    const routes = await listRoutesForAirline(snapshot.airline.id ?? "");
+    const [routes, operations] = await Promise.all([
+      listRoutesForAirline(snapshot.airline.id ?? ""),
+      loadOverlayOperations(snapshot.airline.id ?? ""),
+    ]);
 
-    return jsonResponse(buildMapState(snapshot, url.searchParams, routes));
+    return jsonResponse(buildMapState(snapshot, url.searchParams, routes, operations));
   }
 
   if (url.pathname === "/game/finance-overview") {
@@ -332,21 +395,11 @@ function buildFleetSummary(snapshot: GameSnapshot, baseAirport: Airport | undefi
   };
 }
 
-function buildMapState(
-  snapshot: GameSnapshot,
-  searchParams: URLSearchParams,
-  routes: OverlayRoute[] = [],
-): Record<string, unknown> {
-  const baseAirport = getBaseAirport(snapshot);
-  const includeOpportunities = searchParams.get("include_opportunities") !== "false";
-  const requestedSelectedAirportId = searchParams.get("selected_airport_id");
-  const opportunities = includeOpportunities
-    ? buildRouteOpportunities(snapshot, baseAirport?.id ?? null).slice(0, 12)
-    : [];
-  const selectedAirport =
-    snapshot.airports.find((airport) => airport.id === requestedSelectedAirportId) ??
-    opportunities[0]?.airport ??
-    baseAirport;
+function buildMapAirportFeatures(
+  baseAirport: Airport | undefined,
+  opportunities: RouteOpportunity[],
+  routeDestinations: Airport[] = [],
+): Map<string, Record<string, unknown>> {
   const airportFeatures = new Map<string, Record<string, unknown>>();
 
   if (baseAirport) {
@@ -363,32 +416,18 @@ function buildMapState(
     }
   }
 
-  const warnings = [
-    ...(baseAirport && !pointFromAirport(baseAirport) ? ["MISSING_BASE_COORDINATES"] : []),
-    ...(airportFeatures.size === 0 ? ["NO_MAP_AIRPORTS"] : []),
-  ];
-  const routeFeatures = routes
-    .map((route) => toRouteFeature(route, snapshot))
-    .filter((feature): feature is Record<string, unknown> => feature !== null);
+  // Route destinations take precedence over generic opportunities; never overwrite the base.
+  for (const airport of routeDestinations) {
+    if (!airport.id || airport.id === baseAirport?.id) {
+      continue;
+    }
+    const feature = toAirportFeature(airport, "route_destination", 0);
+    if (feature) {
+      airportFeatures.set(airport.id, feature);
+    }
+  }
 
-  return {
-    airports: {
-      features: Array.from(airportFeatures.values()),
-      type: "FeatureCollection",
-    },
-    capabilities: {
-      flights: "configured",
-      routes: "configured",
-    },
-    routes: {
-      features: routeFeatures,
-      type: "FeatureCollection",
-    },
-    scope: searchParams.get("scope") ?? "dashboard",
-    selected: selectedAirport ? toSelectedAirport(selectedAirport, snapshot, baseAirport) : null,
-    viewport: buildViewport(Array.from(airportFeatures.values())),
-    warnings,
-  };
+  return airportFeatures;
 }
 
 function buildNavigationProgress(
@@ -564,10 +603,30 @@ function getBaseAirport(snapshot: GameSnapshot): Airport | undefined {
   return snapshot.airports.find((airport) => airport.id === snapshot.airline.starting_airport_id);
 }
 
-async function loadGameSnapshot(config: BffConfig, userAuthorization: string): Promise<GameSnapshot> {
+function interpolateFlightPosition(
+  origin: { latitude: number; longitude: number },
+  destination: { latitude: number; longitude: number },
+  flight: OverlayFlight,
+): { latitude: number; longitude: number } {
+  const departureTime = new Date(flight.departure_at ?? "").getTime();
+  const arrivalTime = new Date(flight.arrival_at ?? "").getTime();
+
+  if (!Number.isFinite(departureTime) || !Number.isFinite(arrivalTime) || arrivalTime <= departureTime) {
+    return origin;
+  }
+
+  const progress = Math.max(0, Math.min(1, (Date.now() - departureTime) / (arrivalTime - departureTime)));
+
+  return {
+    latitude: origin.latitude + (destination.latitude - origin.latitude) * progress,
+    longitude: origin.longitude + (destination.longitude - origin.longitude) * progress,
+  };
+}
+
+async function loadGameSnapshot(config: BffConfig, request: Request, userAuthorization: string): Promise<GameSnapshot> {
   const token = await getBackendAdminToken(config);
   const [airline, aircrafts, aircraftTypes, airports, regions, regionLinks] = await Promise.all([
-    requestBackendJson<Airline>(config, "/airline/me", { token: userAuthorization }),
+    getValidatedUserAirline<Airline>(request, config),
     requestBackendJson<{ items?: Aircraft[] }>(config, "/aircrafts", { token: userAuthorization }),
     requestBackendJson<{ items?: AircraftType[] }>(config, "/aircraft-types", { token }),
     requestBackendJson<{ airports?: Airport[] }>(config, "/airports", { token }),
@@ -633,18 +692,7 @@ function operationsState(hasRoutes: boolean, hasSchedules: boolean): string {
 }
 
 function pointFromAirport(airport: Airport): null | { latitude: number; longitude: number } {
-  const match = /POINT\s*\(\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*\)/i.exec(
-    airport.geog ?? airport.geom ?? "",
-  );
-
-  if (!match?.[1] || !match[2]) {
-    return null;
-  }
-
-  return {
-    latitude: Number(match[2]),
-    longitude: Number(match[1]),
-  };
+  return parseGeoPoint(airport.geog, airport.geom);
 }
 
 function routesReasonCode(hasAircraft: boolean, hasRoutes: boolean): string {
@@ -665,7 +713,7 @@ function routesState(hasAircraft: boolean, hasRoutes: boolean): string {
 
 function toAirportFeature(
   airport: Airport,
-  role: "base" | "opportunity",
+  role: "base" | "opportunity" | "route_destination",
   score: number,
   demand?: number,
 ): null | Record<string, unknown> {
@@ -711,6 +759,40 @@ function toAirportSummary(airport: Airport): Record<string, unknown> {
     stand_fee: airport.stand_fee ?? 0,
     turnaround_point_price: airport.turnaround_point_price ?? 0,
     works_at_night: Boolean(airport.works_at_night),
+  };
+}
+
+function toFlightFeature(flight: OverlayFlight, snapshot: GameSnapshot): null | Record<string, unknown> {
+  if (flight.status === "cancelled" || flight.status === "completed") {
+    return null;
+  }
+
+  const origin = snapshot.airports.find((airport) => airport.id === flight.origin_airport_id);
+  const destination = snapshot.airports.find((airport) => airport.id === flight.destination_airport_id);
+  const originPoint = origin ? pointFromAirport(origin) : null;
+  const destinationPoint = destination ? pointFromAirport(destination) : null;
+
+  if (!originPoint || !destinationPoint) {
+    return null;
+  }
+
+  const position = interpolateFlightPosition(originPoint, destinationPoint, flight);
+
+  return {
+    geometry: {
+      coordinates: [position.longitude, position.latitude],
+      type: "Point",
+    },
+    id: flight.id,
+    properties: {
+      flight_number: flight.flight_number,
+      id: flight.id,
+      label: flight.flight_number ?? "Flight",
+      profit: flight.expected?.profit ?? 0,
+      route_id: flight.route_id,
+      status: flight.status ?? "scheduled",
+    },
+    type: "Feature",
   };
 }
 

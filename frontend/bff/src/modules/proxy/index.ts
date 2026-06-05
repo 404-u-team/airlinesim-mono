@@ -138,10 +138,14 @@ function buildBackendHeaders(request: Request): Headers {
   return headers;
 }
 
+// Pagination/control params are not item fields; treating them as exact-match
+// filters would wrongly empty the whole collection.
+const nonFilterParams = new Set(["cursor", "limit", "offset", "order", "page", "page_size", "per_page", "q", "refresh", "sort"]);
+
 function filterItems(items: JsonObject[], searchParams: URLSearchParams): JsonObject[] {
   const query = normalizeSearchValue(searchParams.get("q"));
   const filters = Array.from(searchParams.entries())
-    .filter(([key, value]) => key !== "q" && key !== "refresh" && value.trim() !== "")
+    .filter(([key, value]) => !nonFilterParams.has(key) && value.trim() !== "")
     .map(([key, value]) => [key, normalizeSearchValue(value)] as const);
 
   return items.filter((item) => {
@@ -221,6 +225,15 @@ async function handleCacheableRoute(
     try {
       payload = await loadCacheableRouteInternal(request, config, route);
     } catch (error) {
+      const stalePayload = cache.get(route.path);
+      if (stalePayload) {
+        return listResponse(route, stalePayload, url.searchParams, {
+          cached: true,
+          degraded: true,
+          errorCode: error instanceof BackendHttpError ? error.code : "BACKEND_UNAVAILABLE",
+          stale: true,
+        });
+      }
       if (route.fallbackEmptyOnError) {
         return degradedListResponse(route, error);
       }
@@ -243,12 +256,32 @@ async function handleCacheableRoute(
   if (payload instanceof Response) {
     return payload;
   }
-  const filteredItems = filterItems(payload.items, url.searchParams);
+
+  return listResponse(route, payload, url.searchParams, {
+    cached: Boolean(cachedPayload),
+  });
+}
+
+function listResponse(
+  route: CacheableRouteConfig,
+  payload: CachedPayload,
+  searchParams: URLSearchParams,
+  options: {
+    cached: boolean;
+    degraded?: boolean;
+    errorCode?: string;
+    stale?: boolean;
+  },
+): Response {
+  const filteredItems = filterItems(payload.items, searchParams);
 
   return jsonResponse({
     meta: {
-      cached: Boolean(cachedPayload),
+      cached: options.cached,
+      degraded: options.degraded ?? false,
+      error_code: options.errorCode,
       fetched_at: new Date(payload.fetchedAt).toISOString(),
+      stale: options.stale ?? false,
       total: payload.items.length,
     },
     [route.collectionKey]: filteredItems,

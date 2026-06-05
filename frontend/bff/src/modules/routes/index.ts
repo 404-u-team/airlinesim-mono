@@ -276,6 +276,12 @@ async function routeRequest(request: Request, url: URL, config: BffConfig): Prom
     return routeOpportunityPreviewRequest(request, url, config, decodeURIComponent(previewMatch[1]));
   }
 
+  // Exact collection endpoints must be matched before the `/routes/:id` detail
+  // matcher, otherwise `/routes/opportunities` is misread as a route id and 404s.
+  if (url.pathname === "/routes" || url.pathname === "/routes/opportunities") {
+    return routeCollectionRequest(request, url, config);
+  }
+
   const routeMatch = /^\/routes\/([^/]+)$/.exec(url.pathname);
   if (routeMatch?.[1]) {
     return routeDetailRequest(request, config, decodeURIComponent(routeMatch[1]));

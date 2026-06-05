@@ -1,7 +1,7 @@
 import type { BffConfig } from "../../config";
 import type { Aircraft, AircraftType, Airline, Airport, Country, FleetSnapshot } from "./types";
 
-import { getBackendAdminToken, getUserAuthorization } from "../../auth";
+import { getBackendAdminToken, getUserAuthorization, getValidatedUserAirline } from "../../auth";
 import { BackendHttpError, requestBackendJson } from "../../backend-http";
 import { getCachedListInternal } from "../proxy";
 
@@ -19,7 +19,7 @@ export async function loadFleetSnapshot(request: Request, config: BffConfig): Pr
 
   const adminRequest = await createAdminRequest(request, config);
   const [airline, aircrafts, aircraftTypes, airports, countries] = await Promise.all([
-    requestBackendJson<Airline>(config, "/airline/me", { token: authorization }),
+    getValidatedUserAirline<Airline>(request, config),
     requestBackendJson<{ items?: Aircraft[] }>(config, "/aircrafts", { token: authorization }),
     getCachedListInternal<AircraftType>(adminRequest, config, "/aircraft-types", "items"),
     getCachedListInternal<Airport>(adminRequest, config, "/airports", "airports"),

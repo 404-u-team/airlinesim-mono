@@ -77,7 +77,7 @@ function addBffOverlay(swagger: SwaggerDocument): SwaggerDocument {
       continue;
     }
 
-    operation.description = `${operation.description ?? ""}\n\nBFF caches this list in memory, retries backend 500 responses up to 4 attempts, and supports exact field filters plus q search across text fields.`.trim();
+    operation.description = `${operation.description ?? ""}\n\nBFF caches this list in memory, retries safe backend failures within BFF_BACKEND_MAX_SAFE_ATTEMPTS, and supports exact field filters plus q search across text fields.`.trim();
     operation.parameters = mergeQueryParameters(operation.parameters, getFilterParameters(swagger, operation));
   }
 

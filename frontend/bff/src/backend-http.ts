@@ -34,6 +34,8 @@ export class BackendHttpError extends Error {
   }
 }
 
+const inFlightJsonRequests = new Map<string, Promise<unknown>>();
+
 export function normalizeBackendError(
   status: number,
   body: unknown,
@@ -62,8 +64,8 @@ export async function requestBackend(
   options: RequestBackendOptions = {},
 ): Promise<Response> {
   const method = options.method ?? "GET";
-  const timeoutMs = options.timeoutMs ?? 10_000;
-  const maxAttempts = options.maxAttempts ?? 3;
+  const timeoutMs = options.timeoutMs ?? getDefaultTimeoutMs(config, method, path);
+  const maxAttempts = options.maxAttempts ?? getDefaultMaxAttempts(config, method, path, options.retryMutating);
   const url = `${config.backendBaseUrl}${path}`;
 
   let lastError: unknown = null;
@@ -116,8 +118,29 @@ export async function requestBackendJson<TValue>(
   path: string,
   options: RequestBackendOptions = {},
 ): Promise<TValue> {
-  const response = await requestBackend(config, path, options);
-  return (await response.json()) as TValue;
+  const coalescingKey = getJsonCoalescingKey(config, path, options);
+
+  if (!coalescingKey) {
+    const response = await requestBackend(config, path, options);
+    return (await response.json()) as TValue;
+  }
+
+  const existingRequest = inFlightJsonRequests.get(coalescingKey);
+  if (existingRequest) {
+    const value = await existingRequest;
+    return value as TValue;
+  }
+
+  const request = requestBackend(config, path, options)
+    .then(async (response) => await response.json())
+    .finally(() => {
+      inFlightJsonRequests.delete(coalescingKey);
+    });
+
+  inFlightJsonRequests.set(coalescingKey, request);
+
+  const value = await request;
+  return value as TValue;
 }
 
 function buildBackendRequestBody(body?: unknown): ArrayBuffer | Blob | string | undefined {
@@ -142,6 +165,35 @@ function buildBackendRequestHeaders(options: RequestBackendOptions): Headers {
     headers.set("Accept", "application/json");
   }
   return headers;
+}
+
+function getDefaultMaxAttempts(
+  config: BffConfig,
+  method: string,
+  path: string,
+  retryMutating?: boolean,
+): number {
+  const isSafeMethod = method === "GET" || method === "HEAD";
+  const isAuthPath = path.includes("/auth/login") || path.includes("/auth/register") || path.includes("/auth/refresh");
+
+  if (isSafeMethod || isAuthPath || retryMutating) {
+    return Math.max(1, config.backendMaxSafeAttempts ?? 2);
+  }
+
+  return 1;
+}
+
+function getDefaultTimeoutMs(config: BffConfig, method: string, path: string): number {
+  const isSafeMethod = method === "GET" || method === "HEAD";
+  const isAuthPath = path.includes("/auth/") || path === "/airline/me";
+
+  if (isAuthPath) {
+    return config.backendAuthTimeoutMs ?? 1500;
+  }
+
+  return isSafeMethod
+    ? config.backendReadTimeoutMs ?? 1500
+    : config.backendMutationTimeoutMs ?? 5000;
 }
 
 function getInitialErrorCodeAndMessage(
@@ -176,6 +228,34 @@ function getInitialErrorCodeAndMessage(
     return normalizeAirportError(status, body);
   }
   return normalizeGenericError(status);
+}
+
+function getJsonCoalescingKey(
+  config: BffConfig,
+  path: string,
+  options: RequestBackendOptions,
+): null | string {
+  const method = options.method ?? "GET";
+  if (method !== "GET" && method !== "HEAD") {
+    return null;
+  }
+  if (options.body != null) {
+    return null;
+  }
+
+  const headers = Array.from(buildBackendRequestHeaders(options).entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => `${key}:${value}`)
+    .join("|");
+
+  return [
+    config.backendBaseUrl,
+    method,
+    path,
+    options.timeoutMs ?? getDefaultTimeoutMs(config, method, path),
+    options.maxAttempts ?? getDefaultMaxAttempts(config, method, path, options.retryMutating),
+    headers,
+  ].join("::");
 }
 
 async function handleResponseError(

@@ -47,7 +47,7 @@
 </script>
 
 <div
-    class="relative w-full h-screen bg-background transition-colors duration-300"
+    class="relative w-full h-full min-h-0 bg-background transition-colors duration-300"
     class:dark={mapManager.SelectedStyle.theme === "dark"}
 >
     <div bind:this={mapContainer} class="map-container"></div>

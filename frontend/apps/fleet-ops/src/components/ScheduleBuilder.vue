@@ -202,7 +202,7 @@ function toggleDay(day: number): void {
     <div
       v-if="error || success"
       class="mt-4 rounded-lg border p-3"
-      :class="error ? 'border-error bg-error-bg text-slate-950' : 'border-success bg-success-bg text-slate-950'"
+      :class="error ? 'border-error bg-error-bg text-error' : 'border-success bg-success-bg text-success'"
     >
       {{ error || success }}
     </div>
@@ -319,7 +319,7 @@ function toggleDay(day: number): void {
 
         <div
           v-if="preview?.blockers.length"
-          class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-slate-950"
+          class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-error"
         >
           <ul class="list-inside list-disc">
             <li
@@ -332,7 +332,7 @@ function toggleDay(day: number): void {
         </div>
         <div
           v-if="preview?.warnings.length"
-          class="mt-4 rounded-lg border border-warning bg-warning-bg p-3 text-slate-950"
+          class="mt-4 rounded-lg border border-warning bg-warning-bg p-3 text-warning"
         >
           <ul class="list-inside list-disc">
             <li

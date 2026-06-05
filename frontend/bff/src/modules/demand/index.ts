@@ -1,6 +1,7 @@
 import type { BffConfig } from "../../config";
 
 import { getBackendAdminToken, requireValidUserToken } from "../../auth";
+import { parseGeoPoint } from "../../geo";
 import { jsonResponse } from "../../http";
 import { backendRequest, extractBackendId } from "../import/backend/api";
 import { distanceKm } from "../import/shared/math";
@@ -273,18 +274,7 @@ function parseAirportPair(url: URL): null | {
 }
 
 function pointFromAirport(airport: Airport): null | Point {
-  const match = /POINT\s*\(\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*\)/i.exec(
-    airport.geog ?? airport.geom ?? "",
-  );
-
-  if (!match?.[1] || !match[2]) {
-    return null;
-  }
-
-  return {
-    latitude: Number(match[2]),
-    longitude: Number(match[1]),
-  };
+  return parseGeoPoint(airport.geog, airport.geom);
 }
 
 async function updateRegionLinkDemand(

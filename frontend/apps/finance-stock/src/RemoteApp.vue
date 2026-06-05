@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AirBadge, AirButton, AirMetricCard } from "@airlinesim/air-ui";
+import { AirButton, AirMetricCard, AirStatePanel } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
 import { type Locale } from "@airlinesim/i18n";
 import { computed, onMounted, ref } from "vue";
@@ -46,7 +46,7 @@ async function loadFinance(): Promise<void> {
     ledger.value = ledgerResponse.transactions;
     routes.value = routesResponse.routes;
   } catch (loadError) {
-    error.value = loadError instanceof Error ? loadError.message : "Finance request failed.";
+    error.value = loadError instanceof Error ? loadError.message : t.value("errorLoad");
   } finally {
     isLoading.value = false;
   }
@@ -64,6 +64,10 @@ function riskLabel(code: FinanceOverview["risks"][number]["code"]): string {
     WEEKLY_OPERATING_LOSS: "riskWeeklyLoss",
   } as const;
   return t.value(keys[code]);
+}
+
+function routeLabel(route: RouteProfitability): string {
+  return `${route.origin_airport_label ?? route.origin_airport_id} -> ${route.destination_airport_label ?? route.destination_airport_id}`;
 }
 
 function transactionAmount(transaction: LedgerTransaction): number {
@@ -86,8 +90,7 @@ function transactionLabel(code: string): string {
   <section class="h-full overflow-y-auto bg-background p-4 text-body text-text-primary sm:p-6">
     <header class="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <AirBadge label="Finance & Stock" variant="success-soft" />
-        <h1 class="mt-4 text-h2">
+        <h1 class="text-h2">
           {{ t("overview") }}
         </h1>
         <p class="mt-2 max-w-3xl text-text-muted">
@@ -103,9 +106,13 @@ function transactionLabel(code: string): string {
       />
     </header>
 
-    <p v-if="error" class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-error">
-      {{ error }}
-    </p>
+    <AirStatePanel
+      v-if="error"
+      class="mt-4"
+      :title="t('errorLoad')"
+      :body="error"
+      tone="danger"
+    />
 
     <div v-if="view === 'stock-market'" class="mt-6 rounded-lg border border-border bg-surface p-6">
       <h2 class="text-h3">
@@ -128,7 +135,7 @@ function transactionLabel(code: string): string {
         <button
           v-for="risk in overview.risks"
           :key="risk.code"
-          class="rounded-lg border border-warning bg-warning-bg p-4 text-left text-slate-950"
+          class="rounded-lg border border-warning bg-warning-bg p-4 text-left text-warning"
           type="button"
           @click="openTarget(risk.target_path)"
         >
@@ -143,15 +150,16 @@ function transactionLabel(code: string): string {
         </h2>
         <div class="mt-4 grid gap-3">
           <article v-for="route in routes" :key="route.route_id" class="grid gap-2 rounded-lg border border-border bg-background p-3 sm:grid-cols-5">
-            <strong>{{ route.origin_airport_id.slice(0, 8) }} → {{ route.destination_airport_id.slice(0, 8) }}</strong>
+            <strong>{{ routeLabel(route) }}</strong>
             <span>{{ t("completed") }}: {{ route.flights_completed }}</span>
             <span>{{ t("revenue") }}: {{ formatMoney(route.revenue) }}</span>
             <span>{{ t("costs") }}: {{ formatMoney(route.costs) }}</span>
             <span :class="route.profit < 0 ? 'text-error' : 'text-success'">{{ t("profit") }}: {{ formatMoney(route.profit, true) }}</span>
           </article>
-          <p v-if="routes.length === 0" class="text-text-muted">
-            {{ t("empty") }}
-          </p>
+          <AirStatePanel
+            v-if="routes.length === 0"
+            :title="t('empty')"
+          />
         </div>
       </div>
 
@@ -168,9 +176,10 @@ function transactionLabel(code: string): string {
               </div>
               <strong :class="transaction.direction === 'credit' ? 'text-success' : 'text-error'">{{ formatMoney(transactionAmount(transaction), true) }}</strong>
             </article>
-            <p v-if="ledger.length === 0" class="text-text-muted">
-              {{ t("empty") }}
-            </p>
+            <AirStatePanel
+              v-if="ledger.length === 0"
+              :title="t('empty')"
+            />
           </div>
         </section>
 

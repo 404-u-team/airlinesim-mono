@@ -56,6 +56,12 @@ export function sumLedger(transactions: LedgerTransaction[]): number {
   return transactions.reduce((total, transaction) => total + signedAmount(transaction), 0);
 }
 
+function stableLedgerId(idempotencyKey: string): string {
+  const hash = idempotencyKey.split("").reduce((value, char) => (value << 5) - value + char.charCodeAt(0), 0);
+
+  return `ledger-${Math.abs(hash).toString(36)}`;
+}
+
 function transaction(
   flight: StoredFlight,
   sourceType: LedgerTransaction["source_type"],
@@ -65,6 +71,8 @@ function transaction(
   direction: LedgerTransaction["direction"],
   occurredAt: string,
 ): LedgerTransaction {
+  const idempotencyKey = `flight:${flight.id}:${sourceType}`;
+
   return {
     airline_id: flight.airline_id,
     amount: Math.max(0, Math.round(amount)),
@@ -73,8 +81,8 @@ function transaction(
     currency: "USD",
     direction,
     flight_id: flight.id,
-    id: crypto.randomUUID(),
-    idempotency_key: `flight:${flight.id}:${sourceType}`,
+    id: stableLedgerId(idempotencyKey),
+    idempotency_key: idempotencyKey,
     label_code: labelCode,
     occurred_at: occurredAt,
     route_id: flight.route_id,

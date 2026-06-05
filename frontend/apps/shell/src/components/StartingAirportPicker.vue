@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable vue/custom-event-name-casing -- update:modelValue is the Vue v-model contract. */
 import { AirCombobox, type AirComboboxOption } from "@airlinesim/air-ui";
 import { type Locale, translate } from "@airlinesim/i18n";
 import { computed, onBeforeUnmount, ref, watch } from "vue";

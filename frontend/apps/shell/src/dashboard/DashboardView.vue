@@ -32,6 +32,7 @@ const selectedAirportId = ref<string | undefined>();
 const summary = ref<DashboardSummary | null>(null);
 
 let unsubscribeAirportSelected: (() => void) | null = null;
+let unsubscribeNetworkRefreshRequested: (() => void) | null = null;
 let unsubscribeSnapshotInvalidated: (() => void) | null = null;
 
 const t = computed(() => (key: ShellMessageKey): string =>
@@ -57,11 +58,16 @@ onMounted(() => {
   unsubscribeSnapshotInvalidated = airlineSimEventBus.on("game:snapshot-invalidated", () => {
     void refreshDashboard();
   });
+  unsubscribeNetworkRefreshRequested = airlineSimEventBus.on("map:network-refresh-requested", () => {
+    void refreshDashboard();
+  });
 });
 
 onBeforeUnmount(() => {
   unsubscribeAirportSelected?.();
   unsubscribeAirportSelected = null;
+  unsubscribeNetworkRefreshRequested?.();
+  unsubscribeNetworkRefreshRequested = null;
   unsubscribeSnapshotInvalidated?.();
   unsubscribeSnapshotInvalidated = null;
 });
@@ -122,28 +128,7 @@ async function refreshDashboard(): Promise<void> {
 
 <template>
   <main class="h-full overflow-y-auto bg-background text-text-primary">
-    <div class="mx-auto flex max-w-7xl flex-col gap-5 p-4 sm:p-6">
-      <section class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div class="min-w-0">
-          <AirBadge
-            :label="t('dashboard.badge')"
-            variant="primary-soft"
-          />
-          <h1 class="mt-3 text-h2">
-            {{ t("dashboard.title") }}
-          </h1>
-          <p class="mt-2 max-w-3xl text-body text-text-muted">
-            {{ summary ? t("dashboard.subtitle.ready").replace("{airline}", summary.airline.name) : t("dashboard.subtitle.loading") }}
-          </p>
-        </div>
-        <div
-          v-if="summary"
-          class="text-caption text-text-muted"
-        >
-          {{ t("dashboard.updated") }} {{ new Date(summary.updated_at).toLocaleTimeString(props.appLocale) }}
-        </div>
-      </section>
-
+    <div class="flex min-h-full flex-col gap-5 p-3 sm:p-4 lg:p-5">
       <section
         v-if="isLoading"
         class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]"
@@ -157,7 +142,7 @@ async function refreshDashboard(): Promise<void> {
 
       <section
         v-else-if="error"
-        class="rounded-lg border border-error bg-error-bg p-5 text-slate-950"
+        class="rounded-lg border border-error bg-error-bg p-5 text-error"
       >
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div class="flex min-w-0 items-start gap-3">
@@ -183,29 +168,34 @@ async function refreshDashboard(): Promise<void> {
       </section>
 
       <template v-else-if="summary">
-        <DashboardNextAction
-          :app-locale="props.appLocale"
-          :is-refreshing="isRefreshing"
-          :summary="summary"
-          @refresh="refreshDashboard"
-        />
+        <section class="grid min-h-[calc(100vh-6.5rem)] gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
+          <div class="relative min-h-[34rem] overflow-hidden rounded-lg border border-border bg-surface">
+            <SvelteWrapper
+              :create-fn="createMap"
+              :component-props="{ appLocale: props.appLocale, controls: false, mapState, mode: 'dashboard', remoteId: 'map', rotation: false, selectedAirportId, shellPath: '/dashboard', theme: props.appTheme }"
+            />
+            <MapControls :app-locale="props.appLocale" />
 
-        <DashboardMetricStrip
-          :app-locale="props.appLocale"
-          :summary="summary"
-        />
+            <div class="absolute left-3 top-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-col gap-3 sm:left-4 sm:top-4 sm:max-w-md">
+              <div class="rounded-lg border border-border bg-surface/95 p-4 shadow-sm backdrop-blur">
+                <AirBadge
+                  :label="t('dashboard.badge')"
+                  variant="primary-soft"
+                />
+                <h1 class="mt-3 text-h2">
+                  {{ t("dashboard.title") }}
+                </h1>
+                <p class="mt-2 max-h-10 overflow-hidden text-body text-text-muted">
+                  {{ t("dashboard.subtitle.ready").replace("{airline}", summary.airline.name) }}
+                </p>
+                <div class="mt-3 text-caption text-text-muted">
+                  {{ t("dashboard.updated") }} {{ new Date(summary.updated_at).toLocaleTimeString(props.appLocale) }}
+                </div>
+              </div>
 
-        <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
-          <div class="min-w-0">
-            <div class="relative h-[28rem] overflow-hidden rounded-lg border border-border bg-surface">
-              <SvelteWrapper
-                :create-fn="createMap"
-                :component-props="{ appLocale: props.appLocale, controls: false, mapState, mode: 'dashboard', remoteId: 'map', rotation: false, selectedAirportId, shellPath: '/dashboard', theme: props.appTheme }"
-              />
-              <MapControls :app-locale="props.appLocale" />
               <div
                 v-if="mapState?.warnings.length"
-                class="absolute left-3 top-3 z-20 rounded-lg border border-warning bg-warning-bg px-3 py-2 text-caption text-slate-950"
+                class="rounded-lg border border-warning bg-warning-bg px-3 py-2 text-caption text-warning"
               >
                 <span class="inline-flex items-center gap-2">
                   <AlertTriangle :size="14" />
@@ -214,7 +204,54 @@ async function refreshDashboard(): Promise<void> {
               </div>
             </div>
 
-            <div class="mt-4 grid gap-3 md:grid-cols-3">
+            <DashboardNextAction
+              :app-locale="props.appLocale"
+              class="absolute bottom-3 left-3 right-3 z-20 bg-surface/95 backdrop-blur sm:bottom-4 sm:left-4 sm:right-4"
+              :is-refreshing="isRefreshing"
+              :summary="summary"
+              @refresh="refreshDashboard"
+            />
+          </div>
+
+          <aside class="grid min-w-0 content-start gap-4">
+            <DashboardMetricStrip
+              :app-locale="props.appLocale"
+              :summary="summary"
+            />
+
+            <section
+              v-if="selectedAirport"
+              class="rounded-lg border border-border bg-surface p-4"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-caption text-text-muted">
+                    {{ t("dashboard.map.selectedAirport") }}
+                  </p>
+                  <h2 class="mt-1 truncate text-subtitle">
+                    {{ selectedAirport.airport.label }}
+                  </h2>
+                </div>
+                <MapPin
+                  class="shrink-0 text-primary"
+                  :size="20"
+                />
+              </div>
+              <div class="mt-4 grid gap-2 text-caption text-text-muted">
+                <span>{{ t("dashboard.map.demand") }} {{ formatNumber(selectedAirport.demand) }}</span>
+                <span>{{ t("dashboard.base.runway") }} {{ formatNumber(selectedAirport.airport.max_runway_length_m) }} {{ t("unit.meterShort") }}</span>
+                <span>{{ t("dashboard.base.slots") }} {{ formatNumber(selectedAirport.airport.max_runway_uses_per_day) }}/{{ t("unit.dayShort") }}</span>
+              </div>
+              <AirButton
+                class="mt-4 w-full"
+                :label="t('dashboard.openAction')"
+                size="sm"
+                variant="primary-soft"
+                @click="openSelectedAirport"
+              />
+            </section>
+
+            <div class="grid gap-3">
               <article class="rounded-lg border border-border bg-surface p-4">
                 <div class="flex items-center gap-2 text-text-muted">
                   <Building2 :size="18" />
@@ -257,40 +294,6 @@ async function refreshDashboard(): Promise<void> {
                 </p>
               </article>
             </div>
-          </div>
-
-          <aside class="grid min-w-0 gap-5">
-            <section
-              v-if="selectedAirport"
-              class="rounded-lg border border-border bg-surface p-4"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0">
-                  <p class="text-caption text-text-muted">
-                    {{ t("dashboard.map.selectedAirport") }}
-                  </p>
-                  <h2 class="mt-1 truncate text-subtitle">
-                    {{ selectedAirport.airport.label }}
-                  </h2>
-                </div>
-                <MapPin
-                  class="shrink-0 text-primary"
-                  :size="20"
-                />
-              </div>
-              <div class="mt-4 grid gap-2 text-caption text-text-muted">
-                <span>{{ t("dashboard.map.demand") }} {{ formatNumber(selectedAirport.demand) }}</span>
-                <span>{{ t("dashboard.base.runway") }} {{ formatNumber(selectedAirport.airport.max_runway_length_m) }} {{ t("unit.meterShort") }}</span>
-                <span>{{ t("dashboard.base.slots") }} {{ formatNumber(selectedAirport.airport.max_runway_uses_per_day) }}/{{ t("unit.dayShort") }}</span>
-              </div>
-              <AirButton
-                class="mt-4 w-full"
-                :label="t('dashboard.openAction')"
-                size="sm"
-                variant="primary-soft"
-                @click="openSelectedAirport"
-              />
-            </section>
 
             <DashboardAlerts
               :alerts="summary.alerts"

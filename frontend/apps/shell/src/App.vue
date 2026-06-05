@@ -40,6 +40,7 @@ const t = computed(() => (key: ShellMessageKey): string =>
   translate(shellMessages, locale.value, key),
 );
 let unsubscribeNotificationsInvalidated: (() => void) | null = null;
+let unsubscribeNotificationCreated: (() => void) | null = null;
 let unsubscribePanelRequested: (() => void) | null = null;
 
 function closeSidebar(): void {
@@ -98,9 +99,13 @@ onMounted(() => {
   unsubscribeNotificationsInvalidated = airlineSimEventBus.on("notifications:invalidated", () => {
     void refreshNotifications();
   });
+  unsubscribeNotificationCreated = airlineSimEventBus.on("notification:created", () => {
+    void refreshNotifications();
+  });
 });
 
 onUnmounted(() => {
+  unsubscribeNotificationCreated?.();
   unsubscribeNotificationsInvalidated?.();
   unsubscribePanelRequested?.();
 });

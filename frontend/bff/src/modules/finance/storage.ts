@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import type { LedgerTransaction } from "./types";
 
 const ledgerPath = resolve(import.meta.dir, "../../../data/game-state/ledger.json");
+let ledgerMutationQueue: Promise<unknown> = Promise.resolve();
 
 export async function listLedgerForAirline(airlineId: string): Promise<LedgerTransaction[]> {
   const ledger = await readLedger();
@@ -12,15 +13,24 @@ export async function listLedgerForAirline(airlineId: string): Promise<LedgerTra
 }
 
 export async function saveLedgerTransactions(transactions: LedgerTransaction[]): Promise<LedgerTransaction[]> {
-  const ledger = await readLedger();
-  const existingKeys = new Set(ledger.map((transaction) => transaction.idempotency_key));
-  const additions = transactions.filter((transaction) => !existingKeys.has(transaction.idempotency_key));
+  return queuedLedgerMutation(async () => {
+    const ledger = await readLedger();
+    const existingKeys = new Set(ledger.map((transaction) => transaction.idempotency_key));
+    const additions = transactions.filter((transaction) => !existingKeys.has(transaction.idempotency_key));
 
-  if (additions.length > 0) {
-    await writeLedger([...ledger, ...additions]);
-  }
+    if (additions.length > 0) {
+      await writeLedger([...ledger, ...additions]);
+    }
 
-  return additions;
+    return additions;
+  });
+}
+
+async function queuedLedgerMutation<TValue>(mutation: () => Promise<TValue>): Promise<TValue> {
+  const next = ledgerMutationQueue.then(mutation, mutation);
+  ledgerMutationQueue = next.catch(() => undefined);
+
+  return next;
 }
 
 async function readLedger(): Promise<LedgerTransaction[]> {

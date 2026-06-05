@@ -105,7 +105,7 @@ function tone(severity: EventItem["severity"]): "danger-soft" | "primary-soft" |
 </script>
 
 <template>
-  <section class="min-h-full overflow-x-hidden bg-background p-4 text-body text-text-primary sm:p-6">
+  <section class="h-full overflow-y-auto overflow-x-hidden bg-background p-4 text-body text-text-primary sm:p-6">
     <header class="flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
       <div>
         <AirBadge :label="isNotificationsView ? message('tab.notifications') : message('tab.feed')" variant="primary-soft" />
@@ -138,7 +138,7 @@ function tone(severity: EventItem["severity"]): "danger-soft" | "primary-soft" |
       </div>
     </header>
 
-    <div v-if="error" class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-slate-950">
+    <div v-if="error" class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-error">
       {{ error }}
     </div>
 

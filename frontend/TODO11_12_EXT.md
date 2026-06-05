@@ -1,0 +1,2043 @@
+# TODO11_12_EXT: стабилизация MVP, локализация, адаптивность, фронтенд и BFF
+
+Документ расширяет разделы `11. Локализация и тексты` и `12. Адаптивность и доступность игрового цикла` из `TODO_MVP.md`, а также фиксирует недоделки фронтенда и BFF из разделов 1-10 после фактического аудита текущего кода.
+
+Главный фокус: довести приложение до играбельного MVP без глубокой переработки Go backend. Новую продуктовую логику держим в `frontend/bff`, backend трогаем только там, где без минимального изменения невозможно получить стабильное приложение или убрать системные 500/таймауты.
+
+## 0. Что было исследовано
+
+- [ ] Проверен `frontend/AGENTS.md`.
+- [ ] Проверен `backend/Agents.md`.
+- [ ] Проверен `frontend/TODO_MVP.md`.
+- [ ] Проверены предыдущие планы `TODO2_3.md`, `TODO4.md`, `TODO5.md`, `TODO6.md`, `TODO7.md`, `TODO8_9_10.md`.
+- [ ] Проверены `frontend/docs/bff.md`, `frontend/docs/map-state.md`, `frontend/docs/TESTS.md`, `frontend/STYLING.md`, `frontend/docs/I18N.md`.
+- [ ] Проверена структура `frontend/bff/src/modules`.
+- [ ] Проверена структура MFE приложений в `frontend/apps`.
+- [ ] Проверена структура shared-пакетов в `frontend/packages`.
+- [ ] Проверены основные shell routes и guards.
+- [ ] Проверен текущий `DashboardView`.
+- [ ] Проверена текущая карта `apps/map` и `MapManager`.
+- [ ] Проверены основные remote entry screens: Fleet, Network, Finance, Events, Facilities.
+- [ ] Проверен BFF HTTP helper `bff/src/backend-http.ts`.
+- [ ] Проверены BFF overlay storage файлы routes/operations/finance/events.
+- [ ] Проверены event-bus contracts и validators.
+- [ ] Проверены BFF tests и frontend tests.
+- [ ] Проверены backend gateway routes и request timeout.
+- [ ] Проверены backend auth/admin middleware.
+- [ ] Проверены backend fleet/operations handlers как потенциальный источник 500 и gRPC timeout.
+
+## 1. Краткая фактическая картина
+
+- [ ] Shell уже есть и владеет auth, layout, i18n, topbar, sidebar, Dashboard, admin guards и notification panel.
+- [ ] Dashboard уже восстановлен как shell-owned route `/dashboard`, но карта не является центральным полноэкранным элементом.
+- [ ] Dashboard сейчас размещает карту в блоке `h-[28rem]` внутри scroll layout, поэтому требование "большая карта на весь экран как центральный элемент" не выполнено.
+- [ ] Map remote уже умеет принимать `mapState` через props.
+- [ ] Map remote уже умеет рисовать airport points и route lines из GeoJSON.
+- [ ] Map remote уже эмитит `map:airport-selected` и `map:route-selected`.
+- [ ] Shell Dashboard слушает `map:airport-selected` и дозагружает selected airport через BFF.
+- [ ] Shell Dashboard слушает `game:snapshot-invalidated`.
+- [ ] Shell Dashboard не слушает `map:network-refresh-requested`, хотя Fleet/Network его эмитят.
+- [ ] Dashboard map state загружается только при открытии Dashboard и при клике airport.
+- [ ] После покупки самолета или создания маршрута карта может не обновиться, если текущий экран уже открыт и событие не совпало с тем, что слушает Dashboard.
+- [ ] `navigation:intent` из MFE обрабатывается в `apps/shell/src/main.ts`, поэтому базовая cross-MFE навигация есть.
+- [ ] Topbar больше не показывает старые fake values `$50,000,000`, `30,000 t`, `122`.
+- [ ] Topbar берет balance/aircraft/alerts из dashboard summary state.
+- [ ] Topbar форматирует деньги через `Intl.NumberFormat("en", ...)`, игнорируя текущую локаль.
+- [ ] Topbar показывает статичное время `14:36 UTC · 03.12.2025`.
+- [ ] Finance UI до сих пор показывает `Backend balance` / `Баланс backend`.
+- [ ] Finance route profitability до сих пор показывает обрезанные raw airport ids вместо labels.
+- [ ] Network Planner частично локализован, но содержит видимый hardcoded badge `Network Planner`.
+- [ ] Network Planner error fallback содержит hardcoded English `Could not load route data.`
+- [ ] Network Planner filters используют обычные checkbox вместо унифицированных controls из air-ui.
+- [ ] Fleet сильно лучше остальных по BFF-first и i18n, но всё еще имеет transient local notification через `notification:created`.
+- [ ] `notification:created` в event-bus является transient событием, но Shell сейчас не показывает toast и не сохраняет его как notification.
+- [ ] Events/Notifications BFF overlay уже существует.
+- [ ] Facilities BFF domain уже существует и используется.
+- [ ] Admin BFF boundary уже существует, но capability probe временный: проверка через `/countries`, а не официальный identity/capabilities endpoint.
+- [ ] Knowledge base есть только как markdown в `docs/knowledge-base`.
+- [ ] В продукте нет маршрута/раздела "База знаний".
+- [ ] `packages/air-ui` содержит базовые primitives, но нет единых skeleton/loader/empty/error/panel/table/tabs/toast/drawer primitives.
+- [ ] Разные приложения используют разные loading states.
+- [ ] Разные приложения используют разные error states.
+- [ ] Разные приложения используют разные empty states.
+- [ ] UI всё еще выглядит как набор локальных поверхностей, а не единая игровая система.
+- [ ] BFF overlay storage пишет JSON атомарно через temp+rename, но без serialized write queue.
+- [ ] BFF overlay storage не имеет schema version/migrations.
+- [ ] BFF overlay storage не имеет optimistic concurrency/revisions.
+- [ ] BFF overlay storage при параллельных read-modify-write может терять изменения.
+- [ ] `requestBackend` по умолчанию использует `timeoutMs = 10_000` и `maxAttempts = 3`.
+- [ ] `createApiClient` в browser SDK использует timeout `20_000`.
+- [ ] Backend gateway по умолчанию использует `REQUEST_TIMEOUT_SECONDS = 3`.
+- [ ] Комбинация BFF 10s x 3 и frontend 20s создает долгие зависания и плохое ощущение стабильности.
+- [ ] BFF `requireValidUserToken` ходит в `/airline/me` почти перед каждым protected endpoint.
+- [ ] Многие BFF endpoints после `requireValidUserToken` снова грузят `/airline/me` в snapshot.
+- [ ] На один пользовательский экран может приходиться несколько запросов, и каждый может делать повторную auth/airline проверку.
+- [ ] BFF dashboard snapshot грузит `/airline/me`, `/aircrafts`, `/aircraft-types`, `/airports`, `/regions`, `/region-links`.
+- [ ] BFF часто использует backend admin token для world data, потому backend read-only справочники пока admin-only.
+- [ ] Backend gateway сам проверяет token через auth gRPC на каждом protected request.
+- [ ] Это делает цепочку browser -> BFF -> gateway -> auth-service слишком тяжелой для read-heavy UI.
+- [ ] Backend handlers часто мапят любые gRPC ошибки в HTTP 500.
+- [ ] Backend handlers не всегда различают NotFound/AlreadyExists/DeadlineExceeded/Unavailable.
+- [ ] Backend gateway gRPC clients создаются без явных per-call retry/health/fail-fast policy.
+- [ ] Backend `RequestTimeoutSeconds` 3 секунды может быть нормой для gateway, но BFF должен быстрее давать degraded state на неключевые справочники.
+
+## 2. Цель документа
+
+- [ ] Сформировать подробный план завершения раздела 11: все пользовательские тексты, локализация, форматирование, отсутствие raw errors/ids.
+- [ ] Сформировать подробный план завершения раздела 12: desktop/tablet/mobile, touch, keyboard, loading/empty/error states.
+- [ ] Сформировать подробный план стабилизации BFF и frontend API.
+- [ ] Сформировать подробный план возвращения большой карты как центрального экрана.
+- [ ] Сформировать подробный план унификации UI через `packages/air-ui`.
+- [ ] Сформировать список недоделок из разделов 1-10, которые нужно закрыть перед MVP.
+- [ ] Сформировать минимальный список backend изменений, которые нужны для стабильности.
+- [ ] Не переносить новую игровую бизнес-логику в Go backend без необходимости.
+- [ ] Удержать BFF как главный слой product-facing orchestration.
+- [ ] Сделать так, чтобы пользователь мог пройти путь до первого рейса без ручных обходов.
+- [ ] Сделать так, чтобы ошибки backend не разрушали всю страницу.
+- [ ] Сделать так, чтобы каждый экран имел ясный следующий шаг.
+
+## 3. Главные принципы реализации
+
+- [ ] Все browser-facing запросы идут только через BFF.
+- [ ] Frontend не знает `BFF_BACKEND_BASE_URL`.
+- [ ] Frontend не ходит в backend напрямую.
+- [ ] Backend не получает новую игровую MVP-логику, если она может жить в BFF overlay.
+- [ ] Backend получает только минимальные стабильностные изменения: таймауты, error mapping, read-only endpoints, health/capabilities, idempotency support, если без этого MVP нестабилен.
+- [ ] BFF отвечает быстро и предсказуемо.
+- [ ] BFF возвращает degraded states вместо каскадных 500, когда необязательный backend source недоступен.
+- [ ] BFF не делает unsafe retry для mutations.
+- [ ] BFF делает request coalescing для одинаковых snapshot-запросов.
+- [ ] BFF кеширует справочники с TTL и stale-while-revalidate.
+- [ ] BFF overlay writes сериализуются.
+- [ ] BFF overlay state получает schema version.
+- [ ] UI не показывает raw backend/BFF fields.
+- [ ] UI не показывает raw ids как основной текст.
+- [ ] UI не показывает слово `backend` игроку.
+- [ ] UI локализует все visible strings на `ru` и `en`.
+- [ ] UI форматирует деньги/числа/даты по текущей локали.
+- [ ] UI использует air-ui primitives для повторяющихся controls.
+- [ ] UI использует одинаковые loading/empty/error states.
+- [ ] Dashboard first viewport должен быть полноэкранной картой с наложенными игровыми controls.
+- [ ] Карта должна показывать хаб/базу, важные аэропорты, маршруты и рейсы.
+- [ ] Карта не должна быть единственным способом выполнить действия.
+- [ ] Mobile путь должен работать без hover и без широкой таблицы.
+- [ ] Tests добавляются на BFF behavior, shared logic и критичные frontend contracts.
+
+## 4. Критический поток MVP
+
+- [ ] Игрок регистрируется или входит.
+- [ ] Игрок видит понятный статус сессии.
+- [ ] Игрок без авиакомпании попадает в onboarding.
+- [ ] Игрок выбирает стартовую базу через airport picker.
+- [ ] Игрок создает авиакомпанию.
+- [ ] Игрок попадает на Dashboard с большой картой.
+- [ ] Dashboard показывает базу на карте.
+- [ ] Dashboard показывает next action `BUY_FIRST_AIRCRAFT`.
+- [ ] Игрок покупает первый самолет.
+- [ ] Dashboard и карта обновляются после покупки.
+- [ ] Fleet показывает купленный самолет и следующий шаг.
+- [ ] Игрок открывает Network Planner.
+- [ ] Network Planner показывает направления из базы.
+- [ ] Карта показывает возможные направления.
+- [ ] Игрок создает маршрут.
+- [ ] Dashboard и карта обновляются после маршрута.
+- [ ] Игрок открывает Schedule Builder.
+- [ ] Игрок активирует расписание.
+- [ ] Operations показывает будущие рейсы.
+- [ ] Карта показывает активный route line и будущие/живые рейсы.
+- [ ] Завершенный рейс фиксирует finance ledger.
+- [ ] Finance показывает результат без технических терминов.
+- [ ] Events показывает устойчивое событие.
+- [ ] Notifications показывают только actionable active states.
+- [ ] Facilities объясняет ограничения базы.
+- [ ] Knowledge Base помогает пройти сценарий.
+- [ ] Сценарий проходит на desktop.
+- [ ] Сценарий проходит на tablet.
+- [ ] Сценарий проходит на mobile.
+
+## 5. Приоритеты выполнения
+
+- [ ] P0: сократить cascaded 500 и таймауты в BFF/API.
+- [ ] P0: сделать Dashboard с большой картой центральным экраном.
+- [ ] P0: подключить карту к фактическим hub/route/flight данным.
+- [ ] P0: стабилизировать BFF overlay writes.
+- [ ] P0: убрать технические тексты и raw ids из критичного MVP-пути.
+- [ ] P0: унифицировать loading/error/empty states критичных экранов.
+- [ ] P0: убедиться, что первый игровой цикл проходит на mobile.
+- [ ] P1: вынести общие UI primitives в air-ui.
+- [ ] P1: завершить ru/en parity по всем remotes.
+- [ ] P1: добавить Knowledge Base как продуктовый раздел.
+- [ ] P1: закрыть route/schedule/finance недоделки из TODO5-7.
+- [ ] P1: закрыть events/facilities/admin недоделки из TODO8_9_10.
+- [ ] P2: улучшить admin CRUD UX и future capabilities.
+- [ ] P2: расширить тесты beyond smoke.
+- [ ] P2: добавить визуальные/regression проверки responsive layout.
+
+# Часть A. Стабилизация BFF и API
+
+## 6. P0: быстрые ответы вместо зависаний
+
+- [ ] Ввести BFF request budget для каждого product endpoint.
+- [ ] Разделить критичные и некритичные data sources.
+- [ ] Критичные source для Dashboard: auth/session, airline, fleet.
+- [ ] Некритичные source для Dashboard: region-links, top opportunities, events details, finance risk enrichment.
+- [ ] Критичные source для Fleet purchase: airline, aircraft types, airports, aircrafts.
+- [ ] Некритичные source для Fleet purchase: country tail prefix, soft warnings, synthetic events.
+- [ ] Критичные source для Network Planner: airline, owned aircraft, airports, routes overlay.
+- [ ] Некритичные source для Network Planner: region-link demand cache, confidence enrichment, map selected detail.
+- [ ] Критичные source для Operations: route overlay, aircraft, airport constraints, schedule overlay.
+- [ ] Некритичные source для Operations: events recording, notifications reconcile.
+- [ ] Критичные source для Finance: airline balance, ledger, completed flights.
+- [ ] Некритичные source для Finance: route label enrichment, latest events, diagnostic fields.
+- [ ] Для каждого endpoint зафиксировать максимальное целевое время ответа.
+- [ ] Dashboard summary target: до 700ms из hot cache.
+- [ ] Dashboard summary degraded target: до 1200ms при недоступном region-links.
+- [ ] Map-state target: до 700ms из hot cache.
+- [ ] Fleet market target: до 900ms из hot cache.
+- [ ] Route opportunities target: до 1200ms из hot cache.
+- [ ] Schedule options target: до 900ms из hot cache.
+- [ ] Finance overview target: до 900ms из hot cache.
+- [ ] Events/notifications target: до 500ms без backend calls.
+- [ ] Admin readiness target: до 1500ms, потому admin не блокирует player loop.
+- [ ] Уменьшить default BFF backend timeout для safe GET с 10s до 1500-2500ms.
+- [ ] Оставить configurable timeout через env.
+- [ ] Ввести `BFF_BACKEND_READ_TIMEOUT_MS`.
+- [ ] Ввести `BFF_BACKEND_MUTATION_TIMEOUT_MS`.
+- [ ] Ввести `BFF_BACKEND_AUTH_TIMEOUT_MS`.
+- [ ] Ввести `BFF_BACKEND_MAX_SAFE_ATTEMPTS`.
+- [ ] Safe GET retry делать быстро: например 2 попытки по 1200-1500ms.
+- [ ] Не делать 3 x 10s на read path.
+- [ ] Для cacheable world-data list использовать stale cache при timeout.
+- [ ] Для `/region-links` уже есть degraded empty fallback; расширить такой подход на optional read models.
+- [ ] Для `/airports`, `/regions`, `/aircraft-types` возвращать stale cache, если backend недоступен.
+- [ ] Если нет cache и source критичный, возвращать normalized error.
+- [ ] Если нет cache и source некритичный, возвращать explicit degraded state.
+- [ ] В BFF response добавлять `meta.degraded_sources`.
+- [ ] В BFF response добавлять `meta.fetched_at`.
+- [ ] В BFF response добавлять `meta.cache_status`.
+- [ ] UI показывать маленький degraded indicator, а не full-page error, когда core данные доступны.
+- [ ] UI full-page error показывать только если критичный source отсутствует.
+- [ ] Browser SDK timeout уменьшить с 20s до 8s для обычных UI запросов.
+- [ ] Для long-running import оставить отдельный timeout/polling/WebSocket flow.
+- [ ] Для auth submit оставить отдельный timeout около 8-10s.
+- [ ] Для regular read UI установить timeout 6-8s.
+- [ ] Для retry на frontend не добавлять общий retry поверх BFF, пока BFF сам управляет retry.
+- [ ] Добавить abort при смене route или размонтировании heavy screens.
+- [ ] Добавить request cancellation в composables.
+- [ ] Dashboard должен отменять старый map-state selected airport запрос при новом выборе.
+- [ ] Network Planner должен отменять старый preview при выборе нового destination.
+- [ ] Fleet purchase preview должен отменять старый preview при новом tail/type/base.
+- [ ] Schedule preview должен отменять старый preview при изменении формы.
+- [ ] Finance filters должны отменять старый ledger/profit запрос.
+- [ ] Events filters должны отменять старый feed запрос.
+
+## 7. P0: auth/session без лишних backend calls
+
+- [ ] Убрать обязательный `/airline/me` из `requireValidUserToken` для каждого BFF endpoint.
+- [ ] Разделить token validation и airline loading.
+- [ ] Для endpoints, которым нужна airline, грузить airline один раз в snapshot.
+- [ ] Для endpoints, которым не нужна airline, валидировать token легковесно.
+- [ ] Рассмотреть локальную JWT signature validation в BFF, если public key доступен и это согласовано.
+- [ ] Если локальная JWT validation не делается, ввести краткий in-memory auth probe cache.
+- [ ] Auth probe cache key: hash access token или token exp+sub, не raw token в logs.
+- [ ] Auth probe TTL: 15-30 секунд.
+- [ ] Auth probe должен инвалидироваться на `401`.
+- [ ] Airline snapshot cache должен быть scoped by user token/user id.
+- [ ] Не кешировать ошибки 401/403 дольше одного запроса.
+- [ ] Не полагаться на client-provided airline id.
+- [ ] В snapshot helpers возвращать `airline` и `auth` вместе.
+- [ ] Убрать двойную загрузку `/airline/me` в `requireValidUserToken` + `loadGameSnapshot`.
+- [ ] Убрать двойную загрузку `/airline/me` в Fleet snapshot.
+- [ ] Убрать двойную загрузку `/airline/me` в Routes snapshot.
+- [ ] Убрать двойную загрузку `/airline/me` в Operations snapshot.
+- [ ] Убрать двойную загрузку `/airline/me` в Finance snapshot.
+- [ ] Проверить onboarding: `GET /onboarding/session` должен оставаться source of truth для shell restore.
+- [ ] Shell restore должен не запускать одновременно лишние admin/player calls, если пользователь явно player.
+- [ ] Admin capability probe не должен дергать тяжелый `/countries`, если JWT role claim уже дает admin.
+- [ ] Backend минимальное изменение: добавить официальный lightweight endpoint `/auth/session` или `/me`.
+- [ ] Backend минимальное изменение: endpoint возвращает `user_id`, `role`, `capabilities`, `expires_at`.
+- [ ] BFF после появления `/auth/session` заменяет probe `/countries`.
+- [ ] До backend endpoint оставить существующий probe, но кешировать результат.
+
+## 8. P0: request coalescing и snapshot cache
+
+- [ ] Добавить in-flight request coalescing для одинаковых BFF snapshot loads.
+- [ ] Coalescing key должен учитывать airline/user scope.
+- [ ] Coalescing key должен учитывать endpoint family.
+- [ ] Coalescing key должен учитывать query params, влияющие на результат.
+- [ ] Dashboard открытие не должно параллельно грузить одни и те же backend справочники для summary и map-state.
+- [ ] Fleet + Dashboard при `game:snapshot-invalidated` не должны одновременно пробивать backend пятью одинаковыми reads.
+- [ ] Ввести общий `loadPlayerSnapshot`.
+- [ ] `loadPlayerSnapshot` должен уметь включать секции: airline, aircrafts, aircraftTypes, airports, countries, regions, regionLinks.
+- [ ] `loadPlayerSnapshot` должен использовать shared cache для world data.
+- [ ] `loadPlayerSnapshot` должен использовать user-scoped cache для airline/fleet.
+- [ ] World-data cache TTL: 5-15 минут для player screens.
+- [ ] World-data cache invalidation: successful admin mutation/import.
+- [ ] Airline/fleet cache TTL: 5-15 секунд.
+- [ ] Airline/fleet cache invalidation: aircraft purchase, tail update, airline update.
+- [ ] Overlay route/schedule/flight/ledger/events cache TTL может быть 0 или short, потому file IO local.
+- [ ] Для file overlays можно держать memory cache с mtime/version, чтобы не читать JSON на каждый endpoint.
+- [ ] Добавить explicit invalidation function для routes overlay.
+- [ ] Добавить explicit invalidation function для operations overlay.
+- [ ] Добавить explicit invalidation function для finance ledger.
+- [ ] Добавить explicit invalidation function для events/notifications.
+- [ ] При route mutation инвалидировать Dashboard/Map/Operations/Finance/Events derived caches.
+- [ ] При schedule mutation инвалидировать Dashboard/Map/Facilities/Finance/Events.
+- [ ] При flight completion инвалидировать Dashboard/Finance/Events/Notifications.
+- [ ] При admin world mutation инвалидировать world-data cache и readiness.
+- [ ] Response meta должен показывать stale cache usage.
+- [ ] UI не должен считать stale data ошибкой, если action still usable.
+
+## 9. P0: BFF overlay storage reliability
+
+- [ ] Создать общий helper `bff/src/storage/json-store.ts`.
+- [ ] Helper должен поддерживать `read`.
+- [ ] Helper должен поддерживать `write`.
+- [ ] Helper должен поддерживать `update`.
+- [ ] Helper должен поддерживать serialized per-file queue.
+- [ ] Helper должен поддерживать atomic write через temp file + rename.
+- [ ] Helper должен поддерживать schema version.
+- [ ] Helper должен поддерживать migrations.
+- [ ] Helper должен поддерживать backup перед destructive migration.
+- [ ] Helper должен отличать missing file от corrupt JSON.
+- [ ] Corrupt JSON не должен молча превращаться в пустое состояние.
+- [ ] Corrupt JSON должен вернуть normalized `BFF_STORAGE_CORRUPT`.
+- [ ] Для player UI corrupt route/flight store должен показать degraded state и action "contact support/retry", а не удалить данные.
+- [ ] Добавить `revision` к routes.
+- [ ] Добавить `revision` к schedules.
+- [ ] Добавить `revision` к flights.
+- [ ] Добавить `revision` к ledger groups, если нужны updates.
+- [ ] Добавить `schema_version` в persisted root object.
+- [ ] Перейти от raw array root к object root.
+- [ ] Новый формат `routes.json`: `{ "schema_version": 1, "routes": [] }`.
+- [ ] Новый формат `schedules.json`: `{ "schema_version": 1, "schedules": [] }`.
+- [ ] Новый формат `flights.json`: `{ "schema_version": 1, "flights": [] }`.
+- [ ] Новый формат `ledger.json`: `{ "schema_version": 1, "transactions": [] }`.
+- [ ] Новый формат `events.json`: `{ "schema_version": 1, "events": [] }`.
+- [ ] Новый формат `notifications.json`: `{ "schema_version": 1, "notifications": [] }`.
+- [ ] Добавить migration from array root для существующих файлов.
+- [ ] Добавить tests на migration.
+- [ ] Добавить tests на concurrent writes.
+- [ ] Добавить tests на corrupt JSON.
+- [ ] Добавить tests на idempotent save.
+- [ ] `saveRoute` должен выполняться внутри store.update.
+- [ ] `deleteRoute` должен выполняться внутри store.update.
+- [ ] `saveSchedule` должен выполняться внутри store.update.
+- [ ] `saveFlights` должен выполняться внутри store.update.
+- [ ] `saveLedgerTransactions` должен выполняться внутри store.update.
+- [ ] `recordGameEvent` должен выполняться внутри store.update.
+- [ ] `saveNotifications` должен выполняться внутри store.update.
+- [ ] Operations activation должен атомарно сохранить schedule + flights + route status.
+- [ ] Если cross-file atomicity невозможна, оформить recoverable transaction log.
+- [ ] Минимум для MVP: выполнить writes в serialized global queue для operations mutation.
+- [ ] При сбое между schedule write и flights write reconciliation должен восстановить состояние.
+- [ ] Reconciliation должен уметь найти active schedule без generated flights.
+- [ ] Reconciliation должен уметь найти scheduled route без active schedule.
+- [ ] Reconciliation должен уметь найти completed flight без ledger.
+- [ ] Reconciliation не должен дублировать ledger.
+
+## 10. P0: error contract и пользовательские ошибки
+
+- [ ] У всех BFF errors должен быть единый shape.
+- [ ] Shape: `{ error: { code, message, retryable, details?, request_id? } }`.
+- [ ] `details` не показывать пользователю по умолчанию.
+- [ ] `message` может быть английским fallback, но UI должен локализовать по `code`.
+- [ ] Добавить request id/correlation id в BFF.
+- [ ] BFF должен логировать request id, method, path, status, duration.
+- [ ] BFF logs не должны содержать access token.
+- [ ] BFF logs не должны содержать admin credentials.
+- [ ] BFF logs не должны содержать passwords.
+- [ ] Frontend ApiRequestError normalizer должен доставать `error.code`.
+- [ ] Shared helper `getUserFacingError(locale, error, context)` должен жить в shared/frontend utility или каждом app, но по одной модели.
+- [ ] Убрать raw `error.message` как основной UI текст в Dashboard.
+- [ ] Убрать raw `error.message` как основной UI текст в Network.
+- [ ] Убрать raw `error.message` как основной UI текст в Finance.
+- [ ] Убрать raw `error.message` как основной UI текст в Admin CRUD.
+- [ ] Убрать hardcoded fallback English из `Network Planner`.
+- [ ] Убрать hardcoded fallback English из `Finance`.
+- [ ] Убрать hardcoded fallback English из `notificationState`.
+- [ ] Ошибка auth expired должна вести к login с сохранением redirect.
+- [ ] Ошибка backend unavailable должна показывать retry и degraded context.
+- [ ] Ошибка validation должна показывать field-level reason.
+- [ ] Ошибка conflict должна показывать actionable explanation.
+- [ ] Ошибка storage corrupt должна быть диагностической и не стирать состояние.
+- [ ] Ошибка timeout должна показывать "сервер не успел ответить", а не generic 500.
+- [ ] Ошибка gRPC deadline exceeded на backend должна мапиться в HTTP 504.
+- [ ] Ошибка gRPC unavailable на backend должна мапиться в HTTP 503.
+- [ ] Ошибка gRPC invalid argument должна мапиться в HTTP 400/422.
+- [ ] Ошибка gRPC not found должна мапиться в HTTP 404.
+- [ ] Ошибка gRPC already exists должна мапиться в HTTP 409.
+- [ ] Backend минимальное изменение: централизованный mapper gRPC status codes -> HTTP.
+- [ ] Backend минимальное изменение: все handlers используют mapper вместо `StatusInternalServerError` для любых unknown errors.
+- [ ] Backend минимальное изменение: возвращать JSON error body с stable code, где возможно.
+- [ ] BFF до backend mapper должен продолжать нормализовать старые ответы.
+
+## 11. P0: избавиться от 500 "каждые два запроса"
+
+- [ ] Добавить BFF endpoint-level metrics: count, p50, p95, error count.
+- [ ] Добавить backend source metrics внутри BFF: path, status, duration, attempts.
+- [ ] Логировать, какие backend endpoints чаще дают 500.
+- [ ] Логировать, где срабатывает retry.
+- [ ] Логировать, когда BFF отвечает degraded.
+- [ ] Провести audit heavy first-load screens.
+- [ ] Dashboard сейчас делает summary + map-state параллельно.
+- [ ] Оба могут грузить одинаковый GameSnapshot.
+- [ ] Свести Dashboard summary + map-state к одному BFF endpoint или shared in-flight snapshot.
+- [ ] Вариант A: `GET /game/dashboard` возвращает `{ summary, map_state }`.
+- [ ] Вариант B: оставить два endpoints, но coalesce `loadGameSnapshot`.
+- [ ] Для MVP быстрее вариант B.
+- [ ] Для Network Planner opportunities + routes + preview сейчас выполняются на first load.
+- [ ] Не грузить preview до завершения opportunities/routes, если нет selected destination.
+- [ ] Не грузить preview дважды при auto-select first opportunity.
+- [ ] Debounce filters уже есть, но без abort.
+- [ ] Добавить "Apply filters" или staged filters для тяжелых route opportunities, если backend медленный.
+- [ ] Fleet market загружает market и сразу preview.
+- [ ] Preview должен грузиться только при selected type/base/tail ready.
+- [ ] Preview не должен блокировать market render.
+- [ ] Facilities screen делает один BFF request, это нормально.
+- [ ] Finance screen грузит overview + ledger + routes параллельно.
+- [ ] Разделить Finance: overview first, ledger/routes lazy по tab.
+- [ ] Events screen грузит только feed или notifications, это нормально.
+- [ ] Notification panel refresh грузит summary + notifications.
+- [ ] Summary должен быть легким и не требовать full notifications list.
+- [ ] Shell restore грузит `loadMyAirline` и `loadAdminSession` параллельно.
+- [ ] `loadAdminSession` для обычного пользователя дергает admin probe `/countries`.
+- [ ] Оптимизировать: admin probe только если JWT role=admin или если пользователь открывает `/admin`.
+- [ ] До backend `/me` сделать BFF cache для admin probe.
+- [ ] Убрать лишние request bursts при route changes.
+- [ ] `ShellRemoteView` показывает route loader на каждый route change; не должен вызывать extra API сам.
+- [ ] MFE должны сами загружать данные только для своего active view.
+- [ ] Fleet activeMode `flights` не должен запускать fleet market load.
+- [ ] Сейчас `RemoteApp.vue` в Fleet onMounted всегда вызывает `loadMarket`, даже если activeMode !== fleet.
+- [ ] Исправить Fleet: если shellPath `/operations/*`, не грузить market.
+- [ ] Это P0, потому Operations first load сейчас может стрелять Fleet market + Operations.
+- [ ] Network route creation after success вызывает `await loadData()`, что снова грузит opportunities/routes/preview.
+- [ ] После route creation можно append/update routes локально и refresh opportunities lazy.
+- [ ] Purchase success вызывает `await loadMarket()`, что снова грузит market + preview.
+- [ ] После purchase можно обновить ownedAircraft из response и отложить full market refresh.
+- [ ] Schedule activation вызывает events/notifications invalidation и navigation; проверить, не стартуют ли два refresh параллельно.
+- [ ] Notification refresh имеет activeRequest coalescing, это хорошо.
+- [ ] Добавить coalescing для Dashboard refresh.
+- [ ] Добавить coalescing для Fleet market.
+- [ ] Добавить coalescing для Finance overview.
+
+## 12. P0: backend минимальные изменения для стабильности
+
+- [ ] Не переносить routes/schedules/flights/ledger/events MVP overlay в Go backend сейчас.
+- [ ] Добавить официальный lightweight identity endpoint в api-gateway.
+- [ ] Endpoint: `GET /auth/session` или `GET /me`.
+- [ ] Response: `user_id`, `role`, `capabilities`, `expires_at`.
+- [ ] BFF использует endpoint для auth/admin checks.
+- [ ] Сделать world-data list endpoints read-only доступными обычному authenticated user или отдельному service scope.
+- [ ] Минимум: `GET /airports`, `GET /countries`, `GET /regions`, `GET /region-links`, `GET /aircraft-types` не должны требовать admin для read.
+- [ ] Если публичный read нельзя, добавить backend service token contract для BFF без password login на каждом restart.
+- [ ] Добавить gRPC error mapper в api-gateway.
+- [ ] Добавить `DeadlineExceeded -> 504`.
+- [ ] Добавить `Unavailable -> 503`.
+- [ ] Добавить `InvalidArgument -> 400`.
+- [ ] Добавить `NotFound -> 404`.
+- [ ] Добавить `AlreadyExists -> 409`.
+- [ ] Добавить `PermissionDenied -> 403`.
+- [ ] Добавить `Unauthenticated -> 401`.
+- [ ] Убрать generic 500 для known domain errors.
+- [ ] Проверить `operations_handlers.go`: после некоторых conflict branches нет `return`.
+- [ ] Например `CreateRegionLink` после `ErrRegionLinkConflict` вызывает `c.Status(http.StatusConflict)` без `return`, затем логирует и может попытаться отдать 500.
+- [ ] Проверить все handlers на missing return after response.
+- [ ] Исправить missing return после `ErrNoSuchCountry`/`ErrNoSuchRegion` branches, где после JSON нет return.
+- [ ] Проверить `fleet_handlers.go`: `GetAircraft` не мапит NotFound, может отдавать 500.
+- [ ] Проверить `UpdateAircraft`: не мапит NotFound/PermissionDenied.
+- [ ] Проверить `ListAircrafts`: ошибки airline not found/permission должны быть 404/403, не 500.
+- [ ] Проверить operations list handlers на DeadlineExceeded.
+- [ ] Проверить auth middleware: auth-service unavailable сейчас дает 500; для frontend это должно быть 503 retryable.
+- [ ] Добавить gateway request id middleware.
+- [ ] Прокидывать request id в gRPC metadata.
+- [ ] Увеличивать backend timeout не первым действием; сначала убрать лишние запросы и known 500.
+- [ ] Оставить `REQUEST_TIMEOUT_SECONDS=3` как baseline, но BFF должен укладываться в него за счет cache/coalescing.
+- [ ] Добавить health endpoints для backend services или gateway aggregate health.
+- [ ] BFF `/health` должен показывать только собственное здоровье.
+- [ ] Добавить BFF `/health/backend` для diagnostics, не использовать в player UI.
+- [ ] Добавить gateway readiness для gRPC clients.
+- [ ] Проверить connection reuse в gRPC clients.
+- [ ] Проверить Docker compose network aliases и service names.
+- [ ] Проверить Kafka dependency не блокирует HTTP read endpoints.
+- [ ] Проверить Postgres pool settings на сервисах.
+- [ ] Добавить backend tests на error mapping в gateway handlers.
+- [ ] Запускать узкие Go tests только для измененных services.
+
+# Часть B. Dashboard и большая карта как главный экран
+
+## 13. P0: вернуть карту как центральный first-viewport
+
+- [ ] Переработать `/dashboard` из scroll-dashboard в full-screen map workspace.
+- [ ] Первый viewport после topbar должен быть занят картой.
+- [ ] Карта должна быть главным визуальным объектом, а не карточкой внутри layout.
+- [ ] Убрать `max-w-7xl` constraint для главного map workspace.
+- [ ] Убрать фиксированную карту `h-[28rem]` как основной режим.
+- [ ] Dashboard root должен занимать `h-full`.
+- [ ] Внутренний map area должен занимать доступную высоту между topbar и viewport bottom.
+- [ ] На desktop карта должна быть full-bleed внутри content area shell.
+- [ ] Sidebar/topbar остаются shell chrome.
+- [ ] Карта должна оставлять overlay panels поверх себя.
+- [ ] Overlay panels не должны превращать карту в маленький preview.
+- [ ] Main overlay слева: airline status, next action, critical alerts.
+- [ ] Main overlay справа: selected airport/route/flight detail.
+- [ ] Bottom overlay: metric strip или compact operations timeline.
+- [ ] Overlay panels должны иметь max-height и internal scroll, чтобы не ломать карту.
+- [ ] Overlay panels должны быть collapsible.
+- [ ] На mobile overlay panels должны складываться в bottom sheets/sections.
+- [ ] На mobile карта не должна быть единственным первым элементом, если CTA нужен для progress.
+- [ ] Mobile first viewport: compact CTA сверху, карта ниже, details bottom sheet.
+- [ ] Tablet layout: map top/full width, panels overlay or side rail depending width.
+- [ ] Desktop layout: map as canvas, left command rail, right inspector.
+- [ ] Карта не должна находиться внутри `article`/card.
+- [ ] Карта может иметь тонкий border только если требуется отделение от shell chrome.
+- [ ] Map controls должны быть поверх карты и не перекрывать primary CTA.
+- [ ] Existing `MapControls` перенести в карту как fixed overlay zone.
+- [ ] Controls должны быть icon buttons с tooltip.
+- [ ] Controls не должны использовать текстовые кнопки `2D/3D`, если есть icon.
+- [ ] Добавить control для fit network.
+- [ ] Добавить control для focus base.
+- [ ] Добавить control для show/hide opportunities.
+- [ ] Добавить control для show/hide routes.
+- [ ] Добавить control для show/hide flights.
+- [ ] Добавить map legend как collapsible overlay.
+- [ ] Legend должна объяснять base, opportunity, active route, scheduled route, live flight.
+- [ ] Legend должна быть локализована.
+- [ ] Legend не должна занимать место в mobile по умолчанию.
+- [ ] Map should render even when dashboard summary fails partially, if map-state available.
+- [ ] Dashboard summary should render even when map remote fails.
+- [ ] Add explicit map loading state over map canvas.
+- [ ] Add explicit map remote failed state over map canvas.
+- [ ] Add explicit no coordinates state over map canvas.
+- [ ] Add fallback list below overlays if map cannot load.
+
+## 14. P0: подключить карту к хабам, маршрутам и рейсам
+
+- [ ] В BFF `GET /game/map-state` расширить roles airport features.
+- [ ] Role `base` для стартовой базы.
+- [ ] Role `owned_aircraft_base` для баз купленных самолетов, если отличаются от starting base.
+- [ ] Role `route_destination` для destination существующих routes.
+- [ ] Role `opportunity` для top opportunities.
+- [ ] Role `selected` для выбранного airport.
+- [ ] Airport properties должны включать `iata_code`.
+- [ ] Airport properties должны включать `icao_code`.
+- [ ] Airport properties должны включать `municipality`.
+- [ ] Airport properties должны включать `country_name`, если доступно.
+- [ ] Airport properties должны включать `runway_m`.
+- [ ] Airport properties должны включать `slots_per_day`.
+- [ ] Airport properties должны включать `works_at_night`.
+- [ ] Airport properties должны включать `demand`.
+- [ ] Airport properties должны включать `score`.
+- [ ] Airport properties должны включать `cta_target_path`.
+- [ ] Route features должны включать `id`.
+- [ ] Route features должны включать `status`.
+- [ ] Route features должны включать `origin_airport_id`.
+- [ ] Route features должны включать `destination_airport_id`.
+- [ ] Route features должны включать `selected_aircraft_id`.
+- [ ] Route features должны включать `demand`.
+- [ ] Route features должны включать `estimated_profit`.
+- [ ] Route features должны включать `flights_today`.
+- [ ] Route features должны включать `next_departure_at`.
+- [ ] Route features должны включать `cta_target_path`.
+- [ ] Flight features добавить в map-state.
+- [ ] Flight features могут быть points interpolated along route для live/boarding/in_flight.
+- [ ] Flight features для MVP могут быть без smooth animation.
+- [ ] Flight features должны включать `flight_id`.
+- [ ] Flight features должны включать `flight_number`.
+- [ ] Flight features должны включать `route_id`.
+- [ ] Flight features должны включать `aircraft_id`.
+- [ ] Flight features должны включать `status`.
+- [ ] Flight features должны включать `departure_at`.
+- [ ] Flight features должны включать `arrival_at`.
+- [ ] Flight features должны включать `expected_load_factor`.
+- [ ] Flight features должны включать `expected_profit`.
+- [ ] Map remote должен добавить GeoJSON source для flights.
+- [ ] Map remote должен добавить layer для live flight points.
+- [ ] Map remote должен добавить layer для scheduled flight markers, если включен.
+- [ ] Map remote должен добавить selected route highlighting.
+- [ ] Map remote должен добавить selected airport highlighting.
+- [ ] Map remote должен добавить selected flight highlighting.
+- [ ] Route lines должны отличать `draft`, `awaiting_schedule`, `scheduled`, `active`, `paused`.
+- [ ] `awaiting_schedule` route line должен быть dashed.
+- [ ] `scheduled` route line должен быть solid but muted.
+- [ ] `active` route line должен быть solid high contrast.
+- [ ] `paused` route line должен быть muted/dashed.
+- [ ] Opportunity line от base к hovered/selected opportunity можно показывать transient.
+- [ ] Не показывать все opportunities как dense routes одновременно, чтобы карта не шумела.
+- [ ] Добавить BFF query `include_flights=true|false`.
+- [ ] Добавить BFF query `include_opportunities=true|false`.
+- [ ] Добавить BFF query `include_routes=true|false`.
+- [ ] Добавить BFF query `status=live|upcoming|all` для flights.
+- [ ] Добавить BFF query `selected_route_id`.
+- [ ] Добавить BFF query `selected_flight_id`.
+- [ ] Dashboard map-state default должен включать base, routes, live/upcoming flights, top opportunities.
+- [ ] Network Planner map-state mode должен включать opportunities сильнее, чем flights.
+- [ ] Operations map-state mode должен включать flights сильнее, чем opportunities.
+- [ ] Map remote не должен сам вызывать BFF.
+- [ ] Shell или owning remote должны передавать mapState.
+- [ ] Для embedded map в Network Planner решить ownership: либо shell dashboard map only, либо shared map panel contract.
+- [ ] Для MVP достаточно Dashboard map как центральный, а Network Planner может показывать список.
+- [ ] Если Network Planner должен влиять на карту, использовать event `map:focus-route-opportunity`.
+- [ ] Добавить event `map:focus-airport`.
+- [ ] Добавить event `map:focus-route`.
+- [ ] Добавить event `map:focus-flight`.
+- [ ] Dashboard должен слушать `map:network-refresh-requested`.
+- [ ] Dashboard должен слушать `route:created`.
+- [ ] Dashboard должен слушать `schedule:activated`.
+- [ ] Dashboard должен слушать `fleet:aircraft-purchased`.
+- [ ] Dashboard должен слушать `notifications:invalidated` только для alert count refresh, без full map reload.
+- [ ] На событие route/schedule/fleet Dashboard должен reload map-state.
+- [ ] Reload map-state не должен reset viewport, если пользователь вручную двигал карту.
+- [ ] Добавить `preserveViewport` behavior.
+- [ ] Fit bounds делать только на initial load или manual fit.
+- [ ] После создания route подсветить созданный route.
+- [ ] После покупки aircraft подсветить base.
+- [ ] После schedule activation подсветить route и future flights.
+- [ ] После flight selected подсветить flight.
+- [ ] Добавить tests на map-state route features.
+- [ ] Добавить tests на map-state flight features.
+- [ ] Добавить tests на Dashboard event-driven refresh.
+- [ ] Добавить tests на MapManager game layer reapply after style load.
+
+## 15. P1: map visual quality and interaction
+
+- [ ] Убрать локальные hex цвета из MapManager layers или заменить их semantic tokens/central map palette.
+- [ ] Если MapLibre paint не может читать CSS vars надежно, завести `mapThemeTokens`.
+- [ ] Темная тема route/airport labels должна иметь достаточный contrast.
+- [ ] Светлая тема route/airport labels должна иметь достаточный contrast.
+- [ ] Airport markers должны быть кликабельны на touch.
+- [ ] Минимальный touch target для marker interaction должен быть >= 32px через invisible hit layer.
+- [ ] Добавить hover cursor для clickable layers.
+- [ ] Добавить keyboard-accessible fallback list для выбранных объектов.
+- [ ] Click route line должен работать даже на тонких линиях через wider transparent hit layer.
+- [ ] Add route hit layer separate from visual line.
+- [ ] Add airport cluster strategy if many opportunities visible.
+- [ ] For MVP top 12 opportunities can avoid clustering.
+- [ ] Long airport labels should not flood map at low zoom.
+- [ ] Show labels only above zoom threshold or for base/selected.
+- [ ] Add `text-allow-overlap: false`.
+- [ ] Add selected label priority.
+- [ ] Add `fitBounds` padding aware of overlay panels.
+- [ ] Desktop fit padding left/right based on panels.
+- [ ] Mobile fit padding bottom based on bottom sheet.
+- [ ] Add map error boundary around SvelteWrapper.
+- [ ] SvelteWrapper update should not remount map on every prop change.
+- [ ] Dashboard passes stable createMap function; verify no unnecessary remount.
+- [ ] `Map.component.svelte` currently destructures props once; verify Svelte 5 props state updates actually trigger `$effect`.
+- [ ] Add test or manual QA for prop update after map already mounted.
+- [ ] Add Playwright visual check for map not blank.
+- [ ] Add Playwright check for airport markers visible after fixture map-state.
+- [ ] Add Playwright check for route line visible after route fixture.
+- [ ] Add Playwright check for mobile no overlay overlap.
+
+# Часть C. UI-kit и единый визуальный язык
+
+## 16. P0: единые loading states
+
+- [ ] Создать `AirSkeleton`.
+- [ ] `AirSkeleton` поддерживает text line.
+- [ ] `AirSkeleton` поддерживает block.
+- [ ] `AirSkeleton` поддерживает circle.
+- [ ] `AirSkeleton` поддерживает metric card pattern.
+- [ ] `AirSkeleton` поддерживает list row pattern.
+- [ ] `AirSkeleton` должен быть theme-aware.
+- [ ] `AirSkeleton` не должен вызывать layout shift.
+- [ ] Создать `AirLoadingState`.
+- [ ] `AirLoadingState` поддерживает compact.
+- [ ] `AirLoadingState` поддерживает full-panel.
+- [ ] `AirLoadingState` поддерживает label.
+- [ ] `AirLoadingState` использует один spinner style.
+- [ ] Убрать inline spinner из `App.vue` restoring session.
+- [ ] Заменить на `AppLoader` или новый `AirLoadingState`.
+- [ ] Убрать локальный loading text box из Facilities.
+- [ ] Убрать локальные animate-pulse cards из Dashboard, заменить на `AirSkeleton`.
+- [ ] Убрать разнородные `isLoading ? '...'` button labels, использовать button loading prop.
+- [ ] Добавить `loading` prop в `AirButton`.
+- [ ] Добавить spinner/icon placement в `AirButton`.
+- [ ] Добавить disabled + aria-busy behavior в `AirButton`.
+- [ ] Добавить Storybook states для loading buttons.
+- [ ] Fleet `FleetLoadingSkeleton` сверить с AirSkeleton.
+- [ ] Если FleetLoadingSkeleton дублирует новый AirSkeleton, удалить или оставить как domain composition.
+- [ ] Network opportunities loading должен использовать same skeleton cards.
+- [ ] Finance ledger loading должен использовать same skeleton rows.
+- [ ] Events feed loading должен использовать same skeleton feed cards.
+- [ ] Admin table loading должен использовать same skeleton rows.
+
+## 17. P0: единые empty states
+
+- [ ] Создать `AirEmptyState`.
+- [ ] Props: icon, title, description, primaryAction, secondaryAction.
+- [ ] Props: tone `neutral|info|warning`.
+- [ ] Props: compact.
+- [ ] Empty state не должен быть просто серым текстом.
+- [ ] Empty state всегда должен иметь следующий шаг, если есть понятное действие.
+- [ ] Empty state должен быть локализуемым через parent.
+- [ ] Dashboard no aircraft использует `AirEmptyState`.
+- [ ] Dashboard no routes использует `AirEmptyState`.
+- [ ] Dashboard no schedule использует `AirEmptyState`.
+- [ ] Dashboard no flights использует `AirEmptyState`.
+- [ ] Fleet no owned aircraft использует `AirEmptyState`.
+- [ ] Fleet no compatible aircraft использует `AirEmptyState`.
+- [ ] Network no opportunities использует `AirEmptyState`.
+- [ ] Network no saved routes использует `AirEmptyState`.
+- [ ] Operations no routes использует `AirEmptyState`.
+- [ ] Operations no schedules использует `AirEmptyState`.
+- [ ] Operations no flights использует `AirEmptyState`.
+- [ ] Finance no completed flights использует `AirEmptyState`.
+- [ ] Finance no ledger entries использует `AirEmptyState`.
+- [ ] Events no events использует `AirEmptyState`.
+- [ ] Notifications no active notifications использует `AirEmptyState`.
+- [ ] Facilities no base использует `AirEmptyState`.
+- [ ] Admin empty world использует `AirEmptyState`.
+- [ ] Admin no records after search использует `AirEmptyState`.
+- [ ] Empty states не должны показывать raw endpoint names.
+- [ ] Empty states должны иметь help link, когда Knowledge Base будет готова.
+
+## 18. P0: единые error states
+
+- [ ] Создать `AirErrorState`.
+- [ ] Props: title, description, code, retryable, primaryAction.
+- [ ] Props: diagnostics slot hidden/collapsible для admin/dev.
+- [ ] Error state должен поддерживать retry button.
+- [ ] Error state должен поддерживать auth expired action.
+- [ ] Error state должен поддерживать degraded warning compact mode.
+- [ ] Dashboard full error заменить на `AirErrorState`.
+- [ ] Map partial warning заменить на compact `AirErrorState`/`AirNotice`.
+- [ ] Network error box заменить на `AirErrorState`.
+- [ ] Finance error paragraph заменить на `AirErrorState`.
+- [ ] Events error box заменить на `AirErrorState`.
+- [ ] Facilities error box заменить на `AirErrorState`.
+- [ ] Admin CRUD errors заменить на `AirErrorState` or `AirNotice`.
+- [ ] Errors должны использовать localized code mapping.
+- [ ] Errors должны показывать retry только если `retryable=true`.
+- [ ] Errors должны сохранять form state.
+- [ ] Purchase POST uncertain failure должен предлагать refresh owned fleet, не повтор POST автоматически.
+- [ ] Route create uncertain failure должен предлагать refresh routes before retry.
+- [ ] Schedule activation uncertain failure должен предлагать refresh schedules/flights before retry.
+- [ ] Flight completion uncertain failure должен предлагать refresh finance/flight state before retry.
+
+## 19. P1: panel, table, tabs, drawer primitives
+
+- [ ] Создать `AirPanel`.
+- [ ] `AirPanel` поддерживает title.
+- [ ] `AirPanel` поддерживает subtitle.
+- [ ] `AirPanel` поддерживает action slot.
+- [ ] `AirPanel` поддерживает compact padding.
+- [ ] `AirPanel` не должен поощрять card-inside-card.
+- [ ] Создать `AirToolbar`.
+- [ ] `AirToolbar` поддерживает filter controls.
+- [ ] `AirToolbar` поддерживает responsive wrap.
+- [ ] Создать `AirTabs`.
+- [ ] `AirTabs` поддерживает route-driven mode.
+- [ ] `AirTabs` поддерживает segmented mode.
+- [ ] Создать `AirDrawer`.
+- [ ] `AirDrawer` поддерживает mobile bottom sheet.
+- [ ] `AirDrawer` поддерживает desktop side panel.
+- [ ] `AirDrawer` должен иметь focus management.
+- [ ] `AirDrawer` должен закрываться Escape.
+- [ ] Создать `AirModal` или `AirConfirmDialog`.
+- [ ] Purchase confirmation использовать `AirConfirmDialog`.
+- [ ] Risk confirmation использовать `AirConfirmDialog`.
+- [ ] Delete admin confirmation использовать `AirConfirmDialog`.
+- [ ] Discard admin form confirmation использовать `AirConfirmDialog`.
+- [ ] Schedule activation confirmation использовать `AirConfirmDialog`.
+- [ ] Создать `AirDataList`.
+- [ ] `AirDataList` поддерживает desktop table-like rows.
+- [ ] `AirDataList` поддерживает mobile cards.
+- [ ] `AirDataList` поддерживает empty/loading/error slots.
+- [ ] Admin records использовать `AirDataList`.
+- [ ] Finance ledger использовать `AirDataList`.
+- [ ] Flight board использовать `AirDataList`.
+- [ ] Route list использовать `AirDataList`.
+- [ ] Owned aircraft list использовать `AirDataList`.
+- [ ] Создать `AirNotice`.
+- [ ] `AirNotice` поддерживает info/success/warning/danger.
+- [ ] Success/error messages в Fleet/Network/Admin заменить на `AirNotice`.
+- [ ] Создать `AirTooltip`.
+- [ ] Icon buttons должны иметь tooltip for unfamiliar icons.
+- [ ] Map controls использовать `AirTooltip`.
+- [ ] Sidebar collapsed icons должны иметь title/tooltip.
+- [ ] Topbar icons уже имеют title, но проверить accessibility.
+- [ ] Все новые air-ui components экспортировать из `packages/air-ui/src/index.ts`.
+- [ ] Для каждого нового air-ui component добавить Storybook story.
+- [ ] Storybook states: default, loading, disabled, error, long text, mobile narrow.
+- [ ] Добавить air-ui tests хотя бы на props/classes для новых components.
+
+## 20. P1: убрать визуальный шум и лишние badges
+
+- [ ] Провести аудит всех `AirBadge` usages.
+- [ ] Badge оставлять только для статуса, severity, capability, category, state.
+- [ ] Badge не использовать как декоративный eyebrow в каждом header.
+- [ ] Dashboard badge `dashboard.badge` проверить: нужен ли он в full-screen map.
+- [ ] Network badge hardcoded `Network Planner` убрать или заменить на route status/section.
+- [ ] Finance badge `Finance & Stock` убрать или заменить на section state.
+- [ ] Facilities status badge оставить, потому он несет состояние base readiness.
+- [ ] Events tab badge оставить, потому он показывает feed/notifications mode.
+- [ ] Admin badges оставить для status/readiness/admin-only.
+- [ ] Fleet compatibility badges оставить.
+- [ ] Сократить количество color tones на одном экране.
+- [ ] Severity colors использовать consistently: danger/warning/success/info.
+- [ ] Primary color использовать для navigation/action, не для every badge.
+- [ ] Убрать card-heavy layout там, где нужна плотная рабочая поверхность.
+- [ ] Dashboard overlay panels должны быть compact.
+- [ ] Network Planner opportunities должны быть сканируемыми, не как маркетинговые карточки.
+- [ ] Finance ledger должен быть таблицей/list, не набором крупных карточек.
+- [ ] Admin CRUD на desktop должен быть dense list/table.
+- [ ] Mobile может использовать cards.
+- [ ] Следить за border radius <= 8px, как требует дизайн.
+- [ ] Исключить nested cards.
+- [ ] Проверить CSS на локальные hex colors outside air-ui/map palette.
+- [ ] Проверить CSS на локальные font-family outside air-ui.
+- [ ] Проверить CSS на arbitrary text sizes outside allowed utilities.
+
+## 21. P1: shared formatters
+
+- [ ] Создать shared package или module для formatters.
+- [ ] Возможное место: `packages/i18n/src/formatters.ts`.
+- [ ] Альтернатива: `packages/game-sdk` не подходит, потому SDK не должен владеть UI formatting.
+- [ ] Форматтер money: locale, currency, compact optional.
+- [ ] Форматтер signed money.
+- [ ] Форматтер integer.
+- [ ] Форматтер decimal.
+- [ ] Форматтер percent.
+- [ ] Форматтер distance km.
+- [ ] Форматтер runway m.
+- [ ] Форматтер speed kph.
+- [ ] Форматтер passenger count.
+- [ ] Форматтер load factor.
+- [ ] Форматтер duration.
+- [ ] Форматтер local date/time.
+- [ ] Форматтер relative last updated.
+- [ ] Форматтер route pair label.
+- [ ] Использовать formatters в Dashboard.
+- [ ] Использовать formatters в Topbar.
+- [ ] Использовать formatters в Fleet.
+- [ ] Использовать formatters в Network.
+- [ ] Использовать formatters в Operations.
+- [ ] Использовать formatters в Finance.
+- [ ] Использовать formatters в Events.
+- [ ] Использовать formatters в Facilities.
+- [ ] Использовать formatters в Admin.
+- [ ] Убрать `Intl.NumberFormat("en", ...)` из navigation topbar.
+- [ ] Убрать локальные duplicated formatMoney из каждого remote.
+- [ ] Убрать ручное `slice(0, 8)` для airport ids в Finance.
+- [ ] Убрать raw `new Date(...).toLocaleTimeString` без consistent options.
+- [ ] Согласовать currency: USD для MVP, но через constant.
+- [ ] Согласовать distance unit: km.
+- [ ] Согласовать runway unit: m.
+- [ ] Согласовать timezone display policy.
+
+# Часть D. Раздел 11: локализация и тексты
+
+## 22. P0: полная ru/en parity
+
+- [ ] Проверить shell dictionary keys.
+- [ ] Проверить fleet dictionary keys.
+- [ ] Проверить network dictionary keys.
+- [ ] Проверить finance dictionary keys.
+- [ ] Проверить events dictionary keys.
+- [ ] Проверить facilities dictionary keys.
+- [ ] Проверить admin dictionary keys.
+- [ ] Проверить map visible strings.
+- [ ] Проверить air-ui visible fallback strings.
+- [ ] `AirCombobox` default loadingText `Loading...` должен быть prop-only или localized by parent.
+- [ ] В air-ui components не должно быть hardcoded user-facing English, если компонент отображает текст сам.
+- [ ] Search placeholder in topbar локализован, проверить.
+- [ ] Static UTC date/time in topbar убрать или локализовать/заменить.
+- [ ] Navigation labels already mapped in sidebar; проверить все paths.
+- [ ] `quickActions` labels в navigation.ts hardcoded; если используются, локализовать или удалить.
+- [ ] Network header badge hardcoded `Network Planner` локализовать или убрать.
+- [ ] Network error fallback локализовать.
+- [ ] Network placeholders `120`, `3500` допустимы как numeric examples.
+- [ ] Fleet default tail number `HL-001` допустим как example, но helper text должен быть localized.
+- [ ] Finance badge hardcoded `Finance & Stock` локализовать или убрать.
+- [ ] Finance error fallback `Finance request failed.` локализовать.
+- [ ] Finance technical `baseline` label заменить.
+- [ ] Events error fallback already locale conditional; перенести в i18n dictionary.
+- [ ] Facilities metric runway value uses `m`; заменить на shared formatter/localized unit.
+- [ ] Facilities airport code fallback `BASE` проверить; допустимо как code, но label around localized.
+- [ ] Admin inline strings in `AdminOverviewPage` status badge `...` допустимо, но labels/statuses локализовать.
+- [ ] Admin future entity descriptions are English; для ru сейчас используется generic description, но future entity titles/missing arrays остаются English.
+- [ ] Future entities должны иметь localized title/description/missing reasons или быть скрыты из player flow.
+- [ ] BFF returned event/notification codes должны иметь translations in Events and Shell NotificationPanel.
+- [ ] BFF returned alert codes должны иметь translations in Dashboard.
+- [ ] BFF route blockers/warnings должны иметь translations in Network and Operations.
+- [ ] BFF fleet reason codes already have translations; verify all codes.
+- [ ] BFF finance risk codes должны иметь translations.
+- [ ] BFF facilities constraints codes должны иметь translations.
+- [ ] Backend normalized codes должны иметь translations in common error mapping.
+- [ ] Add tests for dictionary key parity for all remotes.
+- [ ] Replace smoke-only tests with i18n parity tests where missing.
+- [ ] Apps lacking i18n parity tests: Network, Finance, Map, Admin deeper routes.
+- [ ] Add `rg`-based lint/test for suspicious visible English literals in Vue templates.
+- [ ] Do not fail on code identifiers, endpoint paths, test names, aria technical labels in docs.
+- [ ] Build allowlist for icons, units, route codes.
+- [ ] Add review checklist for new visible strings.
+
+## 23. P0: тексты объясняют игровые решения
+
+- [ ] В onboarding airport picker не показывать internal airport id.
+- [ ] В onboarding airport picker объяснять runway, slots, night ops, fees.
+- [ ] В Dashboard next action объяснять why this action now.
+- [ ] Dashboard no aircraft: "Купите первый самолет, чтобы открыть маршруты".
+- [ ] Dashboard no routes: "Самолет готов, выберите направление из базы".
+- [ ] Dashboard no schedule: "Маршрут создан, назначьте самолет и время".
+- [ ] Dashboard no flights: "Расписание активно, рейсы появятся после генерации".
+- [ ] Map missing coordinates: объяснить, что airport data неполные, а не "NO_MAP_AIRPORTS".
+- [ ] Fleet blocked runway: показать actual runway vs required.
+- [ ] Fleet insufficient funds: показать price, current balance, missing amount.
+- [ ] Fleet reserve risk: показать remaining balance vs recommended reserve.
+- [ ] Fleet tail conflict: сказать, что регистрационный номер уже используется.
+- [ ] Network route recommendation: объяснить demand, compatible aircraft, profit, blockers.
+- [ ] Network low confidence: объяснить missing demand/region-link data.
+- [ ] Network duplicate route: предложить открыть existing route.
+- [ ] Network blocked route: показать конкретную причину.
+- [ ] Schedule aircraft conflict: показать конфликтующее расписание/время.
+- [ ] Schedule night restriction: показать forbidden local time and airport.
+- [ ] Schedule slot exceeded: показать capacity/current/projected.
+- [ ] Schedule oversupply: показать offered seats vs demand.
+- [ ] Flight status: scheduled/boarding/in_flight/completed/cancelled localized.
+- [ ] Finance available cash: объяснить, что это деньги с учетом завершенных операций.
+- [ ] Finance operations result: объяснить period.
+- [ ] Finance route profitability: показывать airport labels.
+- [ ] Finance ledger transaction: показывать linked flight/route labels.
+- [ ] Finance no completed flights: объяснить, что actual появится после завершения рейса.
+- [ ] Events event details не должны быть просто joined parameter values.
+- [ ] Events event details должны использовать localized templates per code.
+- [ ] Notification details не должны быть просто joined parameter values.
+- [ ] Notification details должны объяснять impact and action.
+- [ ] Facilities constraints должны показывать parameter values.
+- [ ] Admin readiness issues должны вести к конкретному entity/filter.
+- [ ] Admin import raw JSON не должен быть primary summary.
+- [ ] Error messages should avoid "request failed" as final text.
+- [ ] Error messages should say what user can do now.
+- [ ] Retry button label should be localized.
+- [ ] Disabled navigation items should have localized future explanation.
+
+## 24. P1: локализация BFF codes через UI templates
+
+- [ ] BFF не должен сохранять translated strings в persisted events.
+- [ ] BFF должен возвращать code + parameters.
+- [ ] UI должен иметь template map for each code.
+- [ ] Template interpolation должна быть typed enough to avoid missing values.
+- [ ] Create shared interpolation helper.
+- [ ] Missing parameter should fall back gracefully.
+- [ ] Missing translation key should be caught by tests.
+- [ ] Dashboard alert templates должны жить в shell i18n.
+- [ ] Shell notification panel templates должны жить в shell notifications i18n module.
+- [ ] Events feed templates должны жить в events-news i18n.
+- [ ] Fleet warning templates должны жить в fleet i18n.
+- [ ] Network reason templates должны жить в network i18n.
+- [ ] Operations reason templates должны жить в fleet-ops operations i18n or separate operations dictionary.
+- [ ] Finance transaction/risk templates должны жить в finance i18n.
+- [ ] Facilities constraint templates должны жить в facilities i18n.
+- [ ] Admin readiness templates должны жить in admin i18n.
+- [ ] Avoid duplication by sharing code lists, not translated text.
+- [ ] Add unit tests for each code list exhaustiveness.
+
+## 25. P1: Knowledge Base как продуктовый раздел
+
+- [ ] Добавить navigation item `Knowledge Base` / `База знаний`.
+- [ ] Route proposal: `/knowledge`.
+- [ ] Child routes: `/knowledge/articles`, `/knowledge/:slug`.
+- [ ] Не показывать как admin/docs route.
+- [ ] Это пользовательский раздел внутри приложения.
+- [ ] Источник контента на MVP: `docs/knowledge-base`.
+- [ ] Нужно выбрать runtime delivery.
+- [ ] Вариант A: compile-time import markdown через Vite raw imports.
+- [ ] Вариант B: BFF endpoint `/knowledge/articles`.
+- [ ] Для MVP лучше BFF endpoint, если нужен поиск по тексту.
+- [ ] BFF knowledge module читает markdown из `docs/knowledge-base`.
+- [ ] BFF knowledge module возвращает article catalog.
+- [ ] BFF knowledge module возвращает article by slug.
+- [ ] BFF knowledge module возвращает search results.
+- [ ] Добавить frontmatter to articles.
+- [ ] Frontmatter fields: slug, locale, title, category, summary, updated_at, owner, related_routes.
+- [ ] Существующие статьи сейчас только ru; нужна en версия.
+- [ ] Создать article pairs ru/en.
+- [ ] Категории: getting-started, fleet, routes, operations, finance, events, facilities, troubleshooting, system.
+- [ ] MVP articles required: "Первый запуск авиакомпании".
+- [ ] MVP articles required: "Как выбрать стартовую базу".
+- [ ] MVP articles required: "Как купить первый самолет".
+- [ ] MVP articles required: "Почему самолет может не подходить".
+- [ ] MVP articles required: "Что означает остаток баланса".
+- [ ] MVP articles required: "Что такое регистрационный номер".
+- [ ] MVP articles required: "Как выбрать направление".
+- [ ] MVP articles required: "Как читать спрос".
+- [ ] MVP articles required: "Почему маршрут заблокирован".
+- [ ] MVP articles required: "Как открыть первый маршрут".
+- [ ] MVP articles required: "Как создать расписание".
+- [ ] MVP articles required: "Как выбрать частоту и время".
+- [ ] MVP articles required: "Почему самолет занят".
+- [ ] MVP articles required: "Как читать статусы рейсов".
+- [ ] MVP articles required: "Почему меняется баланс".
+- [ ] MVP articles required: "Как читать журнал операций".
+- [ ] MVP articles required: "Как понять прибыльность рейса".
+- [ ] MVP articles required: "Что делать при финансовых предупреждениях".
+- [ ] MVP articles required: "Как читать события и уведомления".
+- [ ] MVP articles required: "Как ограничения базы влияют на рейсы".
+- [ ] MVP articles required: "Что делать если сервер недоступен".
+- [ ] MVP articles required: "Что делать если сессия истекла".
+- [ ] Knowledge UI: category list.
+- [ ] Knowledge UI: search input.
+- [ ] Knowledge UI: article list.
+- [ ] Knowledge UI: article page.
+- [ ] Knowledge UI: breadcrumbs.
+- [ ] Knowledge UI: related actions.
+- [ ] Knowledge UI: related articles.
+- [ ] Knowledge UI: empty search state.
+- [ ] Knowledge UI: loading/error states.
+- [ ] Knowledge UI: localized content switch.
+- [ ] Add contextual help links in Dashboard.
+- [ ] Add contextual help links in Fleet purchase panel.
+- [ ] Add contextual help links in Network preview.
+- [ ] Add contextual help links in Schedule Builder.
+- [ ] Add contextual help links in Finance overview/ledger.
+- [ ] Add contextual help links in Events feed.
+- [ ] Add contextual help links in Facilities.
+- [ ] Help links should not clutter primary workflow.
+- [ ] Use small help icon buttons with tooltip.
+- [ ] Add tests for article catalog locale filtering.
+- [ ] Add tests for search.
+- [ ] Add tests that every related route exists.
+
+# Часть E. Раздел 12: адаптивность, accessibility, states
+
+## 26. P0: responsive audit matrix
+
+- [ ] Define required widths: 320px.
+- [ ] Define required widths: 375px.
+- [ ] Define required widths: 430px.
+- [ ] Define required widths: 768px.
+- [ ] Define required widths: 1024px.
+- [ ] Define required widths: 1280px.
+- [ ] Define required widths: 1440px.
+- [ ] Define required heights: 667px mobile.
+- [ ] Define required heights: 800px desktop.
+- [ ] Define required scenario: login.
+- [ ] Define required scenario: onboarding airport picker.
+- [ ] Define required scenario: dashboard with no aircraft.
+- [ ] Define required scenario: dashboard with aircraft/routes/flights.
+- [ ] Define required scenario: map selected airport.
+- [ ] Define required scenario: fleet market.
+- [ ] Define required scenario: purchase preview.
+- [ ] Define required scenario: purchase confirmation.
+- [ ] Define required scenario: owned aircraft detail.
+- [ ] Define required scenario: route opportunities.
+- [ ] Define required scenario: route preview.
+- [ ] Define required scenario: route list.
+- [ ] Define required scenario: schedule builder.
+- [ ] Define required scenario: flight board.
+- [ ] Define required scenario: finance overview.
+- [ ] Define required scenario: finance ledger/profit.
+- [ ] Define required scenario: events feed.
+- [ ] Define required scenario: notifications view.
+- [ ] Define required scenario: notification panel.
+- [ ] Define required scenario: facilities overview.
+- [ ] Define required scenario: admin overview.
+- [ ] Define required scenario: admin record list/form.
+- [ ] Define required scenario: knowledge base catalog/article.
+- [ ] Add Playwright or browser tests for key routes if existing dev setup supports it.
+- [ ] If no E2E tool exists, add manual QA checklist with screenshots required.
+- [ ] For frontend changes, use Browser plugin to inspect local app after implementation.
+- [ ] Detect horizontal overflow automatically with Playwright.
+- [ ] Detect clipped primary buttons automatically where possible.
+- [ ] Detect text overflow in buttons via screenshot/manual QA.
+
+## 27. P0: no horizontal overflow
+
+- [ ] Shell grid must keep `min-w-0` on content area.
+- [ ] Sidebar collapsed/expanded must not cause horizontal scroll.
+- [ ] Dashboard map overlays must not exceed viewport width.
+- [ ] Dashboard metric strip must wrap or scroll internally, not body overflow.
+- [ ] Topbar status metrics hidden/compact on narrow screens.
+- [ ] Topbar search hidden on tablet/mobile.
+- [ ] Topbar static time removed or compact.
+- [ ] Notification badge must not push buttons.
+- [ ] Onboarding airport cards must fit 320px.
+- [ ] AirCombobox dropdown must fit viewport width.
+- [ ] Fleet filters must stack on mobile.
+- [ ] Fleet aircraft cards must not have fixed large min-width.
+- [ ] Fleet side panel must become drawer/bottom sheet on mobile.
+- [ ] Purchase confirmation must fit 320px.
+- [ ] Tail number input and buttons must not overflow.
+- [ ] Network filters must stack.
+- [ ] Network right preview panel must move below list on mobile.
+- [ ] Network route cards must not use fixed 5-col grid on mobile.
+- [ ] Schedule builder controls must stack.
+- [ ] Day-of-week controls must wrap.
+- [ ] Time/turnaround controls must not overflow.
+- [ ] Flight board rows/cards must not require wide table.
+- [ ] Finance ledger rows must stack amount below/next to label on mobile.
+- [ ] Finance route profitability `sm:grid-cols-5` must have mobile card layout and labels.
+- [ ] Events filter selects must stack.
+- [ ] Events cards must fit.
+- [ ] Facilities metric cards must stack.
+- [ ] SlotCapacityPanel must not overflow.
+- [ ] AircraftCompatibilityList must not overflow.
+- [ ] AdminRecordTable already has article fallback; verify.
+- [ ] Admin forms must stack fields.
+- [ ] Admin import stage logs must wrap long text.
+- [ ] Raw JSON diagnostics must be collapsed and scroll inside panel.
+- [ ] Knowledge article content must wrap code blocks.
+- [ ] Long airport names must truncate with accessible title or wrap.
+- [ ] Long route labels must wrap.
+- [ ] Long model names must wrap.
+- [ ] Long error codes should be hidden behind technical detail.
+
+## 28. P0: touch and keyboard interactions
+
+- [ ] All primary actions must be buttons/links, not hover-only controls.
+- [ ] Map markers need list fallback for touch.
+- [ ] Map route selection needs list fallback.
+- [ ] Sidebar collapsed state must be operable by keyboard.
+- [ ] Sidebar submenus must expose expanded state via aria.
+- [ ] Topbar notification button must have aria-label.
+- [ ] Notification panel must trap focus or at least restore focus on close.
+- [ ] Notification panel must close on Escape.
+- [ ] Notification panel must be reachable by keyboard.
+- [ ] Drawer/modal components must manage focus.
+- [ ] Confirmation dialogs must not rely on color alone.
+- [ ] Form validation errors must be linked to inputs.
+- [ ] AirTextField should expose aria-invalid and describedby.
+- [ ] AirSelect should expose label association.
+- [ ] AirCombobox should be keyboard navigable.
+- [ ] Checkboxes in Network should be replaced by air-ui/toggle with labels.
+- [ ] Segmented controls for schedule frequency must be keyboard navigable.
+- [ ] Day-of-week selection must be checkbox group or accessible segmented buttons.
+- [ ] Tables/lists must preserve readable focus outlines.
+- [ ] Clickable cards must be actual buttons/links or contain clear buttons.
+- [ ] Events notification cards are buttons; verify focus style.
+- [ ] Risk cards in Finance are buttons; verify focus style and aria label.
+- [ ] Admin delete confirmation must require explicit button.
+- [ ] Disabled navigation child should not be focusable as link.
+- [ ] Disabled navigation child should explain future state via title/tooltip.
+- [ ] Color severity must also have text label/icon.
+- [ ] Loading spinner must have sr-only label.
+- [ ] Map canvas should have accessible description and fallback list.
+- [ ] Add axe/manual accessibility checks for critical screens.
+
+## 29. P0: loading, empty, error coverage per MVP screen
+
+- [ ] Login has loading state.
+- [ ] Login has invalid credentials state.
+- [ ] Login has backend unavailable state.
+- [ ] Login has session expired state.
+- [ ] Register has loading state.
+- [ ] Register has account exists state.
+- [ ] Register has validation state.
+- [ ] Onboarding session restoring has loading state.
+- [ ] Onboarding airport search has loading state.
+- [ ] Onboarding airport search has no results state.
+- [ ] Onboarding airport search has backend unavailable state.
+- [ ] Onboarding airline create has validation state.
+- [ ] Dashboard has full loading state.
+- [ ] Dashboard has partial map loading state.
+- [ ] Dashboard has partial map failed state.
+- [ ] Dashboard has no aircraft state.
+- [ ] Dashboard has no routes state.
+- [ ] Dashboard has no schedule state.
+- [ ] Dashboard has no flights state.
+- [ ] Dashboard has backend unavailable state.
+- [ ] Dashboard has degraded world-data state.
+- [ ] Fleet market has loading skeleton.
+- [ ] Fleet market has no aircraft types state.
+- [ ] Fleet market has no compatible aircraft state.
+- [ ] Fleet market has backend unavailable state.
+- [ ] Fleet preview has loading state.
+- [ ] Fleet preview has invalid tail number state.
+- [ ] Fleet purchase has uncertain failure state.
+- [ ] Fleet owned list has empty state.
+- [ ] Fleet aircraft detail has loading/error/not found state.
+- [ ] Network opportunities has loading skeleton.
+- [ ] Network opportunities has no aircraft prerequisite state.
+- [ ] Network opportunities has no opportunities state.
+- [ ] Network opportunities has filters empty state.
+- [ ] Network preview has loading/error/stale state.
+- [ ] Network route create has validation/conflict/stale state.
+- [ ] Network route list has empty state.
+- [ ] Schedule options has no routes state.
+- [ ] Schedule options has no compatible aircraft state.
+- [ ] Schedule preview has loading/error/blocker/warning state.
+- [ ] Schedule activation has uncertain failure state.
+- [ ] Flight board has no schedule state.
+- [ ] Flight board has no flights state.
+- [ ] Flight board has filters empty state.
+- [ ] Flight completion has dev-only state.
+- [ ] Finance overview has loading state.
+- [ ] Finance overview has no completed flights state.
+- [ ] Finance ledger has empty state.
+- [ ] Finance route profitability has insufficient data state.
+- [ ] Finance backend unavailable keeps last data if available.
+- [ ] Events feed has empty state.
+- [ ] Events feed has filters empty state.
+- [ ] Events feed has loading state.
+- [ ] Events feed has error state.
+- [ ] Notifications active empty state.
+- [ ] Notifications resolved empty state.
+- [ ] Facilities no base state.
+- [ ] Facilities incomplete data state.
+- [ ] Facilities no fleet state.
+- [ ] Facilities no schedules state.
+- [ ] Facilities error state.
+- [ ] Admin access denied state.
+- [ ] Admin capability unavailable state.
+- [ ] Admin readiness loading/error state.
+- [ ] Admin CRUD empty/search empty/loading/error/conflict states.
+- [ ] Import running/failed/succeeded/no job states.
+- [ ] Knowledge base loading/error/empty search/article not found states.
+
+## 30. P1: route ownership and disabled pages
+
+- [ ] Verify every enabled navigation route renders a useful implemented screen.
+- [ ] `/dashboard` implemented in shell.
+- [ ] `/events/feed` implemented.
+- [ ] `/events/notifications` implemented.
+- [ ] `/fleet/overview` implemented.
+- [ ] `/fleet/aircraft` currently maps to FleetMarketView same as overview? verify product difference.
+- [ ] `/airports/routes` implemented by Network Planner.
+- [ ] `/operations/live-flights` implemented by Fleet Ops OperationsRouter.
+- [ ] `/operations/schedule` implemented by Fleet Ops OperationsRouter.
+- [ ] `/finances/overview` implemented.
+- [ ] `/finances/profit` implemented but not MVP-quality due raw ids.
+- [ ] `/finances/costs` appears to reuse recent/costs view minimally; needs real costs breakdown.
+- [ ] `/staff/overview` implemented.
+- [ ] `/settings/system` implemented.
+- [ ] `/admin/*` implemented with guards.
+- [ ] Disabled pages should remain disabled.
+- [ ] Direct navigation to disabled pages should show future state if route exists.
+- [ ] `/fleet/orders` disabled but route may still resolve to fleet remote if typed manually.
+- [ ] Fleet remote must show localized future state for disabled fleet paths.
+- [ ] `/fleet/configurations` future state.
+- [ ] `/fleet/maintenance` future state.
+- [ ] `/airports/hubs` disabled but user asked hubs on map; clarify: hub/base display on dashboard, full hubs page later.
+- [ ] `/airports/fees-slots` future state.
+- [ ] `/airports/contracts` future state.
+- [ ] `/operations/fuel` future state.
+- [ ] `/operations/ground-services` future state.
+- [ ] `/operations/research` future state.
+- [ ] `/finances/loans-leasing` future state.
+- [ ] `/finances/stock-market` currently disabled in nav but finance remote can render stock-market if direct; keep localized future state.
+- [ ] `/staff/crew` future state.
+- [ ] `/staff/ground-staff` future state.
+- [ ] `/staff/rosters` future state.
+- [ ] `/staff/training` future state.
+- [ ] `/settings/company` future state.
+- [ ] `/settings/access` future state.
+- [ ] `/settings/notifications` future state.
+- [ ] Future states should not look broken.
+- [ ] Future states should not distract from MVP path.
+
+## 31. P0: backend stability audit - factual findings
+
+- [ ] Backend was checked, not assumed.
+- [ ] Real backend path is `backend/services/*`, not root-level `services/*`.
+- [ ] Gateway config is in `backend/services/api-gateway/internal/config/config.go`.
+- [ ] Gateway auth middleware is in `backend/services/api-gateway/internal/middleware/auth_middleware.go`.
+- [ ] Gateway operations handlers are in `backend/services/api-gateway/internal/handlers/operations_handlers.go`.
+- [ ] Gateway fleet handlers are in `backend/services/api-gateway/internal/handlers/fleet_handlers.go`.
+- [ ] Gateway airline handlers are in `backend/services/api-gateway/internal/handlers/airline_handlers.go`.
+- [ ] Gateway auth handlers are in `backend/services/api-gateway/internal/handlers/auth_handlers.go`.
+- [ ] Shared gRPC-style errors are in `backend/shared/customerrors/errors.go`.
+- [ ] `REQUEST_TIMEOUT_SECONDS` defaults to `3` seconds in gateway config.
+- [ ] Most gateway handlers create `context.WithTimeout(..., h.config.RequestTimeoutSeconds)`.
+- [ ] Auth middleware also creates `context.WithTimeout(..., config.RequestTimeoutSeconds)`.
+- [ ] BFF default backend timeout is `10_000` ms in `frontend/bff/src/backend-http.ts`.
+- [ ] BFF default backend max attempts is `3` in `frontend/bff/src/backend-http.ts`.
+- [ ] Browser SDK default axios timeout is `20_000` ms in `frontend/packages/game-sdk/src/api/createApiClient.ts`.
+- [ ] These timeout budgets are inconsistent.
+- [ ] Gateway can fail a domain gRPC call at 3s.
+- [ ] BFF can continue holding the HTTP request for up to 10s per attempt.
+- [ ] BFF can retry GET requests after a backend timeout/failure.
+- [ ] Browser can keep the UI pending for up to 20s.
+- [ ] This directly explains requests visibly waiting more than 2s.
+- [ ] This directly explains loader inconsistency and long pending states in the UI.
+- [ ] This directly explains why a user can click twice before the first request resolves.
+- [ ] This directly explains why the backend can get duplicate read bursts.
+- [ ] This directly explains why the BFF must have request coalescing and shorter frontend-facing budgets.
+- [ ] Auth middleware verifies JWT locally first.
+- [ ] Auth middleware then calls auth-service gRPC `VerifyToken` on every protected request.
+- [ ] If auth-service gRPC verification fails, middleware returns HTTP 500.
+- [ ] Auth-service unavailable should not be a generic 500.
+- [ ] Auth-service deadline should not be a generic 500.
+- [ ] Auth-service transient failure should be HTTP 503 with retryable metadata.
+- [ ] Invalid or expired token should remain HTTP 401.
+- [ ] Forbidden role should remain HTTP 403.
+- [ ] Current auth middleware makes every protected endpoint depend synchronously on auth-service.
+- [ ] Current auth middleware can turn any BFF request burst into repeated auth-service gRPC calls.
+- [ ] Current auth middleware is a likely root cause of "500 every two requests" under unstable auth-service or slow DB.
+- [ ] Gateway handlers often use `errors.Is(err, customerrors.Err...)`.
+- [ ] The shared custom errors are gRPC status errors.
+- [ ] Across a gRPC boundary, matching by `errors.Is` is not a reliable handler contract.
+- [ ] Handler code should map by `status.Code(err)` and known status details/message.
+- [ ] If `errors.Is` does not match, handlers fall through to generic 500.
+- [ ] This can turn normal domain errors into 500.
+- [ ] Examples of normal domain errors that can become 500: not found, conflict, invalid relation, already exists.
+- [ ] Read endpoints in operations handlers map any list gRPC error to 500.
+- [ ] `ListCountries` maps any gRPC error to 500.
+- [ ] `ListRegions` maps any gRPC error to 500.
+- [ ] `ListRegionLinks` maps any gRPC error to 500.
+- [ ] `ListAirports` maps any gRPC error to 500.
+- [ ] Fleet read endpoints also map many errors to 500.
+- [ ] `GetAircraft` maps any gRPC error to 500.
+- [ ] `ListAircrafts` maps any gRPC error to 500.
+- [ ] `ListAircraftTypes` maps any gRPC error to 500.
+- [ ] `UpdateAircraft` only maps tail-number conflict; not found/unavailable/deadline are likely 500.
+- [ ] `CreateRegion` has a missing `return` after `ErrNoSuchCountry` response.
+- [ ] `CreateRegionLink` has a missing `return` after `ErrRegionLinkConflict` response.
+- [ ] Missing `return` after writing a response can produce double-write behavior and misleading 500 logging.
+- [ ] Missing `return` can also make the client see a wrong final status depending on Gin behavior.
+- [ ] These two missing returns are minimal backend bugs and should be fixed.
+- [ ] Search should be repeated for every `c.Status(...)` and `c.JSON(...)` inside error branches.
+- [ ] Gateway gRPC clients should be checked for connection behavior.
+- [ ] Gateway currently uses simple gRPC clients without a visible cross-cutting retry/health/keepalive strategy.
+- [ ] Do not solve backend stability by moving new gameplay logic into backend.
+- [ ] Backend changes should focus on gateway correctness, timeout budgets, auth/session stability, and status mapping.
+- [ ] BFF remains the place for new MVP aggregation and gameplay glue.
+
+## 32. P0: backend minimal-fix policy
+
+- [ ] Backend work should be intentionally narrow.
+- [ ] Do not redesign service boundaries.
+- [ ] Do not move BFF overlay logic into Go services for MVP.
+- [ ] Do not add new domain storage to backend unless BFF cannot reliably own it.
+- [ ] Do not add route planning logic to backend for MVP.
+- [ ] Do not add operations scheduling logic to backend for MVP.
+- [ ] Do not add finance ledger logic to backend for MVP.
+- [ ] Do not add event template logic to backend for MVP.
+- [ ] Keep backend changes inside api-gateway where possible.
+- [ ] Prefer centralized helpers over editing every handler by hand with divergent behavior.
+- [ ] Prefer status-code correctness over feature expansion.
+- [ ] Prefer removing unnecessary per-request backend load over increasing timeouts.
+- [ ] Prefer returning stable 503/504 to hiding instability as 500.
+- [ ] Preserve existing protobuf contracts unless absolutely necessary.
+- [ ] Preserve existing service APIs unless a tiny read/session endpoint prevents many duplicated calls.
+- [ ] Any backend change must have a narrow test or a repeatable manual verification.
+- [ ] Backend success criterion is fewer 500s and clearer failures, not more backend functionality.
+- [ ] BFF success criterion is fewer backend calls per screen, faster first paint, and graceful degradation.
+
+## 33. P0: gateway error mapping helper
+
+- [ ] Add one shared gateway error mapper.
+- [ ] Suggested location: `backend/services/api-gateway/internal/handlers/errors.go`.
+- [ ] Mapper should accept `*gin.Context`, `error`, optional operation name, and optional domain override map.
+- [ ] Mapper should inspect `status.Code(err)`.
+- [ ] Mapper should map `codes.InvalidArgument` to HTTP 400 or 422.
+- [ ] Mapper should map `codes.NotFound` to HTTP 404.
+- [ ] Mapper should map `codes.AlreadyExists` to HTTP 409.
+- [ ] Mapper should map `codes.FailedPrecondition` to HTTP 409 or 412 depending on operation.
+- [ ] Mapper should map `codes.PermissionDenied` to HTTP 403.
+- [ ] Mapper should map `codes.Unauthenticated` to HTTP 401.
+- [ ] Mapper should map `codes.DeadlineExceeded` to HTTP 504.
+- [ ] Mapper should map `codes.Unavailable` to HTTP 503.
+- [ ] Mapper should map `codes.Canceled` to HTTP 499-like behavior if supported, otherwise 499 is non-standard and use 408 only if client cancel is clearly detected.
+- [ ] Mapper should map unknown/internal to HTTP 500.
+- [ ] Mapper should log operation, gRPC code, sanitized message, and request path.
+- [ ] Mapper should not log bearer tokens.
+- [ ] Mapper should not log full request bodies with secrets.
+- [ ] Mapper should return stable JSON for client-visible errors.
+- [ ] Stable JSON should include `error.code`.
+- [ ] Stable JSON should include `error.message`.
+- [ ] Stable JSON should include `retryable`.
+- [ ] Stable JSON should include `request_id` when request id middleware exists.
+- [ ] Stable JSON should include `source: "backend"` or equivalent only if useful for BFF normalization.
+- [ ] Mapper should keep current `dto.ErrorResponse{ErrorCode: n}` compatibility where admin CRUD already expects numeric codes.
+- [ ] If keeping numeric `ErrorCode`, wrap it in a consistent shape at BFF boundary.
+- [ ] Handlers should stop open-coding `c.Status(http.StatusInternalServerError)` for gRPC errors.
+- [ ] Handlers should use mapper for every gRPC call failure.
+- [ ] Existing user-facing statuses should be preserved: validation 400, unauthorized 401, forbidden 403, conflict 409, not found 404.
+- [ ] Existing undocumented 500s should be replaced with specific 503/504/404/409 where possible.
+- [ ] BFF should then normalize gateway error JSON into its own app error contract.
+- [ ] Acceptance: stopping operations-service makes `/airports` return 503 or 504, not 500.
+- [ ] Acceptance: requesting missing aircraft returns 404, not 500.
+- [ ] Acceptance: duplicate tail number returns 409, not 500.
+- [ ] Acceptance: expired token returns 401, not 500.
+- [ ] Acceptance: auth-service unavailable returns 503 on protected endpoints, not 500.
+
+## 34. P0: replace unreliable `errors.Is` usage after gRPC calls
+
+- [ ] Audit all gateway handlers for `errors.Is(err, customerrors.Err...)`.
+- [ ] Replace post-gRPC domain checks with `status.Code(err)` and/or typed status details.
+- [ ] If proto status details are unavailable, map current shared custom error messages centrally as a temporary compatibility layer.
+- [ ] Do not rely on direct error identity after the gRPC transport boundary.
+- [ ] In `auth_handlers.go`, convert login/register/refresh domain errors by gRPC code.
+- [ ] In `airline_handlers.go`, convert airline not found/conflict/user not found/airport not found by gRPC code.
+- [ ] In `fleet_handlers.go`, convert aircraft type not found, aircraft not found, tail conflict, unavailable, deadline.
+- [ ] In `operations_handlers.go`, convert country/region/airport not found, dependency conflict, ISO/local/IATA/ICAO conflicts.
+- [ ] Keep local `ShouldBindJSON` validation as direct HTTP 400 before gRPC call.
+- [ ] Keep admin role checks in middleware, not in handlers.
+- [ ] Add a test that a service returning `codes.NotFound` becomes HTTP 404.
+- [ ] Add a test that a service returning `codes.AlreadyExists` becomes HTTP 409.
+- [ ] Add a test that a service returning `codes.Unavailable` becomes HTTP 503.
+- [ ] Add a test that a service returning `codes.DeadlineExceeded` becomes HTTP 504.
+- [ ] Add a test that unknown status remains HTTP 500.
+- [ ] Ensure logs show gRPC code for every mapped error.
+- [ ] Ensure BFF can distinguish retryable from user-fixable errors.
+
+## 35. P0: fix known gateway missing-return bugs
+
+- [ ] Fix `CreateRegion` in `backend/services/api-gateway/internal/handlers/operations_handlers.go`.
+- [ ] Add `return` immediately after `c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 2})`.
+- [ ] Fix `CreateRegionLink` in `backend/services/api-gateway/internal/handlers/operations_handlers.go`.
+- [ ] Add `return` immediately after `c.Status(http.StatusConflict)`.
+- [ ] Search for all error branches where a response is written without `return`.
+- [ ] Pattern to search: `c.Status(` followed by no immediate `return` inside an error branch.
+- [ ] Pattern to search: `c.JSON(` followed by no immediate `return` inside an error branch.
+- [ ] Pattern to search: `c.Abort()` followed by no immediate `return`.
+- [ ] Review all hits manually; not every handler branch needs a return, but all terminal error branches should.
+- [ ] Add regression tests for `CreateRegion` country-not-found path.
+- [ ] Add regression tests for `CreateRegionLink` conflict path.
+- [ ] Acceptance: these paths send one response and do not log a fake internal error.
+
+## 36. P0: auth middleware stability
+
+- [ ] Keep local JWT signature verification as the first and fastest auth check.
+- [ ] Do not call auth-service gRPC if local JWT verification fails.
+- [ ] Do not return 500 for auth-service gRPC unavailability.
+- [ ] Map auth-service `codes.Unavailable` to HTTP 503.
+- [ ] Map auth-service `codes.DeadlineExceeded` to HTTP 503 or 504.
+- [ ] Prefer 503 for auth dependency unavailable; prefer 504 for dependency timed out if the client should retry later.
+- [ ] Return stable retryable JSON for auth dependency failure.
+- [ ] Keep invalid token response as 401.
+- [ ] Keep non-admin response as 403.
+- [ ] Add a short in-memory positive token verification cache in gateway if acceptable.
+- [ ] Cache key should be token hash, not raw token string.
+- [ ] Cache value should include user id, role, and expiration.
+- [ ] Cache TTL should be much shorter than token lifetime.
+- [ ] Suggested TTL: 15-60 seconds for MVP.
+- [ ] Do not cache negative auth-service failures for long.
+- [ ] Negative cache for invalid token can be 5-10 seconds if needed.
+- [ ] Cache must not outlive JWT `exp`.
+- [ ] Cache should be bounded to avoid memory growth.
+- [ ] Cache should be safe under concurrent requests.
+- [ ] Cache should reduce BFF burst load from dashboard, map, fleet, finance, events.
+- [ ] Alternative if cache is not desired: gateway trusts local JWT for user id/role and auth-service verification is moved to explicit session endpoints.
+- [ ] If backend team prefers strict DB verification, still fix 500 mapping first.
+- [ ] Add test: valid JWT + auth-service unavailable returns 503, not 500.
+- [ ] Add test: invalid JWT returns 401 without calling auth-service.
+- [ ] Add test: second request with same valid token hits cache and does not call auth-service.
+- [ ] Add test: admin middleware still blocks non-admin role.
+
+## 37. P0: align timeout and retry budgets across browser, BFF, and gateway
+
+- [ ] Define one request-budget policy for MVP.
+- [ ] Browser interactive requests should fail fast enough to show a useful state.
+- [ ] BFF should not keep user-facing requests pending for 10 seconds by default.
+- [ ] Gateway should not be shorter than BFF per-attempt budget in a way that causes needless retry churn.
+- [ ] For read aggregation, BFF should use per-call timeouts of 1.5-3 seconds depending on data criticality.
+- [ ] For write commands, BFF should use one attempt by default.
+- [ ] For writes, do not automatically retry without idempotency key.
+- [ ] For GET reads, BFF may retry once on `503`, `504`, network reset, or abort.
+- [ ] For GET reads, BFF should use jittered backoff under 300ms for MVP.
+- [ ] For GET reads, max attempts should usually be 2, not 3.
+- [ ] For dashboard snapshot, individual backend calls should have separate budgets.
+- [ ] For dashboard snapshot, critical call `/airline/me` should be time-boxed.
+- [ ] For dashboard snapshot, world-data calls can use stale cache when backend is slow.
+- [ ] For dashboard snapshot, route/operations/finance overlays should return even if backend world read fails.
+- [ ] For browser SDK, default timeout should be lower for MVP screens or callers should pass lower timeout.
+- [ ] Suggested browser default: 8-10 seconds if BFF itself fails fast with useful JSON.
+- [ ] Suggested BFF backend default: 2.5-4 seconds, with endpoint-specific overrides.
+- [ ] Suggested gateway default: 4-5 seconds only if downstream services normally complete under 1s.
+- [ ] Do not solve slow UI by simply raising gateway timeout.
+- [ ] Raising timeouts can hide service slowness and keep loaders stuck longer.
+- [ ] Add BFF logs for elapsed backend time per call.
+- [ ] Add BFF response metadata in dev mode: `backend_call_count`, `elapsed_ms`, `degraded`.
+- [ ] Add gateway logs for elapsed gRPC call time.
+- [ ] Acceptance: opening dashboard performs bounded backend calls and returns in under 2s on warm local stack.
+- [ ] Acceptance: backend dependency failure returns degraded/stale state where possible.
+- [ ] Acceptance: write failures show result state within 3s.
+- [ ] Acceptance: no user-facing operation waits 20s silently.
+
+## 38. P0: reduce backend request multiplier in BFF
+
+- [ ] Identify every BFF endpoint that calls `requireValidUserToken`.
+- [ ] Identify every BFF endpoint that then also calls `/airline/me`.
+- [ ] Avoid validating token through `/airline/me` and then requesting `/airline/me` again in the same request.
+- [ ] Introduce request-local auth context.
+- [ ] Auth context should include authorization header.
+- [ ] Auth context should include user id if available.
+- [ ] Auth context should include role/capabilities if available.
+- [ ] Auth context should include airline id if already fetched.
+- [ ] Auth context should include base airport id if already fetched.
+- [ ] `requireValidUserToken` should not fetch full airline data unless the endpoint needs airline data.
+- [ ] Create `requireSession` for token validation only.
+- [ ] Create `requireAirlineContext` for endpoints that need airline id/base.
+- [ ] Cache `/airline/me` per request.
+- [ ] Cache `/airline/me` briefly per token in BFF if acceptable.
+- [ ] Suggested BFF `/airline/me` cache TTL: 5-15 seconds.
+- [ ] Cache must be invalidated after onboarding airline creation.
+- [ ] Cache must be invalidated after settings/company future edits.
+- [ ] Dashboard snapshot should call `/airline/me` once.
+- [ ] Fleet snapshot should not duplicate airline and aircraft calls already returned by game snapshot if the shell has fresh snapshot.
+- [ ] Map state should be derived from dashboard snapshot when possible.
+- [ ] Finance should not fetch backend balance separately if dashboard snapshot already includes it and no fresh write happened.
+- [ ] Fleet market should not load when user opens operations route.
+- [ ] Network route create should not trigger full market reload.
+- [ ] After successful fleet purchase, invalidate only affected slices: fleet, finance, map, dashboard.
+- [ ] After successful route create, invalidate only affected slices: routes, map, dashboard, operations options.
+- [ ] After schedule activation, invalidate operations, map flights, finance forecast, dashboard.
+- [ ] Add request coalescing for identical GETs.
+- [ ] Coalescing key should include method, path, token scope, and query.
+- [ ] Coalescing should apply to `/airports`, `/regions`, `/region-links`, `/aircraft-types`, `/airline/me`, `/aircrafts`.
+- [ ] Coalescing should not apply to non-idempotent writes.
+- [ ] Coalescing should expose one shared promise to concurrent requests.
+- [ ] Coalescing should clear on resolution or failure.
+- [ ] Coalescing should avoid thundering herd when dashboard, fleet, map, and finance mount together.
+- [ ] Add stale cache for world data.
+- [ ] World data cache should include countries, regions, region links, airports, aircraft types.
+- [ ] World data cache should be keyed by backend base URL and admin/user scope if needed.
+- [ ] World data cache TTL can be 30-120 seconds for MVP.
+- [ ] Admin CRUD/import must invalidate world data cache.
+- [ ] BFF read endpoints should return stale world data with `degraded: true` when backend is temporarily unavailable.
+- [ ] UI should show compact degraded warning only where relevant, not global red noise.
+- [ ] Acceptance: initial dashboard + remotes no longer create duplicate `/airline/me` bursts.
+- [ ] Acceptance: opening `/operations/live-flights` does not call fleet market endpoint.
+- [ ] Acceptance: route create does not cause unrelated market calls.
+- [ ] Acceptance: backend call count is visible in dev logs and can be compared before/after.
+
+## 39. P0: BFF durable overlay storage reliability
+
+- [ ] BFF overlay storage is a core MVP backend substitute.
+- [ ] It must be reliable enough for local and demo play.
+- [ ] Existing temp-file rename pattern is good but incomplete.
+- [ ] Add per-file serialized write queues.
+- [ ] Routes overlay storage needs write serialization.
+- [ ] Operations overlay storage needs write serialization.
+- [ ] Finance ledger storage needs write serialization.
+- [ ] Events storage needs write serialization.
+- [ ] Admin audit storage needs write serialization.
+- [ ] Serialization should prevent lost updates when two UI actions hit the same file concurrently.
+- [ ] Reads during writes should either wait or read the last complete file.
+- [ ] Writes should never leave partial JSON as the canonical file.
+- [ ] Atomic rename should remain.
+- [ ] Add JSON schema version to each overlay file.
+- [ ] Add migration function for each overlay file.
+- [ ] Add corruption recovery path.
+- [ ] If JSON parse fails, move corrupt file to `.corrupt.<timestamp>` and start empty only if safe.
+- [ ] Do not silently drop user state without logging.
+- [ ] Add dev-visible warning when overlay state was recovered.
+- [ ] Add write revision/version field.
+- [ ] For mutating operations, compare expected revision where practical.
+- [ ] Prevent stale route create confirmation from overwriting newer routes.
+- [ ] Prevent stale schedule activation from creating duplicate flights.
+- [ ] Prevent duplicate finance ledger entries for the same completed flight.
+- [ ] Prevent duplicate event notifications for the same source event.
+- [ ] Add idempotency key support for BFF writes.
+- [ ] Purchase aircraft write should use idempotency key if backend supports it; otherwise BFF should not retry.
+- [ ] Route create should use BFF idempotency key.
+- [ ] Schedule activation should use BFF idempotency key.
+- [ ] Flight completion should use BFF idempotency key.
+- [ ] Event resolve/dismiss should use deterministic state update.
+- [ ] Acceptance: double-clicking route create creates one route.
+- [ ] Acceptance: double-clicking schedule activation creates one schedule/flight set.
+- [ ] Acceptance: simultaneous dashboard refresh and finance refresh does not corrupt ledger JSON.
+- [ ] Acceptance: killing BFF during write does not leave unreadable canonical state.
+
+## 40. P1: backend observability for MVP debugging
+
+- [ ] Add request id middleware in api-gateway if missing.
+- [ ] Propagate request id from browser to BFF to gateway where possible.
+- [ ] BFF should create request id if browser does not provide one.
+- [ ] Gateway should log request id, route, status, elapsed.
+- [ ] Gateway should log gRPC target service, method, code, elapsed.
+- [ ] BFF should log backend path, status, elapsed, attempt, retryable.
+- [ ] BFF should log aggregate snapshot elapsed and degraded slices.
+- [ ] Browser dev mode should expose compact diagnostics only in console, not UI clutter.
+- [ ] Do not show raw stack traces to users.
+- [ ] Do not show raw gRPC messages to users.
+- [ ] Do not show raw backend labels like "Backend balance" in production UI.
+- [ ] Add health check for BFF.
+- [ ] Add readiness check for BFF dependencies.
+- [ ] Add gateway readiness endpoint if missing.
+- [ ] Admin readiness screen should consume BFF readiness normalization.
+- [ ] Readiness statuses should distinguish backend unavailable, auth unavailable, world-data incomplete, overlay storage unavailable.
+- [ ] Acceptance: when a 500 happens, logs show one request id across BFF and gateway.
+- [ ] Acceptance: when gRPC deadline happens, status is visible as 504/dependency timeout.
+- [ ] Acceptance: when auth-service is down, user sees session/backend unavailable, not random 500.
+
+## 41. P1: backend read-only data access for BFF
+
+- [ ] Current BFF uses admin token for some world data reads.
+- [ ] Admin token use should be minimized and explicit.
+- [ ] World data reads needed by normal gameplay should be accessible to authenticated users.
+- [ ] Countries read should be user-accessible.
+- [ ] Regions read should be user-accessible.
+- [ ] Region links read should be user-accessible.
+- [ ] Airports read should be user-accessible.
+- [ ] Aircraft types read should be user-accessible.
+- [ ] Mutations should remain admin-only.
+- [ ] Import should remain admin-only.
+- [ ] Admin CRUD should remain admin-only.
+- [ ] If backend routes already allow authenticated read, BFF should stop using admin token there.
+- [ ] If backend routes require admin for read, add minimal gateway route/middleware exception for read-only collections.
+- [ ] Avoid new backend business logic.
+- [ ] Avoid exposing write endpoints to normal users.
+- [ ] Acceptance: normal user can load dashboard map without admin token.
+- [ ] Acceptance: normal user can load fleet market without admin token.
+- [ ] Acceptance: normal user can load route planner data without admin token.
+- [ ] Acceptance: admin token is only used for admin/import/readiness tasks that truly need it.
+
+## 42. P0: explicit old-section gap audit
+
+- [ ] This section is a cross-check against sections 1-10 of `TODO_MVP.md`.
+- [ ] It should stay in the TODO until every old MVP promise is either implemented or consciously deferred.
+- [ ] Do not assume a section is complete because a screen exists.
+- [ ] Verify behavior in browser.
+- [ ] Verify BFF calls.
+- [ ] Verify tests.
+- [ ] Verify i18n.
+- [ ] Verify loading/error/empty states.
+- [ ] Verify degraded backend behavior.
+- [ ] Verify state refresh after writes.
+
+## 43. Section 1 gap audit - auth, onboarding, session
+
+- [ ] Confirm login flow uses BFF, not direct gateway.
+- [ ] Confirm register flow uses BFF, not direct gateway.
+- [ ] Confirm refresh-token flow works after access token expiry.
+- [ ] Confirm logout clears all token state.
+- [ ] Confirm expired token redirects or shows session expired consistently.
+- [ ] Confirm invalid token does not trigger backend request storms.
+- [ ] Confirm onboarding status uses one BFF endpoint.
+- [ ] Confirm onboarding status does not duplicate `/airline/me` and `/aircrafts` unnecessarily.
+- [ ] Confirm onboarding can create airline when base airport is selected.
+- [ ] Confirm onboarding base airport picker uses real airports.
+- [ ] Confirm base airport picker has search.
+- [ ] Confirm base airport picker has country/region labels.
+- [ ] Confirm base airport picker handles no data.
+- [ ] Confirm base airport picker handles backend unavailable.
+- [ ] Confirm onboarding create errors are localized.
+- [ ] Confirm airline name conflict is shown as a user-fixable conflict.
+- [ ] Confirm IATA/ICAO conflict is shown as a user-fixable conflict.
+- [ ] Confirm missing airport is shown as stale airport data, not 500.
+- [ ] Confirm onboarding success invalidates session/airline cache.
+- [ ] Confirm shell routes require authenticated user after login.
+- [ ] Confirm shell does not flash wrong route before auth state resolves.
+- [ ] Confirm admin capability is not hardcoded by route name.
+- [ ] Confirm admin capability uses role/capability probe.
+- [ ] Confirm non-admin direct admin URL shows access denied, not broken page.
+- [ ] Confirm auth loading uses shared loader.
+- [ ] Confirm auth errors use shared error panel.
+- [ ] Confirm auth form buttons use shared pending state.
+- [ ] Confirm auth form field validation is localized.
+- [ ] Confirm auth form server errors are localized.
+- [ ] Confirm auth form does not show raw gateway/BFF error text.
+- [ ] Confirm session errors do not show repeated toasts on every failed request.
+- [ ] Confirm BFF exposes a single session response useful to shell.
+- [ ] If missing, add `GET /api/session` or equivalent in BFF.
+- [ ] Session response should include user id.
+- [ ] Session response should include role.
+- [ ] Session response should include airline id when exists.
+- [ ] Session response should include base airport id when exists.
+- [ ] Session response should include capabilities.
+- [ ] Session response should include degraded/backend status.
+- [ ] Session response should not fetch world data.
+- [ ] Session response should not block the whole app on non-critical services.
+
+## 44. Section 2 gap audit - shell dashboard
+
+- [ ] Dashboard exists but must be re-centered around the full-screen map.
+- [ ] Dashboard should not feel like a generic card dashboard.
+- [ ] Dashboard should be the main operational cockpit.
+- [ ] First viewport should show map as the dominant element.
+- [ ] Supporting KPI panes should be subordinate to map.
+- [ ] Shell max-width dashboard layout should be removed or bypassed for main map screen.
+- [ ] Current map block height around `28rem` is insufficient.
+- [ ] Main map should fill available space below topbar.
+- [ ] Main map should preserve bottom/side content hints where needed.
+- [ ] Topbar status should stop showing static `14:36 UTC · 03.12.2025`.
+- [ ] Topbar date/time should be real app time, simulation time, or removed until implemented.
+- [ ] Topbar money formatting should follow selected locale.
+- [ ] Topbar should not use hardcoded `Intl.NumberFormat("en", ...)`.
+- [ ] Topbar should not show stale values after purchase/route/schedule actions.
+- [ ] Dashboard should listen to `map:network-refresh-requested`.
+- [ ] Dashboard should listen to route/fleet/operations invalidation events consistently.
+- [ ] Dashboard should throttle refresh after multiple events.
+- [ ] Dashboard should show stale cached data while refreshing.
+- [ ] Dashboard should show compact degraded indicator if backend world data is stale.
+- [ ] Dashboard should not block map rendering on finance ledger load.
+- [ ] Dashboard should not block map rendering on events load.
+- [ ] Dashboard should not block map rendering on facilities load.
+- [ ] Dashboard primary CTA should align with current missing step.
+- [ ] If no aircraft, show purchase CTA.
+- [ ] If aircraft but no routes, show route planning CTA.
+- [ ] If routes but no schedules, show schedule CTA.
+- [ ] If schedules but no flights, show operations CTA.
+- [ ] If flights active, show live operations summary.
+- [ ] Dashboard quick cards should use shared card/panel primitives.
+- [ ] Dashboard quick cards should not duplicate map information excessively.
+- [ ] Dashboard should include map filters for hubs/routes/flights.
+- [ ] Dashboard should include selected item drawer for airport/route/flight.
+- [ ] Dashboard should have browser smoke test.
+- [ ] Dashboard should have snapshot transform unit tests.
+- [ ] Dashboard should have degraded backend test.
+
+## 45. Section 3 gap audit - map
+
+- [ ] Map remote currently renders airport points and route lines.
+- [ ] Map does not yet render flights as moving/positioned entities.
+- [ ] Map state contract must include hubs.
+- [ ] Map state contract must include routes.
+- [ ] Map state contract must include active flights.
+- [ ] Map state contract must include selected/focused ids.
+- [ ] Map state contract must include stale/degraded flags.
+- [ ] Hub markers should be visually distinct from generic airports.
+- [ ] Base airport should be visually distinct from non-base hubs.
+- [ ] Route lines should encode active/inactive/planned state.
+- [ ] Flight markers should encode status: scheduled, boarding, airborne, landed, completed, delayed if available.
+- [ ] Flight positions can be approximate linear interpolation for MVP.
+- [ ] Flight positions must be deterministic for same simulation time.
+- [ ] Flight interpolation should use origin/destination coordinates.
+- [ ] Flight interpolation should handle missing coordinates gracefully.
+- [ ] Flight interpolation should clamp before departure and after arrival.
+- [ ] Map tooltips should use localized labels.
+- [ ] Map tooltips should not show raw UUIDs.
+- [ ] Map selection should open a drawer/panel in dashboard.
+- [ ] Airport selection should show airport name, IATA/ICAO, country/region, hub/base status, connected routes.
+- [ ] Route selection should show origin/destination labels, aircraft assignment/schedules if available, profit summary if available.
+- [ ] Flight selection should show flight number/id, route, aircraft, departure/arrival times, current status.
+- [ ] Map refresh should not redraw blank state during pending fetch.
+- [ ] Map should support fit-to-network.
+- [ ] Map should support focus selected item.
+- [ ] Map should support reset view.
+- [ ] Map should be usable with mouse wheel.
+- [ ] Map should be usable on touch screens.
+- [ ] Map should have no overlapping critical UI controls.
+- [ ] Map controls should use shared icon buttons and tooltips.
+- [ ] Map legend should be compact.
+- [ ] Map legend should not be a large explanatory card.
+- [ ] Map empty state should be a map-like empty network, not a generic blank panel.
+- [ ] If no base airline exists, dashboard should route to onboarding instead of showing empty map.
+- [ ] If no routes exist, show base hub and route planning CTA.
+- [ ] If backend world data is unavailable but cached airports exist, show cached map.
+- [ ] If no cached airports exist, show shared error state with retry.
+- [ ] Map tests should verify airports render.
+- [ ] Map tests should verify routes render.
+- [ ] Map tests should verify flights render.
+- [ ] Map tests should verify selected airport event.
+- [ ] Map tests should verify selected route event.
+- [ ] Map tests should verify selected flight event.
+
+## 46. Section 4 gap audit - fleet
+
+- [ ] Fleet remote should not load market on operations routes.
+- [ ] `apps/fleet-ops/src/RemoteApp.vue` currently calls `loadMarket()` on mount.
+- [ ] Split market loading from operations loading.
+- [ ] Only `/fleet/overview` and `/fleet/aircraft` should load market/catalog data.
+- [ ] `/operations/live-flights` should load operations board data.
+- [ ] `/operations/schedule` should load schedule planning data.
+- [ ] Purchase aircraft should have idempotency protection.
+- [ ] Purchase aircraft should disable submit while pending.
+- [ ] Purchase aircraft should show uncertain result if backend times out after command may have succeeded.
+- [ ] Purchase aircraft should refresh fleet, finance, dashboard, and map after success.
+- [ ] Purchase aircraft should emit one notification, not duplicate notifications.
+- [ ] `notification:created` emissions should be consumed by events/notifications state.
+- [ ] Fleet cards should use shared loader and empty state.
+- [ ] Fleet market should have no-aircraft-types state.
+- [ ] Fleet market should have backend-unavailable state.
+- [ ] Fleet market should have filtered-empty state.
+- [ ] Fleet market should hide raw technical ids.
+- [ ] Aircraft detail should show not found as 404 state.
+- [ ] Aircraft detail should show stale data while refreshing.
+- [ ] Aircraft update tail conflict should show localized conflict.
+- [ ] Aircraft update not found should show localized stale state.
+- [ ] Aircraft list should show assigned route/schedule summary.
+- [ ] Aircraft list should show status in consistent chip style.
+- [ ] Aircraft list should not use excessive badges.
+- [ ] Fleet status labels should be shared with operations/finance.
+- [ ] Fleet tests should cover operations route no-market-load.
+- [ ] Fleet tests should cover purchase success invalidations.
+- [ ] Fleet tests should cover purchase timeout/uncertain result.
+- [ ] Fleet tests should cover localized error states.
+
+## 47. Section 5 gap audit - routes/network
+
+- [ ] Network planner exists but needs MVP hardening.
+- [ ] Remove hardcoded visible `Network Planner` badge or convert to proper title pattern.
+- [ ] Replace fallback `Could not load route data.` with localized shared error.
+- [ ] Route opportunities should use real base airport and fleet constraints.
+- [ ] Route opportunities should handle no aircraft.
+- [ ] Route opportunities should handle no airports.
+- [ ] Route opportunities should handle incomplete world data.
+- [ ] Route opportunities should handle backend stale world data.
+- [ ] Route preview should be deterministic for same inputs.
+- [ ] Route preview should have revision or input hash.
+- [ ] If inputs changed after preview, create button should require fresh preview.
+- [ ] Route create should use idempotency key.
+- [ ] Route create should not retry automatically without idempotency.
+- [ ] Route create should detect duplicate route conflict.
+- [ ] Route create should show conflict as user-fixable.
+- [ ] Route create should persist overlay route atomically.
+- [ ] Route create should refresh dashboard map after success.
+- [ ] Route create should refresh schedule options after success.
+- [ ] Route create should not refresh unrelated fleet market.
+- [ ] Route lines should show immediately on map after success.
+- [ ] Route labels should use airport codes/names, not raw ids.
+- [ ] Route list should show origin/destination names.
+- [ ] Route list should show distance/demand/forecast.
+- [ ] Route list should show schedule count if available.
+- [ ] Route list should show profit status if finance has data.
+- [ ] Route planner filters should not destroy selected preview silently.
+- [ ] Route planner should have accessible keyboard flow.
+- [ ] Route BFF storage should serialize writes.
+- [ ] Route BFF storage should expose route revision.
+- [ ] Route tests should cover stale preview rejection.
+- [ ] Route tests should cover duplicate create.
+- [ ] Route tests should cover map invalidation event.
+
+## 48. Section 6 gap audit - operations/schedule/flights
+
+- [ ] Operations planner exists but needs deterministic stable behavior.
+- [ ] Schedule options should use route labels.
+- [ ] Schedule options should filter compatible aircraft.
+- [ ] Schedule preview should detect aircraft conflicts.
+- [ ] Schedule preview should detect route conflicts.
+- [ ] Schedule preview should detect slot/night restrictions if facilities affect them.
+- [ ] Schedule preview should show warnings separately from blockers.
+- [ ] Schedule preview should not create side effects.
+- [ ] Schedule activation should use idempotency key.
+- [ ] Schedule activation should prevent duplicate schedules on double click.
+- [ ] Schedule activation should persist stable schedule id.
+- [ ] Flight generation should use deterministic stable flight ids.
+- [ ] Current `buildStoredFlight` uses `crypto.randomUUID()` for flight `id`; audit if this causes duplicate flights on regeneration.
+- [ ] If regenerated from same schedule/time, flight id should be derived from schedule id + leg + departure time.
+- [ ] `schedule_id` should consistently refer to persisted schedule id, not temporary preview key.
+- [ ] Flight board should not depend on fleet market load.
+- [ ] Flight board should show active flights from BFF operations storage.
+- [ ] Flight board should group by status.
+- [ ] Flight board should show route labels.
+- [ ] Flight board should show aircraft tail number/model.
+- [ ] Flight board should show localized times.
+- [ ] Flight board should have filters.
+- [ ] Flight completion should be clearly dev-only if manual completion remains.
+- [ ] Flight completion should be idempotent.
+- [ ] Completed flight should generate finance ledger entry exactly once.
+- [ ] Completed flight should generate event notification exactly once if applicable.
+- [ ] Operations should emit map refresh after flight status changes.
+- [ ] Map should show active flights after schedule activation.
+- [ ] Operations tests should cover conflict detection.
+- [ ] Operations tests should cover activation idempotency.
+- [ ] Operations tests should cover deterministic flight ids.
+- [ ] Operations tests should cover finance ledger once-only integration.
+- [ ] Operations tests should cover map flight state generation.
+
+## 49. Section 7 gap audit - finance
+
+- [ ] Finance overview exists but still exposes backend terminology.
+- [ ] Replace `Backend balance` / `Баланс backend` with product language.
+- [ ] Suggested label: current balance / текущий баланс.
+- [ ] Route profitability should not show sliced raw airport ids.
+- [ ] Route profitability should use route labels from airports index.
+- [ ] Finance ledger should be resilient to duplicate completed-flight events.
+- [ ] Finance ledger should have stable transaction ids for generated entries.
+- [ ] Finance ledger should store source id.
+- [ ] Finance ledger should store source type.
+- [ ] Finance ledger should store idempotency key.
+- [ ] Finance ledger should not recalculate destructive entries on every read.
+- [ ] Finance overview should combine backend balance with BFF ledger clearly.
+- [ ] Finance should explain pending/estimated values through UI labels, not dev terms.
+- [ ] Costs breakdown route should be real enough for MVP.
+- [ ] Costs breakdown should separate fuel, maintenance, fees, lease, staff if data exists.
+- [ ] Costs breakdown should show estimated/unavailable where data missing.
+- [ ] Profit page should show no-completed-flights state.
+- [ ] Profit page should show insufficient data state.
+- [ ] Finance should not block dashboard map.
+- [ ] Finance should use stale cached ledger if backend is down.
+- [ ] Finance should refresh after aircraft purchase.
+- [ ] Finance should refresh after flight completion.
+- [ ] Finance should refresh after route/schedule changes only where forecast changes.
+- [ ] Finance tests should cover labels.
+- [ ] Finance tests should cover duplicate ledger prevention.
+- [ ] Finance tests should cover route label hydration.
+- [ ] Finance tests should cover backend unavailable graceful state.
+
+## 50. Section 8 gap audit - events and notifications
+
+- [ ] Events feed exists but needs product-quality event text.
+- [ ] Do not build event messages by joining raw params.
+- [ ] Create localized event templates in BFF or shared frontend dictionary.
+- [ ] Templates should cover aircraft purchase.
+- [ ] Templates should cover route created.
+- [ ] Templates should cover schedule activated.
+- [ ] Templates should cover flight completed.
+- [ ] Templates should cover finance balance changes.
+- [ ] Templates should cover facility slot/night warnings.
+- [ ] Templates should cover backend degraded state if shown as event.
+- [ ] Event severity should be normalized.
+- [ ] Event category should be normalized.
+- [ ] Event timestamps should use locale formatting.
+- [ ] Events should not show raw ids unless inside debug drawer.
+- [ ] Notifications should consume `notification:created` events from remotes.
+- [ ] Notifications should persist or intentionally be ephemeral with clear contract.
+- [ ] If persisted, BFF notifications storage should serialize writes.
+- [ ] If ephemeral, shell should own in-memory notification queue and remotes should only emit commands.
+- [ ] Notification resolve/dismiss should be idempotent.
+- [ ] Events feed filters should have empty state.
+- [ ] Events feed should not show too many badges.
+- [ ] Event cards should use shared item/list primitives.
+- [ ] Event detail should show affected route/aircraft/flight labels.
+- [ ] Event tests should cover localization.
+- [ ] Event tests should cover notification event bus integration.
+- [ ] Event tests should cover duplicate prevention.
+
+## 51. Section 9 gap audit - facilities and staff
+
+- [ ] Facilities screen exists but needs gameplay integration audit.
+- [ ] Base airport facilities should reflect selected airline base.
+- [ ] Gate/slot capacity should affect schedule warnings/blockers consistently.
+- [ ] Night restrictions should affect schedule warnings/blockers consistently.
+- [ ] Maintenance/support capacity should affect fleet/operations status if used.
+- [ ] Staff overview should not imply implemented deep staff mechanics if not present.
+- [ ] Facilities UI should use real units and localized labels.
+- [ ] Facilities should not show unexplained coefficients.
+- [ ] Facilities should not show raw backend ids.
+- [ ] Facilities should have no-base state.
+- [ ] Facilities should have incomplete-world-data state.
+- [ ] Facilities should have no-schedules state.
+- [ ] Facilities should have no-fleet state.
+- [ ] Facilities should have backend degraded state.
+- [ ] Facilities should refresh after base airline creation.
+- [ ] Facilities should refresh after route/schedule changes if capacity usage changes.
+- [ ] Schedule planner should consume facilities warnings from one BFF source.
+- [ ] Do not duplicate slot/night calculations separately in UI and BFF.
+- [ ] Facilities tests should cover localized labels.
+- [ ] Facilities tests should cover no-base state.
+- [ ] Facilities tests should cover schedule warning integration.
+
+## 52. Section 10 gap audit - admin/import/knowledge base
+
+- [ ] Admin is enabled only for capability-authorized users.
+- [ ] Admin readiness should not require more backend calls than necessary.
+- [ ] Admin readiness should use BFF coalesced world data reads.
+- [ ] Admin readiness should show dependency status clearly.
+- [ ] Admin CRUD should use gateway mapped errors.
+- [ ] Admin CRUD conflicts should show 409, not generic 500.
+- [ ] Admin CRUD not found should show 404, not generic 500.
+- [ ] Admin CRUD dependency conflicts should show 409.
+- [ ] Admin CRUD validation should show field-level or actionable messages.
+- [ ] Import jobs should show running/succeeded/failed states.
+- [ ] Import job error output should be summarized and expandable.
+- [ ] Import should not block normal user world-data reads.
+- [ ] Import success should invalidate BFF world-data cache.
+- [ ] Import failure should not poison world-data cache.
+- [ ] Knowledge base exists as markdown docs.
+- [ ] Knowledge base must be surfaced in the app if section 11 expects user-facing help.
+- [ ] Knowledge base UI should support article list.
+- [ ] Knowledge base UI should support search.
+- [ ] Knowledge base UI should support localized article titles.
+- [ ] Knowledge base UI should support article not found state.
+- [ ] Knowledge base UI should not require backend.
+- [ ] Knowledge base route should be enabled only if implemented.
+- [ ] Admin tests should cover capability denied.
+- [ ] Admin tests should cover readiness degraded.
+- [ ] Admin tests should cover CRUD conflict.
+- [ ] Import tests should cover cache invalidation.
+- [ ] Knowledge base tests should cover article rendering/search if implemented.
+
+## 53. P0: integrated MVP acceptance scenario
+
+- [ ] Start from a clean user or seeded user.
+- [ ] Register/login through BFF.
+- [ ] Create airline in onboarding.
+- [ ] Pick base airport from real airport data.
+- [ ] Land on dashboard, not generic card page.
+- [ ] Dashboard shows full-screen map as central element.
+- [ ] Map shows base hub.
+- [ ] Topbar shows real balance and no static fake time.
+- [ ] Open fleet market.
+- [ ] Buy one aircraft.
+- [ ] Purchase request completes or returns clear uncertain state under timeout.
+- [ ] Dashboard refreshes without hard reload.
+- [ ] Map still shows base hub.
+- [ ] Fleet list shows purchased aircraft.
+- [ ] Finance balance reflects purchase.
+- [ ] Open network planner.
+- [ ] Create route from base to destination.
+- [ ] Route line appears on map.
+- [ ] Route appears in route list with labels.
+- [ ] Open schedule planner.
+- [ ] Create schedule for route and aircraft.
+- [ ] Schedule activation is idempotent.
+- [ ] Flight board shows generated flights.
+- [ ] Map shows active/scheduled flights.
+- [ ] Complete a flight if manual completion is MVP dev action.
+- [ ] Finance ledger receives one revenue/cost entry.
+- [ ] Events feed receives one event.
+- [ ] Notifications show one notification.
+- [ ] Refresh browser.
+- [ ] Overlay state persists.
+- [ ] Repeat dashboard load with backend temporarily slow.
+- [ ] UI returns within user-acceptable time with stale/degraded states.
+- [ ] No request waits 20s silently.
+- [ ] No regular user-facing path returns generic 500 for known domain problems.
+- [ ] No console storm of repeated failed requests.
+- [ ] No visual mix of unrelated loader styles.
+- [ ] No raw UUID is visible in main UI except explicit debug/admin contexts.
+- [ ] No disabled nav page looks broken if directly opened.
+
+## 54. P0: implementation order for stabilization work
+
+- [ ] First stabilize request budgets and error contracts.
+- [ ] Then reduce BFF request count and duplicate loads.
+- [ ] Then make dashboard map the central shell experience.
+- [ ] Then connect hubs/routes/flights to map state.
+- [ ] Then standardize loaders/errors/empty states.
+- [ ] Then complete localization section 11.
+- [ ] Then run responsive section 12 audit.
+- [ ] Then expand tests around the critical happy path and failure path.
+- [ ] Backend step 1: add gateway error mapper.
+- [ ] Backend step 2: fix missing returns.
+- [ ] Backend step 3: fix auth middleware 500 mapping.
+- [ ] Backend step 4: optionally add short auth verification cache.
+- [ ] Backend step 5: align timeout config.
+- [ ] Backend step 6: add minimal logs/request id if missing.
+- [ ] BFF step 1: lower default backend timeout and attempts by endpoint type.
+- [ ] BFF step 2: add request-local `/airline/me` reuse.
+- [ ] BFF step 3: coalesce world-data GETs.
+- [ ] BFF step 4: stale-cache world data.
+- [ ] BFF step 5: serialize overlay writes.
+- [ ] BFF step 6: add idempotency to route/schedule/flight/notification/ledger writes.
+- [ ] Frontend step 1: stop loading fleet market from operations routes.
+- [ ] Frontend step 2: create shared loader/error/empty primitives and migrate high-traffic screens.
+- [ ] Frontend step 3: rebuild dashboard layout around full-screen map.
+- [ ] Frontend step 4: wire dashboard refresh events.
+- [ ] Frontend step 5: add flights to map state and rendering.
+- [ ] Frontend step 6: remove dev/backend/raw-id labels from finance/network/events.
+- [ ] Frontend step 7: finish ru/en parity.
+- [ ] Frontend step 8: run responsive matrix and fix overflow/overlap.
+- [ ] Verification step 1: run BFF tests.
+- [ ] Verification step 2: run frontend tests.
+- [ ] Verification step 3: run frontend lint.
+- [ ] Verification step 4: run targeted Go gateway tests.
+- [ ] Verification step 5: manually walk integrated MVP acceptance scenario.
+
+## 55. Definition of done for this TODO
+
+- [ ] The application has one obvious primary screen: map-first dashboard.
+- [ ] The map shows hubs.
+- [ ] The map shows routes.
+- [ ] The map shows flights.
+- [ ] BFF aggregates data for frontend screens.
+- [ ] New gameplay logic remains in BFF.
+- [ ] Backend is touched minimally for stability and correct HTTP behavior.
+- [ ] Known domain errors do not become 500.
+- [ ] Auth dependency failures do not become generic 500.
+- [ ] gRPC deadlines become clear 504/503 responses.
+- [ ] User-facing requests do not silently wait longer than acceptable budgets.
+- [ ] Duplicate GET bursts are coalesced or cached.
+- [ ] Duplicate writes are idempotent or explicitly protected.
+- [ ] Overlay storage is serialized and recoverable.
+- [ ] UI uses unified loading states.
+- [ ] UI uses unified empty states.
+- [ ] UI uses unified error states.
+- [ ] UI uses consistent panels, tables, tabs, drawers, chips, and buttons.
+- [ ] UI no longer looks assembled from unrelated systems.
+- [ ] Badges are meaningful and sparse.
+- [ ] Raw UUIDs are hidden from normal UI.
+- [ ] Backend/dev terminology is removed from product text.
+- [ ] Section 11 localization is complete enough for MVP.
+- [ ] Section 12 responsive behavior is complete enough for desktop and mobile.
+- [ ] Critical MVP scenario passes from login to completed flight.
+- [ ] Failure scenario with backend slow/unavailable is graceful.
+- [ ] Tests cover the critical happy path.
+- [ ] Tests cover the critical degraded path.

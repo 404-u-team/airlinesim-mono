@@ -19,7 +19,7 @@ test("retries backend 500 responses up to a successful response", async () => {
   globalThis.fetch = async (input) => {
     calls.push(String(input));
 
-    if (calls.length < 3) {
+    if (calls.length < 2) {
       return json({ error: "temporary" }, 500);
     }
 
@@ -39,7 +39,6 @@ test("retries backend 500 responses up to a successful response", async () => {
   expect(response?.status).toBe(200);
   expect(await response?.json()).toEqual({ ok: true });
   expect(calls).toEqual([
-    "http://backend.test/airline/me",
     "http://backend.test/airline/me",
     "http://backend.test/airline/me",
   ]);
@@ -156,6 +155,44 @@ test("returns a degraded empty region-link list when backend is unavailable", as
       total: 0,
     },
     region_links: [],
+  });
+});
+
+test("returns stale cached list data when a refresh fails", async () => {
+  let failRefresh = false;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+
+    if (url === "http://backend.test/airline/me") {
+      return json({ id: "airline-1" });
+    }
+    if (failRefresh) {
+      return json({ error: "internal" }, 500);
+    }
+
+    return json({
+      airports: [
+        {
+          id: "airport-1",
+          iata_code: "ICN",
+          intl_name: "Incheon International",
+        },
+      ],
+    });
+  };
+
+  await getProtected("http://bff.test/airports?refresh=true");
+  failRefresh = true;
+  const staleResponse = await getProtected("http://bff.test/airports?refresh=true");
+
+  expect(staleResponse.status).toBe(200);
+  expect(await staleResponse.json()).toMatchObject({
+    airports: [{ id: "airport-1" }],
+    meta: {
+      cached: true,
+      degraded: true,
+      stale: true,
+    },
   });
 });
 

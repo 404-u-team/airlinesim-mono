@@ -279,7 +279,7 @@ async function submitForm(): Promise<void> {
         {{ notice }}
       </p>
 
-      <div v-if="pendingDelete" class="rounded-md border border-warning bg-warning-bg p-3 text-slate-950">
+      <div v-if="pendingDelete" class="rounded-md border border-warning bg-warning-bg p-3 text-warning">
         <strong>{{ adminText(appLocale, "deleteTitle") }}</strong>
         <p class="mt-1 text-body">
           {{ adminText(appLocale, "deleteDescription") }}
@@ -300,7 +300,7 @@ async function submitForm(): Promise<void> {
         </div>
       </div>
 
-      <div v-if="pendingDiscard" class="rounded-md border border-warning bg-warning-bg p-3 text-slate-950">
+      <div v-if="pendingDiscard" class="rounded-md border border-warning bg-warning-bg p-3 text-warning">
         <strong>{{ adminText(appLocale, "confirmDiscard") }}</strong>
         <p class="mt-1 text-body">
           {{ adminText(appLocale, "discardDescription") }}

@@ -4,18 +4,21 @@ import { dirname, resolve } from "node:path";
 import type { StoredRoute } from "./types";
 
 const routesPath = resolve(import.meta.dir, "../../../data/game-state/routes.json");
+let routesMutationQueue: Promise<unknown> = Promise.resolve();
 
 export async function deleteRoute(routeId: string, airlineId: string): Promise<null | StoredRoute> {
-  const routes = await readRoutes();
-  const route = routes.find((item) => item.id === routeId && item.airline_id === airlineId);
+  return queuedRoutesMutation(async () => {
+    const routes = await readRoutes();
+    const route = routes.find((item) => item.id === routeId && item.airline_id === airlineId);
 
-  if (!route) {
-    return null;
-  }
+    if (!route) {
+      return null;
+    }
 
-  await writeRoutes(routes.filter((item) => item.id !== routeId));
+    await writeRoutes(routes.filter((item) => item.id !== routeId));
 
-  return route;
+    return route;
+  });
 }
 
 export async function findRoute(routeId: string, airlineId: string): Promise<null | StoredRoute> {
@@ -45,18 +48,20 @@ export async function readRoutes(): Promise<StoredRoute[]> {
 }
 
 export async function saveRoute(route: StoredRoute): Promise<StoredRoute> {
-  const routes = await readRoutes();
-  const existingIndex = routes.findIndex((item) => item.id === route.id);
+  return queuedRoutesMutation(async () => {
+    const routes = await readRoutes();
+    const existingIndex = routes.findIndex((item) => item.id === route.id);
 
-  if (existingIndex >= 0) {
-    routes[existingIndex] = route;
-  } else {
-    routes.push(route);
-  }
+    if (existingIndex >= 0) {
+      routes[existingIndex] = route;
+    } else {
+      routes.push(route);
+    }
 
-  await writeRoutes(routes);
+    await writeRoutes(routes);
 
-  return route;
+    return route;
+  });
 }
 
 export async function writeRoutes(routes: StoredRoute[]): Promise<void> {
@@ -65,4 +70,11 @@ export async function writeRoutes(routes: StoredRoute[]): Promise<void> {
   const tmpPath = `${routesPath}.${crypto.randomUUID()}.tmp`;
   await writeFile(tmpPath, JSON.stringify(routes, null, 2));
   await rename(tmpPath, routesPath);
+}
+
+async function queuedRoutesMutation<TValue>(mutation: () => Promise<TValue>): Promise<TValue> {
+  const next = routesMutationQueue.then(mutation, mutation);
+  routesMutationQueue = next.catch(() => undefined);
+
+  return next;
 }

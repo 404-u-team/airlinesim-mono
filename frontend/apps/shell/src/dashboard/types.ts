@@ -35,6 +35,10 @@ export type DashboardMapState = {
     flights: "available" | "not_configured";
     routes: "available" | "not_configured";
   };
+  flights?: {
+    features: unknown[];
+    type: "FeatureCollection";
+  };
   routes: {
     features: unknown[];
     type: "FeatureCollection";

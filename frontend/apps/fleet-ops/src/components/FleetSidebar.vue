@@ -110,7 +110,7 @@ const tailNumberModel = computed({
           <div
             v-for="reason in purchaseReasons"
             :key="reason.code"
-            class="rounded-lg border border-warning bg-warning-bg px-3 py-2 text-caption text-slate-950"
+            class="rounded-lg border border-warning bg-warning-bg px-3 py-2 text-caption text-warning"
           >
             {{ reasonLabel(reason) }}
           </div>

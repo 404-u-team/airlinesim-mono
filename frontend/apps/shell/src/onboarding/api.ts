@@ -4,6 +4,7 @@ import { apiClient } from "../api";
 
 export type OnboardingAirportOption = {
   country_id?: string;
+  country_name?: string;
   fuel_price_multiplier?: number;
   gate_fee?: number;
   iata_code?: string;

@@ -52,6 +52,7 @@ const labelKeysByPath: Record<string, ShellMessageKey> = {
   "/fleet/maintenance": "nav.fleet.maintenance",
   "/fleet/orders": "nav.fleet.orders",
   "/fleet/overview": "nav.fleet.overview",
+  "/knowledge-base": "nav.knowledgeBase",
   "/operations": "nav.operations",
   "/operations/fuel": "nav.operations.fuel",
   "/operations/ground-services": "nav.operations.groundServices",

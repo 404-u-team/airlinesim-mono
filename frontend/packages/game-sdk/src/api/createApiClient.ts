@@ -23,7 +23,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       Accept: "application/json",
       "Content-Type": "application/json",
     },
-    timeout: options.timeoutMs ?? 20_000,
+    timeout: options.timeoutMs ?? 8_000,
   });
 
   instance.interceptors.request.use((config) => {

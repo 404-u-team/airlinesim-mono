@@ -5,6 +5,8 @@ import type { StoredFlight, StoredSchedule } from "./types";
 
 const flightsPath = resolve(import.meta.dir, "../../../data/game-state/flights.json");
 const schedulesPath = resolve(import.meta.dir, "../../../data/game-state/schedules.json");
+let flightsMutationQueue: Promise<unknown> = Promise.resolve();
+let schedulesMutationQueue: Promise<unknown> = Promise.resolve();
 
 export async function listFlightsForAirline(airlineId: string): Promise<StoredFlight[]> {
   const flights = await readArray<StoredFlight>(flightsPath);
@@ -19,29 +21,47 @@ export async function listSchedulesForAirline(airlineId: string): Promise<Stored
 }
 
 export async function saveFlights(nextFlights: StoredFlight[]): Promise<void> {
-  const currentFlights = await readArray<StoredFlight>(flightsPath);
-  const nextById = new Map(nextFlights.map((flight) => [flight.id, flight]));
-  const merged = [
-    ...currentFlights.filter((flight) => !nextById.has(flight.id)),
-    ...nextFlights,
-  ];
+  await queuedFlightsMutation(async () => {
+    const currentFlights = await readArray<StoredFlight>(flightsPath);
+    const nextById = new Map(nextFlights.map((flight) => [flight.id, flight]));
+    const merged = [
+      ...currentFlights.filter((flight) => !nextById.has(flight.id)),
+      ...nextFlights,
+    ];
 
-  await writeArray(flightsPath, merged);
+    await writeArray(flightsPath, merged);
+  });
 }
 
 export async function saveSchedule(schedule: StoredSchedule): Promise<StoredSchedule> {
-  const schedules = await readArray<StoredSchedule>(schedulesPath);
-  const existingIndex = schedules.findIndex((item) => item.id === schedule.id);
+  return queuedSchedulesMutation(async () => {
+    const schedules = await readArray<StoredSchedule>(schedulesPath);
+    const existingIndex = schedules.findIndex((item) => item.id === schedule.id);
 
-  if (existingIndex >= 0) {
-    schedules[existingIndex] = schedule;
-  } else {
-    schedules.push(schedule);
-  }
+    if (existingIndex >= 0) {
+      schedules[existingIndex] = schedule;
+    } else {
+      schedules.push(schedule);
+    }
 
-  await writeArray(schedulesPath, schedules);
+    await writeArray(schedulesPath, schedules);
 
-  return schedule;
+    return schedule;
+  });
+}
+
+async function queuedFlightsMutation<TValue>(mutation: () => Promise<TValue>): Promise<TValue> {
+  const next = flightsMutationQueue.then(mutation, mutation);
+  flightsMutationQueue = next.catch(() => undefined);
+
+  return next;
+}
+
+async function queuedSchedulesMutation<TValue>(mutation: () => Promise<TValue>): Promise<TValue> {
+  const next = schedulesMutationQueue.then(mutation, mutation);
+  schedulesMutationQueue = next.catch(() => undefined);
+
+  return next;
 }
 
 async function readArray<TValue>(path: string): Promise<TValue[]> {

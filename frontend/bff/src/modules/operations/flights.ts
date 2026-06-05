@@ -55,6 +55,7 @@ export function generateFlightsForSchedule(
   pattern: SchedulePattern,
   startsOn: string | undefined,
   daysToGenerate: number,
+  scheduleId?: string,
 ): StoredFlight[] {
   const origin = snapshot.airports.find((item) => item.id === route.origin_airport_id);
   const destination = snapshot.airports.find((item) => item.id === route.destination_airport_id);
@@ -64,7 +65,26 @@ export function generateFlightsForSchedule(
   }
 
   return buildScheduleDates(startsOn, pattern, daysToGenerate)
-    .map((departureAt, index) => buildStoredFlight(snapshot, route, aircraft, type, pattern, origin, destination, departureAt, index));
+    .map((departureAt, index) =>
+      buildStoredFlight(snapshot, route, aircraft, type, pattern, origin, destination, departureAt, index, scheduleId));
+}
+
+export function stableScheduleId(
+  routeId: string,
+  aircraftId: string | undefined,
+  pattern: SchedulePattern,
+  startsOn: string | undefined,
+): string {
+  const seed = [
+    routeId,
+    aircraftId ?? "",
+    startsOn ?? "",
+    pattern.departure_local_time,
+    pattern.turnaround_minutes,
+    pattern.days_of_week.join(","),
+  ].join("|");
+
+  return `schedule-${Math.abs(hashCode(seed)).toString(36)}`;
 }
 
 export function summarizeWeeklyEconomics(sampleFlights: StoredFlight[], daysPerWeek: number): SchedulePreview["economics"] {
@@ -128,10 +148,12 @@ function buildStoredFlight(
   destination: Airport,
   departureAt: Date,
   index: number,
+  scheduleId?: string,
 ): StoredFlight {
   const arrivalAt = new Date(departureAt.getTime() + estimateBlockHours(route, type) * 60 * 60_000);
   const expected = estimateFlightFinancials(route, type, origin, destination, pattern.days_of_week.length);
-  const stableKey = `${route.id}:${aircraft.id ?? ""}:${departureAt.toISOString()}`;
+  const resolvedScheduleId = scheduleId ?? stableScheduleId(route.id, aircraft.id, pattern, undefined);
+  const flightId = stableFlightId(resolvedScheduleId, departureAt);
 
   return {
     aircraft_id: aircraft.id ?? "",
@@ -142,11 +164,11 @@ function buildStoredFlight(
     destination_airport_id: route.destination_airport_id,
     expected,
     flight_number: buildFlightNumber(snapshot, route, index),
-    id: crypto.randomUUID(),
+    id: flightId,
     origin_airport_id: route.origin_airport_id,
     route_id: route.id,
-    schedule_id: stableKey,
-    status: currentFlightStatus({ ...newFlightStub(route, aircraft, expected, stableKey, departureAt, arrivalAt), status: "scheduled" }),
+    schedule_id: resolvedScheduleId,
+    status: currentFlightStatus({ ...newFlightStub(route, aircraft, expected, flightId, departureAt, arrivalAt), status: "scheduled" }),
     updated_at: new Date().toISOString(),
   };
 }
@@ -214,4 +236,8 @@ function newFlightStub(
     status: "scheduled",
     updated_at: new Date().toISOString(),
   };
+}
+
+function stableFlightId(scheduleId: string, departureAt: Date): string {
+  return `flight-${Math.abs(hashCode(`${scheduleId}|${departureAt.toISOString()}`)).toString(36)}`;
 }

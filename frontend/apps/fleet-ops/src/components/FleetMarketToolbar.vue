@@ -59,7 +59,7 @@ function updateFilter(key: FilterKey, value: string): void {
   <div
     v-if="error || message"
     class="mt-4 rounded-lg border p-3 text-body"
-    :class="error ? 'border-error bg-error-bg text-slate-950' : 'border-success bg-success-bg text-slate-950'"
+    :class="error ? 'border-error bg-error-bg text-error' : 'border-success bg-success-bg text-success'"
   >
     {{ error || message }}
   </div>

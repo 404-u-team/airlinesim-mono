@@ -68,7 +68,11 @@ export async function handleOnboardingAirports(
   const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? "20")));
 
   try {
-    const airports = await getOnboardingAirportsCatalog(request, config);
+    const [airports, countryIndex] = await Promise.all([
+      getOnboardingAirportsCatalog(request, config),
+      // Country names are a nice-to-have label; never block airport search on it.
+      getOnboardingCountriesIndex(request, config).catch(() => new Map<string, string>()),
+    ]);
     const options: OnboardingAirportOption[] = [];
 
     for (const airport of airports) {
@@ -77,6 +81,7 @@ export async function handleOnboardingAirports(
       }
 
       const option = calculateAirportScore(airport);
+      option.country_name = option.country_id ? countryIndex.get(option.country_id) : undefined;
 
       if (q) {
         option.score += getQueryScoreAdjustment(airport, q);
@@ -202,6 +207,31 @@ async function getOnboardingAirportsCatalog(request: Request, config: BffConfig)
   });
 
   return getCachedListInternal<Airport>(adminRequest, config, "/airports", "airports");
+}
+
+async function getOnboardingCountriesIndex(request: Request, config: BffConfig): Promise<Map<string, string>> {
+  const token = await getBackendAdminToken(config);
+  const adminRequest = new Request(request.url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const countries = await getCachedListInternal<{ id?: string; intl_name?: string; local_name?: string }>(
+    adminRequest,
+    config,
+    "/countries",
+    "countries",
+  );
+  const index = new Map<string, string>();
+
+  for (const country of countries) {
+    const name = country.intl_name ?? country.local_name;
+    if (country.id && name) {
+      index.set(country.id, name);
+    }
+  }
+
+  return index;
 }
 
 function getQueryScoreAdjustment(airport: Airport, q: string): number {

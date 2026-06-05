@@ -7,6 +7,7 @@ import WarningBadge from "./WarningBadge.vue";
 
 type OnboardingAirportOption = {
   country_id?: string;
+  country_name?: string;
   fuel_price_multiplier?: number;
   gate_fee?: number;
   iata_code?: string;
@@ -38,6 +39,9 @@ const props = withDefaults(
 
 
 const isSuitable = computed(() => props.airport.score >= 1000 && !props.airport.warnings.includes("SHORT_RUNWAY"));
+const locationLabel = computed(() =>
+  [props.airport.municipality, props.airport.country_name].filter(Boolean).join(", "),
+);
 const t = computed(() => (key: ShellMessageKey): string =>
   translate(shellMessages, props.appLocale, key),
 );
@@ -117,7 +121,7 @@ const totalFees = computed(() => {
           v-if="airport.municipality"
           class="mt-1 text-body text-text-muted"
         >
-          {{ airport.municipality }}, {{ airport.country_id }}
+          {{ locationLabel }}
         </p>
       </div>
 

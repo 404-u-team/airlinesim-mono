@@ -29,6 +29,10 @@ bun --cwd bff run lint
 
 - `BFF_PORT` - порт BFF, по умолчанию `4200`.
 - `BFF_BACKEND_BASE_URL` - base URL backend API, по умолчанию `https://api.master.stand.airlinesim.ms0ur.dev/`.
+- `BFF_BACKEND_READ_TIMEOUT_MS` - бюджет safe read-запроса к backend, по умолчанию `1500`.
+- `BFF_BACKEND_AUTH_TIMEOUT_MS` - бюджет auth/session проверки к backend, по умолчанию `1500`.
+- `BFF_BACKEND_MUTATION_TIMEOUT_MS` - бюджет mutation-запроса к backend, по умолчанию `5000`.
+- `BFF_BACKEND_MAX_SAFE_ATTEMPTS` - число попыток для safe GET/HEAD и auth paths, по умолчанию `2`; обычные mutations без явного `retryMutating` не повторяются.
 - `BFF_IDLE_TIMEOUT_SECONDS` - максимальное время простоя входящего запроса BFF, по умолчанию `120` секунд. Значение должно быть больше суммарного времени backend retry, иначе Bun оборвет соединение до возврата нормализованной ошибки.
 - `backend_admin_login` / `BACKEND_ADMIN_LOGIN` - backend admin login для служебных операций BFF.
 - `backend_admin_password` / `BACKEND_ADMIN_PASSWORD` - backend admin password для служебных операций BFF.
@@ -52,12 +56,13 @@ BFF проверяет токен обычного пользователя из
 - сбор backend URL из `BFF_BACKEND_BASE_URL`;
 - bearer token и JSON headers;
 - timeout через `AbortController`;
-- retry для сетевых ошибок, timeout, `408`, `429`, `500`, `502`, `503`, `504`;
+- retry для сетевых ошибок, timeout, `408`, `429`, `500`, `502`, `503`, `504` внутри короткого request budget;
+- coalescing одинаковых in-flight JSON `GET`/`HEAD` запросов с тем же URL, token/header set и request budget;
 - запрет retry для обычных client/authz/validation ошибок: `400`, `401`, `403`, `404`, `409`, `422`;
 - осторожную политику mutating-запросов: `GET`/`HEAD` безопасно повторяются, auth-запросы могут повторяться, остальные mutation requests повторяются только при явном `retryMutating`;
 - нормализацию backend ошибок в JSON вида `{ "error": { "code": "...", "message": "...", "retryable": false } }`.
 
-Browser-facing приложения не должны реализовывать retry к backend напрямую: они вызывают BFF, а BFF уже применяет общую backend retry-политику.
+Browser-facing приложения не должны реализовывать retry к backend напрямую: они вызывают BFF, а BFF уже применяет общую backend retry-политику. Shared browser SDK держит обычный UI timeout `8000` ms; более длинные операции должны быть оформлены как job/status flow.
 
 ### `import`
 

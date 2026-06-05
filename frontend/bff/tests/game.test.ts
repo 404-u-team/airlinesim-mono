@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 
 import type { BffConfig } from "../src/config";
 
-import { handleGameRequest } from "../src/modules/game";
+import { buildMapState, handleGameRequest } from "../src/modules/game";
 
 const config: BffConfig = {
   backendAdminLogin: "admin",
@@ -375,6 +375,71 @@ test("builds map state with base and opportunity airport features", async () => 
   expect(payload.routes.features).toEqual([]);
   expect(payload.capabilities.routes).toBe("configured");
   expect(payload.airports.features[0].geometry.type).toBe("Point");
+});
+
+test("builds map state flight features from overlay operations", () => {
+  const payload = buildMapState(
+    {
+      aircrafts: [],
+      aircraftTypes: [],
+      airline: {
+        id: "airline-1",
+        starting_airport_id: "airport-1",
+      },
+      airports: [
+        {
+          geog: "POINT (126.4505 37.4691)",
+          iata_code: "ICN",
+          id: "airport-1",
+          intl_name: "Incheon International",
+          region_id: "region-1",
+        },
+        {
+          geog: "POINT (139.7798 35.5523)",
+          iata_code: "HND",
+          id: "airport-2",
+          intl_name: "Tokyo Haneda",
+          region_id: "region-2",
+        },
+      ],
+      regionLinks: [],
+      regions: [],
+    },
+    new URLSearchParams("scope=dashboard&include_opportunities=false"),
+    [],
+    {
+      flights: [
+        {
+          arrival_at: "2026-06-05T12:00:00.000Z",
+          departure_at: "2026-06-05T10:00:00.000Z",
+          destination_airport_id: "airport-2",
+          expected: { profit: 5000 },
+          flight_number: "SA101",
+          id: "flight-1",
+          origin_airport_id: "airport-1",
+          route_id: "route-1",
+          status: "scheduled",
+        },
+      ],
+      schedules: [],
+    },
+  );
+
+  expect(payload).toMatchObject({
+    flights: {
+      features: [
+        {
+          geometry: { type: "Point" },
+          properties: {
+            flight_number: "SA101",
+            id: "flight-1",
+            status: "scheduled",
+          },
+        },
+      ],
+      type: "FeatureCollection",
+    },
+  });
 });
 
 function authorizedRequest(url: string): Request {

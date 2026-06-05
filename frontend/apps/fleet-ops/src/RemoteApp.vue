@@ -94,10 +94,15 @@ const activeMode = computed<"fleet" | "flights" | "schedule">(() => {
 onMounted(() => {
   airlineSimEventBus.emit("mfe:ready", { remoteId: "fleet-ops" });
   unsubscribeAirportSelected = airlineSimEventBus.on("map:airport-selected", (payload) => {
+    if (activeMode.value !== "fleet") {
+      return;
+    }
     filters.baseAirportId = payload.airportId;
     void loadMarket();
   });
-  void loadMarket();
+  if (activeMode.value === "fleet") {
+    void loadMarket();
+  }
 });
 
 onUnmounted(() => unsubscribeAirportSelected?.());
@@ -105,6 +110,9 @@ onUnmounted(() => unsubscribeAirportSelected?.());
 watch(
   filters,
   () => {
+    if (activeMode.value !== "fleet") {
+      return;
+    }
     if (marketDebounce) {
       clearTimeout(marketDebounce);
     }
@@ -114,10 +122,19 @@ watch(
 );
 
 watch([selectedTypeId, tailNumber], () => {
+  if (activeMode.value !== "fleet") {
+    return;
+  }
   if (previewDebounce) {
     clearTimeout(previewDebounce);
   }
   previewDebounce = setTimeout(() => void loadPreview(), 250);
+});
+
+watch(activeMode, (mode) => {
+  if (mode === "fleet" && !market.value && !isLoading.value) {
+    void loadMarket();
+  }
 });
 
 function apiErrorMessage(value: unknown, fallback: FleetMessageKey): string {
@@ -325,9 +342,7 @@ function selectType(type: FleetMarketAircraftType): void {
   selectedTypeId.value = type.id ?? "";
 }
 
-function setSelectedAircraft(aircraft: FleetOwnedAircraftCard | null): void {
-  selectedAircraft.value = aircraft;
-}
+function setSelectedAircraft(aircraft: FleetOwnedAircraftCard | null): void { selectedAircraft.value = aircraft; }
 
 function statusLabel(status: FleetMarketAircraftType["compatibility"]["status"]): string {
   return t.value(`status.${status}`);
@@ -337,9 +352,7 @@ function statusVariant(status: FleetMarketAircraftType["compatibility"]["status"
   return getStatusVariant(status);
 }
 
-function updateFilter(key: keyof typeof filters, value: string): void {
-  filters[key] = value;
-}
+function updateFilter(key: keyof typeof filters, value: string): void { filters[key] = value; }
 </script>
 
 <template>

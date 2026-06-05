@@ -5,6 +5,7 @@ import { authState } from "./auth";
 import DashboardView from "./dashboard/DashboardView.vue";
 import { createMfeRouteRecords, defaultRoutePath, resolveMfeRoute } from "./mfe-routing";
 import AuthView from "./views/AuthView.vue";
+import KnowledgeBaseView from "./views/KnowledgeBaseView.vue";
 import ShellRemoteView from "./views/ShellRemoteView.vue";
 import SystemSettingsView from "./views/SystemSettingsView.vue";
 
@@ -46,6 +47,11 @@ export const router = createRouter({
       component: DashboardView,
       name: "dashboard",
       path: "/dashboard",
+    },
+    {
+      component: KnowledgeBaseView,
+      name: "knowledge-base",
+      path: "/knowledge-base/:article?",
     },
     {
       meta: {

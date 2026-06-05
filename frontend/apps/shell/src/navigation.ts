@@ -4,6 +4,7 @@ import type { Component } from "vue";
 import {
   Banknote,
   Bell,
+  BookOpen,
   BriefcaseBusiness,
   Building2,
   CalendarDays,
@@ -141,6 +142,11 @@ export const navigationSections: NavigationSection[] = [
     path: "/settings",
   },
   {
+    icon: BookOpen,
+    label: "Knowledge Base",
+    path: "/knowledge-base",
+  },
+  {
     adminOnly: true,
     children: [
       { label: "World readiness", path: "/admin/overview" },
@@ -160,12 +166,13 @@ export const navigationSections: NavigationSection[] = [
 export function getStatusMetrics(
   t: (key: ShellMessageKey) => string,
   status: null | ShellStatusSummary,
+  locale = "en",
 ): StatusMetric[] {
   return [
     {
       icon: CircleDollarSign,
       label: t("status.account"),
-      value: status ? formatMoney(status.balance) : "-",
+      value: status ? formatMoney(status.balance, locale) : "-",
     },
     {
       icon: PlaneTakeoff,
@@ -180,8 +187,8 @@ export function getStatusMetrics(
   ];
 }
 
-function formatMoney(value: number): string {
-  return new Intl.NumberFormat("en", {
+function formatMoney(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale, {
     currency: "USD",
     maximumFractionDigits: 0,
     notation: value >= 1_000_000 ? "compact" : "standard",
