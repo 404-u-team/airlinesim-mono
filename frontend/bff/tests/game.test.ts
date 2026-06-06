@@ -377,7 +377,7 @@ test("builds map state with base and opportunity airport features", async () => 
   expect(payload.airports.features[0].geometry.type).toBe("Point");
 });
 
-test("builds map state flight features from overlay operations", () => {
+test("builds map state route and flight features from overlays", () => {
   const payload = buildMapState(
     {
       aircrafts: [],
@@ -406,7 +406,16 @@ test("builds map state flight features from overlay operations", () => {
       regions: [],
     },
     new URLSearchParams("scope=dashboard&include_opportunities=false"),
-    [],
+    [
+      {
+        demand_snapshot: { origin_daily_passengers: 420 },
+        destination_airport_id: "airport-2",
+        economics_snapshot: { estimated_profit_per_flight: 5000 },
+        id: "route-1",
+        origin_airport_id: "airport-1",
+        status: "scheduled",
+      },
+    ],
     {
       flights: [
         {
@@ -433,6 +442,18 @@ test("builds map state flight features from overlay operations", () => {
           properties: {
             flight_number: "SA101",
             id: "flight-1",
+            status: "scheduled",
+          },
+        },
+      ],
+      type: "FeatureCollection",
+    },
+    routes: {
+      features: [
+        {
+          geometry: { type: "LineString" },
+          properties: {
+            id: "route-1",
             status: "scheduled",
           },
         },

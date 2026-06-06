@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Locale } from "@airlinesim/i18n";
 
-import { AirBadge, AirButton, AirMetricCard, AirSelect, AirTextField } from "@airlinesim/air-ui";
+import { AirBadge, AirButton, AirMetricCard, AirSelect } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
 import { computed, onMounted, ref, watch } from "vue";
 
@@ -27,7 +27,8 @@ const routes = ref<OperationRoute[]>([]);
 const selectedAircraftId = ref("");
 const selectedRouteId = ref("");
 const success = ref("");
-const turnaroundMinutes = ref("90");
+// MVP schedules generate one-way legs from the base; turnaround is a fixed default.
+const defaultTurnaroundMinutes = 90;
 
 const aircraftOptions = computed(() =>
   aircraft.value.map((option) => ({
@@ -36,6 +37,19 @@ const aircraftOptions = computed(() =>
   })),
 );
 const canActivate = computed(() => Boolean(preview.value?.canActivate && selectedAircraftId.value && selectedRouteId.value));
+const sampleFlights = computed(() => preview.value?.sample_flights ?? []);
+// getUTCDay() ordering is 0=Sunday..6=Saturday; show Monday-first for readability.
+const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
+const timeOptions = Array.from({ length: 48 }, (_unused, index) => {
+  const value = `${String(Math.floor(index / 2)).padStart(2, "0")}:${index % 2 === 0 ? "00" : "30"}`;
+
+  return { label: value, value };
+});
+const frequencyModes = [
+  { label: "operations.frequency.daily", mode: "daily" },
+  { label: "operations.frequency.threeWeekly", mode: "three" },
+  { label: "operations.frequency.weekly", mode: "weekly" },
+] as const;
 const routeOptions = computed(() =>
   routes.value.map((route) => ({
     label: routeLabel(route),
@@ -47,7 +61,7 @@ onMounted(() => {
   void loadOptions();
 });
 
-watch([selectedRouteId, selectedAircraftId, days, departureTime, turnaroundMinutes], () => {
+watch([selectedRouteId, selectedAircraftId, days, departureTime], () => {
   void loadPreview();
 }, { deep: true });
 
@@ -90,7 +104,6 @@ function applyOptionsResponse(response: ScheduleOptionsResponse): void {
   selectedRouteId.value ||= response.route?.id ?? response.routes[0]?.id ?? "";
   selectedAircraftId.value ||= getDefaultAircraftId(response);
   departureTime.value = response.default_pattern.departure_local_time;
-  turnaroundMinutes.value = String(response.default_pattern.turnaround_minutes);
   days.value = response.default_pattern.days_of_week;
 }
 
@@ -106,8 +119,23 @@ function buildPayload(): {
     days_of_week: days.value,
     departure_local_time: departureTime.value,
     route_id: selectedRouteId.value,
-    turnaround_minutes: Number(turnaroundMinutes.value) || 90,
+    turnaround_minutes: defaultTurnaroundMinutes,
   };
+}
+
+function dayLabel(day: number): string {
+  // 2024-01-07 is a Sunday (getUTCDay 0); offset by the day index for a stable weekday.
+  return new Intl.DateTimeFormat(props.appLocale, { weekday: "short" }).format(new Date(Date.UTC(2024, 0, 7 + day)));
+}
+
+function flightDuration(flight: { arrival_at: string; departure_at: string }): string {
+  const minutes = Math.max(0, Math.round((new Date(flight.arrival_at).getTime() - new Date(flight.departure_at).getTime()) / 60_000));
+
+  return `${Math.floor(minutes / 60)}${props.t("unit.hourShort")} ${minutes % 60}${props.t("unit.minuteShort")}`;
+}
+
+function formatClock(value: string): string {
+  return new Intl.DateTimeFormat(props.appLocale, { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 }
 
 function formatMoney(value: number | undefined): string {
@@ -228,76 +256,61 @@ function toggleDay(day: number): void {
     >
       <div class="rounded-lg border border-border bg-surface p-4">
         <div class="grid gap-4 md:grid-cols-2">
-          <div class="flex min-w-0 flex-col gap-1.5">
-            <span class="text-caption text-text-muted">{{ props.t("operations.selectRoute") }}</span>
-            <AirSelect
-              v-model="selectedRouteId"
-              label="Route"
-              :options="routeOptions"
-            />
-          </div>
-          <div class="flex min-w-0 flex-col gap-1.5">
-            <span class="text-caption text-text-muted">{{ props.t("operations.selectAircraft") }}</span>
-            <AirSelect
-              v-model="selectedAircraftId"
-              label="Aircraft"
-              :options="aircraftOptions"
-            />
-          </div>
+          <AirSelect
+            v-model="selectedRouteId"
+            :label="props.t('operations.selectRoute')"
+            :options="routeOptions"
+          />
+          <AirSelect
+            v-model="selectedAircraftId"
+            :label="props.t('operations.selectAircraft')"
+            :options="aircraftOptions"
+          />
         </div>
 
         <div class="mt-5 grid gap-3 sm:grid-cols-3">
           <AirButton
-            :label="props.t('operations.frequency.daily')"
+            v-for="freq in frequencyModes"
+            :key="freq.mode"
+            :label="props.t(freq.label)"
             size="sm"
             variant="primary-soft"
-            @click="setFrequency('daily')"
-          />
-          <AirButton
-            :label="props.t('operations.frequency.threeWeekly')"
-            size="sm"
-            variant="primary-soft"
-            @click="setFrequency('three')"
-          />
-          <AirButton
-            :label="props.t('operations.frequency.weekly')"
-            size="sm"
-            variant="primary-soft"
-            @click="setFrequency('weekly')"
+            @click="setFrequency(freq.mode)"
           />
         </div>
 
         <div class="mt-4 flex flex-wrap gap-2">
           <button
-            v-for="day in [0, 1, 2, 3, 4, 5, 6]"
+            v-for="day in weekdayOrder"
             :key="day"
-            class="rounded-lg border px-3 py-2 text-body"
-            :class="isDaySelected(day) ? 'border-primary bg-primary text-on-primary' : 'border-border bg-background'"
+            class="min-w-12 rounded-lg border px-3 py-2 text-caption font-medium capitalize"
+            :class="isDaySelected(day) ? 'border-primary bg-primary text-on-primary' : 'border-border bg-background text-text-muted'"
             type="button"
             @click="toggleDay(day)"
           >
-            {{ day }}
+            {{ dayLabel(day) }}
           </button>
         </div>
 
-        <div class="mt-5 grid gap-4 md:grid-cols-2">
-          <AirTextField
+        <div class="mt-5 flex min-w-0 flex-col gap-1.5">
+          <AirSelect
             v-model="departureTime"
             :label="props.t('operations.time')"
-            placeholder="09:00"
+            :options="timeOptions"
           />
-          <AirTextField
-            v-model="turnaroundMinutes"
-            :label="props.t('operations.turnaround')"
-          />
+          <span class="text-caption text-text-muted">{{ props.t("operations.time.hint") }}</span>
         </div>
+
+        <p class="mt-4 rounded-md border border-border bg-background px-3 py-2 text-caption text-text-muted">
+          {{ props.t("operations.oneWayNote") }}
+        </p>
       </div>
 
       <aside class="rounded-lg border border-border bg-surface p-4">
         <h2 class="text-subtitle">
           {{ props.t("operations.preview") }}
         </h2>
-        <div class="mt-4 grid gap-3">
+        <div class="mt-4 grid grid-cols-2 gap-3">
           <AirMetricCard
             :label="props.t('operations.weeklyRevenue')"
             :value="formatMoney(preview?.economics.weekly_revenue)"
@@ -312,9 +325,29 @@ function toggleDay(day: number): void {
             :value="formatMoney(preview?.economics.weekly_profit)"
           />
           <AirMetricCard
-            label="Utilization"
-            :value="`${formatNumber(preview?.weekly_utilization_hours)} h`"
+            :label="props.t('operations.utilization')"
+            :value="`${formatNumber(preview?.weekly_utilization_hours)} ${props.t('unit.hourShort')}`"
           />
+        </div>
+
+        <div
+          v-if="sampleFlights.length"
+          class="mt-4"
+        >
+          <p class="text-caption text-text-muted">
+            {{ props.t("operations.sampleFlights") }}
+          </p>
+          <ul class="mt-2 grid gap-1.5">
+            <li
+              v-for="flight in sampleFlights"
+              :key="flight.id"
+              class="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-caption"
+            >
+              <span class="font-medium">{{ flight.flight_number }}</span>
+              <span class="text-text-muted">{{ formatClock(flight.departure_at) }} → {{ formatClock(flight.arrival_at) }}</span>
+              <span class="text-text-muted">{{ flightDuration(flight) }}</span>
+            </li>
+          </ul>
         </div>
 
         <div

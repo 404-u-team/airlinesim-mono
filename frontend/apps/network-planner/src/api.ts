@@ -14,6 +14,7 @@ const apiClient = createApiClient({
 
 export type RouteOpportunityFilters = {
   aircraftId?: string;
+  limit?: number;
   maxDistance?: string;
   minDemand?: string;
   onlyCompatible?: boolean;
@@ -46,6 +47,9 @@ export async function getRouteOpportunities(filters: RouteOpportunityFilters): P
   }
   if (filters.aircraftId) {
     search.set("aircraft_id", filters.aircraftId);
+  }
+  if (filters.limit) {
+    search.set("limit", String(filters.limit));
   }
 
   const query = search.toString();

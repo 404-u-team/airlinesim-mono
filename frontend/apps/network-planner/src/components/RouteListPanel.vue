@@ -14,29 +14,50 @@ defineProps<{
 const emit = defineEmits<{
   "navigate-to-schedule": [route: StoredRoute];
 }>();
+
+function airportCode(airport: StoredRoute["destination_airport"]): string {
+  return airport?.iata_code || airport?.icao_code || airport?.id || "-";
+}
 </script>
 
 <template>
-  <section class="mt-5 rounded-lg border border-border bg-surface p-4">
-    <h2 class="text-subtitle">
-      {{ t("routes.title") }}
-    </h2>
-    <div class="mt-3 grid gap-3">
+  <section class="h-full overflow-y-auto overflow-x-hidden bg-surface p-3">
+    <div class="grid gap-3">
       <article
         v-for="route in routes"
         :key="route.id"
-        class="rounded-lg border border-border bg-background p-3"
+        class="min-w-0 rounded-lg border border-border bg-background p-3"
       >
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
           <div class="min-w-0">
-            <p class="truncate text-subtitle">
-              {{ route.origin_airport?.label ?? "-" }} -> {{ route.destination_airport?.label ?? "-" }}
-            </p>
+            <div class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+              <div class="min-w-0">
+                <p class="text-subtitle">
+                  {{ airportCode(route.origin_airport) }}
+                </p>
+                <p class="truncate text-caption text-text-muted">
+                  {{ route.origin_airport?.label ?? "-" }}
+                </p>
+              </div>
+              <span
+                aria-hidden="true"
+                class="route-list-direction"
+              />
+              <div class="min-w-0">
+                <p class="text-subtitle">
+                  {{ airportCode(route.destination_airport) }}
+                </p>
+                <p class="truncate text-caption text-text-muted">
+                  {{ route.destination_airport?.label ?? "-" }}
+                </p>
+              </div>
+            </div>
             <p class="mt-1 text-caption text-text-muted">
-              {{ statusLabel(route.status) }} · {{ formatNumber(route.demand_snapshot.origin_daily_passengers) }} pax/day
+              {{ statusLabel(route.status) }} · {{ formatNumber(route.demand_snapshot.origin_daily_passengers) }} {{ t("metric.paxPerDay") }}
             </p>
           </div>
           <AirButton
+            class="justify-self-start sm:justify-self-end"
             :label="t('action.schedule')"
             size="sm"
             variant="warning"
@@ -53,3 +74,31 @@ const emit = defineEmits<{
     </div>
   </section>
 </template>
+
+<style scoped>
+.route-list-direction {
+  align-items: center;
+  color: var(--color-text-muted);
+  display: inline-flex;
+  height: 1.25rem;
+  justify-content: center;
+  width: 1.5rem;
+}
+
+.route-list-direction::before {
+  background: currentcolor;
+  content: "";
+  height: 0.125rem;
+  width: 1rem;
+}
+
+.route-list-direction::after {
+  border-right: 0.125rem solid currentcolor;
+  border-top: 0.125rem solid currentcolor;
+  content: "";
+  height: 0.4rem;
+  margin-left: -0.4rem;
+  transform: rotate(45deg);
+  width: 0.4rem;
+}
+</style>

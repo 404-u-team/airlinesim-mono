@@ -34,6 +34,11 @@ declare module "map/Map" {
   };
 
   export type MapManagerSnapshot = {
+    data: {
+      airports: number;
+      flights: number;
+      routes: number;
+    };
     isGlobe: boolean;
     isReady: boolean;
     isRotating: boolean;

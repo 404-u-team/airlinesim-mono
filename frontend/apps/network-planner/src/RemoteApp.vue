@@ -1,23 +1,26 @@
 <script setup lang="ts">
 import type { Locale } from "@airlinesim/i18n";
 
-import { AirButton, AirMetricCard, AirSelect, AirStatePanel, AirTextField } from "@airlinesim/air-ui";
+import { AirButton, AirStatePanel } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 
 import type { RouteOpportunity, StoredRoute } from "./types";
 
 import { createRoute, getRouteOpportunities, getRoutePreview, getRoutes } from "./api";
-import RouteListPanel from "./components/RouteListPanel.vue";
 import RouteMapPanel from "./components/RouteMapPanel.vue";
-import RouteOpportunityGrid from "./components/RouteOpportunityGrid.vue";
+import RoutePlannerFilters from "./components/RoutePlannerFilters.vue";
+import RoutePlannerLists from "./components/RoutePlannerLists.vue";
 import RoutePreviewPanel from "./components/RoutePreviewPanel.vue";
 import { type NetworkMessageKey, t as translateNetwork } from "./i18n";
 
 const props = defineProps<{
   appLocale: Locale;
+  appTheme?: "dark" | "light";
   shellPath?: string;
 }>();
+
+const ROUTE_OPPORTUNITY_LIMIT = 500;
 
 const error = ref("");
 const isCreating = ref(false);
@@ -32,7 +35,7 @@ const selectedAircraftId = ref("");
 const filters = reactive({
   maxDistance: "",
   minDemand: "",
-  onlyCompatible: false,
+  onlyCompatible: true,
   onlyProfitable: false,
 });
 let filterDebounce: null | ReturnType<typeof setTimeout> = null;
@@ -59,22 +62,6 @@ const aircraftOptions = computed(() => {
 
   return options;
 });
-const topMetrics = computed(() => [
-  {
-    label: tr("metric.weekDemand"),
-    value: formatNumber(opportunities.value[0]?.demand.origin_daily_passengers),
-  },
-  {
-    label: tr("metric.profit"),
-    tone: (opportunities.value[0]?.economics.estimated_profit_per_flight ?? 0) > 0 ? "success" as const : "warning" as const,
-    value: formatMoney(opportunities.value[0]?.economics.estimated_profit_per_flight),
-  },
-  {
-    label: tr("metric.routes"),
-    value: formatNumber(routes.value.length),
-  },
-]);
-
 onMounted(() => {
   airlineSimEventBus.emit("mfe:ready", { remoteId: "network-planner" });
   void loadData();
@@ -159,7 +146,7 @@ async function loadData(): Promise<void> {
 
   try {
     const [opportunityResponse, routeResponse] = await Promise.all([
-      getRouteOpportunities({ ...filters, aircraftId: selectedAircraftId.value }),
+      getRouteOpportunities({ ...filters, aircraftId: selectedAircraftId.value, limit: ROUTE_OPPORTUNITY_LIMIT }),
       getRoutes(),
     ]);
     opportunities.value = opportunityResponse.opportunities;
@@ -240,134 +227,110 @@ const tMap = {
 </script>
 
 <template>
-  <section class="h-full overflow-y-auto bg-background p-4 text-body text-text-primary sm:p-6">
-    <div class="flex flex-col gap-5 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
-      <div class="min-w-0">
-        <h1 class="text-h2">
-          {{ tr("title") }}
-        </h1>
-        <p class="mt-2 max-w-2xl text-body text-text-muted">
-          {{ tr("description") }}
-        </p>
+  <section class="route-planner-shell h-full overflow-y-auto bg-background p-3 text-body text-text-primary sm:p-4 xl:overflow-hidden">
+    <div class="route-planner-frame flex min-h-full flex-col gap-3 xl:h-full xl:min-h-0">
+      <div class="flex flex-col gap-3 border-b border-border pb-3 lg:flex-row lg:items-center lg:justify-between">
+        <div class="min-w-0">
+          <h1 class="text-h2">
+            {{ tr("title") }}
+          </h1>
+          <p class="mt-1 max-w-3xl text-body text-text-muted">
+            {{ tr("description") }}
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 text-caption text-text-muted">
+          <span>{{ tr("panel.results") }}: {{ formatNumber(opportunities.length) }}</span>
+          <span>{{ tr("panel.saved") }}: {{ formatNumber(routes.length) }}</span>
+          <AirButton
+            :disabled="isLoading"
+            :label="isLoading ? '...' : tr('action.refresh')"
+            size="sm"
+            variant="primary-soft"
+            @click="loadData"
+          />
+        </div>
       </div>
-      <AirButton
-        :disabled="isLoading"
-        :label="isLoading ? '...' : tr('action.refresh')"
-        size="sm"
-        variant="warning"
-        @click="loadData"
+
+      <AirStatePanel
+        v-if="error"
+        :title="tr('error.load')"
+        :body="error"
+        tone="danger"
       />
-    </div>
-
-    <AirStatePanel
-      v-if="error"
-      class="mt-4"
-      :title="tr('error.load')"
-      :body="error"
-      tone="danger"
-    />
-    <AirStatePanel
-      v-else-if="message"
-      class="mt-4"
-      :title="message"
-      tone="success"
-    />
-
-    <div class="mt-6 grid gap-3 sm:grid-cols-3">
-      <AirMetricCard
-        v-for="metric in topMetrics"
-        :key="metric.label"
-        :label="metric.label"
-        :tone="metric.tone"
-        :value="metric.value"
+      <AirStatePanel
+        v-else-if="message"
+        :title="message"
+        tone="success"
       />
-    </div>
 
-    <div class="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_28rem]">
-      <div class="min-w-0">
-        <div class="grid gap-3 rounded-lg border border-border bg-surface p-4 md:grid-cols-2 xl:grid-cols-5">
-          <div class="flex min-w-0 flex-col gap-1.5">
-            <span class="text-caption text-text-muted">{{ tr("filter.aircraft") }}</span>
-            <AirSelect
-              class="w-full"
-              :label="tr('filter.aircraft')"
-              :model-value="selectedAircraftId"
-              :options="aircraftOptions"
-              @update:model-value="selectedAircraftId = $event"
-            />
-          </div>
-          <AirTextField
-            v-model="filters.minDemand"
-            :label="tr('filter.minDemand')"
-            placeholder="120"
-          />
-          <AirTextField
-            v-model="filters.maxDistance"
-            :label="tr('filter.maxDistance')"
-            placeholder="3500"
-          />
-          <label class="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 text-body text-text-muted">
-            <input
-              v-model="filters.onlyCompatible"
-              class="size-4 accent-primary"
-              type="checkbox"
-            />
-            {{ tr("filter.compatible") }}
-          </label>
-          <label class="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 text-body text-text-muted">
-            <input
-              v-model="filters.onlyProfitable"
-              class="size-4 accent-primary"
-              type="checkbox"
-            />
-            {{ tr("filter.profitable") }}
-          </label>
-          <div class="flex min-h-11 items-center rounded-lg border border-border bg-background px-3 text-caption text-text-muted">
-            {{ tr("filter.autoApply") }}
-          </div>
-        </div>
+      <RoutePlannerFilters
+        :aircraft-options="aircraftOptions"
+        :max-distance="filters.maxDistance"
+        :min-demand="filters.minDemand"
+        :only-compatible="filters.onlyCompatible"
+        :only-profitable="filters.onlyProfitable"
+        :selected-aircraft-id="selectedAircraftId"
+        :t="tr"
+        @update:max-distance="filters.maxDistance = $event"
+        @update:min-demand="filters.minDemand = $event"
+        @update:only-compatible="filters.onlyCompatible = $event"
+        @update:only-profitable="filters.onlyProfitable = $event"
+        @update:selected-aircraft-id="selectedAircraftId = $event"
+      />
 
-        <div class="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-          <RouteMapPanel
-            :opportunities="opportunities"
-            :selected-destination-id="selectedDestinationId"
-            :t="tr"
-            @select-opportunity="selectOpportunity"
-          />
-
-          <RouteOpportunityGrid
-            :format-money="formatMoney"
-            :format-number="formatNumber"
-            :is-loading="isLoading"
-            :opportunities="opportunities"
-            :recommendation-label="recommendationLabel"
-            :recommendation-variant="recommendationVariant"
-            :selected-destination-id="selectedDestinationId"
-            :t="tr"
-            @select-opportunity="selectOpportunity"
-          />
-        </div>
-
-        <RouteListPanel
-          :format-number="formatNumber"
-          :routes="routes"
-          :status-label="statusLabel"
+      <div class="route-planner-workspace">
+        <RouteMapPanel
+          :app-theme="props.appTheme ?? 'light'"
+          :opportunities="opportunities"
+          :selected-aircraft-id="selectedAircraftId"
+          :selected-destination-id="selectedDestinationId"
           :t="tr"
-          @navigate-to-schedule="navigateToSchedule"
+          @select-opportunity="selectOpportunity"
+        />
+
+        <RoutePreviewPanel
+          class="route-planner-preview"
+          :current-preview="currentPreview"
+          :format-money="formatMoney"
+          :format-number="formatNumber"
+          :is-creating="isCreating"
+          :is-preview-loading="isPreviewLoading"
+          :recommendation-label="recommendationLabel"
+          :recommendation-variant="recommendationVariant"
+          :t="tr"
+          @create-selected-route="createSelectedRoute"
         />
       </div>
 
-      <RoutePreviewPanel
-        :current-preview="currentPreview"
+      <RoutePlannerLists
         :format-money="formatMoney"
         :format-number="formatNumber"
-        :is-creating="isCreating"
-        :is-preview-loading="isPreviewLoading"
+        :is-loading="isLoading"
+        :opportunities="opportunities"
         :recommendation-label="recommendationLabel"
         :recommendation-variant="recommendationVariant"
+        :routes="routes"
+        :selected-destination-id="selectedDestinationId"
+        :status-label="statusLabel"
         :t="tr"
-        @create-selected-route="createSelectedRoute"
+        @navigate-to-schedule="navigateToSchedule"
+        @select-opportunity="selectOpportunity"
       />
     </div>
   </section>
 </template>
+
+<style scoped>
+.route-planner-workspace {
+  display: grid;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+@media (min-width: 1280px) {
+  .route-planner-workspace {
+    height: clamp(32rem, calc(100vh - 22rem), 46rem);
+    grid-template-columns: minmax(0, 1fr) 27rem;
+  }
+}
+</style>

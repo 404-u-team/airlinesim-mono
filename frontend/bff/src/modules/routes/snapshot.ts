@@ -7,9 +7,12 @@ import { loadFleetSnapshot } from "../fleet/snapshot";
 
 type Region = {
   business_score?: number;
+  country_id?: string;
+  gdp_per_capita?: number;
   id?: string;
   intl_name?: string;
   local_name?: string;
+  population?: number;
   tourism_score?: number;
 };
 

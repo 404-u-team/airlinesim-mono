@@ -3,11 +3,11 @@ import { airlineSimEventBus } from "@airlinesim/event-bus";
 import { Map as MapLibreMap, type Map as MapLibreMapType } from "maplibre-gl";
 import { SvelteSet } from "svelte/reactivity";
 
-import { ThreeLayer } from "./3D/ThreeLayer";
 import { MAP__STYLES, type MapStyle, type MapTheme } from "./styles";
 
 const DEFAULT_STYLE = MAP__STYLES[0];
 const DEFAULT_ZOOM = 2;
+const DEBUG_LOG_PREFIX = "[dashboard-map]";
 
 export type MapAirportFeature = {
     geometry: {
@@ -23,7 +23,14 @@ export type MapAirportFeature = {
     type: "Feature";
 };
 
+export type MapFeatureCounts = {
+    airports: number;
+    flights: number;
+    routes: number;
+};
+
 export type MapManagerSnapshot = {
+    data: MapFeatureCounts;
     isGlobe: boolean;
     isReady: boolean;
     isRotating: boolean;
@@ -94,9 +101,9 @@ export class MapManager {
 
     private pendingCameraState: CameraState | null = null;
 
-    private style = $state<MapStyle>(DEFAULT_STYLE);
+    private refreshFrameId: null | number = null;
 
-    private threeLayer: null | ThreeLayer = null;
+    private style = $state<MapStyle>(DEFAULT_STYLE);
 
     private zoom = $state(DEFAULT_ZOOM);
 
@@ -118,9 +125,15 @@ export class MapManager {
             this.animationId = null;
         }
 
-        this.threeLayer = null;
+        if (this.refreshFrameId !== null) {
+            cancelAnimationFrame(this.refreshFrameId);
+            this.refreshFrameId = null;
+        }
 
         if (this.map) {
+            const canvas = this.map.getCanvas();
+            canvas.removeEventListener("webglcontextlost", this.handleWebGlContextLost);
+            canvas.removeEventListener("webglcontextrestored", this.handleWebGlContextRestored);
             this.map.remove();
             this.map = null;
         }
@@ -130,6 +143,7 @@ export class MapManager {
 
     public getSnapshot(): MapManagerSnapshot {
         return {
+            data: this.getFeatureCounts(),
             isGlobe: this.isGlobe,
             isReady: this.map !== null,
             isRotating: this.isInRotation,
@@ -166,6 +180,10 @@ export class MapManager {
             style: this.style.url,
             zoom: this.zoom,
         });
+        const canvas = this.map.getCanvas();
+        canvas.addEventListener("webglcontextlost", this.handleWebGlContextLost);
+        canvas.addEventListener("webglcontextrestored", this.handleWebGlContextRestored);
+        debugLog("map:init", { rotation, style: this.style.name });
         this.isInRotation = rotation;
         this.zoom = this.map.getZoom();
         this.emit();
@@ -174,8 +192,22 @@ export class MapManager {
             this.restoreCameraState();
             this.setGlobeProjection(this.isGlobe, true);
             this.setRotation(this.isInRotation);
-            this.initThreeLayer();
+            // Game layers (base/routes/flights) are the primary content. The optional
+            // three.js model layer is intentionally disabled: it spawned a second WebGL
+            // context that was being lost and tore down the whole map canvas.
             this.applyGameLayers();
+            this.fitGameBounds();
+            this.scheduleGameLayerRefresh(true);
+            void this.map?.once("idle", () => {
+                this.applyGameLayers();
+                this.fitGameBounds();
+                this.emit();
+                debugLog("style:idle-reapplied", {
+                    counts: this.getFeatureCounts(),
+                    hasGameLayers: this.hasGameLayers(),
+                });
+            });
+            debugLog("style:loaded", { counts: this.getFeatureCounts(), style: this.style.name });
         });
 
         this.map.on("zoom", () => {
@@ -199,9 +231,20 @@ export class MapManager {
     }
 
     public setMapState(mapState: MapState | null): void {
-        this.mapState = mapState;
+        // The shell passes map state as a Vue reactive proxy. MapLibre serializes
+        // GeoJSON sources to a Web Worker via structured clone, which throws on a
+        // proxy and silently drops the layers, so deep-clone to plain objects first.
+        this.mapState = toPlainMapState(mapState);
+        debugLog("state:received", {
+            counts: this.getFeatureCounts(),
+            hasGameLayers: this.hasGameLayers(),
+            hasViewport: Boolean(this.mapState?.viewport),
+            styleLoaded: this.map?.isStyleLoaded() ?? false,
+        });
         this.applyGameLayers();
         this.fitGameBounds();
+        this.scheduleGameLayerRefresh(true);
+        this.emit();
     }
 
     public setRotation(rotationStatus: boolean): void {
@@ -261,6 +304,12 @@ export class MapManager {
         this.ensureRouteLayer();
         this.ensureFlightLayer();
         this.ensureAirportLayers();
+        debugLog("layers:applied", {
+            counts: this.getFeatureCounts(),
+            hasAirportLayer: Boolean(this.map.getLayer("airlinesim-airport-points")),
+            hasFlightLayer: Boolean(this.map.getLayer("airlinesim-flight-points")),
+            hasRouteLayer: Boolean(this.map.getLayer("airlinesim-route-lines")),
+        });
     }
 
     private applyStyle(style: MapStyle): void {
@@ -274,7 +323,6 @@ export class MapManager {
             pitch: this.map.getPitch(),
             zoom: this.map.getZoom(),
         };
-        this.threeLayer = null;
         this.map.setStyle(style.url);
     }
 
@@ -412,8 +460,18 @@ export class MapManager {
         }
 
         if (center) {
-            this.map.easeTo({ center, duration: 500, zoom: zoom ?? 5 });
+            // easeTo "around a point" is unsupported under globe projection and logs a
+            // warning, so jump directly to the requested center/zoom instead.
+            this.map.jumpTo({ center, zoom: zoom ?? 5 });
         }
+    }
+
+    private getFeatureCounts(): MapFeatureCounts {
+        return {
+            airports: this.mapState?.airports?.features.length ?? 0,
+            flights: this.mapState?.flights?.features.length ?? 0,
+            routes: this.mapState?.routes?.features.length ?? 0,
+        };
     }
 
     private readonly handleAirportClick = (event: { features?: Array<{ properties?: { id?: string } }> }): void => {
@@ -449,17 +507,29 @@ export class MapManager {
         }
     };
 
-    private initThreeLayer(): void {
-        if (!this.map) {
-            return;
-        }
+    private readonly handleWebGlContextLost = (event: Event): void => {
+        event.preventDefault();
+        debugWarn("webgl:context-lost", { counts: this.getFeatureCounts() });
+    };
 
-        if (this.map.getLayer("3d-models-layer")) {
-            return;
-        }
+    private readonly handleWebGlContextRestored = (): void => {
+        debugWarn("webgl:context-restored", { counts: this.getFeatureCounts() });
+        this.map?.resize();
+        this.setGlobeProjection(this.isGlobe, true);
+        this.applyGameLayers();
+        this.fitGameBounds();
+        this.scheduleGameLayerRefresh(true);
+    };
 
-        this.threeLayer = new ThreeLayer(this.map, this.style.theme);
-        this.map.addLayer(this.threeLayer);
+    private hasGameLayers(): boolean {
+        return Boolean(
+            this.map?.getSource("airlinesim-routes") &&
+            this.map.getSource("airlinesim-flights") &&
+            this.map.getSource("airlinesim-airports") &&
+            this.map.getLayer("airlinesim-route-lines") &&
+            this.map.getLayer("airlinesim-flight-points") &&
+            this.map.getLayer("airlinesim-airport-points"),
+        );
     }
 
     private restoreCameraState(): void {
@@ -473,6 +543,22 @@ export class MapManager {
         this.zoom = cameraState.zoom;
         this.map.jumpTo(cameraState);
         this.emit();
+    }
+
+    private scheduleGameLayerRefresh(shouldFitBounds: boolean): void {
+        if (this.refreshFrameId !== null) {
+            return;
+        }
+
+        this.refreshFrameId = requestAnimationFrame(() => {
+            this.refreshFrameId = null;
+            this.map?.resize();
+            this.applyGameLayers();
+            if (shouldFitBounds) {
+                this.fitGameBounds();
+            }
+            this.emit();
+        });
     }
 
     private setMapInteractivity(enabled: boolean): void {
@@ -513,6 +599,7 @@ export class MapManager {
 
         if (source?.setData) {
             source.setData(data);
+            debugLog("source:updated", { features: featureCount(data), id });
             return;
         }
 
@@ -520,6 +607,7 @@ export class MapManager {
             data: data as unknown as GeoJSON.GeoJSON,
             type: "geojson",
         });
+        debugLog("source:added", { features: featureCount(data), id });
     }
 
     private zoomBy(delta: number): void {
@@ -531,6 +619,40 @@ export class MapManager {
         this.zoom = nextZoom;
         this.map?.zoomTo(nextZoom, { duration: 300 });
         this.emit();
+    }
+}
+
+function debugLog(message: string, details: Record<string, unknown>): void {
+    if (isDebugLoggingEnabled()) {
+        console.warn(DEBUG_LOG_PREFIX, message, details);
+    }
+}
+
+function debugWarn(message: string, details: Record<string, unknown>): void {
+    if (isDebugLoggingEnabled()) {
+        console.warn(DEBUG_LOG_PREFIX, message, details);
+    }
+}
+
+function featureCount(data: Record<string, unknown>): number {
+    const {features} = data;
+
+    return Array.isArray(features) ? features.length : 0;
+}
+
+function isDebugLoggingEnabled(): boolean {
+    return import.meta.env.DEV || import.meta.env.MODE !== "production";
+}
+
+function toPlainMapState(mapState: MapState | null): MapState | null {
+    if (!mapState) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(JSON.stringify(mapState)) as MapState;
+    } catch {
+        return mapState;
     }
 }
 

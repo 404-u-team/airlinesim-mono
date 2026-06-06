@@ -10,6 +10,7 @@ import type {
   StoredRoute,
 } from "./types";
 
+import { calculatePassengerDemand } from "../demand/model";
 import { rangeConstraints, runwayConstraints } from "../facilities/constraints";
 import { buildRouteEconomics } from "./economics";
 import { buildDistanceKm, toRouteAirport } from "./geometry";
@@ -21,9 +22,12 @@ export type RoutePlanningSnapshot = FleetSnapshot & {
 
 type Region = {
   business_score?: number;
+  country_id?: string;
+  gdp_per_capita?: number;
   id?: string;
   intl_name?: string;
   local_name?: string;
+  population?: number;
   tourism_score?: number;
 };
 
@@ -39,7 +43,7 @@ type RegionLink = {
 };
 
 export function buildRouteListItem(route: StoredRoute, snapshot: RoutePlanningSnapshot): ReturnType<typeof toRouteListItem> {
-  return toRouteListItem(route, snapshot);
+  return toRouteListItem(refreshStoredRoute(route, snapshot), snapshot);
 }
 
 export function buildRouteOpportunities(
@@ -140,6 +144,14 @@ export function findAirport(airports: Airport[], id: string | undefined): Airpor
   return airports.find((airport) => airport.id === id);
 }
 
+// Recomputes a stored route's demand/economics from current data; the persisted
+// snapshot is only a frozen creation-time cache and can hold stale numbers.
+export function refreshStoredRoute(route: StoredRoute, snapshot: RoutePlanningSnapshot): StoredRoute {
+  const opportunity = buildRouteOpportunity(snapshot, route.origin_airport_id, route.destination_airport_id, [], route.selected_aircraft_id);
+
+  return opportunity ? { ...route, demand_snapshot: opportunity.demand, economics_snapshot: opportunity.economics } : route;
+}
+
 function addAircraftStateReasons(
   blockers: RouteReason[],
   warnings: RouteReason[],
@@ -218,15 +230,20 @@ function buildAircraftOptions(
 }
 
 function buildDemandSnapshot(snapshot: RoutePlanningSnapshot, origin: Airport, destination: Airport): RouteDemandSnapshot {
+  const distanceKm = buildDistanceKm(origin, destination);
   const link = findRegionLink(snapshot.regionLinks, origin.region_id, destination.region_id);
   const cachedDemand = demandFromLink(link, origin.region_id);
-  const fallbackDemand = fallbackDemandForAirports(snapshot, origin, destination);
-  const originDailyPassengers = Math.max(0, Math.round(cachedDemand > 0 ? cachedDemand : fallbackDemand));
+  const originRegion = snapshot.regions.find((region) => region.id === origin.region_id) ?? {};
+  const destinationRegion = snapshot.regions.find((region) => region.id === destination.region_id) ?? {};
+  const modeled = calculatePassengerDemand(origin, destination, originRegion, destinationRegion, distanceKm);
+  const originDailyPassengers = Math.max(0, Math.round(cachedDemand > 0 ? cachedDemand : modeled.originToDestination));
 
   return {
     calculated_at: new Date().toISOString(),
-    destination_daily_passengers: Math.max(0, Math.round(originDailyPassengers * 0.92)),
-    distance_km: Math.round(buildDistanceKm(origin, destination)),
+    destination_daily_passengers: cachedDemand > 0
+      ? Math.max(0, Math.round(originDailyPassengers * 0.92))
+      : Math.max(0, Math.round(modeled.destinationToOrigin)),
+    distance_km: Math.round(distanceKm),
     origin_daily_passengers: originDailyPassengers,
     region_link_id: link?.id,
   };
@@ -296,15 +313,6 @@ function demandFromLink(link: RegionLink | undefined, originRegionId: string | u
     return link.region_a === originRegionId ? link.base_daily_demand_ab ?? 0 : link.base_daily_demand_ba ?? 0;
   }
   return 80 * ((link.business ?? 0) * 0.42 + (link.tourism ?? 0) * 0.36 + (link.diaspora ?? 0) * 0.22);
-}
-
-function fallbackDemandForAirports(snapshot: RoutePlanningSnapshot, origin: Airport, destination: Airport): number {
-  const originRegion = snapshot.regions.find((region) => region.id === origin.region_id);
-  const destinationRegion = snapshot.regions.find((region) => region.id === destination.region_id);
-  const distance = buildDistanceKm(origin, destination);
-  const score = Math.sqrt((originRegion?.business_score ?? 0.2) * (destinationRegion?.tourism_score ?? 0.2));
-
-  return Math.max(40, Math.round(260 * score * (1 / (1 + distance / 5500))));
 }
 
 function findRegionLink(links: RegionLink[], leftRegionId: string | undefined, rightRegionId: string | undefined): RegionLink | undefined {
@@ -384,8 +392,5 @@ function toRouteListItem(route: StoredRoute, snapshot: RoutePlanningSnapshot): R
 }
 
 function toRouteReason(reason: ReturnType<typeof runwayConstraints>[number]): RouteReason {
-  return {
-    code: reason.code,
-    message: reason.code,
-  };
+  return { code: reason.code, message: reason.code };
 }

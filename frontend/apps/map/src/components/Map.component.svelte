@@ -11,12 +11,10 @@
 
     const {
         controls = false,
-        mapState = null,
         rotation = false,
         theme = "light",
     }: {
         controls?: boolean;
-        mapState?: import("../map-manager/index.svelte").MapState | null;
         rotation?: boolean;
         theme?: "dark" | "light";
     } = $props();
@@ -35,10 +33,6 @@
             appliedTheme = nextTheme;
             untrack(() => mapManager.handleThemeChange(nextTheme));
         }
-    });
-
-    $effect(() => {
-        mapManager.setMapState(mapState);
     });
 
     onDestroy((): void => {

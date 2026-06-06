@@ -66,7 +66,7 @@ export function generateFlightsForSchedule(
     return [];
   }
 
-  return buildScheduleDates(startsOn, pattern, daysToGenerate)
+  return buildScheduleDates(startsOn, pattern, daysToGenerate, origin.timezone)
     .map((departureAt, index) =>
       buildStoredFlight(snapshot, route, aircraft, type, pattern, origin, destination, departureAt, index, scheduleId));
 }
@@ -109,12 +109,10 @@ export function updateFlightStatuses(flights: StoredFlight[], now = new Date()):
   }));
 }
 
-function buildDepartureDate(date: Date, time: string): Date {
+function buildDepartureDate(date: Date, time: string, timeZone?: string): Date {
   const [hour = "9", minute = "0"] = time.split(":");
-  const next = new Date(date);
-  next.setUTCHours(Number(hour), Number(minute), 0, 0);
 
-  return next;
+  return zonedWallTimeToUtc(date, Number(hour), Number(minute), timeZone);
 }
 
 function buildFlightNumber(snapshot: OperationsSnapshot, route: StoredRoute, index: number): string {
@@ -124,7 +122,12 @@ function buildFlightNumber(snapshot: OperationsSnapshot, route: StoredRoute, ind
   return `${prefix}${routeSeed}${String(index + 1).padStart(2, "0")}`;
 }
 
-function buildScheduleDates(startsOn: string | undefined, pattern: SchedulePattern, daysToGenerate: number): Date[] {
+function buildScheduleDates(
+  startsOn: string | undefined,
+  pattern: SchedulePattern,
+  daysToGenerate: number,
+  originTimeZone?: string,
+): Date[] {
   const firstDay = new Date(`${startsOn ?? new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
   const dates: Date[] = [];
 
@@ -133,7 +136,7 @@ function buildScheduleDates(startsOn: string | undefined, pattern: SchedulePatte
     date.setUTCDate(firstDay.getUTCDate() + offset);
 
     if (pattern.days_of_week.includes(date.getUTCDay())) {
-      dates.push(buildDepartureDate(date, pattern.departure_local_time));
+      dates.push(buildDepartureDate(date, pattern.departure_local_time, originTimeZone));
     }
   }
 
@@ -187,7 +190,8 @@ function estimateFlightFinancials(route: StoredRoute, type: AircraftType, origin
   const revenue = Math.round(route.economics_snapshot.estimated_fare_per_passenger * passengers);
   const blockHours = estimateBlockHours(route, type);
   const cost = Math.round(
-    (type.fuel_consumption_per_hour ?? 2.8) * blockHours * getCurrentFuelUnitPrice() +
+    // fuel_consumption_per_hour is kg/h; the fuel unit price is per tonne, so convert.
+    ((type.fuel_consumption_per_hour ?? 2000) / 1000) * blockHours * getCurrentFuelUnitPrice() +
       (type.maint_cost_per_flight_hour ?? 600) * blockHours +
       (origin.runway_fee ?? 0) +
       (origin.gate_fee ?? 0) +
@@ -242,4 +246,42 @@ function newFlightStub(
 
 function stableFlightId(scheduleId: string, departureAt: Date): string {
   return `flight-${Math.abs(hashCode(`${scheduleId}|${departureAt.toISOString()}`)).toString(36)}`;
+}
+
+/**
+ * Converts a wall-clock time (the local departure time at the origin airport) on
+ * a given calendar day into the correct UTC instant. Without a timezone the wall
+ * time is treated as UTC. A single offset correction is accurate outside DST
+ * transition hours, which is sufficient for MVP scheduling.
+ */
+function zonedWallTimeToUtc(date: Date, hour: number, minute: number, timeZone?: string): Date {
+  const wallAsUtc = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), hour, minute, 0, 0);
+
+  if (!timeZone) {
+    return new Date(wallAsUtc);
+  }
+
+  return new Date(wallAsUtc - zoneOffsetMs(new Date(wallAsUtc), timeZone));
+}
+
+function zoneOffsetMs(instant: Date, timeZone: string): number {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      day: "2-digit",
+      hour: "2-digit",
+      hour12: false,
+      minute: "2-digit",
+      month: "2-digit",
+      second: "2-digit",
+      timeZone,
+      year: "numeric",
+    }).formatToParts(instant);
+    const lookup = (type: string): number => Number(parts.find((part) => part.type === type)?.value ?? "0");
+    const hour = lookup("hour") % 24;
+    const asZoned = Date.UTC(lookup("year"), lookup("month") - 1, lookup("day"), hour, lookup("minute"), lookup("second"));
+
+    return asZoned - instant.getTime();
+  } catch {
+    return 0;
+  }
 }

@@ -6,7 +6,7 @@ import { jsonResponse, readJson } from "../../http";
 import { recordGameEvent } from "../events/producer";
 import { reconcileNotificationsAfterMutation } from "../events/reconcile";
 import { reconcileCompletedFlight } from "../finance/ledger";
-import { buildRouteListItem } from "../routes/planning";
+import { buildRouteListItem, refreshStoredRoute } from "../routes/planning";
 import { loadRoutePlanningSnapshot } from "../routes/snapshot";
 import { listRoutesForAirline, saveRoute } from "../routes/storage";
 import { updateFlightStatuses } from "./flights";
@@ -100,6 +100,12 @@ async function completeFlight(request: Request, config: BffConfig, flightId: str
 
   if (!flight) {
     return jsonResponse({ error: { code: "FLIGHT_NOT_FOUND", message: "Flight not found." } }, { status: 404 });
+  }
+  if (flight.status !== "completed" && new Date(flight.arrival_at).getTime() > Date.now()) {
+    return jsonResponse(
+      { error: { code: "FLIGHT_NOT_ARRIVED", message: "Flight has not arrived yet and is settled automatically." } },
+      { status: 409 },
+    );
   }
 
   const completedFlight = {
@@ -215,7 +221,7 @@ async function loadOperationsSnapshot(request: Request, config: BffConfig): Prom
   return {
     ...routeSnapshot,
     flights,
-    routes,
+    routes: routes.map((route) => refreshStoredRoute(route, routeSnapshot)),
     schedules,
   };
 }

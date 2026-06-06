@@ -9,7 +9,7 @@ export type FuelPriceEventPayload = {
 export type FuelPriceSnapshot = {
   price: number;
   recorded_at: string;
-  source: "backend-realtime" | "fallback" | "storage";
+  source: "fallback" | "internal" | "storage";
   unit_price: number;
   updated_at: string;
 };
@@ -19,13 +19,25 @@ type FuelPriceStore = {
   history: FuelPriceSnapshot[];
 };
 
-const defaultGlobalFuelPrice = 100;
-const fuelUnitPriceMultiplier = 9.5;
+// The fuel price is a self-contained simulation, independent of the backend. It is
+// expressed in USD per tonne of jet fuel (a realistic ~800/t). Aircraft
+// fuel_consumption_per_hour is in kg/h, so cost callers divide consumption by 1000.
+const defaultFuelPricePerTonne = 820;
+const minFuelPricePerTonne = 560;
+const maxFuelPricePerTonne = 1180;
+const fuelUpdateIntervalMs = 15 * 60 * 1000;
 const historyLimit = 96;
 const storePath = resolve(import.meta.dir, "../../../data/game-state/fuel-price.json");
 
 let currentSnapshot: FuelPriceSnapshot = buildFallbackSnapshot();
 let mutationQueue: Promise<unknown> = Promise.resolve();
+let schedulerTimer: null | ReturnType<typeof setInterval> = null;
+
+export async function advanceFuelPrice(): Promise<FuelPriceSnapshot> {
+  const nextPrice = nextRandomWalkPrice(currentSnapshot.price);
+
+  return (await recordFuelPriceChange({ price: nextPrice, recorded_at: new Date().toISOString() })) ?? currentSnapshot;
+}
 
 export function getCurrentFuelUnitPrice(): number {
   return currentSnapshot.unit_price;
@@ -56,7 +68,7 @@ export async function recordFuelPriceChange(payload: FuelPriceEventPayload): Pro
   }
 
   const recordedAt = normalizeRecordedAt(payload.recorded_at);
-  const snapshot = buildSnapshot(payload.price, recordedAt, "backend-realtime");
+  const snapshot = buildSnapshot(payload.price, recordedAt, "internal");
   currentSnapshot = snapshot;
 
   await queuedMutation(async () => {
@@ -72,12 +84,17 @@ export async function recordFuelPriceChange(payload: FuelPriceEventPayload): Pro
   return snapshot;
 }
 
-export function toFuelUnitPrice(globalPrice: number): number {
-  return Number((globalPrice * fuelUnitPriceMultiplier).toFixed(2));
+export function startFuelPriceScheduler(): void {
+  if (schedulerTimer) {
+    return;
+  }
+
+  schedulerTimer = setInterval(() => void advanceFuelPrice(), fuelUpdateIntervalMs);
+  schedulerTimer.unref();
 }
 
 function buildFallbackSnapshot(): FuelPriceSnapshot {
-  return buildSnapshot(defaultGlobalFuelPrice, new Date().toISOString(), "fallback");
+  return buildSnapshot(defaultFuelPricePerTonne, new Date().toISOString(), "fallback");
 }
 
 function buildSnapshot(
@@ -85,13 +102,19 @@ function buildSnapshot(
   recordedAt: string,
   source: FuelPriceSnapshot["source"],
 ): FuelPriceSnapshot {
+  const perTonne = clampFuelPrice(price);
+
   return {
-    price: Number(price.toFixed(2)),
+    price: perTonne,
     recorded_at: recordedAt,
     source,
-    unit_price: toFuelUnitPrice(price),
+    unit_price: perTonne,
     updated_at: new Date().toISOString(),
   };
+}
+
+function clampFuelPrice(price: number): number {
+  return Math.round(Math.max(minFuelPricePerTonne, Math.min(maxFuelPricePerTonne, price)));
 }
 
 function dedupeHistory(history: FuelPriceSnapshot[]): FuelPriceSnapshot[] {
@@ -114,6 +137,13 @@ function isValidFuelPrice(value: number | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
+function nextRandomWalkPrice(previous: number): number {
+  const meanReversion = (defaultFuelPricePerTonne - previous) * 0.05;
+  const shock = (Math.random() - 0.5) * 0.08 * previous;
+
+  return clampFuelPrice(previous + meanReversion + shock);
+}
+
 function normalizeRecordedAt(value: string | undefined): string {
   if (!value) {
     return new Date().toISOString();
@@ -134,11 +164,13 @@ function normalizeSnapshot(value: unknown, source: FuelPriceSnapshot["source"]):
     return null;
   }
 
+  const perTonne = clampFuelPrice(payload.price);
+
   return {
-    price: Number(payload.price.toFixed(2)),
+    price: perTonne,
     recorded_at: normalizeRecordedAt(payload.recorded_at),
     source,
-    unit_price: toFuelUnitPrice(payload.price),
+    unit_price: perTonne,
     updated_at: normalizeRecordedAt(payload.updated_at),
   };
 }

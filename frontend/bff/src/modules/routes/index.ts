@@ -23,6 +23,9 @@ type PatchRouteRequest = {
   status?: StoredRoute["status"];
 };
 
+const DEFAULT_ROUTE_OPPORTUNITY_LIMIT = 24;
+const MAX_ROUTE_OPPORTUNITY_LIMIT = 500;
+
 export async function handleRoutesRequest(
   request: Request,
   url: URL,
@@ -121,7 +124,7 @@ function filterOpportunity(opportunity: RouteOpportunity, searchParams: URLSearc
 async function listRouteOpportunities(request: Request, url: URL, config: BffConfig): Promise<Response> {
   const snapshot = await loadRoutePlanningSnapshot(request, config);
   const routes = await listRoutesForAirline(snapshot.airline.id ?? "");
-  const limit = Number(url.searchParams.get("limit") ?? "24");
+  const limit = routeOpportunityLimit(url.searchParams);
   const opportunities = buildRouteOpportunities(
     snapshot,
     routes,
@@ -129,7 +132,7 @@ async function listRouteOpportunities(request: Request, url: URL, config: BffCon
     url.searchParams.get("aircraft_id") ?? undefined,
   )
     .filter((opportunity) => filterOpportunity(opportunity, url.searchParams))
-    .slice(0, Number.isFinite(limit) ? Math.max(1, Math.min(limit, 100)) : 24);
+    .slice(0, limit);
 
   return jsonResponse({
     opportunities,
@@ -149,7 +152,7 @@ async function listRoutes(request: Request, config: BffConfig): Promise<Response
 
 function matchesCompatibleFilter(opportunity: RouteOpportunity, searchParams: URLSearchParams): boolean {
   return searchParams.get("only_compatible") !== "true" ||
-    opportunity.compatible_aircraft.some((option) => option.isCompatible);
+    opportunityHasCompatibleAircraft(opportunity, searchParams.get("aircraft_id") ?? "");
 }
 
 function matchesDemandFilter(opportunity: RouteOpportunity, searchParams: URLSearchParams): boolean {
@@ -167,6 +170,14 @@ function matchesDistanceFilter(opportunity: RouteOpportunity, searchParams: URLS
 function matchesProfitFilter(opportunity: RouteOpportunity, searchParams: URLSearchParams): boolean {
   return searchParams.get("only_profitable") !== "true" ||
     opportunity.economics.estimated_profit_per_flight > 0;
+}
+
+function opportunityHasCompatibleAircraft(opportunity: RouteOpportunity, aircraftId: string): boolean {
+  if (aircraftId) {
+    return opportunity.compatible_aircraft.some((option) => option.aircraft.id === aircraftId && option.isCompatible);
+  }
+
+  return opportunity.compatible_aircraft.some((option) => option.isCompatible);
 }
 
 async function patchRoute(request: Request, config: BffConfig, routeId: string): Promise<Response> {
@@ -268,6 +279,14 @@ async function routeOpportunityPreviewRequest(
   }
 
   return jsonResponse({ error: { code: "METHOD_NOT_ALLOWED", message: "Method not allowed." } }, { status: 405 });
+}
+
+function routeOpportunityLimit(searchParams: URLSearchParams): number {
+  const limit = Number(searchParams.get("limit") ?? String(DEFAULT_ROUTE_OPPORTUNITY_LIMIT));
+
+  return Number.isFinite(limit)
+    ? Math.max(1, Math.min(limit, MAX_ROUTE_OPPORTUNITY_LIMIT))
+    : DEFAULT_ROUTE_OPPORTUNITY_LIMIT;
 }
 
 async function routeRequest(request: Request, url: URL, config: BffConfig): Promise<Response> {

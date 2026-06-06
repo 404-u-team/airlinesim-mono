@@ -23,6 +23,8 @@ const props = defineProps<{
   appTheme: "dark" | "light";
 }>();
 
+const DEBUG_LOG_PREFIX = "[dashboard-map]";
+
 const router = useRouter();
 const error = ref("");
 const isLoading = ref(true);
@@ -72,6 +74,20 @@ onBeforeUnmount(() => {
   unsubscribeSnapshotInvalidated = null;
 });
 
+function debugMapState(message: string, state: DashboardMapState): void {
+  if (!import.meta.env.DEV) {
+    return;
+  }
+
+  console.warn(DEBUG_LOG_PREFIX, message, {
+    airports: state.airports.features.length,
+    flights: state.flights?.features.length ?? 0,
+    routes: state.routes.features.length,
+    selectedAirportId: state.selected?.airport.id,
+    warnings: state.warnings,
+  });
+}
+
 function formatMoney(value: number): string {
   return new Intl.NumberFormat(props.appLocale, {
     currency: "USD",
@@ -95,6 +111,7 @@ async function loadDashboard(): Promise<void> {
     ]);
     summary.value = summaryResponse;
     mapState.value = mapResponse;
+    debugMapState("shell:loaded", mapResponse);
     setDashboardSummary(summaryResponse);
   } catch (loadError) {
     error.value = loadError instanceof Error ? loadError.message : t.value("dashboard.error");
@@ -105,7 +122,9 @@ async function loadDashboard(): Promise<void> {
 
 async function loadMapState(airportId?: string): Promise<void> {
   try {
-    mapState.value = await getDashboardMapState(airportId);
+    const mapResponse = await getDashboardMapState(airportId);
+    mapState.value = mapResponse;
+    debugMapState("shell:selected-airport-loaded", mapResponse);
   } catch {
     // Dashboard remains usable if the map detail refresh fails.
   }
@@ -213,7 +232,7 @@ async function refreshDashboard(): Promise<void> {
             />
           </div>
 
-          <aside class="grid min-h-0 min-w-0 content-start gap-3 overflow-hidden">
+          <aside class="grid min-h-0 min-w-0 content-start gap-3 overflow-y-auto overflow-x-hidden pr-1">
             <DashboardMetricStrip
               :app-locale="props.appLocale"
               :summary="summary"

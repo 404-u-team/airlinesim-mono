@@ -1,8 +1,7 @@
 import type { BffConfig } from "../../config";
 
 import { jsonResponse } from "../../http";
-import { getFuelPriceHistory, getFuelPriceSnapshot, loadFuelPriceStore } from "./price";
-import { startFuelRealtime } from "./realtime";
+import { getFuelPriceHistory, getFuelPriceSnapshot, loadFuelPriceStore, startFuelPriceScheduler } from "./price";
 
 export async function handleFuelRequest(
   request: Request,
@@ -24,7 +23,7 @@ export async function handleFuelRequest(
   return jsonResponse({ error: { code: "FUEL_NOT_FOUND", message: "Fuel endpoint not found." } }, { status: 404 });
 }
 
-export async function initializeFuelModule(config: BffConfig): Promise<void> {
+export async function initializeFuelModule(_config: BffConfig): Promise<void> {
   await loadFuelPriceStore();
-  startFuelRealtime(config);
+  startFuelPriceScheduler();
 }

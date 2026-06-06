@@ -30,8 +30,9 @@ function formatNumber(value: number): string {
 </script>
 
 <template>
-  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+  <div class="grid grid-cols-2 gap-2">
     <AirMetricCard
+      class="col-span-2"
       :label="t('dashboard.metric.balance')"
       :tone="summary.airline.balance < 5_000_000 ? 'warning' : 'success'"
       :value="formatMoney(summary.airline.balance)"

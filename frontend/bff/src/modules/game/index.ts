@@ -5,6 +5,7 @@ import { getBackendAdminToken, getUserAuthorization, getValidatedUserAirline, re
 import { requestBackendJson } from "../../backend-http";
 import { parseGeoPoint } from "../../geo";
 import { jsonResponse } from "../../http";
+import { calculatePassengerDemand } from "../demand/model";
 import { reconcileNotificationsForDashboard, reconcileNotificationsForRequest } from "../events/reconcile";
 import { listEventsForAirline } from "../events/storage";
 import { buildBaseFacilitiesOverview } from "../facilities/overview";
@@ -108,6 +109,8 @@ type OverlayRoute = {
 
 type Region = {
   business_score?: number;
+  country_id?: string;
+  gdp_per_capita?: number;
   id?: string;
   intl_name?: string;
   local_name?: string;
@@ -142,7 +145,8 @@ export function buildMapState(
   const baseAirport = getBaseAirport(snapshot);
   const includeOpportunities = searchParams.get("include_opportunities") !== "false";
   const requestedSelectedAirportId = searchParams.get("selected_airport_id");
-  const opportunities = includeOpportunities
+  const hasNetwork = routes.length > 0 || operations.flights.length > 0;
+  const opportunities = includeOpportunities && !hasNetwork
     ? buildRouteOpportunities(snapshot, baseAirport?.id ?? null).slice(0, 12)
     : [];
   const selectedAirport =
@@ -691,6 +695,25 @@ function operationsState(hasRoutes: boolean, hasSchedules: boolean): string {
   return hasRoutes ? "empty" : "blocked";
 }
 
+function opportunityDistanceKm(origin: Airport, destination: Airport): number {
+  const originPoint = pointFromAirport(origin);
+  const destinationPoint = pointFromAirport(destination);
+
+  if (!originPoint || !destinationPoint) {
+    return 1500;
+  }
+
+  const radius = 6371;
+  const toRad = (value: number): number => (value * Math.PI) / 180;
+  const dLat = toRad(destinationPoint.latitude - originPoint.latitude);
+  const dLng = toRad(destinationPoint.longitude - originPoint.longitude);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(originPoint.latitude)) * Math.cos(toRad(destinationPoint.latitude)) * Math.sin(dLng / 2) ** 2;
+
+  return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function pointFromAirport(airport: Airport): null | { latitude: number; longitude: number } {
   return parseGeoPoint(airport.geog, airport.geom);
 }
@@ -827,8 +850,13 @@ function toRouteFeature(route: OverlayRoute, snapshot: GameSnapshot): null | Rec
 
 function toRouteOpportunity(origin: Airport, destination: Airport, snapshot: GameSnapshot): RouteOpportunity {
   const link = findRegionLink(snapshot.regionLinks, origin.region_id, destination.region_id);
+  const originRegion = snapshot.regions.find((item) => item.id === origin.region_id) ?? {};
   const region = snapshot.regions.find((item) => item.id === destination.region_id);
-  const demand = demandFromLink(link, origin.region_id);
+  const cachedDemand = demandFromLink(link, origin.region_id);
+  const distanceKm = opportunityDistanceKm(origin, destination);
+  const demand = cachedDemand > 0
+    ? cachedDemand
+    : Math.round(calculatePassengerDemand(origin, destination, originRegion, region ?? {}, distanceKm).originToDestination);
   const slotFactor = Math.sqrt(Math.max(destination.max_runway_uses_per_day ?? 1, 1));
   const score = demand * (0.75 + (region?.business_score ?? 0) * 0.2 + (region?.tourism_score ?? 0) * 0.25) * slotFactor;
 

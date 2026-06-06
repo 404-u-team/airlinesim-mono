@@ -18,45 +18,60 @@ defineProps<{
 const emit = defineEmits<{
   "select-opportunity": [opportunity: RouteOpportunity];
 }>();
+
+function compatibleCount(opportunity: RouteOpportunity): number {
+  return opportunity.compatible_aircraft.filter((option) => option.isCompatible).length;
+}
 </script>
 
 <template>
-  <div class="mt-4 grid gap-3 lg:grid-cols-2">
+  <div class="route-opportunity-grid h-full overflow-y-auto bg-surface">
     <button
       v-for="opportunity in opportunities"
       :key="opportunity.destination_airport.id"
-      class="rounded-lg border bg-surface p-4 text-left transition hover:border-warning"
-      :class="selectedDestinationId === opportunity.destination_airport.id ? 'border-warning' : 'border-border'"
+      class="flex w-full min-w-0 items-center gap-3 border-b border-border px-3 py-2.5 text-left transition last:border-b-0 hover:bg-background"
+      :class="selectedDestinationId === opportunity.destination_airport.id ? 'bg-background' : ''"
       type="button"
       @click="emit('select-opportunity', opportunity)"
     >
-      <div class="flex items-start justify-between gap-3">
-        <div class="min-w-0">
-          <h2 class="truncate text-subtitle">
-            {{ opportunity.destination_airport.label }}
-          </h2>
-          <p class="mt-1 text-caption text-text-muted">
-            {{ formatNumber(opportunity.demand.distance_km) }} km
-          </p>
-        </div>
+      <span class="min-w-0 flex-1">
+        <span class="block truncate text-subtitle">{{ opportunity.destination_airport.label }}</span>
+        <span class="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-caption text-text-muted">
+          <span>{{ formatNumber(opportunity.demand.distance_km) }} {{ t("metric.km") }}</span>
+          <span>{{ formatNumber(opportunity.demand.origin_daily_passengers) }} {{ t("metric.paxPerDay") }}</span>
+          <span>{{ formatNumber(opportunity.economics.expected_load_factor * 100) }}%</span>
+          <span :class="compatibleCount(opportunity) > 0 ? 'text-success' : 'text-error'">
+            {{ formatNumber(compatibleCount(opportunity)) }} {{ t("metric.aircraftShort") }}
+          </span>
+        </span>
+      </span>
+
+      <span class="flex shrink-0 flex-col items-end gap-1">
+        <span
+          class="text-subtitle"
+          :class="opportunity.economics.estimated_profit_per_flight > 0 ? 'text-success' : 'text-error'"
+        >
+          {{ formatMoney(opportunity.economics.estimated_profit_per_flight) }}
+        </span>
         <AirBadge
           :label="recommendationLabel(opportunity.recommendation)"
+          size="sm"
           :variant="recommendationVariant(opportunity.recommendation)"
         />
-      </div>
-      <div class="mt-4 grid grid-cols-2 gap-3 text-caption text-text-muted">
-        <span>{{ t("metric.weekDemand") }}: {{ formatNumber(opportunity.demand.origin_daily_passengers) }}</span>
-        <span>{{ t("metric.profit") }}: {{ formatMoney(opportunity.economics.estimated_profit_per_flight) }}</span>
-        <span>{{ t("metric.aircraft") }}: {{ formatNumber(opportunity.compatible_aircraft.filter((option) => option.isCompatible).length) }}</span>
-        <span>{{ t("metric.load") }}: {{ formatNumber(opportunity.economics.expected_load_factor * 100) }}%</span>
-      </div>
+      </span>
     </button>
-  </div>
 
-  <div
-    v-if="!isLoading && opportunities.length === 0"
-    class="mt-4 rounded-lg border border-border bg-surface p-5 text-text-muted"
-  >
-    {{ t("empty.noOpportunities") }}
+    <p
+      v-if="!isLoading && opportunities.length === 0"
+      class="p-5 text-text-muted"
+    >
+      {{ t("empty.noOpportunities") }}
+    </p>
   </div>
 </template>
+
+<style scoped>
+.route-opportunity-grid {
+  min-height: 0;
+}
+</style>

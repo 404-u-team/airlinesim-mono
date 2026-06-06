@@ -44,7 +44,8 @@ function getFlightHours(distance: number, type: AircraftType | null): number {
 }
 
 function getFuelCost(type: AircraftType | null, flightHours: number): number {
-  return (type?.fuel_consumption_per_hour ?? 2.8) * flightHours * getCurrentFuelUnitPrice();
+  // fuel_consumption_per_hour is kg/h; the fuel unit price is per tonne, so convert.
+  return ((type?.fuel_consumption_per_hour ?? 2000) / 1000) * flightHours * getCurrentFuelUnitPrice();
 }
 
 function getMaintenanceCost(type: AircraftType | null, flightHours: number): number {

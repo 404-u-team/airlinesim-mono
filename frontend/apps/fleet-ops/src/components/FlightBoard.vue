@@ -2,13 +2,12 @@
 import type { Locale } from "@airlinesim/i18n";
 
 import { AirBadge, AirButton, AirMetricCard } from "@airlinesim/air-ui";
-import { airlineSimEventBus } from "@airlinesim/event-bus";
 import { computed, onMounted, ref } from "vue";
 
 import type { FleetMessageKey } from "../i18n";
 import type { FlightCard, FlightsResponse } from "../types";
 
-import { completeFlight, getFlights } from "../api";
+import { getFlights } from "../api";
 import { formatMoneyValue, formatNumberValue } from "../formatters";
 
 const props = defineProps<{
@@ -29,17 +28,6 @@ const upcomingFlights = computed(() => data.value?.flights.filter((flight) => fl
 onMounted(() => {
   void loadFlights();
 });
-
-async function complete(id: string): Promise<void> {
-  try {
-    await completeFlight(id);
-    airlineSimEventBus.emit("events:invalidated", { reason: "flight-completed", source: "fleet-ops" });
-    airlineSimEventBus.emit("notifications:invalidated", { reason: "flight-completed", source: "fleet-ops" });
-    await loadFlights();
-  } catch (loadError) {
-    error.value = loadError instanceof Error ? loadError.message : props.t("error.operations");
-  }
-}
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat(props.appLocale, {
@@ -181,14 +169,12 @@ function statusVariant(status: FlightCard["status"]): "danger-soft" | "primary-s
               <span>{{ formatMoney(flight.expected.revenue) }}</span>
               <span>{{ formatMoney(flight.expected.profit) }}</span>
             </div>
-            <AirButton
-              v-if="flight.status !== 'completed'"
-              class="mt-3"
-              :label="props.t('action.completeFlight')"
-              size="sm"
-              variant="primary-soft"
-              @click="complete(flight.id)"
-            />
+            <p
+              v-if="flight.status !== 'completed' && flight.status !== 'cancelled'"
+              class="mt-3 text-caption text-text-muted"
+            >
+              {{ props.t("operations.flight.autoSettles") }}
+            </p>
           </article>
         </div>
       </section>

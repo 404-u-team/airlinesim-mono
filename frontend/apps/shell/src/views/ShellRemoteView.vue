@@ -103,6 +103,7 @@ watch(
       <component
         :is="activeVueRemote"
         :key="remoteInstanceKey"
+        :app-theme="props.appTheme"
         :remote-id="activeRemoteId"
         :app-locale="props.appLocale"
         :shell-path="route.fullPath"

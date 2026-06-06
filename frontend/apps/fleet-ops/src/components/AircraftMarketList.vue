@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AirBadge, AirButton } from "@airlinesim/air-ui";
+import { AirBadge } from "@airlinesim/air-ui";
 
 import type { FleetMarketAircraftType, FleetReason } from "../types";
 
@@ -22,18 +22,16 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="mt-4 grid gap-3 2xl:grid-cols-2">
-    <article
+  <div class="mt-4 overflow-hidden rounded-lg border border-border bg-surface">
+    <button
       v-for="type in types"
       :key="type.id"
-      class="grid min-w-0 gap-4 rounded-lg border bg-surface p-3 transition sm:grid-cols-[11rem_minmax(0,1fr)]"
-      :class="selectedTypeId === type.id ? 'border-primary' : 'border-border'"
+      class="flex w-full min-w-0 items-center gap-3 border-b border-border px-3 py-2.5 text-left transition last:border-b-0 hover:bg-background"
+      :class="selectedTypeId === type.id ? 'bg-background' : ''"
+      type="button"
+      @click="emit('select-type', type)"
     >
-      <button
-        class="relative aspect-[16/10] overflow-hidden rounded-md border border-border bg-background"
-        type="button"
-        @click="emit('select-type', type)"
-      >
+      <span class="grid size-10 shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-background text-caption text-text-muted">
         <img
           v-if="type.image_url"
           :alt="type.model_name || 'Aircraft type'"
@@ -41,73 +39,36 @@ const emit = defineEmits<{
           loading="lazy"
           :src="type.image_url"
         />
-        <div
-          v-else
-          class="flex size-full items-center justify-center text-h3 text-text-muted"
-        >
-          {{ type.icao_code || "----" }}
-        </div>
-      </button>
+        <template v-else>{{ type.icao_code || "----" }}</template>
+      </span>
 
-      <div class="min-w-0">
-        <div class="flex min-w-0 items-start justify-between gap-3">
-          <button
-            class="min-w-0 text-left"
-            type="button"
-            @click="emit('select-type', type)"
-          >
-            <h2 class="truncate text-subtitle">
-              {{ type.model_name || "Aircraft type" }}
-            </h2>
-            <p class="mt-1 text-caption text-text-muted">
-              {{ type.icao_code || "----" }} / {{ type.iata_code || "---" }}
-            </p>
-          </button>
-          <AirBadge
-            :label="statusLabel(type.compatibility.status)"
-            :variant="statusVariant(type.compatibility.status)"
-          />
-        </div>
-
-        <div class="mt-4 grid grid-cols-2 gap-3 text-caption text-text-muted sm:grid-cols-4">
-          <span>{{ formatMoney(type.price_per_unit) }}</span>
+      <span class="min-w-0 flex-1">
+        <span class="flex min-w-0 items-center gap-2">
+          <span class="truncate text-subtitle">{{ type.model_name || "Aircraft type" }}</span>
+          <span class="shrink-0 text-caption text-text-muted">{{ type.icao_code || "----" }}</span>
+        </span>
+        <span class="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-caption text-text-muted">
           <span>{{ formatNumber(type.max_planned_seat_capacity) }} {{ t("metric.seats") }}</span>
           <span>{{ formatNumber(type.max_range_km) }} {{ t("unit.km") }}</span>
           <span>{{ formatNumber(type.min_runway_length_m) }} {{ t("unit.m") }}</span>
-          <span>{{ formatNumber(type.cruising_speed_kph) }} {{ t("unit.kph") }}</span>
-          <span>{{ formatNumber(type.fuel_consumption_per_hour) }} {{ t("unit.kgHour") }}</span>
-          <span>{{ formatMoney(type.preview.remainingBalance) }} {{ t("metric.remaining") }}</span>
-          <span>{{ formatMoney(type.preview.estimatedDailyMaintenanceReserve) }}/{{ t("unit.day") }}</span>
-        </div>
+        </span>
+      </span>
 
-        <div
-          v-if="type.compatibility.warnings.length"
-          class="mt-4 flex flex-wrap gap-2"
-        >
-          <AirBadge
-            v-for="warning in type.compatibility.warnings"
-            :key="warning.code"
-            :label="reasonLabel(warning)"
-            size="sm"
-            :variant="type.compatibility.status === 'blocked' ? 'danger-soft' : 'warning-soft'"
-          />
-        </div>
-
-        <AirButton
-          class="mt-4 w-full"
-          :label="type.compatibility.canPurchase ? t('action.reviewPurchase') : t('market.blocked')"
+      <span class="flex shrink-0 flex-col items-end gap-1">
+        <span class="text-subtitle">{{ formatMoney(type.price_per_unit) }}</span>
+        <AirBadge
+          :label="statusLabel(type.compatibility.status)"
           size="sm"
-          :variant="type.compatibility.canPurchase ? 'primary' : 'danger-soft'"
-          @click="emit('select-type', type)"
+          :variant="statusVariant(type.compatibility.status)"
         />
-      </div>
-    </article>
+      </span>
+    </button>
 
-    <div
+    <p
       v-if="types.length === 0"
-      class="rounded-lg border border-border bg-surface p-5 text-text-muted 2xl:col-span-2"
+      class="p-5 text-text-muted"
     >
       {{ t("market.empty") }}
-    </div>
+    </p>
   </div>
 </template>
