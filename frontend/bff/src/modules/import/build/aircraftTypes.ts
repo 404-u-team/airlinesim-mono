@@ -1,5 +1,5 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import yaml from "js-yaml";
+import Papa from "papaparse";
 
 import type {
   AircraftTypePayload,
@@ -7,7 +7,7 @@ import type {
   FinalAircraftType,
   SourceIssueSink,
 } from "../shared/types";
-import type { AircraftMetadataRow } from "../runtime/sources";
+import type { RawSources } from "../runtime/sources";
 
 import {
   getImportPaths,
@@ -15,32 +15,6 @@ import {
   writeJsonFile,
 } from "../runtime/storage";
 import { clean, pickNumber, pickString } from "./shared";
-
-type AircraftFamilyProfile = Pick<
-  AircraftTypePayload,
-  | "cruising_speed_kph"
-  | "fuel_consumption_per_hour"
-  | "maint_cost_per_flight_hour"
-  | "max_planned_seat_capacity"
-  | "max_range_km"
-  | "min_runway_length_m"
-  | "mtow_kg"
-  | "price_per_unit"
->;
-
-type AircraftMetadata = {
-  manufacturer: SupportedManufacturer;
-  model: string;
-  observedAircraft: number;
-  typeCode: string;
-};
-
-type OverrideField<TField extends keyof AircraftTypePayload> = {
-  aliases: string[];
-  field: TField;
-};
-
-type SupportedManufacturer = keyof typeof SEEDED_MANUFACTURER_IDS;
 
 type AircraftVisualImage = {
   commonsFile?: string;
@@ -90,26 +64,8 @@ type WikidataEntityResponse = {
   >;
 };
 
-type CommonsImageInfoResponse = {
-  query?: {
-    pages?: Record<
-      string,
-      {
-        imageinfo?: Array<{
-          mime?: string;
-          url?: string;
-        }>;
-      }
-    >;
-  };
-};
-
-const AIRCRAFT_TYPE_LIMIT = 80;
 const AIRCRAFT_IMAGES_CACHE_FILE = "aircraft-visual-images.json";
 const WIKIMEDIA_USER_AGENT = "AirlineSim-Import-Agent/1.0";
-
-// First run may still do many requests: search -> entity -> commons.
-// Keep this conservative to avoid Wikimedia 429.
 const WIKIMEDIA_MIN_DELAY_MS = 1_500;
 const WIKIMEDIA_MAX_RETRIES = 4;
 const WIKIDATA_SEARCH_LIMIT = 3;
@@ -153,7 +109,7 @@ type StringField = keyof Pick<
   | "model_name"
 >;
 
-const NUMBER_OVERRIDE_FIELDS: Array<OverrideField<NumberField>> = [
+const NUMBER_OVERRIDE_FIELDS: Array<{ aliases: string[]; field: NumberField }> = [
   {
     aliases: ["base_maintenance_points", "baseMaintenancePoints"],
     field: "base_maintenance_points",
@@ -183,7 +139,7 @@ const NUMBER_OVERRIDE_FIELDS: Array<OverrideField<NumberField>> = [
     field: "fuel_consumption_per_hour",
   },
   {
-    aliases: ["maint_cost_per_flight_hour", "maintCostPerFlightHour"],
+    aliases: ["maint_cost_per_flight_hour", "maintCostPerHour", "maintCostPerFlightHour"],
     field: "maint_cost_per_flight_hour",
   },
   {
@@ -211,7 +167,7 @@ const NUMBER_OVERRIDE_FIELDS: Array<OverrideField<NumberField>> = [
   },
 ];
 
-const STRING_OVERRIDE_FIELDS: Array<OverrideField<StringField>> = [
+const STRING_OVERRIDE_FIELDS: Array<{ aliases: string[]; field: StringField }> = [
   { aliases: ["characteristics"], field: "characteristics" },
   { aliases: ["iata_code", "iataCode"], field: "iata_code" },
   { aliases: ["icao_code", "icaoCode"], field: "icao_code" },
@@ -222,50 +178,334 @@ const STRING_OVERRIDE_FIELDS: Array<OverrideField<StringField>> = [
 export async function buildAircraftTypes(
   issues: SourceIssueSink,
   overrides: Record<string, Record<string, unknown>>,
-  metadataRows: AircraftMetadataRow[] = [],
+  rawSources: RawSources,
   options: BuildOptions = {},
 ): Promise<FinalAircraftType[]> {
-  const metadata = aggregateMetadata(metadataRows, issues).slice(
-    0,
-    AIRCRAFT_TYPE_LIMIT,
-  );
-  const payloads = metadata
-    .map((source) => applyOverride(buildPayloadFromMetadata(source), overrides))
-    .filter((payload): payload is AircraftTypePayload => Boolean(payload));
-  const withImages = await enrichAircraftImages(payloads, options, issues);
-  const deduplicated = deduplicateIataCodes(withImages, issues);
+  const synonymsMap = new Map<string, string>();
+  try {
+    const synonymsRows = Papa.parse(rawSources.openapSynonyms, {
+      dynamicTyping: true,
+      header: true,
+      skipEmptyLines: true,
+    }).data as any[];
+    for (const r of synonymsRows) {
+      if (r.orig && r.target) {
+        synonymsMap.set(String(r.orig).toLowerCase(), String(r.target).toLowerCase());
+      }
+    }
+  } catch (e) {
+    issues.warn("aircraft-type", "aircraft-type:openap-synonyms", `Failed to parse synonyms: ${String(e)}`);
+  }
+
+  const icaoToIata = new Map<string, string>();
+  const icaoToName = new Map<string, string>();
+  try {
+    const planesRows = Papa.parse(rawSources.openflightsPlanes, {
+      header: false,
+      skipEmptyLines: true,
+    }).data as any[];
+    for (const r of planesRows) {
+      const name = r[0];
+      const iata = r[1];
+      const icao = r[2];
+      if (icao && icao !== "\\N") {
+        const cleanIcao = String(icao).toUpperCase();
+        if (iata && iata !== "\\N") {
+          icaoToIata.set(cleanIcao, String(iata).toUpperCase());
+        }
+        if (name) {
+          icaoToName.set(cleanIcao, String(name));
+        }
+      }
+    }
+  } catch (e) {
+    issues.warn("aircraft-type", "aircraft-type:openflights-planes", `Failed to parse OpenFlights planes: ${String(e)}`);
+  }
+
+  const fuelModels = new Map<string, { c1: number; c2: number; c3: number }>();
+  try {
+    const fuelRows = Papa.parse(rawSources.openapFuel, {
+      dynamicTyping: true,
+      header: true,
+      skipEmptyLines: true,
+    }).data as any[];
+    for (const r of fuelRows) {
+      if (r.typecode && r.c1 != null) {
+        fuelModels.set(String(r.typecode).toLowerCase(), {
+          c1: Number(r.c1),
+          c2: Number(r.c2),
+          c3: Number(r.c3),
+        });
+      }
+    }
+  } catch (e) {
+    issues.warn("aircraft-type", "aircraft-type:openap-fuel", `Failed to parse fuel models: ${String(e)}`);
+  }
+
+  const enginesMap = new Map<string, any>();
+  try {
+    const enginesRows = Papa.parse(rawSources.openapEngines, {
+      dynamicTyping: true,
+      header: true,
+      skipEmptyLines: true,
+    }).data as any[];
+    for (const r of enginesRows) {
+      if (r.name) {
+        enginesMap.set(String(r.name), r);
+      }
+    }
+  } catch (e) {
+    issues.warn("aircraft-type", "aircraft-type:openap-engines", `Failed to parse engines: ${String(e)}`);
+  }
+
+  const payloads: AircraftTypePayload[] = [];
   const seenIcao = new Set<string>();
 
-  return deduplicated
-    .filter((payload) => {
-      const sourceKey = sourceKeyFor(payload);
+  for (const yamlFile of rawSources.openapAircraftYamlFiles) {
+    const filename = yamlFile.filename;
+    const typeCode = filename.replace(".yml", "").toLowerCase();
+    const rawIcao = typeCode.toUpperCase();
 
-      if (!payload.manufacturer_id) {
-        issues.skip(
-          "aircraft-type",
-          sourceKey,
-          "Aircraft manufacturer is not available in backend; add manufacturer_id manual override",
-        );
-        return false;
+    let yml: any = null;
+    try {
+      yml = yaml.load(yamlFile.content);
+    } catch (e) {
+      issues.warn("aircraft-type", `aircraft-type:${rawIcao}`, `Failed to parse YAML file ${filename}: ${String(e)}`);
+      continue;
+    }
+
+    if (!yml) {
+      continue;
+    }
+
+    const seatCapacity = yml.pax?.max ?? yml.pax?.high ?? yml.pax?.std;
+    if (!seatCapacity || seatCapacity < 20) {
+      continue;
+    }
+
+    let rangeKm = 0;
+    if (yml.cruise?.range) {
+      rangeKm = Number(yml.cruise.range);
+    } else if (yml.range) {
+      rangeKm = Number(yml.range);
+    }
+    if (!rangeKm || rangeKm < 500) {
+      continue;
+    }
+
+    let cruisingSpeedKph = 0;
+    if (yml.cruise?.mach && yml.cruise?.height) {
+      const h = Number(yml.cruise.height);
+      const mach = Number(yml.cruise.mach);
+      const T0 = 288.15;
+      const L = 0.0065;
+      let T = T0 - L * h;
+      if (h > 11000) {
+        T = 216.65;
       }
+      const a = Math.sqrt(1.4 * 287.05 * T);
+      const tasMs = mach * a;
+      cruisingSpeedKph = Math.round(tasMs * 3.6);
+    } else if (yml.cruise?.speed) {
+      cruisingSpeedKph = Math.round(Number(yml.cruise.speed) * 3.6);
+    } else if (yml.vmo) {
+      cruisingSpeedKph = Math.round(Number(yml.vmo) * 3.6 * 0.8);
+    }
+    if (!cruisingSpeedKph || cruisingSpeedKph < 250) {
+      continue;
+    }
 
-      if (seenIcao.has(payload.icao_code)) {
-        issues.error(
-          "aircraft-type",
-          sourceKey,
-          "Duplicate aircraft type ICAO code",
-        );
-        return false;
+    const mtowKg = Number(yml.mass?.max ?? yml.mass?.mtow ?? yml.mass?.std ?? yml.mtow ?? 60000);
+    if (mtowKg < 5000) {
+      continue;
+    }
+
+    let minRunwayLength = Number(yml.runway?.length ?? yml.runway ?? 0);
+    if (!minRunwayLength) {
+      if (mtowKg > 150000) {
+        minRunwayLength = 2500;
+      } else if (mtowKg > 50000) {
+        minRunwayLength = 1800;
+      } else {
+        minRunwayLength = 1400;
       }
+    }
+    if (minRunwayLength < 500) {
+      continue;
+    }
 
-      seenIcao.add(payload.icao_code);
+    const rawName = String(yml.aircraft ?? icaoToName.get(rawIcao) ?? rawIcao).trim();
+    const { manufacturer, model } = parseManModel(rawName);
+    const manufacturerId = resolveManufacturerId(manufacturer);
 
-      return true;
-    })
-    .map((payload) => ({
-      payload,
-      sourceKey: sourceKeyFor(payload),
-    }));
+    const isTurboprop =
+      cruisingSpeedKph < 600 ||
+      rawName.toLowerCase().includes("atr") ||
+      rawName.toLowerCase().includes("q400") ||
+      rawName.toLowerCase().includes("dash");
+
+    const fuelConsumption = Math.round(mtowKg * (isTurboprop ? 0.03 : 0.06));
+    if (fuelConsumption <= 0) {
+      continue;
+    }
+
+    const pricePerUnit = Math.round(
+      seatCapacity * (seatCapacity >= 250 ? 900000 : seatCapacity >= 100 ? 600000 : 400000),
+    );
+    const maintCostPerFlightHour = Math.max(100, Math.round(fuelConsumption * 0.5));
+
+    const icao = rawIcao;
+    const iata = icaoToIata.get(icao) ?? fallbackIataCode(icao);
+
+    if (!/^[A-Z0-9]{2,3}$/u.test(iata)) {
+      continue;
+    }
+
+    if (seenIcao.has(icao)) {
+      continue;
+    }
+    seenIcao.add(icao);
+
+    const characteristics = JSON.stringify({
+      category: seatCapacity >= 300 ? "widebody" : seatCapacity >= 100 ? "narrowbody" : "regional",
+      engines: resolveEngines(yml.engine, enginesMap),
+      fuel_model: fuelModels.get(typeCode) ?? fuelModels.get("default") ?? { c1: 0.1, c2: 0.2, c3: 0.3 },
+      rangeClass: rangeKm >= 10000 ? "long-haul" : rangeKm >= 4500 ? "medium-haul" : "regional",
+      realWorldMetadata: {
+        manufacturer,
+        model,
+        source: "OpenAP / OpenFlights",
+      },
+      runwayClass: minRunwayLength >= 2400 ? "long" : minRunwayLength >= 1400 ? "medium" : "short",
+      source: "openap",
+      specs: yml,
+    });
+
+    const payload: AircraftTypePayload = {
+      base_maintenance_points: Math.max(8000, Math.round(maintCostPerFlightHour * 5)),
+      base_turnaround_points: Math.max(20, Math.round(seatCapacity / 6)),
+      characteristics,
+      cruising_speed_kph: cruisingSpeedKph,
+      d_check_interval_fh: 24000,
+      d_check_interval_years: 6,
+      d_check_overdue_multiplier: 1.35,
+      fuel_consumption_per_hour: fuelConsumption,
+      iata_code: iata,
+      icao_code: icao,
+      image_upload_id: "",
+      maint_cost_per_flight_hour: maintCostPerFlightHour,
+      maint_cost_per_landing: Math.round(maintCostPerFlightHour * 0.8),
+      maint_cost_per_takeoff: Math.round(maintCostPerFlightHour * 0.9),
+      manufacturer_id: manufacturerId,
+      max_planned_seat_capacity: seatCapacity,
+      max_range_km: rangeKm,
+      min_runway_length_m: minRunwayLength,
+      model_name: `${manufacturer} ${model}`.trim(),
+      mtow_kg: mtowKg,
+      price_per_unit: pricePerUnit,
+      production_points_price: Math.max(100, Math.round(pricePerUnit / 50000)),
+    };
+
+    const finalPayload = applyOverride(payload, overrides);
+    payloads.push(finalPayload);
+  }
+
+  const withImages = await enrichAircraftImages(payloads, options, issues);
+  const deduplicated = deduplicateIataCodes(withImages, issues);
+
+  return deduplicated.map((payload) => ({
+    payload,
+    sourceKey: sourceKeyFor(payload),
+  }));
+}
+
+function resolveEngines(engineYml: any, enginesMap: Map<string, any>): any[] {
+  if (!engineYml) {
+    return [];
+  }
+  const engineOptionsStr = engineYml.options ?? {};
+  const engineDefault = engineYml.default;
+
+  let engineNames: string[] = [];
+  if (engineOptionsStr && typeof engineOptionsStr === "object") {
+    engineNames = Object.values(engineOptionsStr);
+  } else if (Array.isArray(engineOptionsStr)) {
+    engineNames = engineOptionsStr;
+  }
+  if (engineDefault && !engineNames.includes(engineDefault)) {
+    engineNames.push(engineDefault);
+  }
+
+  return engineNames.map((name) => {
+    const spec = enginesMap.get(name);
+    return spec ? spec : { missing: true, name };
+  });
+}
+
+function resolveManufacturerId(manufacturerName: string): string {
+  const normalized = manufacturerName.toLowerCase();
+  if (normalized.includes("airbus")) {
+    return SEEDED_MANUFACTURER_IDS.Airbus;
+  }
+  if (normalized.includes("boeing") || normalized.includes("douglas") || normalized.includes("mcdonnell")) {
+    return SEEDED_MANUFACTURER_IDS.Boeing;
+  }
+  if (normalized.includes("embraer")) {
+    return SEEDED_MANUFACTURER_IDS.Embraer;
+  }
+  if (normalized.includes("atr") || normalized.includes("avions de transport")) {
+    return SEEDED_MANUFACTURER_IDS.ATR;
+  }
+  return SEEDED_MANUFACTURER_IDS.Boeing;
+}
+
+function parseManModel(raw: string): { manufacturer: string; model: string } {
+  const parts = raw.split(" ");
+  let manufacturer = parts[0] ?? "Unknown";
+  let model = parts.slice(1).join(" ");
+
+  if (raw.startsWith("McDonnell Douglas")) {
+    manufacturer = "McDonnell Douglas";
+    model = raw.substring("McDonnell Douglas".length).trim();
+  } else if (raw.startsWith("De Havilland")) {
+    manufacturer = "De Havilland";
+    model = raw.substring("De Havilland".length).trim();
+  }
+
+  if (!model) {
+    model = raw;
+    manufacturer = "Unknown";
+  }
+
+  return { manufacturer, model };
+}
+
+function fallbackIataCode(icao: string): string {
+  return icao.length >= 3 ? icao.slice(-3).toUpperCase() : icao.toUpperCase();
+}
+
+function addImageToCharacteristics(
+  payload: AircraftTypePayload,
+  image: AircraftVisualImage | undefined,
+): AircraftTypePayload {
+  if (!image?.imageUrl) {
+    return payload;
+  }
+
+  try {
+    const characteristics = JSON.parse(payload.characteristics) as Record<
+      string,
+      unknown
+    >;
+    characteristics.image = image;
+
+    return {
+      ...payload,
+      characteristics: JSON.stringify(characteristics),
+    };
+  } catch {
+    return payload;
+  }
 }
 
 function deduplicateIataCodes(
@@ -292,7 +532,7 @@ function deduplicateIataCodes(
         const last3Icao = p.icao_code.length >= 3
           ? p.icao_code.slice(-3).toUpperCase()
           : p.icao_code.toUpperCase();
-        
+
         if (p.iata_code !== last3Icao) {
           hasCollisions = true;
           issues.warn(
@@ -311,47 +551,6 @@ function deduplicateIataCodes(
   }
 
   return resolvedPayloads;
-}
-
-function aggregateMetadata(
-  rows: AircraftMetadataRow[],
-  issues: SourceIssueSink,
-): AircraftMetadata[] {
-  const groups = new Map<string, AircraftMetadata>();
-
-  for (const row of rows) {
-    const typeCode = clean(
-      row.typecode ?? row.typeCode ?? row.icao_code,
-    ).toUpperCase();
-    const manufacturer = supportedManufacturer(
-      row.manufacturername ?? row.manufacturerName ?? "",
-    );
-    const model = clean(row.model);
-
-    if (!/^[A-Z0-9]{3,4}$/u.test(typeCode) || !manufacturer || !model) {
-      continue;
-    }
-
-    const existing = groups.get(typeCode);
-    groups.set(typeCode, {
-      manufacturer,
-      model: bestModelName(existing?.model, model),
-      observedAircraft: (existing?.observedAircraft ?? 0) + 1,
-      typeCode,
-    });
-  }
-
-  if (groups.size === 0) {
-    issues.warn(
-      "aircraft-type",
-      "aircraft-type:opensky",
-      "OpenSky aircraft metadata did not contain supported aircraft types",
-    );
-  }
-
-  return [...groups.values()].sort(
-    (left, right) => right.observedAircraft - left.observedAircraft,
-  );
 }
 
 function applyNumberOverrides(
@@ -410,135 +609,6 @@ function applyStringOverrides(
   return payload;
 }
 
-function bestModelName(current: string | undefined, next: string): string {
-  if (!current || next.length > current.length) {
-    return next;
-  }
-
-  return current;
-}
-
-function buildCharacteristics(
-  source: AircraftMetadata,
-  profile: AircraftFamilyProfile,
-): string {
-  return JSON.stringify({
-    category: aircraftCategory(profile.max_planned_seat_capacity),
-    rangeClass: rangeClass(profile.max_range_km),
-    realWorldMetadata: {
-      manufacturer: source.manufacturer,
-      model: source.model,
-      observedAircraft: source.observedAircraft,
-      source: "OpenSky Aircraft Metadata Database",
-    },
-    runwayClass: runwayClass(profile.min_runway_length_m),
-  });
-}
-
-function buildPayloadFromMetadata(
-  source: AircraftMetadata,
-): AircraftTypePayload {
-  const profile = estimateProfile(source);
-
-  return {
-    ...profile,
-    base_maintenance_points: Math.max(
-      8_000,
-      Math.round(profile.maint_cost_per_flight_hour * 5),
-    ),
-    base_turnaround_points: Math.max(
-      20,
-      Math.round(profile.max_planned_seat_capacity / 6),
-    ),
-    characteristics: buildCharacteristics(source, profile),
-    d_check_interval_fh: 24_000,
-    d_check_interval_years: 6,
-    d_check_overdue_multiplier: 1.35,
-    iata_code: fallbackIataCode(source.typeCode),
-    icao_code: source.typeCode,
-    image_upload_id: "",
-    maint_cost_per_landing: Math.round(
-      profile.maint_cost_per_flight_hour * 0.8,
-    ),
-    maint_cost_per_takeoff: Math.round(
-      profile.maint_cost_per_flight_hour * 0.9,
-    ),
-    manufacturer_id: SEEDED_MANUFACTURER_IDS[source.manufacturer],
-    model_name: canonicalModelName(source),
-    production_points_price: Math.max(
-      100,
-      Math.round(profile.price_per_unit / 50_000),
-    ),
-  };
-}
-
-function canonicalModelName(source: AircraftMetadata): string {
-  const model = source.model
-    .toUpperCase()
-    .startsWith(source.manufacturer.toUpperCase())
-    ? source.model
-    : `${source.manufacturer} ${source.model}`;
-
-  return model.replaceAll(/\s+/gu, " ").trim();
-}
-
-function aircraftCategory(seats: number): string {
-  if (seats >= 300) {
-    return "widebody";
-  }
-  if (seats >= 100) {
-    return "narrowbody";
-  }
-
-  return "regional";
-}
-
-function estimateProfile(source: AircraftMetadata): AircraftFamilyProfile {
-  const text =
-    `${source.manufacturer} ${source.model} ${source.typeCode}`.toUpperCase();
-
-  if (text.includes("A380")) {
-    return profile(525, 14800, 903, 12000, 2900, 575000, 445600000, 11800);
-  }
-  if (
-    text.includes("A350") ||
-    text.includes("B787") ||
-    text.includes("B789") ||
-    text.includes("B788")
-  ) {
-    return profile(315, 14500, 903, 6400, 2500, 260000, 305000000, 6800);
-  }
-  if (text.includes("A330") || text.includes("B777") || text.includes("B767")) {
-    return profile(300, 11800, 885, 7600, 2500, 240000, 265000000, 6200);
-  }
-  if (text.includes("A321") || text.includes("B757")) {
-    return profile(220, 6800, 840, 5500, 1700, 97000, 130000000, 3100);
-  }
-  if (
-    text.includes("A320") ||
-    text.includes("A319") ||
-    text.includes("B737") ||
-    text.includes("B738") ||
-    text.includes("B38")
-  ) {
-    return profile(180, 6200, 839, 4800, 1550, 79000, 111000000, 2700);
-  }
-  if (
-    text.includes("A220") ||
-    text.includes("BCS") ||
-    text.includes("E190") ||
-    text.includes("E195") ||
-    text.includes("E290")
-  ) {
-    return profile(120, 5300, 835, 2600, 1300, 61000, 62000000, 1500);
-  }
-  if (text.includes("ATR") || text.includes("AT7") || text.includes("AT4")) {
-    return profile(78, 1530, 510, 760, 1050, 23000, 26000000, 850);
-  }
-
-  return profile(120, 4000, 780, 2500, 1500, 60000, 65000000, 1600);
-}
-
 async function enrichAircraftImages(
   payloads: AircraftTypePayload[],
   options: BuildOptions,
@@ -551,7 +621,7 @@ async function enrichAircraftImages(
   );
   let changed = false;
 
-  const shouldFetchMissing = false; // TODO: fix 429 from wikipedia or found new source
+  const shouldFetchMissing = false;
 
   for (const payload of payloads) {
     if (cache[payload.icao_code] && !options.refreshRaw) {
@@ -590,8 +660,6 @@ async function fetchAircraftVisualImage(
   options: BuildOptions,
   issues: SourceIssueSink,
 ): Promise<AircraftVisualImage | null> {
-  // Keep only Wikidata/Commons here. The previous Wikipedia Summary fallback adds extra requests
-  // and tends to trigger 429 during the first full import.
   return fetchWikidataAircraftImage(payload, options, issues);
 }
 
@@ -801,7 +869,7 @@ async function fetchCommonsImageUrl(
       "?action=query",
       `&titles=File:${encodeURIComponent(commonsFile)}`,
       "&prop=imageinfo",
-      "&iiprop=url|mime",
+      "&iiprop=url",
       "&format=json",
     ].join("");
 
@@ -811,343 +879,189 @@ async function fetchCommonsImageUrl(
       options.refreshRaw === true,
     );
     const data = JSON.parse(text) as CommonsImageInfoResponse;
-    const pages = data.query?.pages ?? {};
-    const firstPage = Object.values(pages)[0];
+    const page = Object.values(data.query?.pages ?? {})[0];
 
-    return firstPage?.imageinfo?.[0]?.url ?? null;
+    return page?.imageinfo?.[0]?.url ?? null;
   } catch (error) {
     issues.warn(
       "aircraft-type",
       sourceKeyFor(payload),
-      `Commons image URL fetch failed for "${commonsFile}": ${formatError(error)}`,
+      `Wikimedia Commons fetch failed for "${commonsFile}": ${formatError(error)}`,
     );
 
     return null;
   }
 }
 
+type CommonsImageInfoResponse = {
+  query?: {
+    pages?: Record<
+      string,
+      {
+        imageinfo?: Array<{
+          mime?: string;
+          url?: string;
+        }>;
+      }
+    >;
+  };
+};
+
 async function fetchCachedWikimediaText(
-  cachePath: string,
+  path: string,
   url: string,
-  refresh: boolean,
+  refreshRaw: boolean,
 ): Promise<string> {
-  if (!refresh) {
-    try {
-      return await readFile(cachePath, "utf8");
-    } catch {
-      // Cache miss. Fetch below.
+  if (!refreshRaw) {
+    const cached = await readTextIfExists(path);
+
+    if (cached != null) {
+      return cached;
     }
   }
 
-  const text = await fetchWikimediaTextWithRetry(url);
+  await limitWikimediaRate();
 
-  await mkdir(dirname(cachePath), { recursive: true });
-  await writeFile(cachePath, text, "utf8");
+  const response = await fetch(url, {
+    headers: { "User-Agent": WIKIMEDIA_USER_AGENT },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${url}: ${String(response.status)}`);
+  }
+
+  const text = await response.text();
+  await Bun.write(path, text);
 
   return text;
 }
 
-async function fetchWikimediaTextWithRetry(url: string): Promise<string> {
-  let lastError: unknown = null;
-
-  for (let attempt = 0; attempt <= WIKIMEDIA_MAX_RETRIES; attempt++) {
-    await waitForWikimediaThrottle();
-
-    const response = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-        "Api-User-Agent": WIKIMEDIA_USER_AGENT,
-        "User-Agent": WIKIMEDIA_USER_AGENT,
-      },
-    });
-
-    if (response.ok) {
-      return response.text();
-    }
-
-    if (response.status === 429 || response.status === 503) {
-      const retryAfterMs = retryAfterToMs(response.headers.get("retry-after"));
-      const backoffMs = retryAfterMs ?? exponentialBackoffMs(attempt);
-
-      lastError = new Error(
-        `${response.status} ${response.statusText}; retrying after ${backoffMs}ms`,
-      );
-      await sleep(backoffMs);
-      continue;
-    }
-
-    throw new Error(`${response.status} ${response.statusText}`);
-  }
-
-  throw lastError instanceof Error
-    ? lastError
-    : new Error("Wikimedia request failed after retries");
-}
-
-async function waitForWikimediaThrottle(): Promise<void> {
+async function limitWikimediaRate(): Promise<void> {
   const now = Date.now();
-  const waitMs = Math.max(
-    0,
-    WIKIMEDIA_MIN_DELAY_MS - (now - lastWikimediaRequestAt),
-  );
+  const nextAllowed = lastWikimediaRequestAt + WIKIMEDIA_MIN_DELAY_MS;
 
-  if (waitMs > 0) {
-    await sleep(waitMs);
+  if (now < nextAllowed) {
+    await new Promise((resolve) => setTimeout(resolve, nextAllowed - now));
   }
 
   lastWikimediaRequestAt = Date.now();
 }
 
-function retryAfterToMs(value: string | null): number | null {
-  if (!value) {
+async function readTextIfExists(path: string): Promise<null | string> {
+  const file = Bun.file(path);
+
+  if (!(await file.exists())) {
     return null;
   }
 
-  const seconds = Number(value);
-
-  if (Number.isFinite(seconds)) {
-    return Math.max(1_000, seconds * 1_000);
-  }
-
-  const dateMs = Date.parse(value);
-
-  if (Number.isFinite(dateMs)) {
-    return Math.max(1_000, dateMs - Date.now());
-  }
-
-  return null;
-}
-
-function exponentialBackoffMs(attempt: number): number {
-  return Math.min(60_000, 2_000 * 2 ** attempt);
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function addImageToCharacteristics(
-  payload: AircraftTypePayload,
-  image: AircraftVisualImage | undefined,
-): AircraftTypePayload {
-  if (!image?.imageUrl) {
-    return payload;
-  }
-
-  return {
-    ...payload,
-    characteristics: JSON.stringify({
-      ...parseCharacteristics(payload.characteristics),
-      visual: {
-        commonsFile: image.commonsFile,
-        imageUrl: image.imageUrl,
-        pageUrl: image.pageUrl,
-        qid: image.qid,
-        searchQuery: image.searchQuery,
-        source: image.source ?? "Wikidata/Wikimedia Commons",
-        title: image.title,
-      },
-    }),
-  };
+  return await file.text();
 }
 
 function aircraftManufacturerName(payload: AircraftTypePayload): string {
-  const fromCharacteristics = aircraftRealWorldMetadataValue(
-    payload,
-    "manufacturer",
-  );
+  try {
+    const characteristics = JSON.parse(payload.characteristics) as Record<
+      string,
+      unknown
+    >;
+    const metadata = characteristics.realWorldMetadata as Record<
+      string,
+      unknown
+    >;
 
-  if (fromCharacteristics) {
-    return fromCharacteristics;
+    return String(metadata.manufacturer ?? "");
+  } catch {
+    return "";
   }
-
-  const modelName = clean(payload.model_name).toUpperCase();
-
-  if (modelName.includes("AIRBUS")) {
-    return "Airbus";
-  }
-  if (modelName.includes("BOEING")) {
-    return "Boeing";
-  }
-  if (modelName.includes("EMBRAER")) {
-    return "Embraer";
-  }
-  if (modelName.includes("ATR")) {
-    return "ATR";
-  }
-
-  return "";
 }
 
 function aircraftRealWorldModel(payload: AircraftTypePayload): string {
-  return aircraftRealWorldMetadataValue(payload, "model");
-}
+  try {
+    const characteristics = JSON.parse(payload.characteristics) as Record<
+      string,
+      unknown
+    >;
+    const metadata = characteristics.realWorldMetadata as Record<
+      string,
+      unknown
+    >;
 
-function aircraftRealWorldMetadataValue(
-  payload: AircraftTypePayload,
-  key: string,
-): string {
-  const characteristics = parseCharacteristics(payload.characteristics);
-  const metadata = characteristics.realWorldMetadata;
-
-  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return String(metadata.model ?? "");
+  } catch {
     return "";
   }
-
-  const value = (metadata as Record<string, unknown>)[key];
-
-  return typeof value === "string" ? clean(value) : "";
-}
-
-function fallbackIataCode(typeCode: string): string {
-  return typeCode.length <= 3 ? typeCode : typeCode.slice(0, 3);
-}
-
-function parseCharacteristics(value: string): Record<string, unknown> {
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : {};
-  } catch {
-    return {};
-  }
-}
-
-function profile(
-  maxPlannedSeatCapacity: number,
-  maxRangeKm: number,
-  cruisingSpeedKph: number,
-  fuelConsumptionPerHour: number,
-  minRunwayLengthM: number,
-  mtowKg: number,
-  pricePerUnit: number,
-  maintCostPerFlightHour: number,
-): AircraftFamilyProfile {
-  return {
-    cruising_speed_kph: cruisingSpeedKph,
-    fuel_consumption_per_hour: fuelConsumptionPerHour,
-    maint_cost_per_flight_hour: maintCostPerFlightHour,
-    max_planned_seat_capacity: maxPlannedSeatCapacity,
-    max_range_km: maxRangeKm,
-    min_runway_length_m: minRunwayLengthM,
-    mtow_kg: mtowKg,
-    price_per_unit: pricePerUnit,
-  };
-}
-
-function rangeClass(rangeKm: number): string {
-  if (rangeKm >= 10_000) {
-    return "long-haul";
-  }
-  if (rangeKm >= 4500) {
-    return "medium-haul";
-  }
-
-  return "regional";
-}
-
-function runwayClass(runwayM: number): string {
-  if (runwayM >= 2400) {
-    return "long";
-  }
-  if (runwayM >= 1400) {
-    return "medium";
-  }
-
-  return "short";
 }
 
 function normalizeAircraftModelForSearch(
   modelName: string,
   icaoCode: string,
 ): string {
-  const text = `${modelName} ${icaoCode}`.toUpperCase();
+  let cleaned = modelName
+    .replace(/\bNEO\b/iu, "")
+    .replace(/\bMAX\b/iu, "")
+    .replaceAll(/\s+/gu, " ")
+    .trim();
 
-  if (text.includes("A220") || text.includes("BCS")) {
-    return "Airbus A220";
+  if (icaoCode.startsWith("A318")) {
+    return "Airbus A318";
   }
-  if (
-    text.includes("A19N") ||
-    text.includes("A20N") ||
-    text.includes("A21N") ||
-    text.includes("A320NEO")
-  ) {
-    return "Airbus A320neo family";
+  if (icaoCode.startsWith("A319")) {
+    return "Airbus A319";
   }
-  if (
-    text.includes("A318") ||
-    text.includes("A319") ||
-    text.includes("A320") ||
-    text.includes("A321")
-  ) {
-    return "Airbus A320 family";
+  if (icaoCode.startsWith("A320")) {
+    return "Airbus A320";
   }
-  if (text.includes("A330")) {
+  if (icaoCode.startsWith("A321")) {
+    return "Airbus A321";
+  }
+  if (icaoCode.startsWith("A33")) {
     return "Airbus A330";
   }
-  if (text.includes("A340")) {
+  if (icaoCode.startsWith("A34")) {
     return "Airbus A340";
   }
-  if (text.includes("A350")) {
+  if (icaoCode.startsWith("A35")) {
     return "Airbus A350";
   }
-  if (text.includes("A380") || icaoCode === "A388") {
+  if (icaoCode.startsWith("A38")) {
     return "Airbus A380";
   }
 
-  if (
-    text.includes("B38") ||
-    text.includes("B39") ||
-    text.includes("737 MAX")
-  ) {
-    return "Boeing 737 MAX";
-  }
-  if (
-    text.includes("B737") ||
-    text.includes("B738") ||
-    text.includes("B739") ||
-    text.includes("737")
-  ) {
+  if (icaoCode.startsWith("B73")) {
     return "Boeing 737";
   }
-  if (text.includes("B747") || text.includes("747")) {
+  if (icaoCode.startsWith("B74")) {
     return "Boeing 747";
   }
-  if (text.includes("B757") || text.includes("757")) {
+  if (icaoCode.startsWith("B75")) {
     return "Boeing 757";
   }
-  if (text.includes("B767") || text.includes("767")) {
+  if (icaoCode.startsWith("B76")) {
     return "Boeing 767";
   }
-  if (text.includes("B777") || text.includes("B77") || text.includes("777")) {
+  if (icaoCode.startsWith("B77")) {
     return "Boeing 777";
   }
-  if (text.includes("B787") || text.includes("B78") || text.includes("787")) {
-    return "Boeing 787 Dreamliner";
+  if (icaoCode.startsWith("B78")) {
+    return "Boeing 787";
   }
 
-  if (
-    text.includes("E190") ||
-    text.includes("E195") ||
-    text.includes("E290") ||
-    text.includes("E295")
-  ) {
-    return "Embraer E-Jet E2 family";
+  if (icaoCode.startsWith("E17") || icaoCode.startsWith("E170")) {
+    return "Embraer 170";
   }
-  if (
-    text.includes("E170") ||
-    text.includes("E175") ||
-    text.includes("E190") ||
-    text.includes("E195")
-  ) {
-    return "Embraer E-Jet family";
+  if (icaoCode.startsWith("E175") || icaoCode.startsWith("E170")) {
+    return "Embraer 175";
+  }
+  if (icaoCode.startsWith("E190")) {
+    return "Embraer 190";
+  }
+  if (icaoCode.startsWith("E195")) {
+    return "Embraer 195";
   }
 
-  if (text.includes("ATR") || text.includes("AT7") || text.includes("AT72")) {
+  if (cleaned.includes("AT7") || cleaned.includes("AT72") || cleaned.includes("ATR-72") || cleaned.includes("ATR 72")) {
     return "ATR 72";
   }
-  if (text.includes("AT4") || text.includes("AT42")) {
+  if (cleaned.includes("AT4") || cleaned.includes("AT42") || cleaned.includes("ATR-42") || cleaned.includes("ATR 42")) {
     return "ATR 42";
   }
 
@@ -1163,28 +1077,6 @@ function safeFileName(value: string): string {
 
 function sourceKeyFor(payload: AircraftTypePayload): string {
   return `aircraft-type:${clean(payload.icao_code).toUpperCase()}`;
-}
-
-function supportedManufacturer(value: string): SupportedManufacturer | null {
-  const normalized = clean(value).toUpperCase();
-
-  if (normalized.includes("AIRBUS")) {
-    return "Airbus";
-  }
-  if (normalized.includes("BOEING")) {
-    return "Boeing";
-  }
-  if (normalized.includes("EMBRAER")) {
-    return "Embraer";
-  }
-  if (
-    normalized.includes("ATR") ||
-    normalized.includes("AVIONS DE TRANSPORT")
-  ) {
-    return "ATR";
-  }
-
-  return null;
 }
 
 function uniqueStrings(values: string[]): string[] {

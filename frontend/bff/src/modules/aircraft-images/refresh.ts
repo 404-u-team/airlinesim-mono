@@ -58,7 +58,6 @@ export async function refreshAircraftImages(
     const icaoCode = (type.icao_code ?? "").toUpperCase();
     const modelName = type.model_name ?? icaoCode;
 
-    result.processed++;
     reportProgress?.({
       current: index + 1,
       message: `Resolving image for ${modelName} (${icaoCode})`,
@@ -67,54 +66,8 @@ export async function refreshAircraftImages(
       total: types.length,
     });
 
-    if (!options.refresh && images[icaoCode]?.imageUrl) {
-      result.skipped++;
-      continue;
-    }
-
-    try {
-      const image = await fetchAircraftVisualImage({
-        characteristics: type.characteristics,
-        icaoCode,
-        modelName,
-      });
-
-      if (image?.imageUrl) {
-        images[icaoCode] = image;
-        writeAircraftImages(images);
-        result.found++;
-        log?.({
-          details: { imageUrl: image.imageUrl, source: image.source },
-          entityType: "aircraft-type",
-          level: "info",
-          message: `Image found for ${modelName}`,
-          operation: "aircraft-image.found",
-          sourceKey: icaoCode,
-          stage: "importing",
-        });
-      } else {
-        result.missing++;
-        log?.({
-          entityType: "aircraft-type",
-          level: "warning",
-          message: `No image found for ${modelName}`,
-          operation: "aircraft-image.missing",
-          sourceKey: icaoCode,
-          stage: "importing",
-        });
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Image fetch failed";
-      result.errors.push(`${icaoCode}: ${message}`);
-      log?.({
-        entityType: "aircraft-type",
-        level: "error",
-        message: `Image fetch failed for ${modelName}: ${message}`,
-        operation: "aircraft-image.error",
-        sourceKey: icaoCode,
-        stage: "importing",
-      });
-    }
+    // eslint-disable-next-line no-await-in-loop
+    await refreshTypeImage(type, images, options, result, log);
   }
 
   writeAircraftImages(images);
@@ -126,4 +79,75 @@ export async function refreshAircraftImages(
   });
 
   return result;
+}
+
+function logImageFound(icaoCode: string, modelName: string, imageUrl: string, source?: string, log?: ImportLogger): void {
+  log?.({
+    details: { imageUrl, source },
+    entityType: "aircraft-type",
+    level: "info",
+    message: `Image found for ${modelName}`,
+    operation: "aircraft-image.found",
+    sourceKey: icaoCode,
+    stage: "importing",
+  });
+}
+
+function logImageMissing(icaoCode: string, modelName: string, log?: ImportLogger): void {
+  log?.({
+    entityType: "aircraft-type",
+    level: "warning",
+    message: `No image found for ${modelName}`,
+    operation: "aircraft-image.missing",
+    sourceKey: icaoCode,
+    stage: "importing",
+  });
+}
+
+async function refreshTypeImage(
+  type: BackendAircraftType,
+  images: AircraftImageMap,
+  options: RefreshAircraftImagesOptions,
+  result: AircraftImagesResult,
+  log?: ImportLogger,
+): Promise<void> {
+  const icaoCode = (type.icao_code ?? "").toUpperCase();
+  const modelName = type.model_name ?? icaoCode;
+
+  result.processed++;
+
+  if (!options.refresh && images[icaoCode]?.imageUrl) {
+    result.skipped++;
+    return;
+  }
+
+  try {
+    const image = await fetchAircraftVisualImage({
+      characteristics: type.characteristics,
+      icaoCode,
+      modelName,
+    });
+
+    if (image?.imageUrl) {
+      // eslint-disable-next-line require-atomic-updates
+      images[icaoCode] = image;
+      writeAircraftImages(images);
+      result.found++;
+      logImageFound(icaoCode, modelName, image.imageUrl, image.source, log);
+    } else {
+      result.missing++;
+      logImageMissing(icaoCode, modelName, log);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Image fetch failed";
+    result.errors.push(`${icaoCode}: ${message}`);
+    log?.({
+      entityType: "aircraft-type",
+      level: "error",
+      message: `Image fetch failed for ${modelName}: ${message}`,
+      operation: "aircraft-image.error",
+      sourceKey: icaoCode,
+      stage: "importing",
+    });
+  }
 }

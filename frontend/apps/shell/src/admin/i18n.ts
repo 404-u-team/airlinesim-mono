@@ -1,3 +1,145 @@
+import { type Locale, type LocaleMessages, translate } from "@airlinesim/i18n";
+
+const adminTextMessages = {
+  en: {
+    actions: "Actions",
+    admin: "Admin",
+    cancel: "Cancel",
+    capabilities: "Capabilities",
+    capabilitiesDescription: "These modules are planned but not yet available in the admin UI.",
+    confirmDelete: "Delete",
+    confirmDiscard: "Discard changes",
+    create: "Create",
+    delete: "Delete",
+    deleteDescription: "This record will be removed from the backend.",
+    deleteTitle: "Delete record?",
+    disabled: "Disabled",
+    discardDescription: "Your changes will be lost if you continue.",
+    edit: "Edit",
+    empty: "No records found.",
+    enabled: "Enabled",
+    loading: "Loading...",
+    locked: "Locked",
+    missing: "Missing",
+    openapi: "OpenAPI",
+    readiness: "Readiness",
+    records: "Records",
+    refresh: "Refresh",
+    save: "Save",
+    search: "Search",
+    selectCountry: "Select a country",
+    selectRegion: "Select a region",
+    technical: "Technical",
+    toBeEnabled: "To be enabled",
+    total: "total",
+    unlock: "Unlock",
+    worldImport: "World import",
+  },
+  ru: {
+    actions: "Действия",
+    admin: "Админка",
+    cancel: "Отмена",
+    capabilities: "Возможности",
+    capabilitiesDescription: "Эти модули запланированы, но пока недоступны в админке.",
+    confirmDelete: "Удалить",
+    confirmDiscard: "Отменить изменения",
+    create: "Создать",
+    delete: "Удалить",
+    deleteDescription: "Эта запись будет удалена из backend.",
+    deleteTitle: "Удалить запись?",
+    disabled: "Отключено",
+    discardDescription: "Если продолжить, все изменения будут потеряны.",
+    edit: "Редактировать",
+    empty: "Записи не найдены.",
+    enabled: "Включено",
+    loading: "Загрузка...",
+    locked: "Закрыто",
+    missing: "Не хватает",
+    openapi: "OpenAPI",
+    readiness: "Готовность мира",
+    records: "Записи",
+    refresh: "Обновить",
+    save: "Сохранить",
+    search: "Поиск",
+    selectCountry: "Выберите страну",
+    selectRegion: "Выберите регион",
+    technical: "Техническое",
+    toBeEnabled: "Будет включено",
+    total: "всего",
+    unlock: "Разблокировать",
+    worldImport: "Импорт мира",
+  },
+} as const;
+
+export type AdminTextKey = keyof typeof adminTextMessages.en;
+
+const adminTextMessagesTyped: LocaleMessages<AdminTextKey> = adminTextMessages;
+
+const adminLabelTranslations: Record<string, Record<Locale, string> | undefined> = {
+  "Aircraft tail code": { en: "Aircraft tail code", ru: "Хвостовой код самолёта" },
+  "Airport catalog, fees and geospatial fields from the OpenAPI Airport schema.": {
+    en: "Airport catalog, fees and geospatial fields from the OpenAPI Airport schema.",
+    ru: "Каталог аэропортов, сборы и геопространственные поля из схемы Airport в OpenAPI.",
+  },
+  Airports: { en: "Airports", ru: "Аэропорты" },
+  Business: { en: "Business", ru: "Бизнес" },
+  "Business score": { en: "Business score", ru: "Бизнес-рейтинг" },
+  Code: { en: "Code", ru: "Код" },
+  Continent: { en: "Continent", ru: "Континент" },
+  "Corporate tax rate": { en: "Corporate tax rate", ru: "Корпоративный налог" },
+  Countries: { en: "Countries", ru: "Страны" },
+  "Countries, tax rates and permission pricing from the OpenAPI Country schema.": {
+    en: "Countries, tax rates and permission pricing from the OpenAPI Country schema.",
+    ru: "Страны, налоговые ставки и цены разрешений из схемы Country в OpenAPI.",
+  },
+  Country: { en: "Country", ru: "Страна" },
+  Diaspora: { en: "Diaspora", ru: "Диаспора" },
+  "Elevation, ft": { en: "Elevation, ft", ru: "Высота, ft" },
+  "Flythrough permission price": { en: "Flythrough permission price", ru: "Цена разрешения на пролёт" },
+  "Fuel price multiplier": { en: "Fuel price multiplier", ru: "Множитель цены топлива" },
+  "Gate fee": { en: "Gate fee", ru: "Сбор за гейт" },
+  "GDP per capita": { en: "GDP per capita", ru: "ВВП на душу населения" },
+  Geography: { en: "Geography", ru: "География" },
+  Geometry: { en: "Geometry", ru: "Геометрия" },
+  "Home link": { en: "Home link", ru: "Домашняя ссылка" },
+  IATA: { en: "IATA", ru: "IATA" },
+  "IATA code": { en: "IATA code", ru: "Код IATA" },
+  ICAO: { en: "ICAO", ru: "ICAO" },
+  "ICAO code": { en: "ICAO code", ru: "Код ICAO" },
+  "International name": { en: "International name", ru: "Международное название" },
+  ISO: { en: "ISO", ru: "ISO" },
+  "ISO code": { en: "ISO code", ru: "ISO-код" },
+  "Land permission price": { en: "Land permission price", ru: "Цена разрешения на посадку" },
+  "Local code": { en: "Local code", ru: "Локальный код" },
+  "Local name": { en: "Local name", ru: "Локальное название" },
+  "Maintenance point price": { en: "Maintenance point price", ru: "Цена точки обслуживания" },
+  "Max runway length, m": { en: "Max runway length, m", ru: "Макс. длина ВПП, м" },
+  "Max runway uses per day": { en: "Max runway uses per day", ru: "Макс. использование ВПП в день" },
+  Municipality: { en: "Municipality", ru: "Муниципалитет" },
+  Population: { en: "Population", ru: "Население" },
+  Region: { en: "Region", ru: "Регион" },
+  "Region A": { en: "Region A", ru: "Регион A" },
+  "Region B": { en: "Region B", ru: "Регион B" },
+  "Region Links": { en: "Region Links", ru: "Связи регионов" },
+  Regions: { en: "Regions", ru: "Регионы" },
+  "Regions, demand scores and country ownership from the OpenAPI Region schema.": {
+    en: "Regions, demand scores and country ownership from the OpenAPI Region schema.",
+    ru: "Регионы, показатели спроса и принадлежность стране из схемы Region в OpenAPI.",
+  },
+  "Runway fee": { en: "Runway fee", ru: "Сбор за ВПП" },
+  "Symmetric demand links between regions from the OpenAPI Region Link schema.": {
+    en: "Symmetric demand links between regions from the OpenAPI Region Link schema.",
+    ru: "Симметричные связи спроса между регионами из схемы Region Link в OpenAPI.",
+  },
+  "Tail code": { en: "Tail code", ru: "Хвостовой код" },
+  Timezone: { en: "Timezone", ru: "Часовой пояс" },
+  Tourism: { en: "Tourism", ru: "Туризм" },
+  "Tourism score": { en: "Tourism score", ru: "Туристический рейтинг" },
+  "VAT rate": { en: "VAT rate", ru: "Ставка НДС" },
+  "Wikipedia link": { en: "Wikipedia link", ru: "Ссылка на Wikipedia" },
+  "Works at night": { en: "Works at night", ru: "Работает ночью" },
+};
+
 export const adminImportMessages = {
   en: {
     admin: "Admin",
@@ -100,3 +242,12 @@ export const adminImportMessages = {
 } as const;
 
 export type AdminImportMessageKey = keyof typeof adminImportMessages.en;
+
+export function adminText(locale: Locale, key: AdminTextKey): string {
+  return translate(adminTextMessagesTyped, locale, key);
+}
+
+export function localizeAdminLabel(locale: Locale, label: string): string {
+  const translation = adminLabelTranslations[label];
+  return translation ? translation[locale] : label;
+}

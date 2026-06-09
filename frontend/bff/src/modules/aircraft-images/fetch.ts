@@ -26,6 +26,8 @@ type CommonsImageInfoResponse = {
   };
 };
 
+type WikidataEntity = NonNullable<NonNullable<WikidataEntityResponse["entities"]>[string]>;
+
 type WikidataEntityResponse = {
   entities?: Record<
     string,
@@ -68,40 +70,37 @@ export async function fetchAircraftVisualImage(
   return fetchWikidataAircraftImage(input);
 }
 
+const NORMALIZE_RULES = [
+  { target: "Airbus A220", triggers: ["A220", "BCS"] },
+  { target: "Airbus A320neo family", triggers: ["A19N", "A20N", "A21N", "A320NEO"] },
+  { target: "Airbus A320 family", triggers: ["A318", "A319", "A320", "A321"] },
+  { target: "Airbus A330", triggers: ["A330"] },
+  { target: "Airbus A340", triggers: ["A340"] },
+  { target: "Airbus A350", triggers: ["A350"] },
+  { target: "Airbus A380", triggers: ["A380", "A388"] },
+  { target: "Boeing 737 MAX", triggers: ["B38", "B39", "737 MAX"] },
+  { target: "Boeing 737", triggers: ["B737", "B738", "B739", "737"] },
+  { target: "Boeing 747", triggers: ["B747", "747"] },
+  { target: "Boeing 757", triggers: ["B757", "757"] },
+  { target: "Boeing 767", triggers: ["B767", "767"] },
+  { target: "Boeing 777", triggers: ["B777", "B77", "777"] },
+  { target: "Boeing 787 Dreamliner", triggers: ["B787", "B78", "787"] },
+  { target: "Embraer E-Jet E2 family", triggers: ["E190", "E195", "E290", "E295"] },
+  { target: "Embraer E-Jet family", triggers: ["E170", "E175"] },
+  { target: "ATR 72", triggers: ["ATR", "AT7", "AT72"] },
+  { target: "ATR 42", triggers: ["AT4", "AT42"] },
+];
+
 // Maps an aircraft model/ICAO to a canonical Wikipedia page title / search term.
 // Ported from the previous in-import enrichment so behaviour is preserved.
 export function normalizeAircraftModelForSearch(modelName: string, icaoCode: string): string {
   const text = `${modelName} ${icaoCode}`.toUpperCase();
 
-  if (text.includes("A220") || text.includes("BCS")) {return "Airbus A220";}
-  if (text.includes("A19N") || text.includes("A20N") || text.includes("A21N") || text.includes("A320NEO")) {
-    return "Airbus A320neo family";
+  for (const rule of NORMALIZE_RULES) {
+    if (rule.triggers.some((trigger) => text.includes(trigger))) {
+      return rule.target;
+    }
   }
-  if (text.includes("A318") || text.includes("A319") || text.includes("A320") || text.includes("A321")) {
-    return "Airbus A320 family";
-  }
-  if (text.includes("A330")) {return "Airbus A330";}
-  if (text.includes("A340")) {return "Airbus A340";}
-  if (text.includes("A350")) {return "Airbus A350";}
-  if (text.includes("A380") || icaoCode === "A388") {return "Airbus A380";}
-
-  if (text.includes("B38") || text.includes("B39") || text.includes("737 MAX")) {return "Boeing 737 MAX";}
-  if (text.includes("B737") || text.includes("B738") || text.includes("B739") || text.includes("737")) {
-    return "Boeing 737";
-  }
-  if (text.includes("B747") || text.includes("747")) {return "Boeing 747";}
-  if (text.includes("B757") || text.includes("757")) {return "Boeing 757";}
-  if (text.includes("B767") || text.includes("767")) {return "Boeing 767";}
-  if (text.includes("B777") || text.includes("B77") || text.includes("777")) {return "Boeing 777";}
-  if (text.includes("B787") || text.includes("B78") || text.includes("787")) {return "Boeing 787 Dreamliner";}
-
-  if (text.includes("E190") || text.includes("E195") || text.includes("E290") || text.includes("E295")) {
-    return "Embraer E-Jet E2 family";
-  }
-  if (text.includes("E170") || text.includes("E175")) {return "Embraer E-Jet family";}
-
-  if (text.includes("ATR") || text.includes("AT7") || text.includes("AT72")) {return "ATR 72";}
-  if (text.includes("AT4") || text.includes("AT42")) {return "ATR 42";}
 
   return modelName;
 }
@@ -133,8 +132,16 @@ async function fetchWikidataAircraftDetails(
   try {
     const url = `https://www.wikidata.org/wiki/Special:EntityData/${qid}.json`;
     const data = await fetchWikimediaJson<WikidataEntityResponse>(url);
-    const entity = data.entities?.[qid];
-    const commonsFile = entity?.claims?.P18?.[0]?.mainsnak?.datavalue?.value;
+    const { entities } = data;
+    if (!entities) {
+      return null;
+    }
+    const entity = entities[qid];
+    if (!entity) {
+      return null;
+    }
+
+    const commonsFile = getCommonsFileFromEntity(entity);
 
     if (!commonsFile) {
       return null;
@@ -146,14 +153,16 @@ async function fetchWikidataAircraftDetails(
       return null;
     }
 
+    const { pageUrl, title } = getEntityMetadata(entity);
+
     return {
       commonsFile,
       imageUrl,
-      pageUrl: entity?.sitelinks?.enwiki?.url,
+      pageUrl,
       qid,
       searchQuery,
       source: "Wikidata/Wikimedia Commons",
-      title: entity?.labels?.en?.value ?? entity?.sitelinks?.enwiki?.title,
+      title,
     };
   } catch {
     return null;
@@ -164,9 +173,11 @@ async function fetchWikidataAircraftImage(
   input: AircraftImageInput,
 ): Promise<AircraftVisualImage | null> {
   for (const query of wikidataQueriesForAircraft(input)) {
+    // eslint-disable-next-line no-await-in-loop
     const qids = await searchWikidataAircraft(query);
 
     for (const qid of qids.slice(0, WIKIDATA_QIDS_TO_CHECK)) {
+      // eslint-disable-next-line no-await-in-loop
       const details = await fetchWikidataAircraftDetails(qid, query);
 
       if (details?.imageUrl) {
@@ -182,8 +193,10 @@ async function fetchWikimediaJson<TValue>(url: string): Promise<TValue> {
   let lastError: unknown = null;
 
   for (let attempt = 0; attempt <= WIKIMEDIA_MAX_RETRIES; attempt++) {
+    // eslint-disable-next-line no-await-in-loop
     await waitForWikimediaThrottle();
 
+    // eslint-disable-next-line no-await-in-loop
     const response = await fetch(url, {
       headers: {
         Accept: "application/json",
@@ -193,6 +206,7 @@ async function fetchWikimediaJson<TValue>(url: string): Promise<TValue> {
     });
 
     if (response.ok) {
+      // eslint-disable-next-line no-await-in-loop
       return (await response.json()) as TValue;
     }
 
@@ -200,12 +214,13 @@ async function fetchWikimediaJson<TValue>(url: string): Promise<TValue> {
       const retryAfterMs = retryAfterToMs(response.headers.get("retry-after"));
       const backoffMs = retryAfterMs ?? Math.min(60_000, 2_000 * 2 ** attempt);
 
-      lastError = new Error(`${response.status} ${response.statusText}; retrying after ${backoffMs}ms`);
+      lastError = new Error(`${String(response.status)} ${response.statusText}; retrying after ${String(backoffMs)}ms`);
+      // eslint-disable-next-line no-await-in-loop
       await sleep(backoffMs);
       continue;
     }
 
-    throw new Error(`${response.status} ${response.statusText}`);
+    throw new Error(`${String(response.status)} ${response.statusText}`);
   }
 
   throw lastError instanceof Error ? lastError : new Error("Wikimedia request failed after retries");
@@ -217,6 +232,7 @@ async function fetchWikipediaSummaryImage(
   for (const title of wikipediaTitlesForAircraft(input)) {
     try {
       const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+      // eslint-disable-next-line no-await-in-loop
       const response = await fetchWikimediaJson<WikipediaSummaryResponse>(url);
       const imageUrl = response.originalimage?.source ?? response.thumbnail?.source;
 
@@ -235,6 +251,17 @@ async function fetchWikipediaSummaryImage(
   }
 
   return null;
+}
+
+function getCommonsFileFromEntity(entity: WikidataEntity): null | string {
+  return entity.claims?.P18?.[0]?.mainsnak?.datavalue?.value ?? null;
+}
+
+function getEntityMetadata(entity: WikidataEntity): { pageUrl?: string; title?: string } {
+  const enwiki = entity.sitelinks?.enwiki;
+  const pageUrl = enwiki?.url;
+  const title = entity.labels?.en?.value ?? enwiki?.title;
+  return { pageUrl, title };
 }
 
 function realWorldMetadata(characteristics?: string): {
@@ -280,7 +307,7 @@ async function searchWikidataAircraft(query: string): Promise<string[]> {
       `&search=${encodeURIComponent(query)}`,
       "&language=en",
       "&format=json",
-      `&limit=${WIKIDATA_SEARCH_LIMIT}`,
+      `&limit=${String(WIKIDATA_SEARCH_LIMIT)}`,
     ].join("");
     const data = await fetchWikimediaJson<WikidataSearchResponse>(url);
 
@@ -295,7 +322,9 @@ async function searchWikidataAircraft(query: string): Promise<string[]> {
 }
 
 async function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function uniqueStrings(values: string[]): string[] {
@@ -303,30 +332,46 @@ function uniqueStrings(values: string[]): string[] {
 }
 
 async function waitForWikimediaThrottle(): Promise<void> {
-  const waitMs = Math.max(0, WIKIMEDIA_MIN_DELAY_MS - (Date.now() - lastWikimediaRequestAt));
+  const now = Date.now();
+  const waitMs = Math.max(0, WIKIMEDIA_MIN_DELAY_MS - (now - lastWikimediaRequestAt));
+  lastWikimediaRequestAt = now + waitMs;
 
   if (waitMs > 0) {
     await sleep(waitMs);
   }
-
-  lastWikimediaRequestAt = Date.now();
 }
+
+const SCORE_RULES = [
+  { trigger: "aircraft", value: 10 },
+  { trigger: "airliner", value: 10 },
+  { trigger: "airplane", value: 8 },
+  { trigger: "jet", value: 4 },
+  { trigger: "turboprop", value: 4 },
+  { trigger: "family", value: 2 },
+  { trigger: "airport", value: -15 },
+  { trigger: "airline", value: -12 },
+  { trigger: "flight ", value: -8 },
+];
+
+const NEGATIVE_TRIGGERS = ["accident", "incident", "crash"];
 
 function wikidataAircraftSearchScore(item: { description?: string; label?: string }): number {
   const text = `${item.label ?? ""} ${item.description ?? ""}`.toLowerCase();
   let score = 0;
 
-  if (text.includes("aircraft")) {score += 10;}
-  if (text.includes("airliner")) {score += 10;}
-  if (text.includes("airplane")) {score += 8;}
-  if (text.includes("jet")) {score += 4;}
-  if (text.includes("turboprop")) {score += 4;}
-  if (text.includes("narrow-body") || text.includes("wide-body")) {score += 3;}
-  if (text.includes("family")) {score += 2;}
-  if (text.includes("airport")) {score -= 15;}
-  if (text.includes("airline")) {score -= 12;}
-  if (text.includes("accident") || text.includes("incident") || text.includes("crash")) {score -= 12;}
-  if (text.includes("flight ")) {score -= 8;}
+  for (const rule of SCORE_RULES) {
+    if (text.includes(rule.trigger)) {
+      score += rule.value;
+    }
+  }
+
+  if (text.includes("narrow-body") || text.includes("wide-body")) {
+    score += 3;
+  }
+
+  if (NEGATIVE_TRIGGERS.some((trigger) => text.includes(trigger))) {
+    score -= 12;
+  }
 
   return score;
 }

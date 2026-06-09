@@ -92,6 +92,17 @@ export function startAircraftImagesJob(config: BffConfig, options: RefreshAircra
   return job;
 }
 
+function buildImagesReport(result: { found: number; missing: number; processed: number; skipped: number; errors: string[] }): ImportJobReportSummary {
+  return {
+    counts: { found: result.found, missing: result.missing, processed: result.processed, skipped: result.skipped },
+    errors: result.errors.length,
+    firstErrors: result.errors.slice(0, 10).map((message) => ({ entityType: "aircraft-type", message, sourceKey: "aircraft-image" })),
+    firstWarnings: [],
+    quality: {},
+    warnings: result.missing,
+  };
+}
+
 async function runAircraftImagesJob(config: BffConfig, options: RefreshAircraftImagesOptions, job: ImportJobStatus, actorId: string): Promise<void> {
   const log = createJobLogger(job);
   Object.assign(job, { status: "running" });
@@ -110,14 +121,7 @@ async function runAircraftImagesJob(config: BffConfig, options: RefreshAircraftI
     }, log);
     Object.assign(job, {
       finishedAt: new Date().toISOString(),
-      report: {
-        counts: { found: result.found, missing: result.missing, processed: result.processed, skipped: result.skipped },
-        errors: result.errors.length,
-        firstErrors: result.errors.slice(0, 10).map((message) => ({ entityType: "aircraft-type", message, sourceKey: "aircraft-image" })),
-        firstWarnings: [],
-        quality: {},
-        warnings: result.missing,
-      },
+      report: buildImagesReport(result),
       status: result.errors.length > 0 && result.found === 0 ? "failed" : "succeeded",
     });
     if (job.status === "succeeded") {
