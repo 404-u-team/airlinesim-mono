@@ -6,6 +6,7 @@ import { jsonResponse, readJson } from "../../http";
 import { recordGameEvent } from "../events/producer";
 import { reconcileNotificationsAfterMutation } from "../events/reconcile";
 import { reconcileCompletedFlight } from "../finance/ledger";
+import { enrichOwnedAircraft } from "../fleet/scoring";
 import { buildRouteListItem } from "../routes/planning";
 import { saveRoute } from "../routes/storage";
 import { annotateOutOfPosition } from "./aircraft-position";
@@ -146,6 +147,7 @@ async function getScheduleOptions(request: Request, url: URL, config: BffConfig)
   const routeId = url.searchParams.get("route_id") ?? snapshot.routes.find((route) => route.status === "awaiting_schedule")?.id;
   const route = snapshot.routes.find((item) => item.id === routeId) ?? null;
   const compatibleAircraft = snapshot.aircrafts.map((aircraft) => {
+    const enriched = enrichOwnedAircraft(aircraft, snapshot.aircraftTypes, snapshot.airports);
     const preview = route
       ? buildSchedulePreview(snapshot, {
         aircraft_id: aircraft.id,
@@ -156,7 +158,7 @@ async function getScheduleOptions(request: Request, url: URL, config: BffConfig)
       : null;
 
     return {
-      aircraft,
+      aircraft: enriched,
       blockers: preview?.blockers ?? [],
       compatible: Boolean(preview?.canActivate),
       warnings: preview?.warnings ?? [],

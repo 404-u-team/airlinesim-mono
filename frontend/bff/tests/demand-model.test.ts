@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { calculatePassengerDemand, gravityDemand } from "../src/modules/demand/model";
+import { calculatePassengerDemand, gravityDemand, shortHaulFactor } from "../src/modules/demand/model";
 
 const airport = {
   fuel_price_multiplier: 1,
@@ -34,4 +34,27 @@ test("passenger demand preserves directional differences", () => {
   expect(result.originToDestination).toBeGreaterThan(1);
   expect(result.destinationToOrigin).toBeGreaterThan(1);
   expect(result.originToDestination).not.toBe(result.destinationToOrigin);
+});
+
+test("short-haul factor collapses intra-metro pairs and saturates by 300 km", () => {
+  expect(shortHaulFactor(44)).toBe(0);
+  expect(shortHaulFactor(300)).toBe(1);
+  expect(shortHaulFactor(700)).toBe(1);
+});
+
+test("very short pairs (a city's two airports) carry essentially no demand", () => {
+  const region = { business_score: 0.6, country_id: "A", gdp_per_capita: 20_000, population: 10_000_000, tourism_score: 0.4 };
+
+  expect(calculatePassengerDemand(airport, airport, region, region, 44).originToDestination).toBeLessThanOrEqual(1);
+});
+
+test("domestic pairs out-demand otherwise-identical international pairs", () => {
+  const origin = { business_score: 0.6, country_id: "A", gdp_per_capita: 20_000, population: 10_000_000, tourism_score: 0.4 };
+  const sameCountry = { ...origin };
+  const otherCountry = { ...origin, country_id: "B" };
+
+  const domestic = calculatePassengerDemand(airport, airport, origin, sameCountry, 1200).originToDestination;
+  const international = calculatePassengerDemand(airport, airport, origin, otherCountry, 1200).originToDestination;
+
+  expect(domestic).toBeGreaterThan(international);
 });

@@ -125,6 +125,15 @@ export async function getLatestImportJob(): Promise<LatestImportJob | null> {
   }
 }
 
+export async function startAircraftImagesJob(refresh: boolean): Promise<string> {
+  const response = await apiClient.post<{ jobId: string }>("/admin/import/aircraft-images", {
+    refreshRaw: refresh,
+    source: "admin-ui",
+  });
+
+  return response.jobId;
+}
+
 export async function startImportJob(mode: "dry-run" | "import", refreshRaw: boolean): Promise<string> {
   const response = await apiClient.post<{ jobId: string }>("/admin/import/world-data", {
     mode,

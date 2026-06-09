@@ -6,6 +6,7 @@ import { runWorldDataImport, type ImportOptions } from "./pipeline";
 import { errorDetails, type ImportLogEntry, type ImportLogInput } from "./logger";
 import { recordAdminAudit } from "../../admin/audit";
 import { cache } from "../../proxy";
+import { refreshAircraftImages, type RefreshAircraftImagesOptions } from "../../aircraft-images/refresh";
 
 export type ImportJobStatus = {
   error?: string;
@@ -67,6 +68,91 @@ export function startWorldDataImportJob(config: BffConfig, options: ImportOption
   void runJob(config, options, job, actorId);
 
   return job;
+}
+
+export function startAircraftImagesJob(config: BffConfig, options: RefreshAircraftImagesOptions, actorId = "authenticated-user"): ImportJobStatus {
+  const activeJob = Array.from(jobs.values()).find((job) => job.status === "queued" || job.status === "running");
+  if (activeJob) {
+    return activeJob;
+  }
+
+  const job: ImportJobStatus = {
+    id: crypto.randomUUID(),
+    logs: [],
+    mode: "import",
+    progress: { message: "Aircraft image refresh queued", percent: 0, stage: "preparing" },
+    startedAt: new Date().toISOString(),
+    status: "queued",
+  };
+
+  jobs.set(job.id, job);
+  publishJob(job);
+  void runAircraftImagesJob(config, options, job, actorId);
+
+  return job;
+}
+
+async function runAircraftImagesJob(config: BffConfig, options: RefreshAircraftImagesOptions, job: ImportJobStatus, actorId: string): Promise<void> {
+  const log = createJobLogger(job);
+  Object.assign(job, { status: "running" });
+  log({ level: "info", message: "Aircraft image refresh started", operation: "job.start", stage: "preparing" });
+  publishJob(job);
+
+  try {
+    let lastPublishedAt = 0;
+    const result = await refreshAircraftImages(config, options, (progress) => {
+      const stageChanged = progress.stage !== job.progress.stage;
+      job.progress = progress;
+      if (stageChanged || progress.percent >= 98 || Date.now() - lastPublishedAt >= 100) {
+        lastPublishedAt = Date.now();
+        publishJob(job);
+      }
+    }, log);
+    Object.assign(job, {
+      finishedAt: new Date().toISOString(),
+      report: {
+        counts: { found: result.found, missing: result.missing, processed: result.processed, skipped: result.skipped },
+        errors: result.errors.length,
+        firstErrors: result.errors.slice(0, 10).map((message) => ({ entityType: "aircraft-type", message, sourceKey: "aircraft-image" })),
+        firstWarnings: [],
+        quality: {},
+        warnings: result.missing,
+      },
+      status: result.errors.length > 0 && result.found === 0 ? "failed" : "succeeded",
+    });
+    if (job.status === "succeeded") {
+      cache.clear();
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Aircraft image refresh failed";
+    log({
+      details: errorDetails(error),
+      level: "error",
+      message,
+      operation: "job.failed",
+      stage: job.progress.stage,
+    });
+    Object.assign(job, {
+      error: message,
+      finishedAt: new Date().toISOString(),
+      progress: { ...job.progress, message },
+      status: "failed",
+    });
+  } finally {
+    publishJob(job);
+    try {
+      await recordAdminAudit({
+        action: "import.run",
+        capability: "world.manage",
+        entity_type: "aircraft-images",
+        import_job_id: job.id,
+        success: job.status === "succeeded",
+        user_id: actorId,
+      });
+    } catch (error) {
+      console.warn("Aircraft image refresh admin audit write failed:", error);
+    }
+  }
 }
 
 async function runJob(config: BffConfig, options: ImportOptions, job: ImportJobStatus, actorId: string): Promise<void> {

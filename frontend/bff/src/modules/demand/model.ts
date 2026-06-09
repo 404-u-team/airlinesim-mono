@@ -39,12 +39,14 @@ export type PassengerDemandBreakdown = {
   directionFactorDestinationToOrigin: number;
   directionFactorOriginToDestination: number;
   distanceImpedance: number;
+  domesticMultiplier: number;
   gdpElasticity: number;
   gravity: number;
   originGdpPerCapita: number;
   originPopulation: number;
   populationElasticity: number;
   sameCountry: boolean;
+  shortHaulFactor: number;
   tourism: number;
 };
 
@@ -56,9 +58,15 @@ export type PassengerDemandResult = {
   tourism: number;
 };
 
-const CALIBRATION_K = 0.45;
-const GDP_ELASTICITY = 0.6;
-const POPULATION_ELASTICITY = 0.5;
+// Calibrated 2026-06 against real O&D anchors (Moscow–Sochi/Ufa/Istanbul/Copenhagen)
+// and the gravity-model literature (Grosche et al. 2007; global city-pair model 2018),
+// which put population/GDPpc elasticities in the 0.6–0.8 range. See docs/passenger-demand-model.md.
+const CALIBRATION_K = 2.6;
+const GDP_ELASTICITY = 0.55;
+const POPULATION_ELASTICITY = 0.62;
+// Domestic air markets are larger than a naive gravity predicts (no border friction,
+// weaker long-distance rail), so same-country pairs get a multiplicative boost.
+const DOMESTIC_MULTIPLIER = 1.8;
 
 export function calculatePassengerDemand(
   originAirport: DemandAirport,
@@ -92,8 +100,10 @@ export function explainPassengerDemand(
   const impedance = distanceImpedance(distanceKm);
   const gravity = gravityDemand(originRegion, destinationRegion, distanceKm);
   const airportFactor = Math.sqrt(airportMarketFactor(originAirport) * airportMarketFactor(destinationAirport));
-  const affinityFactor = 0.7 + 0.75 * business + 0.55 * tourism + 0.45 * diaspora + (sameCountry ? 0.22 : 0);
-  const baseDemand = gravity * airportFactor * affinityFactor;
+  const affinityFactor = 0.7 + 0.75 * business + 0.55 * tourism + 0.45 * diaspora;
+  const domesticMultiplier = sameCountry ? DOMESTIC_MULTIPLIER : 1;
+  const shortHaul = shortHaulFactor(distanceKm);
+  const baseDemand = gravity * airportFactor * affinityFactor * domesticMultiplier * shortHaul;
   const directionAb = directionFactor(originRegion, destinationRegion, business, tourism, diaspora);
   const directionBa = directionFactor(destinationRegion, originRegion, business, tourism, diaspora);
 
@@ -110,12 +120,14 @@ export function explainPassengerDemand(
       directionFactorDestinationToOrigin: round2(directionBa),
       directionFactorOriginToDestination: round2(directionAb),
       distanceImpedance: round2(impedance),
+      domesticMultiplier: round2(domesticMultiplier),
       gdpElasticity: GDP_ELASTICITY,
       gravity: round2(gravity),
       originGdpPerCapita: Math.max(originRegion.gdp_per_capita ?? 10_000, 500),
       originPopulation: Math.max(originRegion.population ?? 100_000, 50_000),
       populationElasticity: POPULATION_ELASTICITY,
       sameCountry,
+      shortHaulFactor: round2(shortHaul),
       tourism: round2(tourism),
     },
     result: {
@@ -140,6 +152,12 @@ export function gravityDemand(left: DemandRegion, right: DemandRegion, distanceK
     rightGdpThousands ** GDP_ELASTICITY;
 
   return CALIBRATION_K * marketMass * distanceImpedance(distanceKm);
+}
+
+// Collapses demand for intra-metro / very short pairs (e.g. a city's two airports
+// ~40 km apart) where nobody flies. Ramps 0 → 1 between 60 and 300 km.
+export function shortHaulFactor(distanceKm: number): number {
+  return clamp((distanceKm - 60) / 240, 0, 1);
 }
 
 function airportMarketFactor(airport: DemandAirport): number {

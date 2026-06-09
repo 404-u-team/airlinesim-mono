@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { Locale } from "@airlinesim/i18n";
 
-import { AirButton, AirMetricCard, AirStatePanel } from "@airlinesim/air-ui";
-import { createAuthClient, getBackendBaseUrl } from "@airlinesim/game-sdk";
+import { AirAircraftThumb, AirButton, AirMetricCard, AirStatePanel } from "@airlinesim/air-ui";
+import { getBackendBaseUrl } from "@airlinesim/game-sdk";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
 import type { FleetMessageKey } from "../i18n";
@@ -17,7 +17,6 @@ const props = defineProps<{
   t: (key: FleetMessageKey | string) => string;
 }>();
 
-const authClient = createAuthClient();
 const connectionState = ref<"connected" | "connecting" | "disconnected">("disconnected");
 const current = ref<FuelPriceSnapshot | null>(null);
 const error = ref("");
@@ -51,14 +50,14 @@ const priceRange = computed(() => {
 
 const fleetFuelImpact = computed(() => {
   if (!ownedAircraft.value.length || !current.value) { return []; }
-  const groups = new Map<string, { count: number; fuelBurn: number; modelName: string; }>();
+  const groups = new Map<string, { count: number; fuelBurn: number; icaoCode?: string; imageUrl?: string; modelName: string; }>();
   for (const ac of ownedAircraft.value) {
     const model = ac.modelName || ac.type?.model_name || "Unknown";
     const existing = groups.get(model);
     if (existing) {
       existing.count++;
     } else {
-      groups.set(model, { count: 1, fuelBurn: ac.type?.fuel_consumption_per_hour ?? 0, modelName: model });
+      groups.set(model, { count: 1, fuelBurn: ac.type?.fuel_consumption_per_hour ?? 0, icaoCode: ac.type?.icao_code, imageUrl: ac.type?.image_url, modelName: model });
     }
   }
   const {price} = current.value;
@@ -66,6 +65,8 @@ const fleetFuelImpact = computed(() => {
     costPerHour: (g.fuelBurn / 1000) * price,
     count: g.count,
     fuelBurn: g.fuelBurn,
+    icaoCode: g.icaoCode,
+    imageUrl: g.imageUrl,
     modelName: g.modelName,
   })).sort((a, b) => b.costPerHour - a.costPerHour);
 });
@@ -128,7 +129,7 @@ function startRealtime(): void {
         const snapshot: FuelPriceSnapshot = {
           price: Number(payload.price),
           recorded_at: payload.recorded_at,
-          source: "internal",
+          source: "backend-realtime",
           unit_price: Number(payload.price),
           updated_at: new Date().toISOString(),
         };
@@ -315,7 +316,15 @@ function stopRealtime(): void {
                 class="border-b border-border hover:bg-surface-hover last:border-b-0"
               >
                 <td class="px-4 py-3 text-body font-medium text-text-primary">
-                  {{ item.modelName }}
+                  <span class="flex min-w-0 items-center gap-3">
+                    <AirAircraftThumb
+                      :alt="item.modelName"
+                      :fallback="item.icaoCode"
+                      :image-url="item.imageUrl"
+                      size="sm"
+                    />
+                    <span class="truncate">{{ item.modelName }}</span>
+                  </span>
                 </td>
                 <td class="px-4 py-3 text-center">
                   <span class="inline-flex items-center rounded-full bg-surface border border-border px-2.5 py-0.5 text-caption font-semibold">

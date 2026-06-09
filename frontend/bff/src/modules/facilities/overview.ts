@@ -2,6 +2,7 @@ import type { Airport } from "../fleet/types";
 import type { OperationsSnapshot } from "../operations/planning";
 import type { AirportConstraint, BaseFacilitiesOverview } from "./types";
 
+import { resolveAircraftImageUrl } from "../aircraft-images/resolve";
 import { estimateBlockHours } from "../operations/flights";
 import { aircraftStateConstraints, airportDataConstraints, arrivalLocalTime, nightOperationConstraints, runwayConstraints, runwayMargin } from "./constraints";
 import { airportCostProfile } from "./costs";
@@ -23,7 +24,7 @@ export function buildBaseFacilitiesOverview(snapshot: OperationsSnapshot): BaseF
       compatible: !constraints.some((item) => item.blocking),
       constraints,
       runway_margin_m: runwayMargin(base, type),
-      type,
+      type: type ? { ...type, image_url: resolveAircraftImageUrl(type) } : null,
     };
   });
   const slots = buildSlotCapacity(base, snapshot.routes, snapshot.schedules, snapshot.flights);

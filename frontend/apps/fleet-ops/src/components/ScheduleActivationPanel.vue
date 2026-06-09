@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AirButton, AirMetricCard } from "@airlinesim/air-ui";
+import { AirAircraftThumb, AirButton, AirMetricCard } from "@airlinesim/air-ui";
 
 import type { OperationAircraftOption, OperationReason, SchedulePreviewResponse } from "../types";
 
@@ -54,9 +54,18 @@ const emit = defineEmits<{
       <h2 class="text-subtitle">
         {{ t("operations.aircraft.ready") }}
       </h2>
-      <p class="mt-2 text-body text-text-muted">
-        {{ selectedAircraft?.aircraft.tail_number ?? "-" }} · {{ selectedAircraft?.aircraft.modelName ?? "-" }}
-      </p>
+      <div class="mt-2 flex items-center gap-3">
+        <AirAircraftThumb
+          v-if="selectedAircraft"
+          :alt="selectedAircraft.aircraft.modelName"
+          :fallback="selectedAircraft.aircraft.type?.icao_code"
+          :image-url="selectedAircraft.aircraft.type?.image_url"
+          size="sm"
+        />
+        <p class="min-w-0 truncate text-body text-text-muted">
+          {{ selectedAircraft?.aircraft.tail_number ?? "-" }} · {{ selectedAircraft?.aircraft.modelName ?? "-" }}
+        </p>
+      </div>
       <div
         v-if="selectedAircraft?.blockers.length || selectedAircraft?.warnings.length"
         class="mt-3 grid gap-2"

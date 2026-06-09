@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AirBadge, AirButton, AirMetricCard, AirSelect, AirStatePanel, AirTextField } from "@airlinesim/air-ui";
+import { AirAircraftThumb, AirBadge, AirButton, AirMetricCard, AirSelect, AirStatePanel, AirTextField } from "@airlinesim/air-ui";
 import { computed } from "vue";
 
 import type {
@@ -231,9 +231,18 @@ const tailNumberModel = computed({
           <h2 class="text-subtitle">
             {{ t("purchase.preview") }}
           </h2>
-          <p class="mt-1 text-caption text-text-muted">
-            {{ selectedType?.model_name ?? t("purchase.select") }}
-          </p>
+          <div class="mt-2 flex items-center gap-3">
+            <AirAircraftThumb
+              v-if="selectedType"
+              :alt="selectedType.model_name"
+              :fallback="selectedType.icao_code"
+              :image-url="selectedType.image_url"
+              size="sm"
+            />
+            <p class="min-w-0 truncate text-caption text-text-muted">
+              {{ selectedType?.model_name ?? t("purchase.select") }}
+            </p>
+          </div>
 
           <div
             v-if="hubOptions.length"

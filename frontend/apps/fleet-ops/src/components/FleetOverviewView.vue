@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AirBadge, AirButton, AirMetricCard, AirStatePanel } from "@airlinesim/air-ui";
+import { AirAircraftThumb, AirBadge, AirButton, AirMetricCard, AirStatePanel } from "@airlinesim/air-ui";
 import { computed } from "vue";
 
 import type { FleetMarketResponse, FleetOwnedAircraftCard } from "../types";
@@ -26,13 +26,23 @@ const maintenanceRiskCount = computed(() =>
   props.aircraft.filter((aircraft) => aircraft.maintenanceRatio < 0.35).length,
 );
 const modelGroups = computed(() => {
-  const groups = new Map<string, number>();
+  const groups = new Map<string, { count: number; icaoCode?: string; imageUrl?: string; modelName: string }>();
 
   for (const aircraft of props.aircraft) {
-    groups.set(aircraft.modelName, (groups.get(aircraft.modelName) ?? 0) + 1);
+    const existing = groups.get(aircraft.modelName);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      groups.set(aircraft.modelName, {
+        count: 1,
+        icaoCode: aircraft.type?.icao_code,
+        imageUrl: aircraft.type?.image_url,
+        modelName: aircraft.modelName,
+      });
+    }
   }
 
-  return Array.from(groups, ([modelName, count]) => ({ count, modelName }))
+  return Array.from(groups.values())
     .sort((left, right) => right.count - left.count)
     .slice(0, 5);
 });
@@ -209,7 +219,15 @@ const unassignedCount = computed(() =>
             :key="group.modelName"
             class="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2"
           >
-            <span class="truncate text-body">{{ group.modelName }}</span>
+            <span class="flex min-w-0 items-center gap-3">
+              <AirAircraftThumb
+                :alt="group.modelName"
+                :fallback="group.icaoCode"
+                :image-url="group.imageUrl"
+                size="sm"
+              />
+              <span class="truncate text-body">{{ group.modelName }}</span>
+            </span>
             <AirBadge
               :label="formatNumber(group.count)"
               variant="primary-soft"

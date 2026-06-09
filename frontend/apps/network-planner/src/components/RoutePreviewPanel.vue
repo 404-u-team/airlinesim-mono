@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AirBadge, AirButton } from "@airlinesim/air-ui";
+import { AirAircraftThumb, AirBadge, AirButton } from "@airlinesim/air-ui";
 import { computed, ref } from "vue";
 
 import type { NetworkMessageKey } from "../i18n";
@@ -183,17 +183,25 @@ function reasonLabel(reason: { code: string; message: string }): string {
             :key="option.aircraft.id ?? option.aircraft.tail_number"
             class="flex items-start justify-between gap-2"
           >
-            <div class="min-w-0">
-              <p class="truncate text-body">
-                {{ option.aircraft.tail_number ?? option.aircraft.id }}
-                <span class="text-text-muted">· {{ option.type?.model_name ?? option.aircraft.type_id }}</span>
-              </p>
-              <p
-                v-if="!option.isCompatible && option.blockers.length"
-                class="mt-0.5 text-caption text-error"
-              >
-                {{ reasonLabel(option.blockers[0]) }}
-              </p>
+            <div class="flex min-w-0 items-start gap-2">
+              <AirAircraftThumb
+                :alt="option.type?.model_name"
+                :fallback="option.type?.icao_code"
+                :image-url="option.type?.image_url"
+                size="sm"
+              />
+              <div class="min-w-0">
+                <p class="truncate text-body">
+                  {{ option.aircraft.tail_number ?? option.aircraft.id }}
+                  <span class="text-text-muted">· {{ option.type?.model_name ?? option.aircraft.type_id }}</span>
+                </p>
+                <p
+                  v-if="!option.isCompatible && option.blockers.length"
+                  class="mt-0.5 text-caption text-error"
+                >
+                  {{ reasonLabel(option.blockers[0]) }}
+                </p>
+              </div>
             </div>
             <AirBadge
               class="shrink-0"

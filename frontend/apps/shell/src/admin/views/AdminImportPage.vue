@@ -10,37 +10,13 @@ import {
   type ImportIssue,
   type ImportJob,
   type ImportJobSocket,
+  startAircraftImagesJob,
   startImportJob,
 } from "../api/importApi";
 
 const props = defineProps<{ appLocale: Locale }>();
-const messages = {
-  en: {
-    admin: "Admin", allEntities: "All entities", allSeverities: "All severities", cachedAction: "Start import", cachedDescription: "Import using the latest locally cached source files.",
-    cachedTitle: "Import cached sources",
-    cancel: "Cancel", confirm: "Confirm import", confirmCached: "Run a real import using cached sources?",
-    confirmDescription: "World records may be created or updated. Run dry-run first and review its report.", confirmRefresh: "Refresh sources and run a real import?", description: "Validate or import countries, regions, airports and aircraft types through BFF. Region links are created lazily from demand requests. Run dry-run first. Source refresh does not delete existing backend data.", dryAction: "Start dry run",
-    dryDescription: "Build and validate the dataset without backend mutations.",
-    dryRun: "Dry run", dryTitle: "Dry run", entityFilter: "Entity", errors: "Errors", failed: "Failed",
-    firstErrors: "First errors", firstWarnings: "First warnings", import: "Import", issues: "First issues", jobId: "Job ID",
-    latest: "Latest job", liveConnected: "Realtime connected", liveDisconnected: "Realtime disconnected", logs: "Import log", mode: "Mode",
-    progress: "Progress", queued: "Queued", refreshAction: "Refresh and import", refreshDescription: "Download source files again, then reconcile and import them.", refreshTitle: "Refresh sources and import", running: "Running",
-    severityFilter: "Severity", stage: "Stage", startError: "Could not start import.", status: "Status", statusError: "Could not read import status.", succeeded: "Succeeded", title: "World data import", warnings: "Warnings",
-  },
-  ru: {
-    admin: "Админка", allEntities: "Все сущности", allSeverities: "Все уровни", cachedAction: "Запустить импорт", cachedDescription: "Импортировать последние локально сохранённые исходные данные.",
-    cachedTitle: "Импорт из кеша",
-    cancel: "Отмена", confirm: "Подтвердить импорт", confirmCached: "Запустить реальный импорт из кешированных источников?",
-    confirmDescription: "Записи мира могут быть созданы или обновлены. Сначала выполните проверочный запуск и изучите отчёт.", confirmRefresh: "Обновить источники и запустить реальный импорт?", description: "Проверьте или импортируйте страны, регионы, аэропорты и типы самолётов через BFF. Связи регионов создаются лениво при запросах спроса. Сначала выполните проверочный запуск. Обновление источников не удаляет существующие данные backend.", dryAction: "Запустить проверку",
-    dryDescription: "Собрать и проверить набор данных без изменений в backend.",
-    dryRun: "Проверочный запуск", dryTitle: "Проверочный запуск", entityFilter: "Сущность", errors: "Ошибки", failed: "Ошибка",
-    firstErrors: "Первые ошибки", firstWarnings: "Первые предупреждения", import: "Импорт", issues: "Первые проблемы", jobId: "ID задачи",
-    latest: "Последняя задача", liveConnected: "Realtime подключён", liveDisconnected: "Realtime отключён", logs: "Журнал импорта", mode: "Режим",
-    progress: "Прогресс", queued: "В очереди", refreshAction: "Обновить и импортировать", refreshDescription: "Повторно загрузить исходные файлы, сверить и импортировать их.", refreshTitle: "Обновление источников и импорт", running: "Выполняется",
-    severityFilter: "Уровень", stage: "Этап", startError: "Не удалось запустить импорт.", status: "Статус", statusError: "Не удалось получить статус импорта.", succeeded: "Завершено", title: "Импорт данных мира", warnings: "Предупреждения",
-  },
-} as const;
-const t = (key: keyof typeof messages.en) => messages[props.appLocale][key];
+import { type AdminImportMessageKey, adminImportMessages } from "../i18n";
+const t = (key: AdminImportMessageKey) => adminImportMessages[props.appLocale][key];
 const activeJob = ref<ImportJob | null>(null);
 const error = ref("");
 const isStarting = ref(false);
@@ -137,6 +113,20 @@ function schedulePoll(jobId: string): void {
   pollTimer = setTimeout(() => void pollJob(jobId), 1500);
 }
 
+async function startAircraftImages(refresh: boolean): Promise<void> {
+  isStarting.value = true;
+  error.value = "";
+  try {
+    const jobId = await startAircraftImagesJob(refresh);
+    importSocket?.subscribe(jobId);
+    await pollJob(jobId);
+  } catch {
+    error.value = t("startError");
+  } finally {
+    isStarting.value = false;
+  }
+}
+
 async function startImport(mode: "dry-run" | "import", refreshRaw: boolean): Promise<void> {
   isStarting.value = true;
   error.value = "";
@@ -192,7 +182,7 @@ async function startImport(mode: "dry-run" | "import", refreshRaw: boolean): Pro
       </div>
     </div>
 
-    <div class="mt-6 grid gap-4 md:grid-cols-3">
+    <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <article class="rounded-lg border border-border bg-surface p-4">
         <h2 class="text-subtitle">
           {{ t("dryTitle") }}
@@ -236,6 +226,29 @@ async function startImport(mode: "dry-run" | "import", refreshRaw: boolean): Pro
           variant="warning"
           @click="requestImport(true)"
         />
+      </article>
+      <article class="rounded-lg border border-border bg-surface p-4">
+        <h2 class="text-subtitle">
+          {{ t("imagesTitle") }}
+        </h2>
+        <p class="mt-2 text-text-muted">
+          {{ t("imagesDescription") }}
+        </p>
+        <div class="mt-4 flex flex-col gap-2">
+          <AirButton
+            :disabled="isStarting"
+            :label="t('imagesAction')"
+            variant="success"
+            @click="startAircraftImages(false)"
+          />
+          <AirButton
+            :disabled="isStarting"
+            :label="t('imagesRefreshAction')"
+            size="sm"
+            variant="primary-soft"
+            @click="startAircraftImages(true)"
+          />
+        </div>
       </article>
     </div>
 

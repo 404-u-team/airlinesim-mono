@@ -41,6 +41,7 @@ export type FleetAirportCard = {
   label: string;
   max_runway_length_m: number;
   max_runway_uses_per_day: number;
+  timezone?: string;
   works_at_night: boolean;
 };
 

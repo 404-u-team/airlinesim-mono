@@ -4,7 +4,7 @@ import type { ImportMode, ImportRequestBody } from "./shared/types";
 import { requireAdminCapability } from "../../auth";
 import { jsonResponse } from "../../http";
 import { adminActorId } from "../admin/audit";
-import { getImportJobStatus, getLatestImportJobStatus, startWorldDataImportJob } from "./runtime/jobs";
+import { getImportJobStatus, getLatestImportJobStatus, startAircraftImagesJob, startWorldDataImportJob } from "./runtime/jobs";
 
 export async function handleImportRequest(
   request: Request,
@@ -12,13 +12,17 @@ export async function handleImportRequest(
   config: BffConfig,
 ): Promise<null | Response> {
   const path = url.pathname.replace(/^\/admin/, "");
-  if (!path.startsWith("/import/world-data")) {
+  if (!path.startsWith("/import/world-data") && path !== "/import/aircraft-images") {
     return null;
   }
 
   const authError = await requireAdminCapability(request, config, "world.manage");
   if (authError) {
     return authError;
+  }
+
+  if (request.method === "POST" && path === "/import/aircraft-images") {
+    return importAircraftImages(request, config);
   }
 
   if (request.method === "POST" && path === "/import/world-data") {
@@ -70,6 +74,20 @@ async function importWorldData(
     refreshRaw: body.refreshRaw,
     source: body.source,
   }, adminActorId(request));
+
+  return jsonResponse({
+    jobId: job.id,
+    status: job.status,
+    statusUrl: `/admin/import/world-data/jobs/${job.id}`,
+  }, { status: 202 });
+}
+
+async function importAircraftImages(
+  request: Request,
+  config: BffConfig,
+): Promise<Response> {
+  const body = await readOptionalJson(request);
+  const job = startAircraftImagesJob(config, { refresh: body.refreshRaw === true }, adminActorId(request));
 
   return jsonResponse({
     jobId: job.id,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Locale } from "@airlinesim/i18n";
 
-import { AirBadge } from "@airlinesim/air-ui";
+import { AirAircraftThumb, AirBadge } from "@airlinesim/air-ui";
 
 import type { FacilitiesOverview } from "../types";
 
@@ -28,11 +28,19 @@ function message(key: FacilitiesMessageKey): string {
     <div v-else class="mt-4 grid gap-3 lg:grid-cols-2">
       <article v-for="item in items" :key="item.aircraft.id" class="rounded-lg border border-border p-3">
         <div class="flex items-start justify-between gap-3">
-          <div>
-            <strong>{{ item.aircraft.tail_number ?? item.aircraft.id }}</strong>
-            <p class="text-caption text-text-muted">
-              {{ item.type?.model_name ?? "-" }}
-            </p>
+          <div class="flex min-w-0 items-center gap-3">
+            <AirAircraftThumb
+              :alt="item.type?.model_name"
+              :fallback="item.type?.icao_code"
+              :image-url="item.type?.image_url"
+              size="sm"
+            />
+            <div class="min-w-0">
+              <strong class="block truncate">{{ item.aircraft.tail_number ?? item.aircraft.id }}</strong>
+              <p class="truncate text-caption text-text-muted">
+                {{ item.type?.model_name ?? "-" }}
+              </p>
+            </div>
           </div>
           <AirBadge :label="message(item.compatible ? 'status.ready' : 'status.blocked')" :variant="item.compatible ? 'success-soft' : 'danger-soft'" />
         </div>

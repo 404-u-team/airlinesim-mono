@@ -26,6 +26,8 @@ export type FacilitiesOverview = {
     constraints: Constraint[];
     runway_margin_m: null | number;
     type: null | {
+      icao_code?: string;
+      image_url?: string;
       min_runway_length_m?: number;
       model_name?: string;
     };

@@ -85,6 +85,7 @@ export type FleetAirportCard = {
   municipality?: string;
   runway_fee: number;
   stand_fee: number;
+  timezone?: string;
   turnaround_point_price: number;
   works_at_night: boolean;
 };

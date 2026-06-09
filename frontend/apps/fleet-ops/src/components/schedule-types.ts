@@ -4,8 +4,15 @@ export type ScheduleDragState = {
   hoverTime: null | string;
   kind: "block" | "route" | null;
   label: string;
+  /** Local departure day (converted from UTC display position) — used for actual block storage */
+  localDay: null | number;
+  /** Local departure time (converted from UTC display position) — used for actual block storage */
+  localTime: null | string;
   payloadId: string;
   previewWidthPct: number;
+  /** Left-position (%) of the return-leg preview on returnPreviewDay */
+  returnPreviewDay: null | number;
+  returnPreviewLeftPct: null | number;
   tone: "outbound" | "return";
   valid: boolean;
   x: number;

@@ -19,6 +19,8 @@ const emit = defineEmits<{
   created: [];
 }>();
 
+const isOpen = ref(false);
+
 const hubs = ref<HubOption[]>([]);
 const destinationId = ref("");
 const date = ref(new Date().toISOString().slice(0, 10));
@@ -73,52 +75,58 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <section class="grid content-start gap-3 rounded-lg border border-border bg-surface p-3">
-    <div>
-      <p class="text-caption font-semibold text-text-muted">
-        {{ props.t("operations.ferry.title") }}
-      </p>
-      <p class="mt-1 text-caption text-text-muted">
+  <section class="grid content-start gap-2 rounded-lg border border-border bg-surface-subtle p-3 transition-all duration-200">
+    <button
+      class="flex w-full items-center justify-between text-left text-caption font-bold text-text-primary outline-hidden cursor-pointer"
+      type="button"
+      @click="isOpen = !isOpen"
+    >
+      <span>{{ props.t("operations.ferry.title") }}</span>
+      <span class="text-[10px] text-text-muted transition-transform duration-200" :class="isOpen ? 'rotate-180' : ''">▼</span>
+    </button>
+
+    <div v-if="isOpen" class="grid gap-3 pt-2 border-t border-border mt-1">
+      <p class="text-caption text-text-muted">
         {{ props.t("operations.ferry.subtitle") }}
       </p>
-    </div>
 
-    <div class="flex flex-col gap-1">
-      <span class="text-caption text-text-muted">{{ props.t("operations.ferry.destination") }}</span>
-      <AirSelect
-        v-model="destinationId"
-        class="w-full"
-        :label="props.t('operations.ferry.destination')"
-        :options="hubOptions"
+      <div class="flex flex-col gap-1">
+        <span class="text-caption text-text-muted">{{ props.t("operations.ferry.destination") }}</span>
+        <AirSelect
+          v-model="destinationId"
+          class="w-full"
+          :label="props.t('operations.ferry.destination')"
+          :options="hubOptions"
+        />
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <AirTextField
+          v-model="date"
+          :label="props.t('operations.ferry.date')"
+          type="date"
+        />
+        <AirTextField
+          v-model="time"
+          :label="props.t('operations.ferry.time')"
+          type="time"
+        />
+      </div>
+
+      <p
+        v-if="error || success"
+        class="rounded-md border px-3 py-2 text-caption"
+        :class="error ? 'border-error bg-error-bg text-error' : 'border-success bg-success-bg text-success'"
+      >
+        {{ error || success }}
+      </p>
+
+      <AirButton
+        :disabled="isSaving"
+        :label="isSaving ? props.t('operations.ferry.creating') : props.t('operations.ferry.create')"
+        size="sm"
+        @click="submit"
       />
     </div>
-
-    <div class="grid grid-cols-2 gap-2">
-      <AirTextField
-        v-model="date"
-        :label="props.t('operations.ferry.date')"
-        type="date"
-      />
-      <AirTextField
-        v-model="time"
-        :label="props.t('operations.ferry.time')"
-        type="time"
-      />
-    </div>
-
-    <p
-      v-if="error || success"
-      class="rounded-md border px-3 py-2 text-caption"
-      :class="error ? 'border-error bg-error-bg text-error' : 'border-success bg-success-bg text-success'"
-    >
-      {{ error || success }}
-    </p>
-
-    <AirButton
-      :disabled="isSaving"
-      :label="isSaving ? props.t('operations.ferry.creating') : props.t('operations.ferry.create')"
-      size="sm"
-      @click="submit"
-    />
   </section>
 </template>

@@ -1,5 +1,7 @@
 import type { Aircraft, AircraftType, Airport, FleetSnapshot } from "../fleet/types";
 import type {
+  Region,
+  RegionLink,
   RouteAircraftOption,
   RouteDemandSnapshot,
   RouteEconomics,
@@ -10,6 +12,7 @@ import type {
   StoredRoute,
 } from "./types";
 
+import { resolveAircraftImageUrl } from "../aircraft-images/resolve";
 import { explainPassengerDemand } from "../demand/model";
 import { rangeConstraints, runwayConstraints } from "../facilities/constraints";
 import { buildRouteEconomics } from "./economics";
@@ -19,28 +22,6 @@ export type RoutePlanningSnapshot = FleetSnapshot & {
   hubAirportIds?: string[];
   regionLinks: RegionLink[];
   regions: Region[];
-};
-
-type Region = {
-  business_score?: number;
-  country_id?: string;
-  gdp_per_capita?: number;
-  id?: string;
-  intl_name?: string;
-  local_name?: string;
-  population?: number;
-  tourism_score?: number;
-};
-
-type RegionLink = {
-  base_daily_demand_ab?: number;
-  base_daily_demand_ba?: number;
-  business?: number;
-  diaspora?: number;
-  id?: string;
-  region_a?: string;
-  region_b?: string;
-  tourism?: number;
 };
 
 export function buildRouteListItem(route: StoredRoute, snapshot: RoutePlanningSnapshot): ReturnType<typeof toRouteListItem> {
@@ -211,7 +192,7 @@ function buildAircraftOption(
     aircraft,
     blockers,
     isCompatible: blockers.length === 0,
-    type,
+    type: type ? { ...type, image_url: resolveAircraftImageUrl(type) } : null,
     warnings,
   };
 }
@@ -270,6 +251,11 @@ function buildRouteBlockers(
   }
   if (!origin.id || !destination.id) {
     addReason(blockers, "MISSING_AIRPORT", "Airport data is missing.");
+  }
+  // Intra-metro pairs (e.g. a city's two airports ~40 km apart) are not a flyable
+  // market — no one books a 40 km flight. Block them regardless of region.
+  if (buildDistanceKm(origin, destination) < 75) {
+    addReason(blockers, "ROUTE_DISTANCE_TOO_SHORT", "Airports are too close for a viable route.");
   }
   if (existingRoute) {
     addReason(blockers, "DUPLICATE_ROUTE", "Route already exists.");

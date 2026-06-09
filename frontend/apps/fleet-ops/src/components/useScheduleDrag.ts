@@ -2,6 +2,8 @@ import { onUnmounted, reactive, type Ref } from "vue";
 
 import type { ScheduleDragState } from "./schedule-types";
 
+import { timeToHour } from "./schedule-bars";
+
 export type ScheduleBlock = { day: number; id: string; routeId: string; saved?: boolean; time: string };
 
 type DragContext = {
@@ -17,8 +19,13 @@ type DragOptions = {
   moveBlock: (blockId: string, day: number, time: string) => void;
   placeBlock: (day: number, time: string, routeId?: string) => void;
   previewWidthForRoute: (routeId: string) => number;
+  /** Total block-hours for the route (one-way, excluding turnaround) */
+  routeHoursForRoute: (routeId: string) => number;
   routeLabel: (routeId: string) => string;
   setArmedRoute: (routeId: string) => void;
+  turnaroundHours: number;
+  /** UTC offset of the hub airport in hours (e.g. +3 for Moscow). Used to convert UTC drag position to local departure time. */
+  utcOffsetHours?: number;
 };
 
 /**
@@ -37,8 +44,12 @@ export function useScheduleDrag(options: DragOptions): {
     hoverTime: null,
     kind: null,
     label: "",
+    localDay: null,
+    localTime: null,
     payloadId: "",
     previewWidthPct: 0,
+    returnPreviewDay: null,
+    returnPreviewLeftPct: null,
     tone: "outbound",
     valid: false,
     x: 0,
@@ -94,6 +105,27 @@ function begin(context: DragContext, kind: "block" | "route", payloadId: string,
   attach(context);
 }
 
+function convertUtcToLocal(utcDay: number, utcTime: string, offset: number): { day: number; time: string } {
+  if (offset === 0) {
+    return { day: utcDay, time: utcTime };
+  }
+  const [h = "0", m = "0"] = utcTime.split(":");
+  const localH = Number(h) + Number(m) / 60 + offset;
+  let adjustedH = localH;
+  let dayAdj = 0;
+  if (localH < 0) {
+    adjustedH += 24;
+    dayAdj = -1;
+  } else if (localH >= 24) {
+    adjustedH -= 24;
+    dayAdj = 1;
+  }
+  const whole = Math.floor(adjustedH);
+  const time = `${String(whole).padStart(2, "0")}:${adjustedH - whole >= 0.5 ? "30" : "00"}`;
+  const day = (utcDay + dayAdj + 7) % 7;
+  return { day, time };
+}
+
 function detach(context: DragContext): void {
   window.removeEventListener("pointermove", context.onMove);
   window.removeEventListener("pointerup", context.onEnd);
@@ -103,17 +135,21 @@ function detach(context: DragContext): void {
 function handleEnd(context: DragContext): void {
   const { drag, options } = context;
 
-  if (drag.active && drag.hoverDay !== null && drag.hoverTime && drag.valid) {
+  if (drag.active && drag.localDay !== null && drag.localTime && drag.valid) {
     if (drag.kind === "route") {
-      options.placeBlock(drag.hoverDay, drag.hoverTime, drag.payloadId);
+      options.placeBlock(drag.localDay, drag.localTime, drag.payloadId);
     } else if (drag.kind === "block") {
-      options.moveBlock(drag.payloadId, drag.hoverDay, drag.hoverTime);
+      options.moveBlock(drag.payloadId, drag.localDay, drag.localTime);
     }
   }
   drag.active = false;
   drag.kind = null;
   drag.hoverDay = null;
   drag.hoverTime = null;
+  drag.localDay = null;
+  drag.localTime = null;
+  drag.returnPreviewDay = null;
+  drag.returnPreviewLeftPct = null;
   detach(context);
 }
 
@@ -135,16 +171,35 @@ function handleMove(context: DragContext, event: PointerEvent): void {
     return;
   }
 
-  const day = Number(track.dataset.day);
-  const time = timeFromPointer(event.clientX, track);
+  // timeFromPointer returns UTC time (x-axis is UTC)
+  const utcDay = Number(track.dataset.day);
+  const utcTime = timeFromPointer(event.clientX, track);
+
+  // Convert UTC position to local departure time for scheduling logic
+  const { day: localDay, time: localTime } = convertUtcToLocal(utcDay, utcTime, options.utcOffsetHours ?? 0);
+
   const existing = options.blocks.value.find((block) => block.id === drag.payloadId);
   const candidate: ScheduleBlock = drag.kind === "block" && existing
-    ? { ...existing, day, time }
-    : { day, id: "preview", routeId: drag.payloadId, time };
+    ? { ...existing, day: localDay, time: localTime }
+    : { day: localDay, id: "preview", routeId: drag.payloadId, time: localTime };
 
-  drag.hoverDay = day;
-  drag.hoverTime = time;
+  // hoverDay/hoverTime = UTC for display in the timeline
+  drag.hoverDay = utcDay;
+  drag.hoverTime = utcTime;
+  // localDay/localTime = what actually gets stored
+  drag.localDay = localDay;
+  drag.localTime = localTime;
   drag.valid = !options.hasConflict(candidate, drag.kind === "block" ? drag.payloadId : "");
+
+  // Return-leg preview: computed in UTC (flight duration is timezone-independent)
+  const routeId = drag.kind === "block"
+    ? (options.blocks.value.find((b) => b.id === drag.payloadId)?.routeId ?? drag.payloadId)
+    : drag.payloadId;
+  const blockHours = options.routeHoursForRoute(routeId);
+  const returnUTCHour = timeToHour(utcTime) + blockHours + options.turnaroundHours;
+  const returnDayOffset = Math.floor(returnUTCHour / 24);
+  drag.returnPreviewDay = (utcDay + returnDayOffset) % 7;
+  drag.returnPreviewLeftPct = ((returnUTCHour % 24) / 24) * 100;
 }
 
 function timeFromPointer(clientX: number, track: HTMLElement): string {

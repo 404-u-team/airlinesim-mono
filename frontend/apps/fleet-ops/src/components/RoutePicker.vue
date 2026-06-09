@@ -184,97 +184,108 @@ function toPendingRoute(opportunity: RouteOpportunityItem): OperationRoute {
 
     <div
       v-if="originAirport || selectedHub"
-      class="grid gap-2 rounded-md border border-border bg-background p-3"
+      class="grid gap-3 md:grid-cols-2"
     >
-      <div class="flex items-center justify-between gap-2">
-        <p class="min-w-0 truncate text-body font-semibold">
-          {{ originAirport?.label ?? selectedHub?.label }}
-        </p>
-        <AirBadge
-          v-if="selectedHub?.is_base"
-          :label="props.t('operations.hub.base')"
-          size="sm"
-          variant="primary-soft"
-        />
-      </div>
-      <p
-        v-if="originAirport?.municipality"
-        class="text-caption text-text-muted"
+      <div
+        class="grid gap-2 rounded-md border border-border bg-background p-3"
       >
-        {{ originAirport.municipality }}
-      </p>
-      <dl class="grid grid-cols-2 gap-x-3 gap-y-1 text-caption">
         <div class="flex items-center justify-between gap-2">
-          <dt class="text-text-muted">
-            {{ props.t("operations.hub.price") }}
-          </dt>
-          <dd class="font-medium">
-            {{ selectedHub ? (selectedHub.is_base ? props.t("operations.hub.free") : formatMoney(selectedHub.fee)) : "—" }}
-          </dd>
+          <p class="min-w-0 truncate text-body font-semibold">
+            {{ originAirport?.label ?? selectedHub?.label }}
+          </p>
+          <AirBadge
+            v-if="selectedHub?.is_base"
+            :label="props.t('operations.hub.base')"
+            size="sm"
+            variant="primary-soft"
+          />
         </div>
-        <div
-          v-if="airportFees !== null"
-          class="flex items-center justify-between gap-2"
+        <p
+          v-if="originAirport?.municipality"
+          class="text-caption text-text-muted"
         >
-          <dt class="text-text-muted">
-            {{ props.t("operations.hub.fees") }}
-          </dt>
-          <dd class="font-medium">
-            {{ formatMoney(airportFees) }}
-          </dd>
-        </div>
-        <div
-          v-if="originAirport?.max_runway_length_m"
-          class="flex items-center justify-between gap-2"
-        >
-          <dt class="text-text-muted">
-            {{ props.t("operations.hub.runway") }}
-          </dt>
-          <dd class="font-medium">
-            {{ formatNumber(originAirport.max_runway_length_m) }} {{ props.t("unit.m") }}
-          </dd>
-        </div>
-        <div class="flex items-center justify-between gap-2">
-          <dt class="text-text-muted">
-            {{ props.t("operations.hub.nightOps") }}
-          </dt>
-          <dd class="font-medium">
-            {{ originAirport?.works_at_night === false ? props.t("operations.hub.no") : props.t("operations.hub.yes") }}
-          </dd>
-        </div>
-        <div
-          v-if="selectedHub"
-          class="flex items-center justify-between gap-2"
-        >
-          <dt class="text-text-muted">
-            {{ props.t("operations.hub.routes") }}
-          </dt>
-          <dd class="font-medium">
-            {{ formatNumber(selectedHub.routes) }}
-          </dd>
-        </div>
-        <div
-          v-if="selectedHub"
-          class="flex items-center justify-between gap-2"
-        >
-          <dt class="text-text-muted">
-            {{ props.t("operations.hub.profit") }}
-          </dt>
-          <dd
-            class="font-medium"
-            :class="selectedHub.profit >= 0 ? 'text-success' : 'text-error'"
+          {{ originAirport.municipality }}
+        </p>
+        <dl class="hub-details-grid grid grid-cols-2 gap-x-3 gap-y-1 text-caption">
+          <div class="flex items-center justify-between gap-2">
+            <dt class="text-text-muted">
+              {{ props.t("operations.hub.price") }}
+            </dt>
+            <dd class="font-medium">
+              {{ selectedHub ? (selectedHub.is_base ? props.t("operations.hub.free") : formatMoney(selectedHub.fee)) : "—" }}
+            </dd>
+          </div>
+          <div
+            v-if="airportFees !== null"
+            class="flex items-center justify-between gap-2"
           >
-            {{ formatMoney(selectedHub.profit) }}
-          </dd>
-        </div>
-      </dl>
-    </div>
+            <dt class="text-text-muted">
+              {{ props.t("operations.hub.fees") }}
+            </dt>
+            <dd class="font-medium">
+              {{ formatMoney(airportFees) }}
+            </dd>
+          </div>
+          <div
+            v-if="originAirport?.max_runway_length_m"
+            class="flex items-center justify-between gap-2"
+          >
+            <dt class="text-text-muted">
+              {{ props.t("operations.hub.runway") }}
+            </dt>
+            <dd class="font-medium">
+              {{ formatNumber(originAirport.max_runway_length_m) }} {{ props.t("unit.m") }}
+            </dd>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <dt class="text-text-muted">
+              {{ props.t("operations.hub.nightOps") }}
+            </dt>
+            <dd class="font-medium">
+              {{ originAirport?.works_at_night === false ? props.t("operations.hub.no") : props.t("operations.hub.yes") }}
+            </dd>
+          </div>
+          <div
+            v-if="selectedHub"
+            class="flex items-center justify-between gap-2"
+          >
+            <dt class="text-text-muted">
+              {{ props.t("operations.hub.routes") }}
+            </dt>
+            <dd class="font-medium">
+              {{ formatNumber(selectedHub.routes) }}
+            </dd>
+          </div>
+          <div
+            v-if="selectedHub"
+            class="flex items-center justify-between gap-2"
+          >
+            <dt class="text-text-muted">
+              {{ props.t("operations.hub.profit") }}
+            </dt>
+            <dd
+              class="font-medium"
+              :class="selectedHub.profit >= 0 ? 'text-success' : 'text-error'"
+            >
+              {{ formatMoney(selectedHub.profit) }}
+            </dd>
+          </div>
+        </dl>
+      </div>
 
-    <HubMapPanel
-      :app-theme="props.appTheme ?? 'light'"
-      :destination-airport="selectedDestinationAirport"
-      :origin-airport="originAirport"
-      :t="props.t"
-    />
+      <HubMapPanel
+        :app-theme="props.appTheme ?? 'light'"
+        :destination-airport="selectedDestinationAirport"
+        :origin-airport="originAirport"
+        :t="props.t"
+        class="h-full"
+      />
+    </div>
   </div>
 </template>
+
+<style scoped>
+.hub-details-grid {
+  column-gap: 24px !important;
+}
+</style>

@@ -30,6 +30,8 @@ export type RouteAircraftOption = {
   blockers: RouteReason[];
   isCompatible: boolean;
   type: null | {
+    icao_code?: string;
+    image_url?: string;
     max_planned_seat_capacity?: number;
     model_name?: string;
   };
@@ -64,12 +66,14 @@ export type RouteDemandBreakdown = {
   directionFactorDestinationToOrigin: number;
   directionFactorOriginToDestination: number;
   distanceImpedance: number;
+  domesticMultiplier: number;
   gdpElasticity: number;
   gravity: number;
   originGdpPerCapita: number;
   originPopulation: number;
   populationElasticity: number;
   sameCountry: boolean;
+  shortHaulFactor: number;
   source: "model" | "region_link";
   tourism: number;
 };

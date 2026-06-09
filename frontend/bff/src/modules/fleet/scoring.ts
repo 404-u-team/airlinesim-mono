@@ -10,6 +10,7 @@ import type {
   FleetReason,
 } from "./types";
 
+import { resolveAircraftImageUrl } from "../aircraft-images/resolve";
 import { runwayConstraints } from "../facilities/constraints";
 
 type CompatibilityFlags = {
@@ -48,7 +49,7 @@ export function enrichAircraftType(
       status,
       warnings,
     },
-    image_url: aircraftImageUrl(type),
+    image_url: resolveAircraftImageUrl(type),
     preview: {
       cashReserveWarning: flags.cashReserveWarning,
       estimatedDailyMaintenanceReserve: flags.estimatedDailyMaintenanceReserve,
@@ -64,7 +65,7 @@ export function enrichOwnedAircraft(
   airports: Airport[],
 ): FleetOwnedAircraftCard {
   const matchedType = aircraftTypes.find((item) => item.id === aircraft.type_id) ?? null;
-  const type = matchedType ? { ...matchedType, image_url: aircraftImageUrl(matchedType) } : null;
+  const type = matchedType ? { ...matchedType, image_url: resolveAircraftImageUrl(matchedType) } : null;
   const baseAirport = airports.find((item) => item.id === aircraft.base_airport_id);
 
   return {
@@ -114,22 +115,10 @@ export function toAirportCard(airport: Airport | undefined): FleetAirportCard | 
     municipality: airport.municipality,
     runway_fee: airport.runway_fee ?? 0,
     stand_fee: airport.stand_fee ?? 0,
+    timezone: airport.timezone,
     turnaround_point_price: airport.turnaround_point_price ?? 0,
     works_at_night: airport.works_at_night !== false,
   };
-}
-
-function aircraftImageUrl(type: AircraftType | null): string | undefined {
-  const characteristics = parseCharacteristics(type?.characteristics);
-  const {visual} = characteristics;
-
-  if (!visual || typeof visual !== "object" || Array.isArray(visual)) {
-    return undefined;
-  }
-
-  const {imageUrl} = (visual as { imageUrl?: unknown });
-
-  return typeof imageUrl === "string" && imageUrl ? imageUrl : undefined;
 }
 
 function airportLabel(airport: Airport | undefined): string {
@@ -278,18 +267,6 @@ function maintenanceRatio(aircraft: Aircraft): number {
   }
 
   return Math.max(0, Math.min(1, (aircraft.current_maintenance_points ?? max) / max));
-}
-
-function parseCharacteristics(value: string | undefined): Record<string, unknown> {
-  try {
-    const parsed = JSON.parse(value ?? "{}") as unknown;
-
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
-      : {};
-  } catch {
-    return {};
-  }
 }
 
 function scoreAircraftType(

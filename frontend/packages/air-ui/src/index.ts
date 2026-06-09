@@ -1,3 +1,4 @@
+export { default as AirAircraftThumb } from "./components/AirAircraftThumb";
 export { default as AirBadge } from "./components/AirBadge";
 export { default as AirButton } from "./components/AirButton";
 export { default as AirCombobox } from "./components/AirCombobox";
@@ -9,6 +10,7 @@ export { default as AirIconButton } from "./components/AirIconButton";
 export { default as AirMetricCard } from "./components/AirMetricCard";
 export { default as AirModal } from "./components/AirModal";
 export { default as AirPagination } from "./components/AirPagination";
+export { default as AirProgressBar } from "./components/AirProgressBar";
 export { default as AirSegmentedControl } from "./components/AirSegmentedControl";
 export type { AirSegmentedControlOption } from "./components/AirSegmentedControl";
 export { default as AirSelect } from "./components/AirSelect";
@@ -16,3 +18,4 @@ export { default as AirStatePanel } from "./components/AirStatePanel";
 export { default as AirTextField } from "./components/AirTextField";
 export { default as AirTimeline } from "./components/AirTimeline";
 export type { AirTimelineItem } from "./components/AirTimeline";
+

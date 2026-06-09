@@ -1,6 +1,28 @@
 import type { PassengerDemandBreakdown } from "../demand/model";
 import type { Aircraft, AircraftType, Airport } from "../fleet/types";
 
+export type Region = {
+  business_score?: number;
+  country_id?: string;
+  gdp_per_capita?: number;
+  id?: string;
+  intl_name?: string;
+  local_name?: string;
+  population?: number;
+  tourism_score?: number;
+};
+
+export type RegionLink = {
+  base_daily_demand_ab?: number;
+  base_daily_demand_ba?: number;
+  business?: number;
+  diaspora?: number;
+  id?: string;
+  region_a?: string;
+  region_b?: string;
+  tourism?: number;
+};
+
 export type RouteAircraftOption = {
   aircraft: Aircraft;
   blockers: RouteReason[];
@@ -92,7 +114,8 @@ export type RouteReasonCode =
   | "NO_DEMAND_DATA"
   | "ORIGIN_NOT_BASE"
   | "ORIGIN_NOT_HUB"
-  | "ORIGIN_RUNWAY_TOO_SHORT";
+  | "ORIGIN_RUNWAY_TOO_SHORT"
+  | "ROUTE_DISTANCE_TOO_SHORT";
 
 export type RouteRecommendation = "blocked" | "open" | "risky";
 
