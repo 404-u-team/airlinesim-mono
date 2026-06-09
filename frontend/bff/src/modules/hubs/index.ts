@@ -11,7 +11,7 @@ import { signedAmount } from "../finance/calculator";
 import { listLedgerForAirline, saveLedgerTransactions } from "../finance/storage";
 import { loadRoutePlanningSnapshot } from "../routes/snapshot";
 import { listRoutesForAirline } from "../routes/storage";
-import { estimateHubFee } from "./fee";
+import { airportWeight, estimateHubFee, regionWeight } from "./fee";
 import { addHub, listHubsForAirline, removeHub } from "./storage";
 
 type HubsContext = {
@@ -174,6 +174,69 @@ async function loadHubsContext(request: Request, config: BffConfig): Promise<Hub
   };
 }
 
+async function previewHubResponse(request: Request, config: BffConfig, url: URL): Promise<Response> {
+  const context = await loadHubsContext(request, config);
+  const airportId = url.searchParams.get("airport_id") ?? "";
+  if (!airportId) {
+    return jsonResponse({ error: { code: "AIRPORT_REQUIRED", message: "Airport ID is required." } }, { status: 400 });
+  }
+
+  const airport = context.airports.find((item) => item.id === airportId);
+  if (!airport) {
+    return jsonResponse({ error: { code: "AIRPORT_NOT_FOUND", message: "Airport not found." } }, { status: 404 });
+  }
+
+  const region = context.regions.find((item) => item.id === airport.region_id);
+  const fee = estimateHubFee(airport, region);
+  const available = availableBalance(context);
+
+  const apWeight = airportWeight(airport);
+  const regWeight = regionWeight(region);
+
+  return jsonResponse({
+    airport: {
+      country_id: airport.country_id,
+      fuel_price_multiplier: airport.fuel_price_multiplier,
+      gate_fee: airport.gate_fee,
+      iata_code: airport.iata_code,
+      icao_code: airport.icao_code,
+      id: airport.id,
+      intl_name: airport.intl_name,
+      local_name: airport.local_name,
+      max_runway_length_m: airport.max_runway_length_m,
+      max_runway_uses_per_day: airport.max_runway_uses_per_day,
+      municipality: airport.municipality,
+      region_id: airport.region_id,
+      runway_fee: airport.runway_fee,
+      stand_fee: airport.stand_fee,
+      works_at_night: airport.works_at_night,
+    },
+    balance: {
+      available,
+      can_afford: available >= fee,
+      remaining: available - fee,
+    },
+    fee_details: {
+      airport_weight: apWeight,
+      base_fee: 150000,
+      final_fee: fee,
+      max_fee_cap: 5000000,
+      min_fee_cap: 200000,
+      raw_total: 150000 + apWeight + regWeight,
+      region_weight: regWeight,
+    },
+    region: region
+      ? {
+          business_score: region.business_score,
+          gdp_per_capita: region.gdp_per_capita,
+          id: region.id,
+          population: region.population,
+          tourism_score: region.tourism_score,
+        }
+      : null,
+  });
+}
+
 async function removeHubResponse(request: Request, config: BffConfig, airportId: string): Promise<Response> {
   const context = await loadHubsContext(request, config);
 
@@ -188,6 +251,9 @@ async function removeHubResponse(request: Request, config: BffConfig, airportId:
 async function routeHubsRequest(request: Request, url: URL, config: BffConfig): Promise<Response> {
   if (request.method === "GET" && url.pathname === "/hubs") {
     return listHubsResponse(request, config);
+  }
+  if (request.method === "GET" && url.pathname === "/hubs/preview") {
+    return previewHubResponse(request, config, url);
   }
   if (request.method === "POST" && url.pathname === "/hubs") {
     return addHubResponse(request, config);

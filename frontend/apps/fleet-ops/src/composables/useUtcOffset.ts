@@ -1,8 +1,17 @@
-import { computed, isRef, type Ref } from "vue";
+import { computed, type ComputedRef, isRef, type Ref } from "vue";
 
-export function useUtcOffset(timezone: (() => string | undefined) | Ref<string | undefined> | string | undefined) {
+export function useUtcOffset(
+  timezone: (() => string | undefined) | Ref<string | undefined> | string | undefined
+): ComputedRef<number> {
   return computed(() => {
-    const tz = typeof timezone === "function" ? timezone() : (isRef(timezone) ? timezone.value : timezone);
+    let tz: string | undefined;
+    if (typeof timezone === "function") {
+      tz = timezone();
+    } else if (isRef(timezone)) {
+      tz = timezone.value;
+    } else {
+      tz = timezone;
+    }
     if (!tz) {
       return 0;
     }

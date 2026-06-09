@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { AirAircraftThumb, AirBadge, AirButton, AirMetricCard, AirSelect, AirStatePanel, AirTextField } from "@airlinesim/air-ui";
-import { computed } from "vue";
+import { AirAircraftThumb, AirBadge, AirButton, AirMetricCard, AirPagination, AirSelect, AirStatePanel, AirTextField } from "@airlinesim/air-ui";
+import { computed, ref, watch } from "vue";
 
 import type {
   FleetMarketAircraftType,
@@ -47,38 +47,32 @@ const emit = defineEmits<{
   "update-tail-number": [value: string];
 }>();
 
-const baseAirportModel = computed({
-  get: () => props.filters.baseAirportId,
-  set: (value: string) => emit("update-filter", "baseAirportId", value),
+const PAGE_SIZE = 10;
+const page = ref(1);
+
+watch(
+  () => props.market?.aircraftTypes,
+  () => {
+    page.value = 1;
+  },
+);
+
+const paginatedAircraftTypes = computed(() => {
+  if (!props.market) {
+    return [];
+  }
+  const start = (page.value - 1) * PAGE_SIZE;
+  return props.market.aircraftTypes.slice(start, start + PAGE_SIZE);
 });
-const confirmingRiskModel = computed({
-  get: () => props.isConfirmingRisk,
-  set: (value: boolean) => emit("update-confirming-risk", value),
-});
-const maxPriceModel = computed({
-  get: () => props.filters.maxPrice,
-  set: (value: string) => emit("update-filter", "maxPrice", value),
-});
-const minCapacityModel = computed({
-  get: () => props.filters.minCapacity,
-  set: (value: string) => emit("update-filter", "minCapacity", value),
-});
-const minRangeModel = computed({
-  get: () => props.filters.minRange,
-  set: (value: string) => emit("update-filter", "minRange", value),
-});
-const queryModel = computed({
-  get: () => props.filters.q,
-  set: (value: string) => emit("update-filter", "q", value),
-});
-const sortModel = computed({
-  get: () => props.filters.sort,
-  set: (value: string) => emit("update-filter", "sort", value),
-});
-const tailNumberModel = computed({
-  get: () => props.tailNumber,
-  set: (value: string) => emit("update-tail-number", value),
-});
+
+const baseAirportModel = computed({ get: () => props.filters.baseAirportId, set: (v) => emit("update-filter", "baseAirportId", v) });
+const confirmingRiskModel = computed({ get: () => props.isConfirmingRisk, set: (v) => emit("update-confirming-risk", v) });
+const maxPriceModel = computed({ get: () => props.filters.maxPrice, set: (v) => emit("update-filter", "maxPrice", v) });
+const minCapacityModel = computed({ get: () => props.filters.minCapacity, set: (v) => emit("update-filter", "minCapacity", v) });
+const minRangeModel = computed({ get: () => props.filters.minRange, set: (v) => emit("update-filter", "minRange", v) });
+const queryModel = computed({ get: () => props.filters.q, set: (v) => emit("update-filter", "q", v) });
+const sortModel = computed({ get: () => props.filters.sort, set: (v) => emit("update-filter", "sort", v) });
+const tailNumberModel = computed({ get: () => props.tailNumber, set: (v) => emit("update-tail-number", v) });
 </script>
 
 <template>
@@ -115,11 +109,7 @@ const tailNumberModel = computed({
       :title="t('error.load')"
       tone="danger"
     />
-    <AirStatePanel
-      v-else-if="message"
-      :title="message"
-      tone="success"
-    />
+    <AirStatePanel v-else-if="message" :title="message" tone="success" />
 
     <section class="grid gap-3 rounded-lg border border-border bg-surface p-4 lg:grid-cols-[minmax(14rem,1fr)_repeat(3,minmax(9rem,0.45fr))_13rem] lg:items-end">
       <AirTextField
@@ -128,32 +118,13 @@ const tailNumberModel = computed({
         :placeholder="t('filter.search.placeholder')"
         type="search"
       />
-      <AirTextField
-        v-model="minRangeModel"
-        :label="t('filter.minRange')"
-        type="number"
-      />
-      <AirTextField
-        v-model="minCapacityModel"
-        :label="t('filter.minCapacity')"
-        type="number"
-      />
-      <AirTextField
-        v-model="maxPriceModel"
-        :label="t('filter.maxPrice')"
-        type="number"
-      />
-      <AirSelect
-        v-model="sortModel"
-        :label="t('filter.sort')"
-        :options="sortOptions"
-      />
+      <AirTextField v-model="minRangeModel" :label="t('filter.minRange')" type="number" />
+      <AirTextField v-model="minCapacityModel" :label="t('filter.minCapacity')" type="number" />
+      <AirTextField v-model="maxPriceModel" :label="t('filter.maxPrice')" type="number" />
+      <AirSelect v-model="sortModel" :label="t('filter.sort')" :options="sortOptions" />
     </section>
 
-    <div
-      v-if="market"
-      class="fleet-order-grid"
-    >
+    <div v-if="market" class="fleet-order-grid">
       <section class="min-w-0 overflow-hidden rounded-lg border border-border bg-surface">
         <div class="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
           <div>
@@ -164,22 +135,19 @@ const tailNumberModel = computed({
               {{ t("fleet.order.catalog.subtitle") }}
             </p>
           </div>
-          <AirBadge
-            :label="formatNumber(market.summary.visibleTypes)"
-            variant="primary-soft"
-          />
+          <AirBadge :label="formatNumber(market.summary.visibleTypes)" variant="primary-soft" />
         </div>
 
-        <div class="grid max-h-[44rem] gap-3 overflow-y-auto p-3 lg:grid-cols-2 2xl:grid-cols-3">
+        <div class="grid gap-3 p-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <button
-            v-for="type in market.aircraftTypes"
+            v-for="type in paginatedAircraftTypes"
             :key="type.id"
             class="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-background text-left transition hover:border-primary"
             :class="selectedTypeId === type.id ? 'outline outline-2 outline-primary' : ''"
             type="button"
             @click="emit('select-type', type)"
           >
-            <span class="grid h-36 place-items-center overflow-hidden border-b border-border bg-surface-subtle text-h3 text-text-muted">
+            <span class="grid h-20 place-items-center overflow-hidden border-b border-border bg-surface-subtle text-h3 text-text-muted">
               <img
                 v-if="type.image_url"
                 :alt="type.model_name || 'Aircraft type'"
@@ -189,18 +157,14 @@ const tailNumberModel = computed({
               />
               <template v-else>{{ type.icao_code || "----" }}</template>
             </span>
-            <span class="flex min-h-52 flex-col gap-3 p-3">
+            <span class="flex flex-1 flex-col gap-2.5 p-3">
               <span class="min-w-0">
                 <span class="flex items-start justify-between gap-2">
                   <span class="min-w-0">
-                    <span class="block truncate text-subtitle">{{ type.model_name || "Aircraft type" }}</span>
+                    <span class="block truncate text-subtitle font-semibold text-text-primary">{{ type.model_name || "Aircraft type" }}</span>
                     <span class="mt-0.5 block text-caption text-text-muted">{{ type.icao_code || type.iata_code || "----" }}</span>
                   </span>
-                  <AirBadge
-                    :label="statusLabel(type.compatibility.status)"
-                    size="sm"
-                    :variant="statusVariant(type.compatibility.status)"
-                  />
+                  <AirBadge :label="statusLabel(type.compatibility.status)" size="sm" :variant="statusVariant(type.compatibility.status)" />
                 </span>
               </span>
 
@@ -211,62 +175,105 @@ const tailNumberModel = computed({
                 <span>{{ formatMoney(type.price_per_unit) }}</span>
               </span>
 
-              <span class="mt-auto text-caption text-text-muted">
+              <span class="mt-auto pt-2 border-t border-border/50 text-caption text-text-muted">
                 {{ type.compatibility.warnings[0] ? reasonLabel(type.compatibility.warnings[0]) : t("fleet.order.compatible") }}
               </span>
             </span>
           </button>
 
-          <p
-            v-if="market.aircraftTypes.length === 0"
-            class="p-5 text-text-muted"
-          >
+          <p v-if="market.aircraftTypes.length === 0" class="p-5 text-text-muted">
             {{ t("market.empty") }}
           </p>
         </div>
+
+        <div
+          v-if="market.aircraftTypes.length > PAGE_SIZE"
+          class="flex justify-end border-t border-border p-3 bg-surface"
+        >
+          <AirPagination
+            v-model:page="page"
+            :page-size="PAGE_SIZE"
+            :total-items="market.aircraftTypes.length"
+          />
+        </div>
       </section>
 
-      <aside class="grid min-w-0 content-start gap-4">
+      <aside class="grid min-w-0 content-start gap-4 fleet-order-aside pr-1">
         <section class="rounded-lg border border-border bg-surface p-4">
           <h2 class="text-subtitle">
             {{ t("purchase.preview") }}
           </h2>
-          <div class="mt-2 flex items-center gap-3">
+          
+          <!-- Compact Inline Stats -->
+          <div class="mt-2 flex flex-col gap-1 border-b border-border pb-3 text-caption text-text-muted">
+            <div class="flex justify-between gap-2">
+              <span>{{ t("metric.balance") }}:</span>
+              <strong class="text-text-primary">{{ formatMoney(market.airline.balance) }}</strong>
+            </div>
+            <div class="flex justify-between gap-2">
+              <span>{{ t("fleet.base.title") }}:</span>
+              <strong class="text-text-primary truncate max-w-48" :title="market.baseAirport?.label">
+                {{ market.baseAirport?.label.split(' - ')[0] ?? "-" }}
+              </strong>
+            </div>
+            <div class="flex justify-between gap-2 text-[10px]">
+              <span>{{ t("fleet.market.affordable") }}/{{ t("fleet.market.compatible") }}:</span>
+              <strong class="text-text-primary">
+                {{ formatNumber(market.summary.affordableTypes) }} / {{ formatNumber(market.summary.baseCompatibleTypes) }}
+              </strong>
+            </div>
+          </div>
+
+          <!-- Large image preview when type is selected -->
+          <div
+            v-if="selectedType?.image_url"
+            class="relative mt-3 w-full h-36 overflow-hidden rounded-lg border border-border bg-surface-subtle"
+          >
+            <img
+              :src="selectedType.image_url"
+              :alt="selectedType.model_name"
+              class="size-full object-cover"
+              loading="lazy"
+            />
+          </div>
+
+          <!-- Selected Type details row -->
+          <div class="mt-3 flex items-center gap-3">
             <AirAircraftThumb
-              v-if="selectedType"
+              v-if="selectedType && !selectedType.image_url"
               :alt="selectedType.model_name"
               :fallback="selectedType.icao_code"
               :image-url="selectedType.image_url"
               size="sm"
             />
-            <p class="min-w-0 truncate text-caption text-text-muted">
-              {{ selectedType?.model_name ?? t("purchase.select") }}
-            </p>
+            <div class="min-w-0">
+              <p class="truncate text-caption font-semibold text-text-primary">
+                {{ selectedType?.model_name ?? t("purchase.select") }}
+              </p>
+              <p class="text-[10px] text-text-muted">
+                {{ selectedType?.icao_code ?? "----" }}
+              </p>
+            </div>
           </div>
 
-          <div
-            v-if="hubOptions.length"
-            class="mt-4 flex flex-col gap-1"
-          >
-            <span class="text-caption text-text-muted">{{ t("fleet.order.deliveryHub") }}</span>
+          <!-- Delivery Base Selector and Tail Number input side-by-side -->
+          <div class="mt-3 grid grid-cols-2 gap-3">
             <AirSelect
+              v-if="hubOptions.length"
               v-model="baseAirportModel"
               class="w-full"
               :label="t('fleet.order.deliveryHub')"
               :options="hubOptions"
             />
-            <span class="text-caption text-text-muted">{{ t("fleet.order.deliveryHubHint") }}</span>
+            <AirTextField
+              v-model="tailNumberModel"
+              class="w-full"
+              :label="t('aircraft.tail')"
+              :placeholder="t('tail.placeholder')"
+            />
           </div>
 
-          <AirTextField
-            v-model="tailNumberModel"
-            class="mt-4"
-            :hint="preview?.tailNumber.suggestedPrefix ? `${t('tail.hint')} ${preview.tailNumber.suggestedPrefix}` : t('tail.hint')"
-            :label="t('aircraft.tail')"
-            :placeholder="t('tail.placeholder')"
-          />
-
-          <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+          <div class="mt-3 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
             <AirMetricCard
               :label="t('metric.price')"
               :value="formatMoney(preview?.aircraftPrice)"
@@ -289,12 +296,12 @@ const tailNumberModel = computed({
 
           <div
             v-if="purchaseReasons.length"
-            class="mt-4 grid gap-2"
+            class="mt-3 grid gap-2"
           >
             <div
               v-for="reason in purchaseReasons"
               :key="reason.code"
-              class="rounded-lg border border-warning bg-warning-bg px-3 py-2 text-caption text-warning"
+              class="rounded-lg border border-warning bg-warning-bg px-3 py-1.5 text-caption text-warning"
             >
               {{ reasonLabel(reason) }}
             </div>
@@ -302,7 +309,7 @@ const tailNumberModel = computed({
 
           <label
             v-if="requiresRiskAcknowledge"
-            class="mt-4 flex items-start gap-2 text-caption text-text-muted"
+            class="mt-3 flex items-start gap-2 text-caption text-text-muted"
           >
             <input
               v-model="confirmingRiskModel"
@@ -319,20 +326,6 @@ const tailNumberModel = computed({
             @click="emit('confirm-purchase')"
           />
         </section>
-
-        <section class="rounded-lg border border-border bg-surface p-4">
-          <h2 class="text-subtitle">
-            {{ t("fleet.base.title") }}
-          </h2>
-          <p class="mt-2 text-body text-text-muted">
-            {{ market.baseAirport?.label ?? "-" }}
-          </p>
-          <div class="mt-3 grid gap-2 text-caption text-text-muted">
-            <span>{{ t("metric.balance") }}: {{ formatMoney(market.airline.balance) }}</span>
-            <span>{{ t("fleet.market.affordable") }}: {{ formatNumber(market.summary.affordableTypes) }}</span>
-            <span>{{ t("fleet.market.compatible") }}: {{ formatNumber(market.summary.baseCompatibleTypes) }}</span>
-          </div>
-        </section>
       </aside>
     </div>
   </div>
@@ -342,11 +335,19 @@ const tailNumberModel = computed({
 .fleet-order-grid {
   display: grid;
   gap: 1rem;
+  align-items: start;
 }
 
 @media (min-width: 1280px) {
   .fleet-order-grid {
     grid-template-columns: minmax(0, 1fr) 26rem;
   }
+}
+
+.fleet-order-aside {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
 }
 </style>

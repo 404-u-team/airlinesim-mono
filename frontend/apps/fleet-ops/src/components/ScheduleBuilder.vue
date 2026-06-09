@@ -51,28 +51,7 @@ const weeklyProfit = computed(() => blocks.value.reduce((tot, b) => tot + (route
 const routeById = computed(() => new Map(routes.value.map((route) => [route.id, route])));
 
 /** UTC offset of the selected aircraft's hub airport (hours). Reactive: updates when aircraft changes. */
-const hubUtcOffsetHours = computed(() => {
-  const tz = selectedAircraftOption.value?.aircraft?.baseAirport?.timezone;
-  if (!tz) {return 0;}
-  try {
-    const now = new Date();
-    const parts = new Intl.DateTimeFormat("en-US", {
-      hour: "numeric",
-      hour12: false,
-      minute: "numeric",
-      timeZone: tz,
-    }).formatToParts(now);
-    const localH = (Number(parts.find((p) => p.type === "hour")?.value ?? 0) % 24)
-      + Number(parts.find((p) => p.type === "minute")?.value ?? 0) / 60;
-    const utcH = now.getUTCHours() + now.getUTCMinutes() / 60;
-    let diff = localH - utcH;
-    if (diff > 12) {diff -= 24;}
-    if (diff < -12) {diff += 24;}
-    return diff;
-  } catch {
-    return 0;
-  }
-});
+const hubUtcOffsetHours = useUtcOffset(() => selectedAircraftOption.value?.aircraft?.baseAirport?.timezone);
 
 const { drag, onBarPointerDown, startRouteDrag } = useScheduleDrag({
   blocks, hasConflict: blockHasConflict, moveBlock, placeBlock,

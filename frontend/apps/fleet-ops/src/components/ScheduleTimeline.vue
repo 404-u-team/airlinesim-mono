@@ -4,7 +4,6 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import type { FleetMessageKey } from "../i18n";
 import type { ScheduleDragState, TimelineBar } from "./schedule-types";
 
-import { useUtcOffset } from "../composables/useUtcOffset";
 import { type DaySegment, splitIntoDaySegments, timeToHour } from "./schedule-bars";
 
 type PositionedTimelineBar = TimelineBar & {
@@ -179,21 +178,17 @@ function updateCurrentTime(): void {
   currentDay.value = now.getUTCDay();
   currentPct.value = ((now.getUTCHours() + now.getUTCMinutes() / 60) / 24) * 100;
 }
-
 let timer: null | ReturnType<typeof setInterval> = null;
-
 onMounted(() => {
   updateCurrentTime();
   timer = setInterval(updateCurrentTime, 30000);
 });
-
 onUnmounted(() => {
-  if (timer) {clearInterval(timer);}
+  if (timer) {
+    clearInterval(timer);
+  }
 });
-
-watch(() => props.timezone, () => {
-  // utcOffsetHours recomputes automatically; currentTime stays UTC
-});
+watch(() => props.timezone, () => {});
 </script>
 
 <template>
@@ -272,11 +267,10 @@ watch(() => props.timezone, () => {
           <!-- Thin current-time line on every row (hub local time) -->
           <div
             v-if="currentPct !== null"
-            class="now-line pointer-events-none absolute bottom-0 top-0"
+            class="now-line pointer-events-none absolute bottom-0 top-0 z-20"
             :style="{
               left: `${currentPct}%`,
               backgroundColor: day === currentDay ? 'var(--state-error)' : 'rgba(185,28,28,0.18)',
-              zIndex: 20,
             }"
           >
             <div v-if="day === currentDay" class="current-time-dot absolute top-0" />
@@ -341,79 +335,13 @@ watch(() => props.timezone, () => {
 </template>
 
 <style scoped>
-.hour-track {
-  background-image: 
-    repeating-linear-gradient(
-      to right,
-      transparent,
-      transparent calc(100% / 8 - 1px),
-      rgba(148, 163, 184, 0.22) calc(100% / 8 - 1px),
-      rgba(148, 163, 184, 0.22) calc(100% / 8),
-      transparent calc(100% / 8)
-    ),
-    repeating-linear-gradient(
-      to right,
-      transparent,
-      transparent calc(100% / 24 - 1px),
-      rgba(148, 163, 184, 0.08) calc(100% / 24)
-    );
-}
-
-.hover-badge {
-  background-color: rgba(23, 23, 23, 0.95) !important;
-  color: #ffffff !important;
-  font-weight: 700;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
-}
-
-.remove-btn {
-  position: absolute !important;
-  right: 2px !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  display: grid !important;
-  place-items: center !important;
-  width: 16px !important;
-  height: 16px !important;
-  border-radius: 4px !important;
-  background-color: rgba(239, 68, 68, 0.15) !important;
-  color: #ef4444 !important;
-  font-size: 10px !important;
-  line-height: 1 !important;
-  opacity: 0 !important;
-  transition: opacity 150ms ease, background-color 150ms ease, color 150ms ease !important;
-}
-
-.group:hover .remove-btn {
-  opacity: 1 !important;
-}
-
-.remove-btn:hover {
-  background-color: #ef4444 !important;
-  color: #ffffff !important;
-}
-
-.now-line {
-  width: 1px;
-}
-
-.today-label {
-  color: var(--primary) !important;
-  font-weight: 600 !important;
-}
-
-.today-track {
-  border-color: var(--primary) !important;
-  box-shadow: 0 0 0 1px var(--primary) !important;
-}
-
-.current-time-dot {
-  width: 6px;
-  height: 6px;
-  background-color: var(--state-error);
-  left: 50%;
-  border-radius: 50%;
-  transform: translate(-50%, -2px);
-  box-shadow: 0 0 4px var(--state-error);
-}
+.hour-track { background-image: repeating-linear-gradient(to right, transparent, transparent calc(100% / 8 - 1px), rgba(148, 163, 184, 0.22) calc(100% / 8 - 1px), rgba(148, 163, 184, 0.22) calc(100% / 8), transparent calc(100% / 8)), repeating-linear-gradient(to right, transparent, transparent calc(100% / 24 - 1px), rgba(148, 163, 184, 0.08) calc(100% / 24)); }
+.hover-badge { background-color: rgba(23, 23, 23, 0.95) !important; color: #ffffff !important; font-weight: 700; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.1); }
+.remove-btn { position: absolute !important; right: 2px !important; top: 50% !important; transform: translateY(-50%) !important; display: grid !important; place-items: center !important; width: 16px !important; height: 16px !important; border-radius: 4px !important; background-color: rgba(239, 68, 68, 0.15) !important; color: #ef4444 !important; font-size: 10px !important; line-height: 1 !important; opacity: 0 !important; transition: opacity 150ms ease, background-color 150ms ease, color 150ms ease !important; }
+.group:hover .remove-btn { opacity: 1 !important; }
+.remove-btn:hover { background-color: #ef4444 !important; color: #ffffff !important; }
+.now-line { width: 1px; }
+.today-label { color: var(--primary) !important; font-weight: 600 !important; }
+.today-track { border-color: var(--primary) !important; box-shadow: 0 0 0 1px var(--primary) !important; }
+.current-time-dot { width: 6px; height: 6px; background-color: var(--state-error); left: 50%; border-radius: 50%; transform: translate(-50%, -2px); box-shadow: 0 0 4px var(--state-error); }
 </style>

@@ -1,10 +1,20 @@
 export type AirportSearchOption = {
+  country_id?: string;
+  country_name?: string;
+  fuel_price_multiplier?: number;
+  gate_fee?: number;
   iata_code?: string;
   icao_code?: string;
   id: string;
   intl_name?: string;
   local_name?: string;
+  max_runway_length_m?: number;
+  max_runway_uses_per_day?: number;
   municipality?: string;
+  region_id?: string;
+  runway_fee?: number;
+  stand_fee?: number;
+  works_at_night?: boolean;
 };
 
 export type CreateRouteResponse = {
@@ -19,6 +29,55 @@ export type HubItem = {
   label: string;
   profit: number;
   routes: number;
+};
+
+export type HubPreviewAirport = {
+  country_id?: string;
+  fuel_price_multiplier?: number;
+  gate_fee?: number;
+  iata_code?: string;
+  icao_code?: string;
+  id: string;
+  intl_name?: string;
+  local_name?: string;
+  max_runway_length_m?: number;
+  max_runway_uses_per_day?: number;
+  municipality?: string;
+  region_id?: string;
+  runway_fee?: number;
+  stand_fee?: number;
+  works_at_night?: boolean;
+};
+
+export type HubPreviewBalance = {
+  available: number;
+  can_afford: boolean;
+  remaining: number;
+};
+
+export type HubPreviewFeeDetails = {
+  airport_weight: number;
+  base_fee: number;
+  final_fee: number;
+  max_fee_cap: number;
+  min_fee_cap: number;
+  raw_total: number;
+  region_weight: number;
+};
+
+export type HubPreviewRegion = {
+  business_score?: number;
+  gdp_per_capita?: number;
+  id: string;
+  population?: number;
+  tourism_score?: number;
+};
+
+export type HubPreviewResponse = {
+  airport: HubPreviewAirport;
+  balance: HubPreviewBalance;
+  fee_details: HubPreviewFeeDetails;
+  region: HubPreviewRegion | null;
 };
 
 export type RouteAircraftOption = {

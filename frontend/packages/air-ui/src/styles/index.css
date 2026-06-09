@@ -27,10 +27,16 @@
   --color-on-primary-soft: var(--on-primary-soft);
   --color-success: var(--state-success);
   --color-success-bg: var(--state-success-bg);
+  --color-on-success: var(--on-success);
+  --color-on-success-soft: var(--on-success-soft);
   --color-error: var(--state-error);
   --color-error-bg: var(--state-error-bg);
+  --color-on-error: var(--on-error);
+  --color-on-error-soft: var(--on-error-soft);
   --color-warning: var(--state-warning);
   --color-warning-bg: var(--state-warning-bg);
+  --color-on-warning: var(--on-warning);
+  --color-on-warning-soft: var(--on-warning-soft);
   --color-link: var(--link);
   --color-disabled: var(--disabled);
 
@@ -128,10 +134,16 @@
   --on-primary-soft: #020617;
   --state-success: #166534;
   --state-success-bg: #bdffd4;
+  --on-success: #ffffff;
+  --on-success-soft: #166534;
   --state-error: #b91c1c;
   --state-error-bg: #ffc4c4;
+  --on-error: #ffffff;
+  --on-error-soft: #b91c1c;
   --state-warning: #c56a01;
   --state-warning-bg: #ffdfb3;
+  --on-warning: #ffffff;
+  --on-warning-soft: #c56a01;
   --link: #1d4ed8;
   --disabled: #d1d5db;
 }
@@ -150,10 +162,16 @@
   --on-primary-soft: #f9fafb;
   --state-success: #6ee7b7;
   --state-success-bg: #022c22;
+  --on-success: #020617;
+  --on-success-soft: #6ee7b7;
   --state-error: #fca5a5;
   --state-error-bg: #450a0a;
+  --on-error: #020617;
+  --on-error-soft: #fca5a5;
   --state-warning: #fed7aa;
   --state-warning-bg: #451a03;
+  --on-warning: #020617;
+  --on-warning-soft: #fed7aa;
   --link: #60a5fa;
   --disabled: #4b5563;
 }

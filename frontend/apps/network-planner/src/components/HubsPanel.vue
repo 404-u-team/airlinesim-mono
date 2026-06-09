@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import type { Locale } from "@airlinesim/i18n";
 
-import { AirButton, AirCombobox, type AirComboboxOption, AirStatePanel } from "@airlinesim/air-ui";
+import { AirBadge, AirButton, AirStatePanel } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { onMounted, ref } from "vue";
 
 import type { NetworkMessageKey } from "../i18n";
-import type { AirportSearchOption, HubItem } from "../types";
+import type { HubItem } from "../types";
 
-import { addHub, getHubs, removeHub, searchAirports } from "../api";
+import { getHubs, removeHub } from "../api";
+import EstablishHubPanel from "./EstablishHubPanel.vue";
 
 const props = defineProps<{
   appLocale: Locale;
@@ -20,20 +21,9 @@ const error = ref("");
 const message = ref("");
 const isLoading = ref(false);
 const isMutating = ref(false);
-const selectedAirportId = ref("");
-const airportOptions = ref<AirComboboxOption[]>([]);
-
-let searchTimer: null | ReturnType<typeof setTimeout> = null;
 
 onMounted(() => {
   void load();
-  void runSearch("");
-});
-
-onBeforeUnmount(() => {
-  if (searchTimer) {
-    clearTimeout(searchTimer);
-  }
 });
 
 function formatMoney(value: number): string {
@@ -58,22 +48,19 @@ async function load(): Promise<void> {
   }
 }
 
-async function onAdd(): Promise<void> {
-  const airportId = selectedAirportId.value;
-  if (!airportId) {
-    return;
-  }
+function onHubError(msg: string): void {
+  error.value = msg;
+}
+
+async function onHubEstablished(fee: number): Promise<void> {
   isMutating.value = true;
   error.value = "";
-  message.value = "";
-  selectedAirportId.value = "";
+  message.value = `${props.t("hubs.add")} · ${formatMoney(fee)}`;
   try {
-    const response = await addHub(airportId);
-    message.value = `${props.t("hubs.add")} · ${formatMoney(response.fee)}`;
     invalidate();
     await load();
-  } catch (addError) {
-    error.value = addError instanceof Error ? addError.message : props.t("error.load");
+  } catch (loadError) {
+    error.value = loadError instanceof Error ? loadError.message : props.t("error.load");
   } finally {
     isMutating.value = false;
   }
@@ -85,6 +72,7 @@ async function onRemove(hub: HubItem): Promise<void> {
   }
   isMutating.value = true;
   error.value = "";
+  message.value = "";
   try {
     await removeHub(hub.airport_id);
     invalidate();
@@ -95,31 +83,13 @@ async function onRemove(hub: HubItem): Promise<void> {
     isMutating.value = false;
   }
 }
-
-function onSearch(query: string): void {
-  if (searchTimer) {
-    clearTimeout(searchTimer);
-  }
-  searchTimer = setTimeout(() => void runSearch(query), 300);
-}
-
-async function runSearch(query: string): Promise<void> {
-  try {
-    const airports = await searchAirports(query);
-    airportOptions.value = airports.map((airport: AirportSearchOption) => ({
-      label: `${airport.iata_code ?? airport.icao_code ?? "---"} - ${airport.intl_name ?? airport.local_name ?? "Airport"}`,
-      value: airport.id,
-    }));
-  } catch {
-    error.value = props.t("hubs.searchError");
-  }
-}
 </script>
 
 <template>
-  <div class="flex min-h-full flex-col gap-4">
-    <div class="border-b border-border pb-3">
-      <h1 class="text-h2">
+  <div class="flex min-h-full flex-col gap-6">
+    <!-- Header -->
+    <div class="border-b border-border pb-4">
+      <h1 class="text-h2 font-bold tracking-tight">
         {{ props.t("hubs.title") }}
       </h1>
       <p class="mt-1 max-w-3xl text-body text-text-muted">
@@ -127,103 +97,111 @@ async function runSearch(query: string): Promise<void> {
       </p>
     </div>
 
+    <!-- Feedback messages -->
     <AirStatePanel
       v-if="error"
       :body="error"
       :title="props.t('error.load')"
       tone="danger"
+      class="animate-fade-in"
     />
     <AirStatePanel
       v-else-if="message"
       :title="message"
       tone="success"
+      class="animate-fade-in"
     />
 
-    <section class="grid gap-3 rounded-lg border border-border bg-surface p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-      <AirCombobox
-        :empty-text="props.t('hubs.searchPlaceholder')"
-        :label="props.t('hubs.add')"
-        :model-value="selectedAirportId"
-        :options="airportOptions"
-        :placeholder="props.t('hubs.searchPlaceholder')"
-        @search="onSearch"
-        @update:model-value="selectedAirportId = $event"
-      />
-      <AirButton
-        :disabled="!selectedAirportId || isMutating"
-        :label="props.t('hubs.add')"
-        @click="onAdd"
-      />
-    </section>
-    <p class="-mt-2 text-caption text-text-muted">
-      {{ props.t("hubs.addHint") }}
-    </p>
+    <!-- Main Layout -->
+    <div class="grid gap-6 lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px] items-start">
+      <!-- Left Column: Active Hubs List -->
+      <div class="flex flex-col gap-4">
+        <!-- Loading Active Hubs -->
+        <div v-if="isLoading" class="flex flex-col gap-4 py-8 items-center justify-center text-text-muted">
+          <div class="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary" />
+          <span class="text-caption mt-2">Loading hubs...</span>
+        </div>
 
-    <div class="overflow-x-auto rounded-lg border border-border bg-surface">
-      <table class="w-full min-w-[36rem] border-collapse text-caption">
-        <thead>
-          <tr class="border-b border-border bg-surface-subtle text-left text-text-muted">
-            <th class="px-4 py-2 font-medium">
-              {{ props.t("hubs.title") }}
-            </th>
-            <th class="px-3 py-2 text-right font-medium">
-              {{ props.t("hubs.routes") }}
-            </th>
-            <th class="px-3 py-2 text-right font-medium">
-              {{ props.t("hubs.profit") }}
-            </th>
-            <th class="px-3 py-2 text-right font-medium">
-              {{ props.t("hubs.fee") }}
-            </th>
-            <th class="px-4 py-2 text-right font-medium" />
-          </tr>
-        </thead>
-        <tbody>
-          <tr
+        <div v-else-if="hubs.length === 0" class="rounded-xl border border-dashed border-border p-8 text-center text-text-muted bg-surface-subtle">
+          <p class="text-body font-medium">
+            {{ props.t("hubs.empty") }}
+          </p>
+        </div>
+
+        <!-- Hub Cards Grid -->
+        <div v-else class="grid gap-4 sm:grid-cols-2">
+          <div
             v-for="hub in hubs"
             :key="hub.airport_id"
-            class="border-b border-border last:border-b-0"
+            class="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-border bg-surface p-5 transition-all duration-200 hover:border-primary-soft hover:shadow-md"
+            :class="{ 'border-l-4 border-l-primary': hub.is_base, 'border-l-4 border-l-text-muted': !hub.is_base }"
           >
-            <td class="px-4 py-2.5">
-              <span>{{ hub.label }}</span>
-              <span
-                v-if="hub.is_base"
-                class="ml-2 rounded bg-primary-soft px-1.5 py-0.5 text-[10px] text-on-primary-soft"
-              >{{ props.t("hubs.base") }}</span>
-            </td>
-            <td class="px-3 py-2.5 text-right text-text-muted">
-              {{ hub.routes }}
-            </td>
-            <td
-              class="px-3 py-2.5 text-right font-semibold"
-              :class="hub.profit < 0 ? 'text-error' : 'text-success'"
-            >
-              {{ formatMoney(hub.profit) }}
-            </td>
-            <td class="px-3 py-2.5 text-right text-text-muted">
-              {{ hub.fee > 0 ? formatMoney(hub.fee) : "—" }}
-            </td>
-            <td class="px-4 py-2.5 text-right">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-h3 font-bold tracking-tight text-text">{{ hub.label.split(' - ')[0] }}</span>
+                  <AirBadge
+                    v-if="hub.is_base"
+                    :label="props.t('hubs.base')"
+                    variant="primary-soft"
+                    size="sm"
+                  />
+                </div>
+                <p class="text-caption text-text-muted mt-0.5 line-clamp-1">
+                  {{ hub.label.split(' - ')[1] || 'Airport' }}
+                </p>
+              </div>
+
+              <!-- Delete Action -->
               <AirButton
                 v-if="!hub.is_base"
                 :disabled="isMutating"
                 :label="props.t('hubs.remove')"
                 size="sm"
                 variant="danger-soft"
+                class="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity duration-200"
                 @click="onRemove(hub)"
               />
-            </td>
-          </tr>
-          <tr v-if="!isLoading && hubs.length <= 1">
-            <td
-              class="px-4 py-8 text-center text-text-muted"
-              colspan="5"
-            >
-              {{ props.t("hubs.empty") }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </div>
+
+            <!-- Card Body / Stats -->
+            <div class="mt-6 grid grid-cols-2 gap-4 border-t border-border pt-4 text-caption">
+              <!-- Routes Count -->
+              <div class="flex flex-col">
+                <span class="text-text-muted font-medium uppercase tracking-wider text-[10px]">{{ props.t("hubs.routes") }}</span>
+                <span class="text-body font-bold text-text mt-0.5">{{ hub.routes }}</span>
+              </div>
+              
+              <!-- Profit -->
+              <div class="flex flex-col">
+                <span class="text-text-muted font-medium uppercase tracking-wider text-[10px]">{{ props.t("hubs.profit") }}</span>
+                <span 
+                  class="text-body font-bold mt-0.5"
+                  :class="hub.profit < 0 ? 'text-error' : 'text-success'"
+                >
+                  {{ formatMoney(hub.profit) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Fee information at the bottom -->
+            <div v-if="hub.fee > 0" class="mt-3 text-[11px] text-text-muted flex justify-between items-center bg-surface-subtle -mx-5 -mb-5 px-5 py-2 border-t border-border">
+              <span>{{ props.t("hubs.fee") }}</span>
+              <span class="font-medium text-text">{{ formatMoney(hub.fee) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Establish Hub Panel Component -->
+      <EstablishHubPanel
+        :app-locale="props.appLocale"
+        :is-mutating="isMutating"
+        :t="props.t"
+        @established="onHubEstablished"
+        @error="onHubError"
+      />
     </div>
   </div>
 </template>

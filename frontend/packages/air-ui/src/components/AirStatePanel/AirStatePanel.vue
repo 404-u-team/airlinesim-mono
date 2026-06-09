@@ -14,10 +14,10 @@ withDefaults(
 );
 
 const toneClasses: Record<StateTone, string> = {
-  danger: "border-error bg-error-bg text-slate-950",
+  danger: "border-error bg-error-bg text-on-error-soft",
   info: "border-border bg-surface text-text-primary",
-  success: "border-success bg-success-bg text-slate-950",
-  warning: "border-warning bg-warning-bg text-slate-950",
+  success: "border-success bg-success-bg text-on-success-soft",
+  warning: "border-warning bg-warning-bg text-on-warning-soft",
 };
 </script>
 

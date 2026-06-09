@@ -4,6 +4,7 @@ import type {
   AirportSearchOption,
   CreateRouteResponse,
   HubItem,
+  HubPreviewResponse,
   RouteOpportunitiesResponse,
   RoutePreviewResponse,
   RoutesResponse,
@@ -34,6 +35,10 @@ export async function createRoute(payload: {
   selected_aircraft_id?: string;
 }): Promise<CreateRouteResponse> {
   return apiClient.post<CreateRouteResponse>("/routes", payload);
+}
+
+export async function getHubPreview(airportId: string): Promise<HubPreviewResponse> {
+  return apiClient.get<HubPreviewResponse>(`/hubs/preview?airport_id=${encodeURIComponent(airportId)}`);
 }
 
 export async function getHubs(): Promise<{ hubs: HubItem[] }> {
