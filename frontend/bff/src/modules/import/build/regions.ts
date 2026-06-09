@@ -38,6 +38,7 @@ function allocateRegionPopulation(
 ): Map<string, number> {
   const result = new Map<string, number>();
   const airportsByCountry = groupBy(airports, (airport) => airport.countryIso);
+  const regionRowsByCode = new Map(context.raw.regions.map((region) => [clean(region.code).toUpperCase(), region]));
 
   for (const country of countries) {
     const countryAirports = airportsByCountry.get(country.iso) ?? [];
@@ -47,7 +48,7 @@ function allocateRegionPopulation(
       context.issues.reportQuality?.("regionsUsingAirportPopulationFallback");
     }
 
-    allocateCountryRegions(country.iso, population, countryAirports, context, result);
+    allocateCountryRegions(country.iso, population, countryAirports, context, regionRowsByCode, result);
   }
 
   return result;
@@ -58,6 +59,7 @@ function allocateCountryRegions(
   population: number,
   countryAirports: AirportShell[],
   context: BuildContext,
+  regionRowsByCode: Map<string, RegionRow>,
   result: Map<string, number>,
 ): void {
   const regionWeights = new Map<string, number>();
@@ -65,7 +67,7 @@ function allocateCountryRegions(
     regionWeights.set(airport.regionCode, (regionWeights.get(airport.regionCode) ?? 0) + airportWeight(airport.type));
   }
 
-  const cityShares = cityPopulationShares(context.raw.geoCities, countryIso, [...regionWeights.keys()]);
+  const cityShares = cityPopulationShares(context.raw.geoCities, countryIso, [...regionWeights.keys()], context.raw.geoAdmin1, regionRowsByCode);
   const total = sum([...regionWeights.values()]);
   const shares = [...regionWeights].map(([code, weight]) => {
     const airportShare = safeDiv(weight, total, 0);

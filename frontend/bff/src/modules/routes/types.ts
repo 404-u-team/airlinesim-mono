@@ -1,3 +1,4 @@
+import type { PassengerDemandBreakdown } from "../demand/model";
 import type { Aircraft, AircraftType, Airport } from "../fleet/types";
 
 export type RouteAircraftOption = {
@@ -16,7 +17,14 @@ export type RouteAirport = Airport & {
   label: string;
 };
 
+export type RouteDemandBreakdown = PassengerDemandBreakdown & {
+  // "region_link" when the displayed number came from a cached backend RegionLink
+  // rather than the live gravity model below.
+  source: "model" | "region_link";
+};
+
 export type RouteDemandSnapshot = {
+  breakdown?: RouteDemandBreakdown;
   calculated_at: string;
   destination_daily_passengers: number;
   distance_km: number;
@@ -83,6 +91,7 @@ export type RouteReasonCode =
   | "NO_COMPATIBLE_AIRCRAFT"
   | "NO_DEMAND_DATA"
   | "ORIGIN_NOT_BASE"
+  | "ORIGIN_NOT_HUB"
   | "ORIGIN_RUNWAY_TOO_SHORT";
 
 export type RouteRecommendation = "blocked" | "open" | "risky";

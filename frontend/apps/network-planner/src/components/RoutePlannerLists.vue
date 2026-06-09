@@ -79,8 +79,8 @@ const emit = defineEmits<{
 
 @media (min-width: 1280px) {
   .route-planner-lists {
-    grid-template-columns: minmax(0, 0.72fr) minmax(34rem, 0.28fr);
-    height: 18rem;
+    grid-template-columns: minmax(0, 1fr) minmax(22rem, 28rem);
+    height: clamp(18rem, 28vh, 26rem);
     min-height: 0;
   }
 }

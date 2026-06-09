@@ -3,6 +3,7 @@ export type EventCode =
   | "AIRCRAFT_PURCHASED"
   | "FINANCE_RESULT_RECORDED"
   | "FLIGHT_COMPLETED"
+  | "HUB_ESTABLISHED"
   | "ROUTE_CREATED"
   | "SCHEDULE_ACTIVATED"
   | "WARNING_CREATED"
@@ -70,6 +71,6 @@ export type StoredNotification = {
   };
   resolved_at?: string;
   severity: Severity;
-  state: "active" | "resolved";
+  state: "active" | "ignored" | "resolved";
   target_path: string;
 };

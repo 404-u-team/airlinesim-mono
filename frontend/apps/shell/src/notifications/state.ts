@@ -5,6 +5,7 @@ import type { Notification, NotificationSummary } from "./types";
 import {
   getNotifications,
   getNotificationSummary,
+  ignoreNotification,
   markAllNotificationsRead,
   markNotificationRead,
 } from "./api";
@@ -37,6 +38,11 @@ export function clearNotifications(): void {
   state.isLoading = false;
   state.notifications = [];
   state.summary = { ...emptySummary };
+}
+
+export async function ignore(id: string): Promise<void> {
+  await ignoreNotification(id);
+  await refreshNotifications();
 }
 
 export async function markAllRead(): Promise<void> {

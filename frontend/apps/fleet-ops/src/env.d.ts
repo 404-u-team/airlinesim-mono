@@ -6,3 +6,15 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare module "map/Map" {
+  export type RemoteSvelteInstance = {
+    destroy?: () => Promise<void>;
+    update?: (props: Record<string, unknown>) => void;
+  };
+
+  export function createMap(
+    target: HTMLElement,
+    props: Record<string, unknown>,
+  ): RemoteSvelteInstance;
+}

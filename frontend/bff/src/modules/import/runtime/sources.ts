@@ -220,6 +220,6 @@ function joinRestCountries(left: RestCountry[], right: RestCountry[]): Map<strin
   return byIso;
 }
 
-function normalizeName(value: string): string {
-  return value.trim().toLowerCase().replaceAll(/[^a-z0-9]+/gu, " ");
+export function normalizeName(value: string): string {
+  return value.trim().toLowerCase().replaceAll(/[^a-z0-9]+/gu, " ").trim();
 }

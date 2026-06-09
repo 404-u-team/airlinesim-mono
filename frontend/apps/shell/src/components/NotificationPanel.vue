@@ -14,6 +14,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
   close: [];
+  ignore: [notification: Notification];
   "mark-all": [];
   open: [notification: Notification];
 }>();
@@ -23,8 +24,10 @@ const messages = {
     close: "Close notifications",
     empty: "No active notifications require attention.",
     error: "Notifications could not be loaded.",
+    ignore: "Ignore",
     loading: "Loading...",
     markAll: "Mark all read",
+    open: "Open",
     retry: "Retry",
     title: "Notifications",
   },
@@ -33,8 +36,10 @@ const messages = {
     close: "Закрыть уведомления",
     empty: "Нет активных уведомлений, требующих внимания.",
     error: "Не удалось загрузить уведомления.",
+    ignore: "Игнорировать",
     loading: "Загрузка...",
     markAll: "Прочитать все",
+    open: "Открыть",
     retry: "Повторить",
     title: "Уведомления",
   },
@@ -123,20 +128,32 @@ function variant(notification: Notification): "danger-soft" | "primary-soft" | "
       <p v-else-if="notificationState.notifications.value.length === 0" class="rounded-lg border border-border p-5 text-text-muted">
         {{ text.empty }}
       </p>
-      <button
+      <article
         v-for="notification in notificationState.notifications.value"
         :key="notification.id"
-        class="mb-3 block w-full rounded-lg border p-4 text-left hover:bg-surface-subtle"
+        class="mb-3 rounded-lg border p-4"
         :class="notification.is_read ? 'border-border' : 'border-primary'"
-        type="button"
-        @click="emit('open', notification)"
       >
         <div class="flex items-start justify-between gap-3">
           <strong>{{ notificationText(notification) }}</strong>
           <AirBadge :label="severityMessages[appLocale][notification.severity]" :variant="variant(notification)" />
         </div>
         <time class="mt-2 block text-caption text-text-muted">{{ new Intl.DateTimeFormat(appLocale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(notification.last_seen_at)) }}</time>
-      </button>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <AirButton
+            :label="text.open"
+            size="sm"
+            variant="primary-soft"
+            @click="emit('open', notification)"
+          />
+          <AirButton
+            :label="text.ignore"
+            size="sm"
+            variant="warning-soft"
+            @click="emit('ignore', notification)"
+          />
+        </div>
+      </article>
     </div>
     <footer class="border-t border-border p-4">
       <AirButton

@@ -7,8 +7,9 @@ import { handleEventsRequest } from "./modules/events";
 import { handleFacilitiesRequest } from "./modules/facilities";
 import { handleFinanceRequest } from "./modules/finance";
 import { handleFleetRequest } from "./modules/fleet";
-import { handleFuelRequest, initializeFuelModule } from "./modules/fuel";
+import { closeFuelSocket, handleFuelRequest, initializeFuelModule, openFuelSocket } from "./modules/fuel";
 import { handleGameRequest } from "./modules/game";
+import { handleHubsRequest } from "./modules/hubs";
 import { handleImportRequest } from "./modules/import";
 import { closeImportSocket, openImportSocket, receiveImportSocketMessage } from "./modules/import/runtime/websocket";
 import { handleOnboardingRequest } from "./modules/onboarding";
@@ -20,21 +21,20 @@ const config = getConfig();
 
 void initializeFuelModule(config);
 
-async function routeProductRequest(request: Request, url: URL): Promise<null | Response> {
+async function routeGameplayRequest(request: Request, url: URL): Promise<null | Response> {
   return (
-    (await handleAdminRequest(request, url, config)) ??
-    (await handleImportRequest(request, url, config)) ??
-    (await handleDemandRequest(request, url, config)) ??
-    (await handleFacilitiesRequest(request, url, config)) ??
-    (await handleEventsRequest(request, url, config)) ??
-    (await handleOnboardingRequest(request, url, config)) ??
     (await handleFleetRequest(request, url, config)) ??
     (await handleFuelRequest(request, url, config)) ??
+    (await handleHubsRequest(request, url, config)) ??
     (await handleRoutesRequest(request, url, config)) ??
     (await handleOperationsRequest(request, url, config)) ??
     (await handleFinanceRequest(request, url, config)) ??
     (await handleGameRequest(request, url, config))
   );
+}
+
+async function routeProductRequest(request: Request, url: URL): Promise<null | Response> {
+  return (await routeWorldRequest(request, url)) ?? (await routeGameplayRequest(request, url));
 }
 
 async function routeRequest(request: Request, url: URL): Promise<Response> {
@@ -45,7 +45,18 @@ async function routeRequest(request: Request, url: URL): Promise<Response> {
   );
 }
 
-Bun.serve<{ jobId: null | string }>({
+async function routeWorldRequest(request: Request, url: URL): Promise<null | Response> {
+  return (
+    (await handleAdminRequest(request, url, config)) ??
+    (await handleImportRequest(request, url, config)) ??
+    (await handleDemandRequest(request, url, config)) ??
+    (await handleFacilitiesRequest(request, url, config)) ??
+    (await handleEventsRequest(request, url, config)) ??
+    (await handleOnboardingRequest(request, url, config))
+  );
+}
+
+Bun.serve<{ jobId: null | string; type: string }>({
   async fetch(request, bunServer) {
     const url = new URL(request.url);
 
@@ -66,7 +77,14 @@ Bun.serve<{ jobId: null | string }>({
         if (authError) {
           return authError;
         }
-        if (bunServer.upgrade(request, { data: { jobId: url.searchParams.get("jobId") } })) {
+        if (bunServer.upgrade(request, { data: { jobId: url.searchParams.get("jobId"), type: "import" } })) {
+          return;
+        }
+        return jsonResponse({ error: "WebSocket upgrade failed" }, { status: 400 });
+      }
+
+      if (request.method === "GET" && url.pathname === "/fuel/ws") {
+        if (bunServer.upgrade(request, { data: { jobId: null, type: "fuel" } })) {
           return;
         }
         return jsonResponse({ error: "WebSocket upgrade failed" }, { status: 400 });
@@ -91,13 +109,23 @@ Bun.serve<{ jobId: null | string }>({
   port: config.port,
   websocket: {
     close(socket) {
-      closeImportSocket(socket);
+      if (socket.data.type === "import") {
+        closeImportSocket(socket);
+      } else if (socket.data.type === "fuel") {
+        closeFuelSocket(socket);
+      }
     },
     message(socket, message) {
-      receiveImportSocketMessage(socket, message);
+      if (socket.data.type === "import") {
+        receiveImportSocketMessage(socket, message);
+      }
     },
     open(socket) {
-      openImportSocket(socket);
+      if (socket.data.type === "import") {
+        openImportSocket(socket);
+      } else if (socket.data.type === "fuel") {
+        openFuelSocket(socket);
+      }
     },
   },
 });

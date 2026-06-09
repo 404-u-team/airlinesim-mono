@@ -1,4 +1,11 @@
+export type AircraftProfitability = FinanceSummary & {
+  aircraft_id: string;
+  aircraft_label: string;
+  flights_completed: number;
+};
+
 export type FinanceOverview = {
+  aircraft_profitability: AircraftProfitability[];
   airline: {
     is_bankrupt?: boolean;
     name?: string;
@@ -8,6 +15,7 @@ export type FinanceOverview = {
     backend_baseline: number;
     operations_delta: number;
   };
+  hub_profitability: HubProfitability[];
   metrics: {
     completed_flights: number;
     fleet_value: number;
@@ -28,6 +36,14 @@ export type FinanceSummary = {
   costs: number;
   profit: number;
   revenue: number;
+};
+
+export type HubProfitability = FinanceSummary & {
+  airport_id: string;
+  flights_completed: number;
+  is_base: boolean;
+  label: string;
+  routes: number;
 };
 
 export type LedgerTransaction = {

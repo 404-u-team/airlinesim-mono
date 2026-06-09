@@ -66,7 +66,7 @@ export type AirlineSimEvents = {
     severity: "error" | "info" | "success" | "warning";
   };
   "notifications:invalidated": {
-    reason: "aircraft-purchased" | "flight-completed" | "read-state-changed" | "risk-changed" | "route-created" | "schedule-activated";
+    reason: "aircraft-purchased" | "flight-completed" | "ignored" | "read-state-changed" | "risk-changed" | "route-created" | "schedule-activated";
     source: "events-news" | "finance-stock" | "fleet-ops" | "network-planner" | "shell";
   };
   "route:created": {

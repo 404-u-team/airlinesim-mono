@@ -21,14 +21,14 @@ function airportCode(airport: StoredRoute["destination_airport"]): string {
 </script>
 
 <template>
-  <section class="h-full overflow-y-auto overflow-x-hidden bg-surface p-3">
-    <div class="grid gap-3">
+  <section class="h-full overflow-y-auto overflow-x-hidden bg-surface">
+    <div class="divide-y divide-border">
       <article
         v-for="route in routes"
         :key="route.id"
-        class="min-w-0 rounded-lg border border-border bg-background p-3"
+        class="min-w-0 px-3 py-2.5 hover:bg-surface-subtle"
       >
-        <div class="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+        <div class="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
           <div class="min-w-0">
             <div class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
               <div class="min-w-0">
@@ -67,7 +67,7 @@ function airportCode(airport: StoredRoute["destination_airport"]): string {
       </article>
       <p
         v-if="routes.length === 0"
-        class="text-body text-text-muted"
+        class="p-3 text-body text-text-muted"
       >
         {{ t("empty.noRoutes") }}
       </p>

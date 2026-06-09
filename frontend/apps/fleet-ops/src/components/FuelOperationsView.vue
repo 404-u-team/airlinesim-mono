@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import type { FuelPriceChangedEvent } from "@airlinesim/game-sdk/realtime";
 import type { Locale } from "@airlinesim/i18n";
 
-import { AirBadge, AirButton, AirMetricCard } from "@airlinesim/air-ui";
-import { createAuthClient, createRealtimeClient } from "@airlinesim/game-sdk";
+import { AirButton, AirMetricCard, AirStatePanel } from "@airlinesim/air-ui";
+import { createAuthClient, getBackendBaseUrl } from "@airlinesim/game-sdk";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
 import type { FleetMessageKey } from "../i18n";
-import type { FuelPriceSnapshot } from "../types";
+import type { FleetOwnedAircraftCard, FuelPriceSnapshot } from "../types";
 
-import { getFuelHistory, getFuelPrice } from "../api";
+import { getFleetAircraft, getFuelHistory, getFuelPrice } from "../api";
 import { formatMoneyValue, formatNumberValue } from "../formatters";
+import FuelPriceChart from "./FuelPriceChart.vue";
 
 const props = defineProps<{
   appLocale: Locale;
@@ -22,40 +22,53 @@ const connectionState = ref<"connected" | "connecting" | "disconnected">("discon
 const current = ref<FuelPriceSnapshot | null>(null);
 const error = ref("");
 const history = ref<FuelPriceSnapshot[]>([]);
+const ownedAircraft = ref<FleetOwnedAircraftCard[]>([]);
 const isLoading = ref(false);
-let socket: null | ReturnType<typeof createRealtimeClient> = null;
 
-const formattedRecordedAt = computed(() =>
-  current.value ? formatDateTime(current.value.recorded_at) : "-",
-);
+let ws: null | WebSocket = null;
+let reconnectTimer: null | ReturnType<typeof setTimeout> = null;
+let isClosedExplicitly = false;
+
+const formattedRecordedAt = computed(() => current.value ? formatDateTime(current.value.recorded_at) : "-");
+const liveLabel = computed(() => connectionState.value === "connected" ? props.t("fuel.live.connected") : props.t("fuel.live.disconnected"));
+const trendLabel = computed(() => props.t(`fuel.trend.${lastDirection.value}`));
+
 const lastDirection = computed(() => {
-  const [latest, previous] = history.value;
-
-  if (!latest || !previous) {
+  const [latest, prev] = history.value;
+  if (!latest || !prev || latest.price === prev.price) {
     return "stable";
   }
-  if (latest.price > previous.price) {
-    return "up";
-  }
-  if (latest.price < previous.price) {
-    return "down";
-  }
-
-  return "stable";
+  return latest.price > prev.price ? "up" : "down";
 });
-const liveLabel = computed(() =>
-  connectionState.value === "connected"
-    ? props.t("fuel.live.connected")
-    : props.t("fuel.live.disconnected"),
-);
-const sourceLabel = computed(() => {
-  if (!current.value) {
-    return "-";
-  }
 
-  return props.t(`fuel.source.${current.value.source}`);
+const averagePrice = computed(() => history.value.length ? Math.round(history.value.reduce((sum, p) => sum + p.price, 0) / history.value.length) : 0);
+
+const priceRange = computed(() => {
+  if (!history.value.length) { return "-"; }
+  const prices = history.value.map((p) => p.price);
+  return `$${Math.min(...prices)} - $${Math.max(...prices)}`;
 });
-const trendLabel = computed(() => props.t(`fuel.trend.${lastDirection.value}`));
+
+const fleetFuelImpact = computed(() => {
+  if (!ownedAircraft.value.length || !current.value) { return []; }
+  const groups = new Map<string, { count: number; fuelBurn: number; modelName: string; }>();
+  for (const ac of ownedAircraft.value) {
+    const model = ac.modelName || ac.type?.model_name || "Unknown";
+    const existing = groups.get(model);
+    if (existing) {
+      existing.count++;
+    } else {
+      groups.set(model, { count: 1, fuelBurn: ac.type?.fuel_consumption_per_hour ?? 0, modelName: model });
+    }
+  }
+  const {price} = current.value;
+  return Array.from(groups.values()).map((g) => ({
+    costPerHour: (g.fuelBurn / 1000) * price,
+    count: g.count,
+    fuelBurn: g.fuelBurn,
+    modelName: g.modelName,
+  })).sort((a, b) => b.costPerHour - a.costPerHour);
+});
 
 onMounted(() => {
   void refresh();
@@ -63,229 +76,263 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  socket?.disconnect();
-  socket = null;
+  stopRealtime();
 });
 
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat(props.appLocale, {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "2-digit",
-    timeZoneName: "short",
-    year: "numeric",
-  }).format(new Date(value));
-}
+const formatDateTime = (val: string) => new Intl.DateTimeFormat(props.appLocale, {
+  day: "2-digit", hour: "2-digit", minute: "2-digit", month: "2-digit",
+}).format(new Date(val));
 
-function formatMoney(value: number | undefined): string {
-  return formatMoneyValue(props.appLocale, value);
-}
-
-function formatNumber(value: number | undefined): string {
-  return formatNumberValue(props.appLocale, value);
-}
-
-function normalizeFuelEvent(event: FuelPriceChangedEvent): FuelPriceSnapshot {
-  const recordedAt = new Date(event.recorded_at);
-  const recorded_at = Number.isNaN(recordedAt.getTime())
-    ? new Date().toISOString()
-    : recordedAt.toISOString();
-
-  return {
-    price: Number(event.price.toFixed(2)),
-    recorded_at,
-    source: "backend-realtime",
-    unit_price: Number((event.price * 9.5).toFixed(2)),
-    updated_at: new Date().toISOString(),
-  };
+function buildFuelSocketUrl(): string {
+  const base = new URL(getBackendBaseUrl(), window.location.origin);
+  base.protocol = base.protocol === "https:" ? "wss:" : "ws:";
+  base.pathname = `${base.pathname.replace(/\/+$/, "")}/fuel/ws`;
+  return base.toString();
 }
 
 async function refresh(): Promise<void> {
   isLoading.value = true;
   error.value = "";
-
   try {
-    const [priceResponse, historyResponse] = await Promise.all([
+    const [price, hist, fleet] = await Promise.all([
       getFuelPrice(),
       getFuelHistory(),
+      getFleetAircraft().catch(() => ({ aircraft: [] })),
     ]);
-    current.value = priceResponse;
-    history.value = historyResponse.history;
-  } catch (loadError) {
-    error.value = loadError instanceof Error ? loadError.message : props.t("fuel.error");
+    current.value = price;
+    history.value = hist.history;
+    ownedAircraft.value = fleet.aircraft;
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : props.t("fuel.error");
   } finally {
     isLoading.value = false;
   }
 }
 
 function startRealtime(): void {
-  if (socket) {
-    return;
-  }
-
+  if (ws) { return; }
   connectionState.value = "connecting";
-  socket = createRealtimeClient({ getToken: authClient.getAccessToken });
-  socket.on("connect", () => {
-    connectionState.value = "connected";
-  });
-  socket.on("disconnect", () => {
+  isClosedExplicitly = false;
+  ws = new WebSocket(buildFuelSocketUrl());
+  ws.addEventListener("open", () => { connectionState.value = "connected"; });
+  ws.addEventListener("close", () => {
     connectionState.value = "disconnected";
+    ws = null;
+    if (!isClosedExplicitly) { reconnectTimer = setTimeout(startRealtime, 3000); }
   });
-  socket.on("fuel_price_changed", (event: FuelPriceChangedEvent) => {
-    const snapshot = normalizeFuelEvent(event);
-    current.value = snapshot;
-    history.value = [snapshot, ...history.value].slice(0, 96);
+  ws.addEventListener("error", () => { connectionState.value = "disconnected"; });
+  ws.addEventListener("message", (event) => {
+    try {
+      const payload = JSON.parse(String(event.data)) as { price: number; recorded_at: string; type: string };
+      if (payload.type === "fuel_price_changed") {
+        const snapshot: FuelPriceSnapshot = {
+          price: Number(payload.price),
+          recorded_at: payload.recorded_at,
+          source: "internal",
+          unit_price: Number(payload.price),
+          updated_at: new Date().toISOString(),
+        };
+        current.value = snapshot;
+        history.value = [snapshot, ...history.value.filter((p) => p.recorded_at !== snapshot.recorded_at)].slice(0, 96);
+      }
+    } catch (e) {
+      console.error("Failed to parse fuel WS message", e);
+    }
   });
+}
+
+function stopRealtime(): void {
+  isClosedExplicitly = true;
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  if (ws) { ws.close(); ws = null; }
 }
 </script>
 
 <template>
-  <section class="h-full overflow-y-auto bg-background p-4 text-body text-text-primary sm:p-6">
-    <header class="flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
-      <div>
-        <AirBadge
-          label="Fleet & Ops"
-          variant="primary-soft"
+  <section class="h-full overflow-y-auto bg-background p-3 text-body text-text-primary sm:p-4">
+    <div class="mx-auto flex min-h-full max-w-[112rem] flex-col gap-4">
+      <header class="flex flex-col gap-3 border-b border-border pb-4 lg:flex-row lg:items-end lg:justify-between">
+        <div class="min-w-0">
+          <h1 class="text-h2">
+            {{ props.t("fuel.title") }}
+          </h1>
+          <p class="mt-1 max-w-3xl text-body text-text-muted">
+            {{ props.t("fuel.subtitle") }}
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span
+            class="rounded-full border px-3 py-1 text-caption font-medium shadow-sm transition-all"
+            :class="connectionState === 'connected' ? 'border-success bg-success-bg text-success' : 'border-warning bg-warning-bg text-warning'"
+          >
+            {{ liveLabel }}
+          </span>
+          <AirButton
+            :disabled="isLoading"
+            :label="props.t('action.refresh')"
+            size="sm"
+            variant="primary-soft"
+            @click="refresh"
+          />
+        </div>
+      </header>
+
+      <AirStatePanel
+        v-if="error"
+        :body="error"
+        :title="props.t('fuel.error')"
+        tone="danger"
+      />
+
+      <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <AirMetricCard
+          :label="props.t('fuel.metric.global')"
+          :value="formatMoneyValue(props.appLocale, current?.price)"
         />
-        <h1 class="mt-4 text-h2">
-          {{ props.t("fuel.title") }}
-        </h1>
-        <p class="mt-2 max-w-2xl text-body text-text-muted">
-          {{ props.t("fuel.subtitle") }}
-        </p>
-      </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <span
-          class="rounded-full border px-3 py-1 text-caption"
-          :class="connectionState === 'connected' ? 'border-success bg-success-bg text-success' : 'border-warning bg-warning-bg text-warning'"
-        >
-          {{ liveLabel }}
-        </span>
-        <AirButton
-          :disabled="isLoading"
-          :label="props.t('action.refresh')"
-          size="sm"
-          variant="primary-soft"
-          @click="refresh"
+        <AirMetricCard
+          :label="props.t('fuel.metric.trend')"
+          :tone="lastDirection === 'up' ? 'warning' : lastDirection === 'down' ? 'success' : 'neutral'"
+          :value="trendLabel"
         />
+        <AirMetricCard
+          :label="props.t('fuel.metric.average')"
+          :value="formatMoneyValue(props.appLocale, averagePrice)"
+        />
+        <AirMetricCard
+          :label="props.t('fuel.metric.range')"
+          :value="priceRange"
+        />
+      </section>
+
+      <!-- Main Section: Chart and History list -->
+      <div class="grid gap-4 lg:grid-cols-3">
+        <!-- Chart panel -->
+        <section class="rounded-lg border border-border bg-surface p-4 shadow-sm lg:col-span-2">
+          <div class="mb-4">
+            <h2 class="text-subtitle font-bold text-text-primary">
+              {{ props.t("fuel.chart.title") }}
+            </h2>
+            <p class="text-caption text-text-muted mt-0.5">
+              {{ props.t("fuel.lastUpdate") }}: {{ formattedRecordedAt }}
+            </p>
+          </div>
+
+          <div class="rounded-lg border border-border bg-background p-4">
+            <FuelPriceChart
+              v-if="history.length"
+              :history="history"
+              :locale="props.appLocale"
+            />
+            <p
+              v-else
+              class="py-16 text-center text-body text-text-muted"
+            >
+              {{ props.t("fuel.empty") }}
+            </p>
+          </div>
+        </section>
+
+        <!-- Recent price log -->
+        <aside class="rounded-lg border border-border bg-surface p-4 shadow-sm lg:col-span-1">
+          <div class="mb-3">
+            <h2 class="text-subtitle font-bold text-text-primary">
+              {{ props.t("fuel.history") }}
+            </h2>
+            <p class="text-caption text-text-muted mt-0.5">
+              {{ props.t("fuel.history.subtitle") }}
+            </p>
+          </div>
+          <div class="overflow-hidden rounded-lg border border-border">
+            <table class="w-full border-collapse text-left">
+              <thead>
+                <tr class="border-b border-border bg-background text-caption font-bold text-text-muted uppercase tracking-wider">
+                  <th class="px-3 py-2 text-left">
+                    {{ props.t("fuel.table.time") }}
+                  </th>
+                  <th class="px-3 py-2 text-right">
+                    {{ props.t("fuel.table.price") }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="item in history.slice(0, 8)"
+                  :key="`${item.recorded_at}-${item.price}`"
+                  class="border-b border-border hover:bg-surface-hover last:border-b-0"
+                >
+                  <td class="px-3 py-2 text-caption text-text-muted">
+                    {{ formatDateTime(item.recorded_at) }}
+                  </td>
+                  <td class="px-3 py-2 text-right text-body font-semibold text-text-primary">
+                    {{ formatMoneyValue(props.appLocale, item.price) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </aside>
       </div>
-    </header>
 
-    <div
-      v-if="error"
-      class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-error"
-    >
-      {{ error }}
-    </div>
-
-    <div class="mt-5 grid gap-4 lg:grid-cols-4">
-      <AirMetricCard
-        :label="props.t('fuel.metric.global')"
-        :value="formatNumber(current?.price)"
-      />
-      <AirMetricCard
-        :label="props.t('fuel.metric.unit')"
-        :value="formatMoney(current?.unit_price)"
-      />
-      <AirMetricCard
-        :label="props.t('fuel.metric.trend')"
-        :tone="lastDirection === 'up' ? 'warning' : lastDirection === 'down' ? 'success' : 'neutral'"
-        :value="trendLabel"
-      />
-      <AirMetricCard
-        :label="props.t('fuel.metric.source')"
-        :value="sourceLabel"
-      />
-    </div>
-
-    <div class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
-      <section class="rounded-lg border border-border bg-surface p-4">
-        <div class="flex items-center justify-between gap-4">
-          <h2 class="text-subtitle">
-            {{ props.t("fuel.history") }}
+      <!-- Fleet Fuel cost impact analysis -->
+      <section class="rounded-lg border border-border bg-surface p-4 shadow-sm">
+        <div class="mb-4">
+          <h2 class="text-subtitle font-bold text-text-primary">
+            {{ props.t("fuel.fleet.title") }}
           </h2>
-          <span class="text-caption text-text-muted">{{ props.t("fuel.lastUpdate") }} {{ formattedRecordedAt }}</span>
+          <p class="text-caption text-text-muted mt-0.5">
+            {{ props.t("fuel.fleet.subtitle") }}
+          </p>
         </div>
 
-        <div class="mt-4 overflow-hidden rounded-lg border border-border">
-          <table class="w-full table-fixed border-collapse text-left text-body">
-            <thead class="bg-surface-subtle text-caption text-text-muted">
-              <tr>
-                <th class="px-3 py-2 font-medium">
-                  {{ props.t("fuel.table.time") }}
+        <div v-if="!fleetFuelImpact.length" class="py-8 text-center border border-dashed border-border rounded-lg bg-background">
+          <p class="text-body text-text-muted">
+            {{ props.t("fuel.fleet.empty") }}
+          </p>
+        </div>
+
+        <div v-else class="overflow-hidden rounded-lg border border-border">
+          <table class="w-full border-collapse text-left">
+            <thead>
+              <tr class="border-b border-border bg-background text-caption font-bold text-text-muted uppercase tracking-wider">
+                <th class="px-4 py-3 text-left">
+                  {{ props.t("fuel.fleet.model") }}
                 </th>
-                <th class="px-3 py-2 text-right font-medium">
-                  {{ props.t("fuel.table.global") }}
+                <th class="px-4 py-3 text-center">
+                  {{ props.t("fuel.fleet.count") }}
                 </th>
-                <th class="px-3 py-2 text-right font-medium">
-                  {{ props.t("fuel.table.unit") }}
+                <th class="px-4 py-3 text-right">
+                  {{ props.t("fuel.fleet.burn") }}
+                </th>
+                <th class="px-4 py-3 text-right">
+                  {{ props.t("fuel.fleet.cost") }}
                 </th>
               </tr>
             </thead>
             <tbody>
               <tr
-                v-for="item in history.slice(0, 12)"
-                :key="`${item.recorded_at}-${item.price}`"
-                class="border-t border-border"
+                v-for="item in fleetFuelImpact"
+                :key="item.modelName"
+                class="border-b border-border hover:bg-surface-hover last:border-b-0"
               >
-                <td class="truncate px-3 py-2 text-text-muted">
-                  {{ formatDateTime(item.recorded_at) }}
+                <td class="px-4 py-3 text-body font-medium text-text-primary">
+                  {{ item.modelName }}
                 </td>
-                <td class="px-3 py-2 text-right font-medium">
-                  {{ formatNumber(item.price) }}
+                <td class="px-4 py-3 text-center">
+                  <span class="inline-flex items-center rounded-full bg-surface border border-border px-2.5 py-0.5 text-caption font-semibold">
+                    {{ item.count }}
+                  </span>
                 </td>
-                <td class="px-3 py-2 text-right font-medium">
-                  {{ formatMoney(item.unit_price) }}
+                <td class="px-4 py-3 text-right text-body text-text-secondary">
+                  {{ formatNumberValue(props.appLocale, item.fuelBurn) }} {{ props.t('unit.kgHour') }}
                 </td>
-              </tr>
-              <tr v-if="history.length === 0">
-                <td
-                  class="px-3 py-8 text-center text-text-muted"
-                  colspan="3"
-                >
-                  {{ props.t("fuel.empty") }}
+                <td class="px-4 py-3 text-right text-body font-bold text-text-primary">
+                  {{ formatMoneyValue(props.appLocale, item.costPerHour) }} / {{ props.t('unit.hourShort') }}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
       </section>
-
-      <aside class="rounded-lg border border-border bg-surface p-4">
-        <h2 class="text-subtitle">
-          {{ props.t("fuel.impact.title") }}
-        </h2>
-        <p class="mt-2 text-body text-text-muted">
-          {{ props.t("fuel.impact.description") }}
-        </p>
-        <dl class="mt-4 space-y-3 text-body">
-          <div class="flex items-center justify-between gap-4">
-            <dt class="text-text-muted">
-              {{ props.t("fuel.impact.routes") }}
-            </dt>
-            <dd class="text-right font-medium">
-              {{ props.t("fuel.impact.live") }}
-            </dd>
-          </div>
-          <div class="flex items-center justify-between gap-4">
-            <dt class="text-text-muted">
-              {{ props.t("fuel.impact.schedules") }}
-            </dt>
-            <dd class="text-right font-medium">
-              {{ props.t("fuel.impact.live") }}
-            </dd>
-          </div>
-          <div class="flex items-center justify-between gap-4">
-            <dt class="text-text-muted">
-              {{ props.t("fuel.impact.flights") }}
-            </dt>
-            <dd class="text-right font-medium">
-              {{ props.t("fuel.impact.next") }}
-            </dd>
-          </div>
-        </dl>
-      </aside>
     </div>
   </section>
 </template>

@@ -1,7 +1,8 @@
-import type { GeoCity, RestCountry } from "../runtime/sources";
+import type { GeoCity, RegionRow, RestCountry } from "../runtime/sources";
 import type { AirportType, FinalAirport, FinalCountry, FinalRegion, Point } from "../shared/types";
 import type { RunwayInfo } from "./types";
 
+import { normalizeName } from "../runtime/sources";
 import { clamp } from "../shared/math";
 
 export function airportCapacityIndex(
@@ -214,14 +215,28 @@ export function weightedCentroid(airports: Array<Omit<FinalAirport, "payload">>)
   };
 }
 
-export function cityPopulationShares(cities: GeoCity[], countryIso: string, regionCodes: string[]): Map<string, number> {
+export function cityPopulationShares(
+  cities: GeoCity[],
+  countryIso: string,
+  regionCodes: string[],
+  geoAdmin1: Map<string, string>,
+  regionRowsByCode: Map<string, RegionRow>,
+): Map<string, number> {
   const regionSet = new Set(regionCodes);
+  // Reverse lookup region ISO code by its normalized name, so GeoNames cities (whose
+  // admin1 code is numeric for many countries, e.g. RU.48) can be matched to the
+  // OurAirports ISO-3166-2 region (e.g. RU-MOW) by admin-area name.
+  const codeByName = new Map(
+    regionCodes
+      .map((code) => [normalizeAreaName(regionRowsByCode.get(code)?.name ?? ""), code] as const)
+      .filter(([name]) => name.length > 0),
+  );
   const populationByRegion = new Map<string, number>();
   const countryCities = cities.filter((city) => city.countryCode === countryIso && city.population > 0);
 
   for (const city of countryCities) {
-    const code = `${countryIso}-${city.admin1Code}`.toUpperCase();
-    if (regionSet.has(code)) {
+    const code = resolveCityRegionCode(city, countryIso, regionSet, geoAdmin1, codeByName);
+    if (code) {
       populationByRegion.set(code, (populationByRegion.get(code) ?? 0) + city.population);
     }
   }
@@ -229,4 +244,30 @@ export function cityPopulationShares(cities: GeoCity[], countryIso: string, regi
   const total = sum([...populationByRegion.values()]);
 
   return new Map([...populationByRegion].map(([code, population]) => [code, total > 0 ? population / total : 0]));
+}
+
+function resolveCityRegionCode(
+  city: GeoCity,
+  countryIso: string,
+  regionSet: Set<string>,
+  geoAdmin1: Map<string, string>,
+  codeByName: Map<string, string>,
+): string | undefined {
+  // Some countries' OurAirports ISO-3166-2 codes equal the GeoNames admin1 code
+  // (e.g. TR-34 / numeric), so try a direct match first.
+  const directCode = `${countryIso}-${city.admin1Code}`.toUpperCase();
+  if (regionSet.has(directCode)) {
+    return directCode;
+  }
+  // Otherwise resolve the GeoNames admin1 code to its area name and match by name.
+  const adminName = geoAdmin1.get(`${city.countryCode}.${city.admin1Code}`);
+  const mapped = adminName ? codeByName.get(normalizeAreaName(adminName)) : undefined;
+
+  return mapped && regionSet.has(mapped) ? mapped : undefined;
+}
+
+// Region/area names differ across sources by parenthetical qualifiers — OurAirports
+// "Moscow (city)" vs GeoNames "Moscow" — so strip those before comparing.
+function normalizeAreaName(value: string): string {
+  return normalizeName(value.replaceAll(/\(.*?\)/gu, " "));
 }

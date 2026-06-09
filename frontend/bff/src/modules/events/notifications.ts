@@ -3,6 +3,28 @@ import type { NotificationRisk, StoredNotification } from "./types";
 import { recordGameEvent } from "./producer";
 import { listNotificationsForAirline, saveNotifications } from "./storage";
 
+export async function ignoreNotification(
+  airlineId: string,
+  notificationId: string,
+): Promise<null | StoredNotification> {
+  const notifications = await listNotificationsForAirline(airlineId);
+  const notification = notifications.find((item) => item.id === notificationId);
+
+  if (!notification) {
+    return null;
+  }
+
+  const updated = {
+    ...notification,
+    is_read: true,
+    last_seen_at: new Date().toISOString(),
+    state: "ignored" as const,
+  };
+  await saveNotifications(notifications.map((item) => item.id === notificationId ? updated : item));
+
+  return updated;
+}
+
 export async function markAllNotificationsRead(airlineId: string): Promise<StoredNotification[]> {
   const notifications = (await listNotificationsForAirline(airlineId)).map((item) => ({
     ...item,
@@ -110,6 +132,17 @@ function reconcileExisting(
     return notification.state === "resolved"
       ? notification
       : { ...notification, resolved_at: now, state: "resolved" };
+  }
+
+  if (notification.state === "ignored") {
+    return {
+      ...notification,
+      ...risk,
+      is_read: true,
+      last_seen_at: now,
+      resolved_at: undefined,
+      state: "ignored",
+    };
   }
 
   return {

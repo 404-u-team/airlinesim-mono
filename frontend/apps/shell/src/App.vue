@@ -21,6 +21,7 @@ import { refreshFuelPrice, startFuelRealtime, stopFuelRealtime } from "./fuel/st
 import { type ShellMessageKey, shellMessages } from "./i18n/messages";
 import {
   clearNotifications,
+  ignore,
   markAllRead,
   markRead,
   notificationState,
@@ -29,6 +30,7 @@ import {
 
 type AppTheme = "dark" | "light";
 
+const SIDEBAR_STORAGE_KEY = "airlinesim:sidebar-open";
 const THEME_STORAGE_KEY = "airlinesim:theme";
 
 const isSidebarOpen = ref(false);
@@ -55,6 +57,17 @@ function getPreferredLocale(): Locale {
     getStoredLocale(window.localStorage) ??
     normalizeLocale(window.navigator.language)
   );
+}
+
+function getPreferredSidebarOpen(): boolean {
+  const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+
+  if (stored === "true" || stored === "false") {
+    return stored === "true";
+  }
+
+  // No stored preference: expand by default on desktop, collapse on narrow screens.
+  return window.matchMedia("(min-width: 1024px)").matches;
 }
 
 function getPreferredTheme(): AppTheme {
@@ -93,6 +106,7 @@ function toggleSidebar(): void {
 onMounted(() => {
   locale.value = getPreferredLocale();
   theme.value = getPreferredTheme();
+  isSidebarOpen.value = getPreferredSidebarOpen();
   unsubscribePanelRequested = airlineSimEventBus.on("shell:panel-requested", (event) => {
     if (event.panel === "notifications") {
       isNotificationPanelOpen.value = true;
@@ -101,6 +115,7 @@ onMounted(() => {
   });
   unsubscribeNotificationsInvalidated = airlineSimEventBus.on("notifications:invalidated", () => {
     void refreshNotifications();
+    void refreshDashboardSummary();
   });
   unsubscribeSnapshotInvalidated = airlineSimEventBus.on("game:snapshot-invalidated", () => {
     void refreshDashboardSummary();
@@ -116,6 +131,11 @@ onUnmounted(() => {
   unsubscribePanelRequested?.();
   unsubscribeSnapshotInvalidated?.();
 });
+
+async function ignorePanelNotification(notification: Notification): Promise<void> {
+  await ignore(notification.id);
+  airlineSimEventBus.emit("notifications:invalidated", { reason: "ignored", source: "shell" });
+}
 
 async function markAllNotificationsRead(): Promise<void> {
   await markAllRead();
@@ -164,6 +184,10 @@ watch(
   },
   { immediate: true },
 );
+
+watch(isSidebarOpen, (isOpen) => {
+  localStorage.setItem(SIDEBAR_STORAGE_KEY, String(isOpen));
+});
 
 watch(
   [
@@ -269,6 +293,7 @@ watch(
           v-if="isNotificationPanelOpen"
           :app-locale="locale"
           @close="isNotificationPanelOpen = false"
+          @ignore="ignorePanelNotification"
           @mark-all="markAllNotificationsRead"
           @open="openNotification"
         />

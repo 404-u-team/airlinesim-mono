@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { markAllNotificationsRead, patchNotificationRead, reconcileNotificationRisks } from "../src/modules/events/notifications";
+import { ignoreNotification, markAllNotificationsRead, patchNotificationRead, reconcileNotificationRisks } from "../src/modules/events/notifications";
 import { recordGameEvent } from "../src/modules/events/producer";
 import { listEventsForAirline } from "../src/modules/events/storage";
 
@@ -69,4 +69,23 @@ test("read all only marks active notifications", async () => {
   const notifications = await markAllNotificationsRead(airlineId);
 
   expect(notifications[0]).toMatchObject({ is_read: true, state: "active" });
+});
+
+test("ignored notifications stay ignored while the risk remains", async () => {
+  const airlineId = `airline-${crypto.randomUUID()}`;
+  const risks = [{
+    airline_id: airlineId,
+    code: "WEEKLY_OPERATING_LOSS" as const,
+    dedupe_key: "WEEKLY_OPERATING_LOSS",
+    parameters: { loss: 100 },
+    related: {},
+    severity: "warning" as const,
+    target_path: "/finances/overview",
+  }];
+
+  const created = await reconcileNotificationRisks(airlineId, risks);
+  await ignoreNotification(airlineId, created[0]?.id ?? "");
+  const reconciled = await reconcileNotificationRisks(airlineId, [{ ...risks[0], parameters: { loss: 200 } }]);
+
+  expect(reconciled[0]).toMatchObject({ is_read: true, parameters: { loss: 200 }, state: "ignored" });
 });

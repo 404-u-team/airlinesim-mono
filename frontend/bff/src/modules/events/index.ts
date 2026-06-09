@@ -4,7 +4,7 @@ import type { StoredGameEvent, StoredNotification } from "./types";
 import { BackendHttpError } from "../../backend-http";
 import { jsonResponse, readJson } from "../../http";
 import { loadFleetSnapshot } from "../fleet/snapshot";
-import { markAllNotificationsRead, patchNotificationRead } from "./notifications";
+import { ignoreNotification, markAllNotificationsRead, patchNotificationRead } from "./notifications";
 import { reconcileNotificationsForRequest } from "./reconcile";
 import { listEventsForAirline } from "./storage";
 
@@ -118,8 +118,10 @@ async function notificationRequest(
   }
   const match = /^\/notifications\/([^/]+)$/.exec(url.pathname);
   if (request.method === "PATCH" && match?.[1]) {
-    const payload = await readJson<{ is_read?: boolean }>(request);
-    const notification = await patchNotificationRead(airlineId, decodeURIComponent(match[1]), payload.is_read === true);
+    const payload = await readJson<{ is_read?: boolean; state?: StoredNotification["state"] }>(request);
+    const notification = payload.state === "ignored"
+      ? await ignoreNotification(airlineId, decodeURIComponent(match[1]))
+      : await patchNotificationRead(airlineId, decodeURIComponent(match[1]), payload.is_read === true);
     return notification
       ? jsonResponse({ notification })
       : jsonResponse({ error: { code: "NOTIFICATION_NOT_FOUND", message: "Notification not found." } }, { status: 404 });

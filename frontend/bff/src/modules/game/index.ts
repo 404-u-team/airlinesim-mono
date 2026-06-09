@@ -66,6 +66,14 @@ type Airport = {
   works_at_night?: boolean;
 };
 
+type DashboardNotification = {
+  code: string;
+  id: string;
+  severity: string;
+  state?: string;
+  target_path: string;
+};
+
 type GameSnapshot = {
   aircrafts: Aircraft[];
   aircraftTypes: AircraftType[];
@@ -228,14 +236,7 @@ export async function handleGameRequest(
         routes,
       }));
 
-    return jsonResponse(buildDashboardSummary(snapshot, routes, operations, notifications
-      .filter((item) => item.state === "active")
-      .map((item) => ({
-        action_code: "OPEN_NOTIFICATION",
-        code: item.code,
-        severity: item.severity,
-        target_path: item.target_path,
-      }))));
+    return jsonResponse(buildDashboardSummary(snapshot, routes, operations, dashboardAlerts(notifications)));
   }
 
   if (url.pathname === "/game/map-state") {
@@ -581,6 +582,18 @@ function compactAirports(airports: Airport[]): Array<{ id?: string; label: strin
     .filter((airport) => airport.id)
     .slice(0, 250)
     .map((airport) => ({ id: airport.id, label: airportLabel(airport) }));
+}
+
+function dashboardAlerts(notifications: DashboardNotification[]): Array<Record<string, string>> {
+  return notifications
+    .filter((item) => item.state === "active")
+    .map((item) => ({
+      action_code: "OPEN_NOTIFICATION",
+      code: item.code,
+      id: item.id,
+      severity: item.severity,
+      target_path: item.target_path,
+    }));
 }
 
 function demandFromLink(link: RegionLink | undefined, originRegionId: string | undefined): number {

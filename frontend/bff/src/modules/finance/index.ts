@@ -7,15 +7,23 @@ import type { LedgerTransaction } from "./types";
 import { BackendHttpError } from "../../backend-http";
 import { jsonResponse } from "../../http";
 import { loadFleetSnapshot } from "../fleet/snapshot";
+import { listHubsForAirline } from "../hubs/storage";
 import { getOperationsStateForRequest } from "../operations";
 import { listRoutesForAirline } from "../routes/storage";
 import { buildFinanceRisks, signedAmount, sumLedger } from "./calculator";
 import { reconcileCompletedFlights } from "./ledger";
 import { listLedgerForAirline } from "./storage";
 
+type AircraftProfitability = FinanceSummary & {
+  aircraft_id: string;
+  aircraft_label: string;
+  flights_completed: number;
+};
+
 type FinanceSnapshot = {
   fleet: FleetSnapshot;
   flights: StoredFlight[];
+  hubAirportIds: string[];
   ledger: LedgerTransaction[];
   routes: StoredRoute[];
 };
@@ -24,6 +32,14 @@ type FinanceSummary = {
   costs: number;
   profit: number;
   revenue: number;
+};
+
+type HubProfitability = FinanceSummary & {
+  airport_id: string;
+  flights_completed: number;
+  is_base: boolean;
+  label: string;
+  routes: number;
 };
 
 type RouteProfitability = FinanceSummary & {
@@ -73,6 +89,35 @@ export async function handleFinanceRequest(
   }
 }
 
+function aircraftProfitability(
+  transactions: LedgerTransaction[],
+  flights: StoredFlight[],
+  fleet: FleetSnapshot,
+): AircraftProfitability[] {
+  const flightById = new Map(flights.map((flight) => [flight.id, flight]));
+  const typeById = new Map(fleet.aircraftTypes.map((type) => [type.id, type]));
+  const byAircraft = new Map<string, LedgerTransaction[]>();
+
+  for (const transaction of transactions) {
+    const aircraftId = transaction.flight_id ? flightById.get(transaction.flight_id)?.aircraft_id : undefined;
+    if (aircraftId) {
+      byAircraft.set(aircraftId, [...(byAircraft.get(aircraftId) ?? []), transaction]);
+    }
+  }
+
+  return fleet.aircrafts.map((aircraft) => {
+    const aircraftTransactions = byAircraft.get(aircraft.id ?? "") ?? [];
+    const flightIds = new Set(aircraftTransactions.map((transaction) => transaction.flight_id).filter(Boolean));
+
+    return {
+      aircraft_id: aircraft.id ?? "",
+      aircraft_label: aircraft.tail_number ?? typeById.get(aircraft.type_id)?.model_name ?? aircraft.id ?? "—",
+      flights_completed: flightIds.size,
+      ...summarize(aircraftTransactions),
+    };
+  });
+}
+
 function airportLabel(airport: FleetSnapshot["airports"][number] | undefined, fallback: string): string {
   if (!airport) {
     return fallback;
@@ -100,6 +145,36 @@ async function flightDetail(request: Request, config: BffConfig, flightId: strin
   const transactions = snapshot.ledger.filter((transaction) => transaction.flight_id === flightId);
 
   return jsonResponse({ flight, profit: sumLedger(transactions), transactions });
+}
+
+function hubProfitability(
+  routeProfits: RouteProfitability[],
+  hubAirportIds: string[],
+  airports: FleetSnapshot["airports"],
+  baseId: string,
+): HubProfitability[] {
+  const airportById = new Map(airports.map((airport) => [airport.id, airport]));
+
+  return hubAirportIds.map((airportId) => {
+    const hubRoutes = routeProfits.filter((route) => route.origin_airport_id === airportId);
+    const summary = hubRoutes.reduce(
+      (totals, route) => ({
+        costs: totals.costs + route.costs,
+        flights_completed: totals.flights_completed + route.flights_completed,
+        profit: totals.profit + route.profit,
+        revenue: totals.revenue + route.revenue,
+      }),
+      { costs: 0, flights_completed: 0, profit: 0, revenue: 0 },
+    );
+
+    return {
+      airport_id: airportId,
+      is_base: airportId === baseId,
+      label: airportLabel(airportById.get(airportId), airportId),
+      routes: hubRoutes.length,
+      ...summary,
+    };
+  });
 }
 
 function inWindow(transactions: LedgerTransaction[], days: number): LedgerTransaction[] {
@@ -132,12 +207,14 @@ async function loadFinanceSnapshot(request: Request, config: BffConfig): Promise
   ]);
   await reconcileCompletedFlights(operations.flights);
   const airlineId = fleet.airline.id ?? "";
-  const [ledgerTransactions, storedRoutes] = await Promise.all([
+  const [ledgerTransactions, storedRoutes, hubs] = await Promise.all([
     listLedgerForAirline(airlineId),
     listRoutesForAirline(airlineId),
+    listHubsForAirline(airlineId),
   ]);
+  const hubAirportIds = [...new Set([fleet.airline.starting_airport_id ?? "", ...hubs.map((hub) => hub.airport_id)].filter(Boolean))];
 
-  return { fleet, flights: operations.flights, ledger: ledgerTransactions, routes: storedRoutes };
+  return { fleet, flights: operations.flights, hubAirportIds, ledger: ledgerTransactions, routes: storedRoutes };
 }
 
 async function overview(request: Request, config: BffConfig): Promise<Response> {
@@ -153,12 +230,14 @@ async function overview(request: Request, config: BffConfig): Promise<Response> 
   const weeklySummary = summarize(weekly);
 
   return jsonResponse({
+    aircraft_profitability: aircraftProfitability(snapshot.ledger, snapshot.flights, snapshot.fleet),
     airline: snapshot.fleet.airline,
     balance: {
       available: availableBalance,
       backend_baseline: baselineBalance,
       operations_delta: ledgerDelta,
     },
+    hub_profitability: hubProfitability(routeProfits, snapshot.hubAirportIds, snapshot.fleet.airports, snapshot.fleet.airline.starting_airport_id ?? ""),
     metrics: {
       completed_flights: snapshot.flights.filter((flight) => flight.status === "completed").length,
       fleet_value: fleetValue,

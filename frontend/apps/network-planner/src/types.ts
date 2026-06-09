@@ -1,5 +1,24 @@
+export type AirportSearchOption = {
+  iata_code?: string;
+  icao_code?: string;
+  id: string;
+  intl_name?: string;
+  local_name?: string;
+  municipality?: string;
+};
+
 export type CreateRouteResponse = {
   route: StoredRoute;
+};
+
+export type HubItem = {
+  airport_id: string;
+  created_at: string;
+  fee: number;
+  is_base: boolean;
+  label: string;
+  profit: number;
+  routes: number;
 };
 
 export type RouteAircraftOption = {
@@ -33,7 +52,30 @@ export type RouteAirport = {
   works_at_night?: boolean;
 };
 
+export type RouteDemandBreakdown = {
+  affinityFactor: number;
+  airportFactor: number;
+  baseDemand: number;
+  business: number;
+  calibrationK: number;
+  destinationGdpPerCapita: number;
+  destinationPopulation: number;
+  diaspora: number;
+  directionFactorDestinationToOrigin: number;
+  directionFactorOriginToDestination: number;
+  distanceImpedance: number;
+  gdpElasticity: number;
+  gravity: number;
+  originGdpPerCapita: number;
+  originPopulation: number;
+  populationElasticity: number;
+  sameCountry: boolean;
+  source: "model" | "region_link";
+  tourism: number;
+};
+
 export type RouteDemandSnapshot = {
+  breakdown?: RouteDemandBreakdown;
   destination_daily_passengers: number;
   distance_km: number;
   origin_daily_passengers: number;

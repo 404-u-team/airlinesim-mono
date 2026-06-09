@@ -26,7 +26,7 @@ const articles: Article[] = [
       ],
       ru: [
         "Начните с создания авиакомпании и выбора стартовой базы. База задает ограничения ВПП, слоты, ночные операции и первые операционные расходы.",
-        "После открытия дашборда следуйте следующему действию: купить самолет, спланировать маршрут, создать расписание, затем следить за рейсами и финансами.",
+        "Откройте дашборд. Это ваш главный центр управления. Далее купите самолет, спланируйте маршрут, создайте расписание, затем следите за рейсами и финансами.",
       ],
     },
     category: "knowledge.category.guide",
@@ -158,11 +158,7 @@ function openArticle(article: Article): void {
   <main class="h-full overflow-y-auto bg-background p-4 text-body text-text-primary sm:p-6">
     <div class="mx-auto grid max-w-7xl gap-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
       <aside class="min-w-0 rounded-lg border border-border bg-surface p-4">
-        <AirBadge
-          :label="t('knowledge.badge')"
-          variant="primary-soft"
-        />
-        <h1 class="mt-3 text-h2">
+        <h1 class="text-h2">
           {{ t("knowledge.title") }}
         </h1>
         <p class="mt-2 text-body text-text-muted">

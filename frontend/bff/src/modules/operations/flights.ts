@@ -4,6 +4,44 @@ import type { OperationsSnapshot } from "./planning";
 import type { FlightFinancials, SchedulePattern, SchedulePreview, StoredFlight } from "./types";
 
 import { getCurrentFuelUnitPrice } from "../fuel/price";
+import { zonedWallTimeToUtc } from "./schedule-time";
+
+type FlightLeg = "outbound" | "return";
+
+// Builds a single one-way "ferry" flight (e.g. to reposition an aircraft between
+// hubs). It still carries passengers: load is computed from one day's worth of the
+// pair's demand. Not tied to a recurring schedule — `schedule_id` is a one-off id.
+export function buildOneTimeFlight(
+  snapshot: OperationsSnapshot,
+  route: StoredRoute,
+  aircraft: Aircraft,
+  type: AircraftType,
+  origin: Airport,
+  destination: Airport,
+  departureAt: Date,
+): StoredFlight {
+  const arrivalAt = new Date(departureAt.getTime() + estimateBlockHours(route, type) * 60 * 60_000);
+  const expected = estimateFlightFinancials(route, type, origin, destination, 7, "outbound");
+  const scheduleId = `ferry-${crypto.randomUUID()}`;
+  const flightId = stableFlightId(scheduleId, departureAt);
+
+  return {
+    aircraft_id: aircraft.id ?? "",
+    airline_id: snapshot.airline.id ?? "",
+    arrival_at: arrivalAt.toISOString(),
+    created_at: new Date().toISOString(),
+    departure_at: departureAt.toISOString(),
+    destination_airport_id: destination.id ?? route.destination_airport_id,
+    expected,
+    flight_number: `${buildFlightNumber(snapshot, route, 0)}F`,
+    id: flightId,
+    origin_airport_id: origin.id ?? route.origin_airport_id,
+    route_id: route.id,
+    schedule_id: scheduleId,
+    status: currentFlightStatus({ ...newFlightStub(route, aircraft, expected, flightId, departureAt, arrivalAt), status: "scheduled" }),
+    updated_at: new Date().toISOString(),
+  };
+}
 
 export function currentFlightStatus(flight: StoredFlight, now = new Date()): StoredFlight["status"] {
   if (flight.status === "cancelled" || flight.status === "completed") {
@@ -31,8 +69,13 @@ export function estimateBlockHours(route: StoredRoute | undefined, type: Aircraf
   return Math.max(0.75, (route?.demand_snapshot.distance_km ?? 900) / (type?.cruising_speed_kph ?? 740) + 0.35);
 }
 
-export function estimateUtilizationHours(route: StoredRoute | undefined, type: AircraftType | undefined, daysPerWeek: number): number {
-  return Number((estimateBlockHours(route, type) * Math.max(daysPerWeek, 0)).toFixed(1));
+export function estimateUtilizationHours(
+  route: StoredRoute | undefined,
+  type: AircraftType | undefined,
+  daysPerWeek: number,
+  turnaroundMinutes = 0,
+): number {
+  return Number((roundTripHours(route, type, turnaroundMinutes) * Math.max(daysPerWeek, 0)).toFixed(1));
 }
 
 export function estimateWeeklyCost(
@@ -46,7 +89,10 @@ export function estimateWeeklyCost(
     return 0;
   }
 
-  return estimateFlightFinancials(route, type, origin, destination, daysPerWeek).cost * daysPerWeek;
+  const outbound = estimateFlightFinancials(route, type, origin, destination, daysPerWeek, "outbound");
+  const inbound = estimateFlightFinancials(route, type, destination, origin, daysPerWeek, "return");
+
+  return (outbound.cost + inbound.cost) * daysPerWeek;
 }
 
 export function generateFlightsForSchedule(
@@ -67,8 +113,30 @@ export function generateFlightsForSchedule(
   }
 
   return buildScheduleDates(startsOn, pattern, daysToGenerate, origin.timezone)
-    .map((departureAt, index) =>
-      buildStoredFlight(snapshot, route, aircraft, type, pattern, origin, destination, departureAt, index, scheduleId));
+    .flatMap((departureAt, index) =>
+      buildRoundTripFlights(snapshot, route, aircraft, type, pattern, origin, destination, departureAt, index, scheduleId));
+}
+
+// Recomputes a flight's expected financials from current route economics and fuel
+// price. Stored `expected` is a frozen creation-time estimate; flights generated
+// before an economics change (e.g. the fuel price fix) otherwise keep stale numbers.
+export function recomputeFlightExpected(flight: StoredFlight, snapshot: OperationsSnapshot): StoredFlight {
+  const route = snapshot.routes.find((item) => item.id === flight.route_id);
+  const aircraft = snapshot.aircrafts.find((item) => item.id === flight.aircraft_id);
+  const type = snapshot.aircraftTypes.find((item) => item.id === aircraft?.type_id);
+  const origin = snapshot.airports.find((item) => item.id === flight.origin_airport_id);
+  const destination = snapshot.airports.find((item) => item.id === flight.destination_airport_id);
+
+  if (!route || !type || !origin || !destination) {
+    return flight;
+  }
+
+  const schedule = snapshot.schedules.find((item) => item.id === flight.schedule_id);
+  const daysPerWeek = schedule?.pattern.days_of_week.length ?? 3;
+
+  const leg = flight.origin_airport_id === route.destination_airport_id ? "return" : "outbound";
+
+  return { ...flight, expected: estimateFlightFinancials(route, type, origin, destination, daysPerWeek, leg) };
 }
 
 export function stableScheduleId(
@@ -90,7 +158,7 @@ export function stableScheduleId(
 }
 
 export function summarizeWeeklyEconomics(sampleFlights: StoredFlight[], daysPerWeek: number): SchedulePreview["economics"] {
-  const sourceFlights = sampleFlights.slice(0, Math.max(daysPerWeek, 1));
+  const sourceFlights = sampleFlights.slice(0, Math.max(daysPerWeek * 2, 1));
   const weeklyRevenue = sourceFlights.reduce((total, flight) => total + flight.expected.revenue, 0);
   const weeklyCost = sourceFlights.reduce((total, flight) => total + flight.expected.cost, 0);
 
@@ -120,6 +188,54 @@ function buildFlightNumber(snapshot: OperationsSnapshot, route: StoredRoute, ind
   const routeSeed = Math.abs(hashCode(route.id)).toString().slice(0, 2).padStart(2, "1");
 
   return `${prefix}${routeSeed}${String(index + 1).padStart(2, "0")}`;
+}
+
+function buildRoundTripFlights(
+  snapshot: OperationsSnapshot,
+  route: StoredRoute,
+  aircraft: Aircraft,
+  type: AircraftType,
+  pattern: SchedulePattern,
+  origin: Airport,
+  destination: Airport,
+  departureAt: Date,
+  index: number,
+  scheduleId?: string,
+): StoredFlight[] {
+  const outbound = buildStoredFlight(
+    snapshot,
+    route,
+    aircraft,
+    type,
+    pattern,
+    origin,
+    destination,
+    departureAt,
+    index,
+    "outbound",
+    scheduleId,
+  );
+
+  if (!pattern.round_trip) {
+    return [outbound];
+  }
+
+  const returnDeparture = new Date(new Date(outbound.arrival_at).getTime() + pattern.turnaround_minutes * 60_000);
+  const inbound = buildStoredFlight(
+    snapshot,
+    route,
+    aircraft,
+    type,
+    pattern,
+    destination,
+    origin,
+    returnDeparture,
+    index,
+    "return",
+    scheduleId,
+  );
+
+  return [outbound, inbound];
 }
 
 function buildScheduleDates(
@@ -153,10 +269,11 @@ function buildStoredFlight(
   destination: Airport,
   departureAt: Date,
   index: number,
+  leg: FlightLeg,
   scheduleId?: string,
 ): StoredFlight {
   const arrivalAt = new Date(departureAt.getTime() + estimateBlockHours(route, type) * 60 * 60_000);
-  const expected = estimateFlightFinancials(route, type, origin, destination, pattern.days_of_week.length);
+  const expected = estimateFlightFinancials(route, type, origin, destination, pattern.days_of_week.length, leg);
   const resolvedScheduleId = scheduleId ?? stableScheduleId(route.id, aircraft.id, pattern, undefined);
   const flightId = stableFlightId(resolvedScheduleId, departureAt);
 
@@ -166,11 +283,11 @@ function buildStoredFlight(
     arrival_at: arrivalAt.toISOString(),
     created_at: new Date().toISOString(),
     departure_at: departureAt.toISOString(),
-    destination_airport_id: route.destination_airport_id,
+    destination_airport_id: destination.id ?? route.destination_airport_id,
     expected,
-    flight_number: buildFlightNumber(snapshot, route, index),
+    flight_number: leg === "return" ? `${buildFlightNumber(snapshot, route, index)}R` : buildFlightNumber(snapshot, route, index),
     id: flightId,
-    origin_airport_id: route.origin_airport_id,
+    origin_airport_id: origin.id ?? route.origin_airport_id,
     route_id: route.id,
     schedule_id: resolvedScheduleId,
     status: currentFlightStatus({ ...newFlightStub(route, aircraft, expected, flightId, departureAt, arrivalAt), status: "scheduled" }),
@@ -182,9 +299,19 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function estimateFlightFinancials(route: StoredRoute, type: AircraftType, origin: Airport, destination: Airport, daysPerWeek: number): FlightFinancials {
+function estimateFlightFinancials(
+  route: StoredRoute,
+  type: AircraftType,
+  origin: Airport,
+  destination: Airport,
+  daysPerWeek: number,
+  leg: FlightLeg,
+): FlightFinancials {
   const seats = type.max_planned_seat_capacity ?? 100;
-  const demandPerFlight = (route.demand_snapshot.origin_daily_passengers * 7) / Math.max(daysPerWeek, 1);
+  const dailyDemand = leg === "return"
+    ? route.demand_snapshot.destination_daily_passengers
+    : route.demand_snapshot.origin_daily_passengers;
+  const demandPerFlight = (dailyDemand * 7) / Math.max(daysPerWeek, 1);
   const loadFactor = clamp(demandPerFlight / Math.max(seats, 1), 0.35, 0.95);
   const passengers = Math.round(seats * loadFactor);
   const revenue = Math.round(route.economics_snapshot.estimated_fare_per_passenger * passengers);
@@ -244,44 +371,11 @@ function newFlightStub(
   };
 }
 
+function roundTripHours(route: StoredRoute | undefined, type: AircraftType | undefined, turnaroundMinutes: number): number {
+  return estimateBlockHours(route, type) * 2 + turnaroundMinutes / 60;
+}
+
 function stableFlightId(scheduleId: string, departureAt: Date): string {
   return `flight-${Math.abs(hashCode(`${scheduleId}|${departureAt.toISOString()}`)).toString(36)}`;
 }
 
-/**
- * Converts a wall-clock time (the local departure time at the origin airport) on
- * a given calendar day into the correct UTC instant. Without a timezone the wall
- * time is treated as UTC. A single offset correction is accurate outside DST
- * transition hours, which is sufficient for MVP scheduling.
- */
-function zonedWallTimeToUtc(date: Date, hour: number, minute: number, timeZone?: string): Date {
-  const wallAsUtc = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), hour, minute, 0, 0);
-
-  if (!timeZone) {
-    return new Date(wallAsUtc);
-  }
-
-  return new Date(wallAsUtc - zoneOffsetMs(new Date(wallAsUtc), timeZone));
-}
-
-function zoneOffsetMs(instant: Date, timeZone: string): number {
-  try {
-    const parts = new Intl.DateTimeFormat("en-US", {
-      day: "2-digit",
-      hour: "2-digit",
-      hour12: false,
-      minute: "2-digit",
-      month: "2-digit",
-      second: "2-digit",
-      timeZone,
-      year: "numeric",
-    }).formatToParts(instant);
-    const lookup = (type: string): number => Number(parts.find((part) => part.type === type)?.value ?? "0");
-    const hour = lookup("hour") % 24;
-    const asZoned = Date.UTC(lookup("year"), lookup("month") - 1, lookup("day"), hour, lookup("minute"), lookup("second"));
-
-    return asZoned - instant.getTime();
-  } catch {
-    return 0;
-  }
-}

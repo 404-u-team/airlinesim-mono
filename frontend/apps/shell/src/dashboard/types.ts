@@ -22,6 +22,7 @@ export type DashboardAirport = {
 export type DashboardAlert = {
   action_code: string;
   code: string;
+  id: string;
   severity: "danger" | "info" | "success" | "warning";
   target_path: string;
 };

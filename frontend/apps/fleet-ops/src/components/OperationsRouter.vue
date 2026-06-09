@@ -9,7 +9,9 @@ import ScheduleBuilder from "./ScheduleBuilder.vue";
 
 defineProps<{
   appLocale: Locale;
+  appTheme?: "dark" | "light";
   mode: "flights" | "fuel" | "schedule";
+  shellPath?: string;
   t: (key: FleetMessageKey | string) => string;
 }>();
 </script>
@@ -18,6 +20,8 @@ defineProps<{
   <ScheduleBuilder
     v-if="mode === 'schedule'"
     :app-locale="appLocale"
+    :app-theme="appTheme"
+    :shell-path="shellPath"
     :t="t"
   />
   <FuelOperationsView

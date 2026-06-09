@@ -1,5 +1,8 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+/* eslint-disable @typescript-eslint/require-await -- fuel store API is async by contract over a synchronous SQLite store. */
+import { resolve } from "node:path";
+
+import { readDocument, writeDocument } from "../../db/database";
+import { broadcastFuelPriceChanged } from "./websocket";
 
 export type FuelPriceEventPayload = {
   price?: number;
@@ -27,7 +30,7 @@ const minFuelPricePerTonne = 560;
 const maxFuelPricePerTonne = 1180;
 const fuelUpdateIntervalMs = 15 * 60 * 1000;
 const historyLimit = 96;
-const storePath = resolve(import.meta.dir, "../../../data/game-state/fuel-price.json");
+const fuelLegacyPath = resolve(import.meta.dir, "../../../data/game-state/fuel-price.json");
 
 let currentSnapshot: FuelPriceSnapshot = buildFallbackSnapshot();
 let mutationQueue: Promise<unknown> = Promise.resolve();
@@ -81,6 +84,8 @@ export async function recordFuelPriceChange(payload: FuelPriceEventPayload): Pro
     currentSnapshot = snapshot;
   });
 
+  broadcastFuelPriceChanged(snapshot);
+
   return snapshot;
 }
 
@@ -122,7 +127,7 @@ function dedupeHistory(history: FuelPriceSnapshot[]): FuelPriceSnapshot[] {
   const deduped: FuelPriceSnapshot[] = [];
 
   for (const item of history) {
-    const key = `${item.recorded_at}:${String(item.price)}`;
+    const key = item.recorded_at.slice(0, 16); // e.g. "2026-06-09T14:10"
     if (seen.has(key)) {
       continue;
     }
@@ -176,19 +181,25 @@ function normalizeSnapshot(value: unknown, source: FuelPriceSnapshot["source"]):
 }
 
 function normalizeStore(value: unknown): FuelPriceStore {
-  const payload = value && typeof value === "object"
+  const { current: rawCurrent, history: rawHistoryPayload } = value && typeof value === "object"
     ? value as { current?: unknown; history?: unknown }
     : {};
-  const current = normalizeSnapshot(payload.current, "storage") ?? currentSnapshot;
-  const history = Array.isArray(payload.history)
-    ? payload.history
+  const current = normalizeSnapshot(rawCurrent, "storage") ?? currentSnapshot;
+  const rawHistory = Array.isArray(rawHistoryPayload)
+    ? rawHistoryPayload
       .map((item) => normalizeSnapshot(item, "storage"))
       .filter((item): item is FuelPriceSnapshot => Boolean(item))
     : [];
 
+  let history = dedupeHistory([current, ...rawHistory]);
+
+  if (history.length < 24) {
+    history = seedHistory(current);
+  }
+
   return {
     current,
-    history: dedupeHistory([current, ...history]).slice(0, historyLimit),
+    history: history.slice(0, historyLimit),
   };
 }
 
@@ -200,23 +211,34 @@ async function queuedMutation<TValue>(mutation: () => Promise<TValue>): Promise<
 }
 
 async function readFuelPriceStoreFromDisk(): Promise<FuelPriceStore> {
-  try {
-    const raw = await readFile(storePath, "utf8");
-    return normalizeStore(JSON.parse(raw) as unknown);
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      const fallback = buildFallbackSnapshot();
+  const raw = readDocument<unknown>("fuel-price", null, fuelLegacyPath);
 
-      return { current: fallback, history: [fallback] };
-    }
-    throw error;
+  if (raw) {
+    return normalizeStore(raw);
   }
+  const fallback = buildFallbackSnapshot();
+
+  return { current: fallback, history: seedHistory(fallback).slice(0, historyLimit) };
+}
+
+function seedHistory(currentSnapshot: FuelPriceSnapshot): FuelPriceSnapshot[] {
+  const history: FuelPriceSnapshot[] = [currentSnapshot];
+  const now = new Date(currentSnapshot.recorded_at);
+  let { price } = currentSnapshot;
+  for (let i = 1; i < historyLimit; i++) {
+    const recordedAt = new Date(now.getTime() - i * fuelUpdateIntervalMs).toISOString();
+    price = nextRandomWalkPrice(price);
+    history.push({
+      price,
+      recorded_at: recordedAt,
+      source: "fallback",
+      unit_price: price,
+      updated_at: recordedAt,
+    });
+  }
+  return history;
 }
 
 async function writeFuelPriceStore(store: FuelPriceStore): Promise<void> {
-  await mkdir(dirname(storePath), { recursive: true });
-
-  const tmpPath = `${storePath}.${crypto.randomUUID()}.tmp`;
-  await writeFile(tmpPath, JSON.stringify(store, null, 2));
-  await rename(tmpPath, storePath);
+  writeDocument("fuel-price", store);
 }

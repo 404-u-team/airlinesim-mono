@@ -6,17 +6,23 @@ import { jsonResponse, readJson } from "../../http";
 import { recordGameEvent } from "../events/producer";
 import { reconcileNotificationsAfterMutation } from "../events/reconcile";
 import { reconcileCompletedFlight } from "../finance/ledger";
-import { buildRouteListItem, refreshStoredRoute } from "../routes/planning";
-import { loadRoutePlanningSnapshot } from "../routes/snapshot";
-import { listRoutesForAirline, saveRoute } from "../routes/storage";
+import { buildRouteListItem } from "../routes/planning";
+import { saveRoute } from "../routes/storage";
+import { annotateOutOfPosition } from "./aircraft-position";
+import { createFerryFlightResponse } from "./ferry";
+import { attachAirportRefs } from "./flight-airports";
+import { recordCompletedFlightEvents, recordScheduleReplacedEvent } from "./flight-events";
 import { updateFlightStatuses } from "./flights";
+import { dedupeGeneratedFlights, loadOperationsSnapshot } from "./load";
 import { buildSchedulePreview, createScheduleFromPreview, type OperationsSnapshot } from "./planning";
-import { listFlightsForAirline, listSchedulesForAirline, saveFlights, saveSchedule } from "./storage";
+import { normalizeReplaceBlocks, replaceAircraftSchedule, type ReplaceScheduleRequest } from "./schedule-replace";
+import { deleteFutureFlightsForSchedules, deleteSchedulesForAircraft, saveFlights, saveSchedule } from "./storage";
 
 type ScheduleRequest = {
   aircraft_id?: string;
   days_of_week?: number[];
   departure_local_time?: string;
+  round_trip?: boolean;
   route_id?: string;
   starts_on?: string;
   turnaround_minutes?: number;
@@ -122,19 +128,6 @@ async function completeFlight(request: Request, config: BffConfig, flightId: str
   return jsonResponse({ flight: completedFlight });
 }
 
-function dedupeGeneratedFlights(currentFlights: StoredFlight[], generatedFlights: StoredFlight[]): StoredFlight[] {
-  const existingKeys = new Set(currentFlights.map((flight) => `${flight.route_id}:${flight.aircraft_id}:${flight.departure_at}`));
-
-  return generatedFlights.filter((flight) => {
-    const key = `${flight.route_id}:${flight.aircraft_id}:${flight.departure_at}`;
-    if (existingKeys.has(key)) {
-      return false;
-    }
-    existingKeys.add(key);
-    return true;
-  });
-}
-
 async function flightRequest(request: Request, url: URL, config: BffConfig): Promise<Response> {
   if (request.method === "GET" && url.pathname === "/operations/flights") {
     return listFlights(request, url, config);
@@ -175,21 +168,29 @@ async function getScheduleOptions(request: Request, url: URL, config: BffConfig)
     default_pattern: {
       days_of_week: [1, 3, 5],
       departure_local_time: "09:00",
+      round_trip: true,
       turnaround_minutes: 90,
     },
     route: route ? buildRouteListItem(route, snapshot) : null,
     routes: snapshot.routes.map((item) => buildRouteListItem(item, snapshot)),
+    schedules: snapshot.schedules,
   });
 }
 
 async function listFlights(request: Request, url: URL, config: BffConfig): Promise<Response> {
   const snapshot = await loadOperationsSnapshot(request, config);
   const status = url.searchParams.get("status");
-  const flights = updateFlightStatuses(snapshot.flights)
-    .filter((flight) => !status || flight.status === status)
-    .filter((flight) => !url.searchParams.get("route_id") || flight.route_id === url.searchParams.get("route_id"))
-    .filter((flight) => !url.searchParams.get("aircraft_id") || flight.aircraft_id === url.searchParams.get("aircraft_id"))
-    .sort((left, right) => left.departure_at.localeCompare(right.departure_at));
+  // Annotate position consistency before filtering, since it depends on the full set
+  // of the aircraft's flights, not just the filtered slice.
+  const annotated = annotateOutOfPosition(updateFlightStatuses(snapshot.flights), snapshot.aircrafts, snapshot.airline.starting_airport_id);
+  const flights = attachAirportRefs(
+    annotated
+      .filter((flight) => !status || flight.status === status)
+      .filter((flight) => !url.searchParams.get("route_id") || flight.route_id === url.searchParams.get("route_id"))
+      .filter((flight) => !url.searchParams.get("aircraft_id") || flight.aircraft_id === url.searchParams.get("aircraft_id"))
+      .sort((left, right) => left.departure_at.localeCompare(right.departure_at)),
+    snapshot.airports,
+  );
 
   return jsonResponse({
     flights,
@@ -209,21 +210,16 @@ async function listSchedules(request: Request, config: BffConfig): Promise<Respo
   });
 }
 
-async function loadOperationsSnapshot(request: Request, config: BffConfig): Promise<OperationsSnapshot> {
-  const routeSnapshot = await loadRoutePlanningSnapshot(request, config);
-  const airlineId = routeSnapshot.airline.id ?? "";
-  const [routes, schedules, flights] = await Promise.all([
-    listRoutesForAirline(airlineId),
-    listSchedulesForAirline(airlineId),
-    listFlightsForAirline(airlineId),
-  ]);
+async function markRoutesScheduled(snapshot: OperationsSnapshot, schedules: StoredSchedule[]): Promise<void> {
+  const now = new Date().toISOString();
+  const routeIds = new Set(schedules.filter((schedule) => schedule.status === "active").map((schedule) => schedule.route_id));
 
-  return {
-    ...routeSnapshot,
-    flights,
-    routes: routes.map((route) => refreshStoredRoute(route, routeSnapshot)),
-    schedules,
-  };
+  await Promise.all([...routeIds].map(async (routeId) => {
+    const route = snapshot.routes.find((item) => item.id === routeId);
+    if (route) {
+      await saveRoute({ ...route, status: "scheduled", updated_at: now });
+    }
+  }));
 }
 
 function operationErrorResponse(error: unknown): Response {
@@ -236,6 +232,9 @@ function operationErrorResponse(error: unknown): Response {
 }
 
 async function operationRequest(request: Request, url: URL, config: BffConfig): Promise<Response> {
+  if (request.method === "POST" && url.pathname === "/operations/ferry-flights") {
+    return createFerryFlightResponse(request, config);
+  }
   if (url.pathname.startsWith("/operations/flights")) {
     return flightRequest(request, url, config);
   }
@@ -243,52 +242,37 @@ async function operationRequest(request: Request, url: URL, config: BffConfig): 
   return scheduleRequest(request, url, config);
 }
 
-async function recordCompletedFlightEvents(airlineId: string, completedFlight: StoredFlight & { actual: NonNullable<StoredFlight["actual"]> }, transactionCount: number): Promise<void> {
-  await recordGameEvent({
-    airline_id: airlineId,
-    category: "operations",
-    code: "FLIGHT_COMPLETED",
-    dedupe_key: `flight-completed:${completedFlight.id}`,
-    occurred_at: completedFlight.arrival_at,
-    parameters: {
-      cost: completedFlight.actual.cost,
-      flight_number: completedFlight.flight_number,
-      load_factor: completedFlight.actual.load_factor,
-      passengers: completedFlight.actual.passengers,
-      profit: completedFlight.actual.profit,
-      revenue: completedFlight.actual.revenue,
-    },
-    related: {
-      aircraft_id: completedFlight.aircraft_id,
-      flight_id: completedFlight.id,
-      route_id: completedFlight.route_id,
-      schedule_id: completedFlight.schedule_id,
-    },
-    severity: completedFlight.actual.profit >= 0 ? "success" : "warning",
-    source_id: completedFlight.id,
-    source_type: "flight",
-    target_path: `/finances/routes?route_id=${encodeURIComponent(completedFlight.route_id)}`,
+async function replaceSchedules(request: Request, config: BffConfig): Promise<Response> {
+  const snapshot = await loadOperationsSnapshot(request, config);
+  const payload = await readJson<ReplaceScheduleRequest>(request);
+  const aircraftId = payload.aircraft_id ?? "";
+
+  if (!aircraftId) {
+    return jsonResponse({ error: { code: "AIRCRAFT_REQUIRED", message: "aircraft_id is required." } }, { status: 400 });
+  }
+
+  const { flights, previews, schedules } = replaceAircraftSchedule(snapshot, {
+    aircraft_id: aircraftId,
+    blocks: normalizeReplaceBlocks(payload.blocks),
+    round_trip: payload.round_trip,
+    turnaround_minutes: payload.turnaround_minutes,
   });
-  await recordGameEvent({
-    airline_id: airlineId,
-    category: "finance",
-    code: "FINANCE_RESULT_RECORDED",
-    dedupe_key: `finance-result:${completedFlight.id}`,
-    occurred_at: completedFlight.arrival_at,
-    parameters: {
-      profit: completedFlight.actual.profit,
-      transaction_count: transactionCount,
-    },
-    related: {
-      flight_id: completedFlight.id,
-      route_id: completedFlight.route_id,
-      schedule_id: completedFlight.schedule_id,
-    },
-    severity: completedFlight.actual.profit >= 0 ? "success" : "warning",
-    source_id: completedFlight.id,
-    source_type: "flight",
-    target_path: `/finances/profit?flight_id=${encodeURIComponent(completedFlight.id)}`,
-  });
+
+  // Drop the aircraft's old schedules and their future flights, then persist the rebuilt set.
+  // Dedupe the rebuilt flights against everything *except* the aircraft's own future flights
+  // we are replacing, so an unchanged leg is not deduped away and then lost.
+  const keptFlights = snapshot.flights.filter((flight) => !(flight.aircraft_id === aircraftId && flight.status === "scheduled"));
+  const removedScheduleIds = await deleteSchedulesForAircraft(snapshot.airline.id ?? "", aircraftId);
+  await deleteFutureFlightsForSchedules(removedScheduleIds);
+  await Promise.all(schedules.map(saveSchedule));
+  if (flights.length > 0) {
+    await saveFlights(dedupeGeneratedFlights(keptFlights, flights));
+  }
+  await markRoutesScheduled(snapshot, schedules);
+  await recordScheduleReplacedEvent(snapshot, schedules, previews.reduce((sum, preview) => sum + preview.economics.weekly_profit, 0), flights.length);
+  await reconcileNotificationsAfterMutation(request, config);
+
+  return jsonResponse({ flights, previews, schedules }, { status: 200 });
 }
 
 async function scheduleRequest(request: Request, url: URL, config: BffConfig): Promise<Response> {
@@ -303,6 +287,9 @@ async function scheduleRequest(request: Request, url: URL, config: BffConfig): P
   }
   if (request.method === "POST" && url.pathname === "/operations/schedules") {
     return activateSchedule(request, config);
+  }
+  if (request.method === "PUT" && url.pathname === "/operations/schedules") {
+    return replaceSchedules(request, config);
   }
   if (request.method === "GET" && url.pathname === "/operations/schedules") {
     return listSchedules(request, config);

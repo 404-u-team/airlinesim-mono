@@ -23,6 +23,7 @@ export async function handleFuelRequest(
   return jsonResponse({ error: { code: "FUEL_NOT_FOUND", message: "Fuel endpoint not found." } }, { status: 404 });
 }
 
+export { closeFuelSocket, openFuelSocket } from "./websocket";
 export async function initializeFuelModule(_config: BffConfig): Promise<void> {
   await loadFuelPriceStore();
   startFuelPriceScheduler();

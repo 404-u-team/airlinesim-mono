@@ -23,8 +23,7 @@ type PatchRouteRequest = {
   status?: StoredRoute["status"];
 };
 
-const DEFAULT_ROUTE_OPPORTUNITY_LIMIT = 24;
-const MAX_ROUTE_OPPORTUNITY_LIMIT = 500;
+const DEFAULT_ROUTE_OPPORTUNITY_LIMIT = Number.POSITIVE_INFINITY;
 
 export async function handleRoutesRequest(
   request: Request,
@@ -268,6 +267,18 @@ function routeErrorResponse(error: unknown): Response {
   return jsonResponse({ error: { code: "ROUTE_ERROR", message } }, { status: 500 });
 }
 
+function routeOpportunityLimit(searchParams: URLSearchParams): number {
+  const rawLimit = searchParams.get("limit");
+  if (!rawLimit) {
+    return DEFAULT_ROUTE_OPPORTUNITY_LIMIT;
+  }
+  const limit = Number(rawLimit);
+
+  return Number.isFinite(limit)
+    ? Math.max(1, limit)
+    : DEFAULT_ROUTE_OPPORTUNITY_LIMIT;
+}
+
 async function routeOpportunityPreviewRequest(
   request: Request,
   url: URL,
@@ -279,14 +290,6 @@ async function routeOpportunityPreviewRequest(
   }
 
   return jsonResponse({ error: { code: "METHOD_NOT_ALLOWED", message: "Method not allowed." } }, { status: 405 });
-}
-
-function routeOpportunityLimit(searchParams: URLSearchParams): number {
-  const limit = Number(searchParams.get("limit") ?? String(DEFAULT_ROUTE_OPPORTUNITY_LIMIT));
-
-  return Number.isFinite(limit)
-    ? Math.max(1, Math.min(limit, MAX_ROUTE_OPPORTUNITY_LIMIT))
-    : DEFAULT_ROUTE_OPPORTUNITY_LIMIT;
 }
 
 async function routeRequest(request: Request, url: URL, config: BffConfig): Promise<Response> {

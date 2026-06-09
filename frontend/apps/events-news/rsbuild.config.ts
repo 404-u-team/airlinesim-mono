@@ -23,7 +23,7 @@ export default defineConfig({
     pluginModuleFederation({
       dts: false,
       exposes: {
-        "./App": "./src/RemoteApp.vue",
+        "./App": "./src/EventsNewsRemoteApp.vue",
       },
       name: "eventsNews",
       shared: {

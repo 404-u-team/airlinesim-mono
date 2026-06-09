@@ -139,6 +139,7 @@ function onInput(event: Event): void {
 }
 
 function selectOption(option: AirComboboxOption): void {
+  // eslint-disable-next-line vue/custom-event-name-casing -- required by Vue v-model
   emit("update:modelValue", option.value);
   searchQuery.value = option.label;
   isOpen.value = false;

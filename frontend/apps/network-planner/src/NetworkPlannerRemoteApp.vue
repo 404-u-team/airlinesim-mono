@@ -8,6 +8,7 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import type { RouteOpportunity, StoredRoute } from "./types";
 
 import { createRoute, getRouteOpportunities, getRoutePreview, getRoutes } from "./api";
+import HubsPanel from "./components/HubsPanel.vue";
 import RouteMapPanel from "./components/RouteMapPanel.vue";
 import RoutePlannerFilters from "./components/RoutePlannerFilters.vue";
 import RoutePlannerLists from "./components/RoutePlannerLists.vue";
@@ -19,8 +20,6 @@ const props = defineProps<{
   appTheme?: "dark" | "light";
   shellPath?: string;
 }>();
-
-const ROUTE_OPPORTUNITY_LIMIT = 500;
 
 const error = ref("");
 const isCreating = ref(false);
@@ -40,6 +39,7 @@ const filters = reactive({
 });
 let filterDebounce: null | ReturnType<typeof setTimeout> = null;
 
+const isHubsView = computed(() => Boolean(props.shellPath?.includes("/airports/hubs")));
 const currentPreview = computed(() => preview.value ?? selectedOpportunity.value ?? null);
 const selectedOpportunity = computed(() =>
   opportunities.value.find((opportunity) => opportunity.destination_airport.id === selectedDestinationId.value) ?? null,
@@ -146,7 +146,7 @@ async function loadData(): Promise<void> {
 
   try {
     const [opportunityResponse, routeResponse] = await Promise.all([
-      getRouteOpportunities({ ...filters, aircraftId: selectedAircraftId.value, limit: ROUTE_OPPORTUNITY_LIMIT }),
+      getRouteOpportunities({ ...filters, aircraftId: selectedAircraftId.value }),
       getRoutes(),
     ]);
     opportunities.value = opportunityResponse.opportunities;
@@ -228,7 +228,15 @@ const tMap = {
 
 <template>
   <section class="route-planner-shell h-full overflow-y-auto bg-background p-3 text-body text-text-primary sm:p-4 xl:overflow-hidden">
-    <div class="route-planner-frame flex min-h-full flex-col gap-3 xl:h-full xl:min-h-0">
+    <HubsPanel
+      v-if="isHubsView"
+      :app-locale="props.appLocale"
+      :t="tr"
+    />
+    <div
+      v-else
+      class="route-planner-frame flex min-h-full flex-col gap-3 xl:h-full xl:min-h-0"
+    >
       <div class="flex flex-col gap-3 border-b border-border pb-3 lg:flex-row lg:items-center lg:justify-between">
         <div class="min-w-0">
           <h1 class="text-h2">

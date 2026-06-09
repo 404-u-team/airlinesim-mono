@@ -7,7 +7,7 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 
 import type { EventItem, EventsResponse, NotificationItem } from "./types";
 
-import { getEvents, getNotifications, markAllRead, markRead } from "./api";
+import { getEvents, getNotifications, ignoreNotification, markAllRead, markRead } from "./api";
 import { type EventMessageKey, t } from "./i18n";
 
 const props = withDefaults(defineProps<{
@@ -23,7 +23,7 @@ const error = ref("");
 const events = ref<EventsResponse | null>(null);
 const filters = reactive({ category: "", severity: "" });
 const isLoading = ref(false);
-const notificationState = ref<"active" | "resolved">("active");
+const notificationState = ref<NotificationItem["state"]>("active");
 const notifications = ref<NotificationItem[]>([]);
 let unsubscribeEvents: (() => void) | null = null;
 let unsubscribeNotifications: (() => void) | null = null;
@@ -59,10 +59,37 @@ function date(value: string): string {
   return new Intl.DateTimeFormat(props.appLocale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
-function details(parameters: Record<string, boolean | number | string>): string {
-  return Object.values(parameters).slice(0, 4).map((value) =>
-    typeof value === "number" ? new Intl.NumberFormat(props.appLocale, { maximumFractionDigits: 2 }).format(value) : String(value),
-  ).join(" · ");
+function describe(parameters: Record<string, boolean | number | string>): string {
+  // Warning events carry the underlying notification code; show its human-readable message.
+  const notificationCode = parameters.notification_code;
+  if (typeof notificationCode === "string") {
+    const text = message.value(`notification.${notificationCode}` as EventMessageKey);
+    if (text) {
+      return text;
+    }
+  }
+
+  return humanizeParams(parameters);
+}
+
+function formatValue(value: boolean | number | string): string {
+  return typeof value === "number"
+    ? new Intl.NumberFormat(props.appLocale, { maximumFractionDigits: 2 }).format(value)
+    : String(value);
+}
+
+function humanizeParams(parameters: Record<string, boolean | number | string>): string {
+  return Object.entries(parameters)
+    .filter(([key]) => key !== "notification_code" && !key.endsWith("_id"))
+    .slice(0, 4)
+    .map(([key, value]) => `${titleize(key)}: ${formatValue(value)}`)
+    .join(" · ");
+}
+
+async function ignore(notification: NotificationItem): Promise<void> {
+  await ignoreNotification(notification.id);
+  airlineSimEventBus.emit("notifications:invalidated", { reason: "ignored", source: "events-news" });
+  await load();
 }
 
 async function load(): Promise<void> {
@@ -99,6 +126,12 @@ async function readAll(): Promise<void> {
   await load();
 }
 
+function titleize(key: string): string {
+  const spaced = key.replaceAll("_", " ");
+
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
 function tone(severity: EventItem["severity"]): "danger-soft" | "primary-soft" | "success-soft" | "warning-soft" {
   return severity === "info" ? "primary-soft" : `${severity}-soft`;
 }
@@ -108,8 +141,7 @@ function tone(severity: EventItem["severity"]): "danger-soft" | "primary-soft" |
   <section class="h-full overflow-y-auto overflow-x-hidden bg-background p-4 text-body text-text-primary sm:p-6">
     <header class="flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
       <div>
-        <AirBadge :label="isNotificationsView ? message('tab.notifications') : message('tab.feed')" variant="primary-soft" />
-        <h1 class="mt-4 text-h2">
+        <h1 class="text-h2">
           {{ message("title") }}
         </h1>
         <p class="mt-2 max-w-3xl text-text-muted">
@@ -186,7 +218,7 @@ function tone(severity: EventItem["severity"]): "danger-soft" | "primary-soft" |
             <AirBadge :label="message(`severity.${event.severity}`)" :variant="tone(event.severity)" />
           </div>
           <p class="mt-3 text-text-muted">
-            {{ details(event.parameters) }}
+            {{ describe(event.parameters) }}
           </p>
           <AirButton
             class="mt-4"
@@ -208,6 +240,12 @@ function tone(severity: EventItem["severity"]): "danger-soft" | "primary-soft" |
           @click="notificationState = 'active'"
         />
         <AirButton
+          :label="message('state.ignored')"
+          size="sm"
+          :variant="notificationState === 'ignored' ? 'primary' : 'primary-soft'"
+          @click="notificationState = 'ignored'"
+        />
+        <AirButton
           :label="message('state.resolved')"
           size="sm"
           :variant="notificationState === 'resolved' ? 'primary' : 'primary-soft'"
@@ -225,23 +263,36 @@ function tone(severity: EventItem["severity"]): "danger-soft" | "primary-soft" |
         {{ message("empty.notifications") }}
       </p>
       <div class="mt-5 grid gap-3 lg:grid-cols-2">
-        <button
+        <article
           v-for="notification in notifications"
           :key="notification.id"
-          class="rounded-lg border bg-surface p-4 text-left hover:bg-surface-subtle"
+          class="rounded-lg border bg-surface p-4"
           :class="notification.is_read ? 'border-border' : 'border-primary'"
-          type="button"
-          @click="openNotification(notification)"
         >
           <div class="flex items-start justify-between gap-3">
             <strong>{{ message(`notification.${notification.code}` as EventMessageKey) }}</strong>
             <AirBadge :label="message(`severity.${notification.severity}`)" :variant="tone(notification.severity)" />
           </div>
           <p class="mt-2 text-text-muted">
-            {{ details(notification.parameters) }}
+            {{ describe(notification.parameters) }}
           </p>
           <time class="mt-2 block text-caption text-text-muted">{{ date(notification.last_seen_at) }}</time>
-        </button>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <AirButton
+              :label="message('action.open')"
+              size="sm"
+              variant="primary-soft"
+              @click="openNotification(notification)"
+            />
+            <AirButton
+              v-if="notification.state === 'active'"
+              :label="message('action.ignore')"
+              size="sm"
+              variant="warning-soft"
+              @click="ignore(notification)"
+            />
+          </div>
+        </article>
       </div>
     </template>
   </section>

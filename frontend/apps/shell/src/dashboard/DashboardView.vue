@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AirBadge, AirButton } from "@airlinesim/air-ui";
+import { AirButton } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
 import { type Locale, translate } from "@airlinesim/i18n";
 import { AlertTriangle, Building2, MapPin, Plane, Route, WifiOff } from "@lucide/vue";
@@ -11,6 +11,7 @@ import type { DashboardMapState, DashboardSummary } from "./types";
 import MapControls from "../components/MapControls.vue";
 import SvelteWrapper from "../components/SvelteWrapper.vue";
 import { type ShellMessageKey, shellMessages } from "../i18n/messages";
+import { ignore as ignoreNotification } from "../notifications/state";
 import { getDashboardMapState, getDashboardSummary } from "./api";
 import DashboardAlerts from "./DashboardAlerts.vue";
 import DashboardMetricStrip from "./DashboardMetricStrip.vue";
@@ -98,6 +99,12 @@ function formatMoney(value: number): string {
 
 function formatNumber(value: number | undefined): string {
   return new Intl.NumberFormat(props.appLocale, { maximumFractionDigits: 0 }).format(value ?? 0);
+}
+
+async function ignoreAlert(alert: DashboardSummary["alerts"][number]): Promise<void> {
+  await ignoreNotification(alert.id);
+  airlineSimEventBus.emit("notifications:invalidated", { reason: "ignored", source: "shell" });
+  await loadDashboard();
 }
 
 async function loadDashboard(): Promise<void> {
@@ -197,11 +204,7 @@ async function refreshDashboard(): Promise<void> {
 
             <div class="absolute left-3 top-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-col gap-3 sm:left-4 sm:top-4 sm:max-w-md">
               <div class="rounded-lg border border-border bg-surface/95 p-4 shadow-sm backdrop-blur">
-                <AirBadge
-                  :label="t('dashboard.badge')"
-                  variant="primary-soft"
-                />
-                <h1 class="mt-3 text-h2">
+                <h1 class="text-h2">
                   {{ t("dashboard.title") }}
                 </h1>
                 <p class="mt-2 max-h-10 overflow-hidden text-body text-text-muted">
@@ -317,6 +320,7 @@ async function refreshDashboard(): Promise<void> {
             <DashboardAlerts
               :alerts="summary.alerts"
               :app-locale="props.appLocale"
+              @ignore="ignoreAlert"
             />
             <DashboardProgressNav
               :app-locale="props.appLocale"

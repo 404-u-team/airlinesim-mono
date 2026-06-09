@@ -12,6 +12,9 @@ const props = defineProps<{
   alerts: DashboardAlert[];
   appLocale: Locale;
 }>();
+const emit = defineEmits<{
+  ignore: [alert: DashboardAlert];
+}>();
 
 const router = useRouter();
 const t = computed(() => (key: ShellMessageKey): string =>
@@ -78,6 +81,13 @@ function variantFor(alert: DashboardAlert): "danger-soft" | "primary-soft" | "su
           size="sm"
           variant="primary-soft"
           @click="openAlert(alert)"
+        />
+        <AirButton
+          class="mt-3 ml-2"
+          :label="t('dashboard.ignoreAction')"
+          size="sm"
+          variant="warning-soft"
+          @click="emit('ignore', alert)"
         />
       </article>
       <p

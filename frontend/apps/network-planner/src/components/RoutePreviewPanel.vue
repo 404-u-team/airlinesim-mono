@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { AirBadge, AirButton } from "@airlinesim/air-ui";
+import { computed, ref } from "vue";
 
 import type { NetworkMessageKey } from "../i18n";
 import type { RouteOpportunity } from "../types";
+
+import DemandExplainerModal from "./DemandExplainerModal.vue";
 
 const props = defineProps<{
   currentPreview: null | RouteOpportunity;
@@ -19,8 +22,28 @@ const emit = defineEmits<{
   "create-selected-route": [];
 }>();
 
+const DEFAULT_DEPARTURE_HOUR = 9;
+const TURNAROUND_HOURS = 1.5;
+
+const showDemandInfo = ref(false);
+
+// Estimated round-trip block time (both legs + turnaround); used to flag overnight rotations
+// that cross 24:00 from a standard daytime departure.
+const roundTripHours = computed(() => {
+  const distance = props.currentPreview?.demand.distance_km ?? 0;
+
+  return Math.max(0.75, distance / 780 + 0.35) * 2 + TURNAROUND_HOURS;
+});
+const returnsNextDay = computed(() => DEFAULT_DEPARTURE_HOUR + roundTripHours.value > 24);
+
 function airportCode(airport: RouteOpportunity["destination_airport"]): string {
   return airport.iata_code || airport.icao_code || airport.id || "-";
+}
+
+function formatDuration(hours: number): string {
+  const whole = Math.floor(hours);
+
+  return `${String(whole)}h ${String(Math.round((hours - whole) * 60))}m`;
 }
 
 function reasonLabel(reason: { code: string; message: string }): string {
@@ -30,14 +53,22 @@ function reasonLabel(reason: { code: string; message: string }): string {
 </script>
 
 <template>
-  <aside class="h-full overflow-y-auto bg-surface p-3">
+  <aside class="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-surface">
+    <div class="border-b border-border px-4 py-3">
+      <h2 class="text-subtitle">
+        {{ t("panel.preview") }}
+      </h2>
+    </div>
     <p
       v-if="!currentPreview"
-      class="text-body text-text-muted"
+      class="p-4 text-body text-text-muted"
     >
       {{ t("preview.empty") }}
     </p>
-    <template v-else>
+    <div
+      v-else
+      class="min-h-0 flex-1 overflow-y-auto p-4"
+    >
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0 flex-1">
           <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2">
@@ -69,23 +100,51 @@ function reasonLabel(reason: { code: string; message: string }): string {
           :variant="recommendationVariant(currentPreview.recommendation)"
         />
       </div>
-      <div class="mt-3 grid gap-2">
-        <div class="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
+      <div class="mt-4 grid grid-cols-2 gap-2">
+        <div class="rounded-md border border-border bg-background px-3 py-2">
           <span class="text-caption text-text-muted">{{ t("metric.distance") }}</span>
-          <span class="text-subtitle">{{ formatNumber(currentPreview.demand.distance_km) }} {{ t("metric.km") }}</span>
+          <p class="text-subtitle">
+            {{ formatNumber(currentPreview.demand.distance_km) }} {{ t("metric.km") }}
+          </p>
         </div>
-        <div class="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
-          <span class="text-caption text-text-muted">{{ t("metric.weekDemand") }}</span>
-          <span class="text-subtitle">{{ formatNumber(currentPreview.demand.origin_daily_passengers) }} {{ t("metric.paxPerDay") }}</span>
+        <div class="rounded-md border border-border bg-background px-3 py-2">
+          <span class="flex items-center gap-1 text-caption text-text-muted">
+            {{ t("metric.weekDemand") }}
+            <button
+              :aria-label="t('demand.info')"
+              class="grid size-4 shrink-0 place-items-center rounded-full border border-border text-[10px] font-semibold leading-none text-text-muted transition hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+              :title="t('demand.info')"
+              type="button"
+              @click="showDemandInfo = true"
+            >
+              i
+            </button>
+          </span>
+          <p class="text-subtitle">
+            {{ formatNumber(currentPreview.demand.origin_daily_passengers) }}
+          </p>
         </div>
-        <div class="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
+        <div class="col-span-2 flex items-center justify-between rounded-md border border-border bg-background px-3 py-2">
+          <div>
+            <span class="text-caption text-text-muted">{{ t("metric.roundTrip") }}</span>
+            <p class="text-subtitle">
+              {{ formatDuration(roundTripHours) }}
+            </p>
+          </div>
+          <AirBadge
+            v-if="returnsNextDay"
+            :label="t('metric.nextDay')"
+            variant="warning-soft"
+          />
+        </div>
+        <div class="col-span-2 rounded-md border border-border bg-background px-3 py-2">
           <span class="text-caption text-text-muted">{{ t("metric.profit") }}</span>
-          <span
+          <p
             class="text-subtitle"
             :class="currentPreview.economics.estimated_profit_per_flight > 0 ? 'text-success' : 'text-error'"
           >
             {{ formatMoney(currentPreview.economics.estimated_profit_per_flight) }}
-          </span>
+          </p>
         </div>
       </div>
       <div
@@ -105,7 +164,7 @@ function reasonLabel(reason: { code: string; message: string }): string {
         </ul>
       </div>
 
-      <div class="mt-3 rounded-lg border border-border bg-background p-3">
+      <div class="mt-3 rounded-md border border-border bg-background p-3">
         <p class="text-caption text-text-muted">
           {{ t("preview.fleet") }}
         </p>
@@ -151,7 +210,17 @@ function reasonLabel(reason: { code: string; message: string }): string {
         variant="warning"
         @click="emit('create-selected-route')"
       />
-    </template>
+    </div>
+
+    <DemandExplainerModal
+      v-if="currentPreview"
+      :demand="currentPreview.demand"
+      :format-money="formatMoney"
+      :format-number="formatNumber"
+      :open="showDemandInfo"
+      :t="t"
+      @close="showDemandInfo = false"
+    />
   </aside>
 </template>
 

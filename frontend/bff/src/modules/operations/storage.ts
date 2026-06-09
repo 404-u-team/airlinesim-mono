@@ -1,87 +1,81 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+/* eslint-disable @typescript-eslint/require-await -- storage API is async by contract over a synchronous SQLite store. */
+import { resolve } from "node:path";
 
 import type { StoredFlight, StoredSchedule } from "./types";
 
-const flightsPath = resolve(import.meta.dir, "../../../data/game-state/flights.json");
-const schedulesPath = resolve(import.meta.dir, "../../../data/game-state/schedules.json");
-let flightsMutationQueue: Promise<unknown> = Promise.resolve();
-let schedulesMutationQueue: Promise<unknown> = Promise.resolve();
+import { readDocument, writeDocument } from "../../db/database";
 
-export async function listFlightsForAirline(airlineId: string): Promise<StoredFlight[]> {
-  const flights = await readArray<StoredFlight>(flightsPath);
+const flightsLegacyPath = resolve(import.meta.dir, "../../../data/game-state/flights.json");
+const schedulesLegacyPath = resolve(import.meta.dir, "../../../data/game-state/schedules.json");
 
-  return flights.filter((flight) => flight.airline_id === airlineId);
-}
+export async function deleteFutureFlightsForSchedules(scheduleIds: string[]): Promise<void> {
+  if (scheduleIds.length === 0) {
+    return;
+  }
+  const targetIds = new Set(scheduleIds);
+  const currentFlights = readFlights();
+  const remaining = currentFlights.filter(
+    (flight) => !(targetIds.has(flight.schedule_id) && flight.status === "scheduled"),
+  );
 
-export async function listSchedulesForAirline(airlineId: string): Promise<StoredSchedule[]> {
-  const schedules = await readArray<StoredSchedule>(schedulesPath);
-
-  return schedules.filter((schedule) => schedule.airline_id === airlineId);
-}
-
-export async function saveFlights(nextFlights: StoredFlight[]): Promise<void> {
-  await queuedFlightsMutation(async () => {
-    const currentFlights = await readArray<StoredFlight>(flightsPath);
-    const nextById = new Map(nextFlights.map((flight) => [flight.id, flight]));
-    const merged = [
-      ...currentFlights.filter((flight) => !nextById.has(flight.id)),
-      ...nextFlights,
-    ];
-
-    await writeArray(flightsPath, merged);
-  });
-}
-
-export async function saveSchedule(schedule: StoredSchedule): Promise<StoredSchedule> {
-  return queuedSchedulesMutation(async () => {
-    const schedules = await readArray<StoredSchedule>(schedulesPath);
-    const existingIndex = schedules.findIndex((item) => item.id === schedule.id);
-
-    if (existingIndex >= 0) {
-      schedules[existingIndex] = schedule;
-    } else {
-      schedules.push(schedule);
-    }
-
-    await writeArray(schedulesPath, schedules);
-
-    return schedule;
-  });
-}
-
-async function queuedFlightsMutation<TValue>(mutation: () => Promise<TValue>): Promise<TValue> {
-  const next = flightsMutationQueue.then(mutation, mutation);
-  flightsMutationQueue = next.catch(() => undefined);
-
-  return next;
-}
-
-async function queuedSchedulesMutation<TValue>(mutation: () => Promise<TValue>): Promise<TValue> {
-  const next = schedulesMutationQueue.then(mutation, mutation);
-  schedulesMutationQueue = next.catch(() => undefined);
-
-  return next;
-}
-
-async function readArray<TValue>(path: string): Promise<TValue[]> {
-  try {
-    const raw = await readFile(path, "utf8");
-    const payload = JSON.parse(raw) as unknown;
-
-    return Array.isArray(payload) ? (payload as TValue[]) : [];
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      return [];
-    }
-    throw error;
+  if (remaining.length !== currentFlights.length) {
+    writeDocument("flights", remaining);
   }
 }
 
-async function writeArray(path: string, value: unknown[]): Promise<void> {
-  await mkdir(dirname(path), { recursive: true });
+export async function deleteSchedulesForAircraft(airlineId: string, aircraftId: string): Promise<string[]> {
+  const schedules = readSchedules();
+  const removed = schedules.filter(
+    (schedule) => schedule.airline_id === airlineId && schedule.aircraft_id === aircraftId,
+  );
+  if (removed.length === 0) {
+    return [];
+  }
+  const removedIds = new Set(removed.map((schedule) => schedule.id));
 
-  const tmpPath = `${path}.${crypto.randomUUID()}.tmp`;
-  await writeFile(tmpPath, JSON.stringify(value, null, 2));
-  await rename(tmpPath, path);
+  writeDocument("schedules", schedules.filter((schedule) => !removedIds.has(schedule.id)));
+
+  return [...removedIds];
+}
+
+export async function listFlightsForAirline(airlineId: string): Promise<StoredFlight[]> {
+  return readFlights().filter((flight) => flight.airline_id === airlineId);
+}
+
+export async function listSchedulesForAirline(airlineId: string): Promise<StoredSchedule[]> {
+  return readSchedules().filter((schedule) => schedule.airline_id === airlineId);
+}
+
+export async function saveFlights(nextFlights: StoredFlight[]): Promise<void> {
+  const currentFlights = readFlights();
+  const nextById = new Map(nextFlights.map((flight) => [flight.id, flight]));
+  const merged = [
+    ...currentFlights.filter((flight) => !nextById.has(flight.id)),
+    ...nextFlights,
+  ];
+
+  writeDocument("flights", merged);
+}
+
+export async function saveSchedule(schedule: StoredSchedule): Promise<StoredSchedule> {
+  const schedules = readSchedules();
+  const existingIndex = schedules.findIndex((item) => item.id === schedule.id);
+
+  if (existingIndex >= 0) {
+    schedules[existingIndex] = schedule;
+  } else {
+    schedules.push(schedule);
+  }
+
+  writeDocument("schedules", schedules);
+
+  return schedule;
+}
+
+function readFlights(): StoredFlight[] {
+  return readDocument<StoredFlight[]>("flights", [], flightsLegacyPath);
+}
+
+function readSchedules(): StoredSchedule[] {
+  return readDocument<StoredSchedule[]>("schedules", [], schedulesLegacyPath);
 }

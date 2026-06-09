@@ -17,8 +17,10 @@
     "@airlinesim/event-bus": "workspace:*",
     "@airlinesim/game-sdk": "workspace:*",
     "@airlinesim/i18n": "workspace:*",
+    "chart.js": "^4.5.1",
     "tailwindcss": "^4.2.2",
-    "vue": "^3.5.32"
+    "vue": "^3.5.32",
+    "vue-chartjs": "^5.3.3"
   },
   "devDependencies": {
     "@airlinesim/eslint-config": "workspace:*",

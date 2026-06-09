@@ -20,6 +20,7 @@ export type OperationReasonCode =
   | "AIRCRAFT_MAINTENANCE_LOW"
   | "AIRCRAFT_NOT_FOUND"
   | "AIRCRAFT_NOT_READY"
+  | "AIRCRAFT_OUT_OF_POSITION"
   | "AIRCRAFT_RANGE_TOO_SHORT"
   | "AIRPORT_DATA_INCOMPLETE"
   | "AIRPORT_NIGHT_OPS_LIMITED"
@@ -40,6 +41,7 @@ export type SchedulePattern = {
   days_of_week: number[];
   departure_local_time: string;
   mode: "daily" | "weekly";
+  round_trip: boolean;
   timezone?: string;
   turnaround_minutes: number;
 };
@@ -69,6 +71,9 @@ export type StoredFlight = {
   flight_number: string;
   id: string;
   origin_airport_id: string;
+  // Derived on read: the aircraft is not at this flight's origin when it is due to
+  // depart (e.g. a ferry leg moved it elsewhere). Not persisted.
+  out_of_position?: boolean;
   route_id: string;
   schedule_id: string;
   status: FlightStatus;

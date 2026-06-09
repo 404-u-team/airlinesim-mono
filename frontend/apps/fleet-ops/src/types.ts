@@ -1,3 +1,20 @@
+export type AirportSearchOption = {
+  iata_code?: string;
+  icao_code?: string;
+  id: string;
+  intl_name?: string;
+  local_name?: string;
+  municipality?: string;
+};
+
+export type AirportSearchResponse = {
+  airports: AirportSearchOption[];
+};
+
+export type CreateRouteResponse = {
+  route: OperationRoute;
+};
+
 export type CreateScheduleResponse = SchedulePreviewResponse & {
   flights: FlightCard[];
   schedule: {
@@ -156,15 +173,23 @@ export type FleetReasonCode =
   | "FLEET_TAIL_NUMBER_EXISTS"
   | "FLEET_TAIL_NUMBER_INVALID";
 
+export type FlightAirportRef = {
+  iata_code?: string;
+  label?: string;
+};
+
 export type FlightCard = {
   aircraft_id: string;
   arrival_at: string;
   departure_at: string;
+  destination_airport?: FlightAirportRef;
   destination_airport_id: string;
   expected: FlightFinancials;
   flight_number: string;
   id: string;
+  origin_airport?: FlightAirportRef;
   origin_airport_id: string;
+  out_of_position?: boolean;
   route_id: string;
   status: "boarding" | "cancelled" | "completed" | "in_flight" | "scheduled";
 };
@@ -198,6 +223,19 @@ export type FuelPriceSnapshot = {
   updated_at: string;
 };
 
+export type HubOption = {
+  airport_id: string;
+  fee: number;
+  is_base: boolean;
+  label: string;
+  profit: number;
+  routes: number;
+};
+
+export type HubsResponse = {
+  hubs: HubOption[];
+};
+
 export type OperationAircraftOption = {
   aircraft: FleetOwnedAircraftCard;
   blockers: OperationReason[];
@@ -216,15 +254,67 @@ export type OperationRoute = {
     origin_daily_passengers: number;
   };
   destination_airport: null | {
+    iata_code?: string;
     label: string;
   };
   destination_airport_id: string;
+  economics_snapshot?: {
+    estimated_profit_per_flight: number;
+  };
   id: string;
   origin_airport: null | {
+    iata_code?: string;
     label: string;
   };
   origin_airport_id: string;
   status: string;
+};
+
+export type OperationSchedule = {
+  aircraft_id: string;
+  id: string;
+  pattern: {
+    days_of_week: number[];
+    departure_local_time: string;
+    round_trip: boolean;
+    turnaround_minutes: number;
+  };
+  route_id: string;
+  status: "active" | "draft" | "paused";
+};
+
+export type ReplaceScheduleResponse = {
+  flights: FlightCard[];
+  previews: Array<SchedulePreviewResponse["preview"]>;
+  schedules: OperationSchedule[];
+};
+
+export type RouteAirportRef = {
+  coordinates?: null | { latitude: number; longitude: number };
+  gate_fee?: number;
+  iata_code?: string;
+  icao_code?: string;
+  id?: string;
+  label: string;
+  max_runway_length_m?: number;
+  municipality?: string;
+  runway_fee?: number;
+  stand_fee?: number;
+  works_at_night?: boolean;
+};
+
+export type RouteOpportunitiesResponse = {
+  opportunities: RouteOpportunityItem[];
+  origin_airport: null | RouteAirportRef;
+};
+
+export type RouteOpportunityItem = {
+  demand: { destination_daily_passengers: number; distance_km: number; origin_daily_passengers: number };
+  destination_airport: RouteAirportRef;
+  economics: { estimated_profit_per_flight: number };
+  existing_route_id?: string;
+  origin_airport: RouteAirportRef;
+  recommendation: "blocked" | "open" | "risky";
 };
 
 export type ScheduleOptionsResponse = {
@@ -232,10 +322,12 @@ export type ScheduleOptionsResponse = {
   default_pattern: {
     days_of_week: number[];
     departure_local_time: string;
+    round_trip?: boolean;
     turnaround_minutes: number;
   };
   route: null | OperationRoute;
   routes: OperationRoute[];
+  schedules: OperationSchedule[];
 };
 
 export type SchedulePreviewResponse = {

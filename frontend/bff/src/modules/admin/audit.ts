@@ -1,7 +1,8 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+/* eslint-disable @typescript-eslint/require-await -- audit API is async by contract over a synchronous SQLite store. */
+import { resolve } from "node:path";
 
 import { getUserAuthorization } from "../../auth";
+import { readDocument, writeDocument } from "../../db/database";
 
 export type AdminAuditEntry = {
   action: string;
@@ -15,7 +16,7 @@ export type AdminAuditEntry = {
   user_id: string;
 };
 
-const auditPath = resolve(import.meta.dir, "../../../data/game-state/admin-audit.json");
+const auditLegacyPath = resolve(import.meta.dir, "../../../data/game-state/admin-audit.json");
 
 export function adminActorId(request: Request): string {
   const token = getUserAuthorization(request)?.slice("Bearer ".length);
@@ -37,16 +38,7 @@ export function adminActorId(request: Request): string {
 }
 
 export async function listAdminAudit(): Promise<AdminAuditEntry[]> {
-  try {
-    const payload = JSON.parse(await readFile(auditPath, "utf8")) as unknown;
-
-    return Array.isArray(payload) ? payload as AdminAuditEntry[] : [];
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      return [];
-    }
-    throw error;
-  }
+  return readDocument<AdminAuditEntry[]>("admin-audit", [], auditLegacyPath);
 }
 
 export async function recordAdminAudit(entry: Omit<AdminAuditEntry, "id" | "occurred_at">): Promise<void> {
@@ -56,8 +48,5 @@ export async function recordAdminAudit(entry: Omit<AdminAuditEntry, "id" | "occu
     id: crypto.randomUUID(),
     occurred_at: new Date().toISOString(),
   };
-  await mkdir(dirname(auditPath), { recursive: true });
-  const temporaryPath = `${auditPath}.${crypto.randomUUID()}.tmp`;
-  await writeFile(temporaryPath, JSON.stringify([next, ...entries].slice(0, 1000), null, 2));
-  await rename(temporaryPath, auditPath);
+  writeDocument("admin-audit", [next, ...entries].slice(0, 1000));
 }

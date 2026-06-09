@@ -25,7 +25,7 @@ export default defineConfig({
     pluginModuleFederation({
       dts: false,
       exposes: {
-        "./App": "./src/RemoteApp.vue",
+        "./App": "./src/NetworkPlannerRemoteApp.vue",
       },
       name: "networkPlanner",
       remotes: {

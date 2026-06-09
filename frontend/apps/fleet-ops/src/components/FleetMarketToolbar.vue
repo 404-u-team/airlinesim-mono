@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AirBadge, AirButton, AirMetricCard, AirSelect, AirTextField } from "@airlinesim/air-ui";
+import { AirButton, AirMetricCard, AirSelect, AirTextField } from "@airlinesim/air-ui";
 
 import type { FleetMarketResponse } from "../types";
 
@@ -36,11 +36,7 @@ function updateFilter(key: FilterKey, value: string): void {
 <template>
   <div class="flex flex-col gap-5 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
     <div class="min-w-0">
-      <AirBadge
-        :label="t('market.badge')"
-        variant="primary-soft"
-      />
-      <h1 class="mt-4 text-h2">
+      <h1 class="text-h2">
         {{ t("market.title") }}
       </h1>
       <p class="mt-2 max-w-3xl text-body text-text-muted">

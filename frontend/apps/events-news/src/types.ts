@@ -25,7 +25,7 @@ export type NotificationItem = {
   last_seen_at: string;
   parameters: Record<string, boolean | number | string>;
   severity: "danger" | "info" | "success" | "warning";
-  state: "active" | "resolved";
+  state: "active" | "ignored" | "resolved";
   target_path: string;
 };
 

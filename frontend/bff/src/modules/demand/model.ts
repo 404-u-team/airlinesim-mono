@@ -25,6 +25,29 @@ export type DemandRegion = {
   tourism_score?: number;
 };
 
+// Per-pair factor breakdown so the UI can explain *why* a demand number is what it
+// is (and surface that the calibration constant K is a game knob, not a real value).
+export type PassengerDemandBreakdown = {
+  affinityFactor: number;
+  airportFactor: number;
+  baseDemand: number;
+  business: number;
+  calibrationK: number;
+  destinationGdpPerCapita: number;
+  destinationPopulation: number;
+  diaspora: number;
+  directionFactorDestinationToOrigin: number;
+  directionFactorOriginToDestination: number;
+  distanceImpedance: number;
+  gdpElasticity: number;
+  gravity: number;
+  originGdpPerCapita: number;
+  originPopulation: number;
+  populationElasticity: number;
+  sameCountry: boolean;
+  tourism: number;
+};
+
 export type PassengerDemandResult = {
   business: number;
   destinationToOrigin: number;
@@ -45,26 +68,64 @@ export function calculatePassengerDemand(
   distanceKm: number,
   existing: DemandAffinity = {},
 ): PassengerDemandResult {
-  const sameCountry = Boolean(originRegion.country_id && originRegion.country_id === destinationRegion.country_id);
-  const business = clamp(existing.business ?? regionalAffinity(originRegion.business_score, destinationRegion.business_score, distanceKm, sameCountry), 0, 1);
-  const tourism = clamp(existing.tourism ?? regionalAffinity(originRegion.tourism_score, destinationRegion.tourism_score, distanceKm, sameCountry), 0, 1);
-  const diaspora = clamp(existing.diaspora ?? diasporaAffinity(originRegion, destinationRegion, distanceKm, sameCountry), 0, 1);
-  const gravity = gravityDemand(originRegion, destinationRegion, distanceKm);
-  const airportFactor = Math.sqrt(airportMarketFactor(originAirport) * airportMarketFactor(destinationAirport));
-  const affinityFactor = 0.7 + 0.75 * business + 0.55 * tourism + 0.45 * diaspora + (sameCountry ? 0.22 : 0);
-  const baseDemand = gravity * airportFactor * affinityFactor;
-
-  return {
-    business: round2(business),
-    destinationToOrigin: Math.max(1, round2(baseDemand * directionFactor(destinationRegion, originRegion, business, tourism, diaspora))),
-    diaspora: round2(diaspora),
-    originToDestination: Math.max(1, round2(baseDemand * directionFactor(originRegion, destinationRegion, business, tourism, diaspora))),
-    tourism: round2(tourism),
-  };
+  return explainPassengerDemand(originAirport, destinationAirport, originRegion, destinationRegion, distanceKm, existing).result;
 }
 
 export function distanceImpedance(distanceKm: number): number {
   return 1 / (1 + Math.max(distanceKm, 50) / 1800) ** 1.25;
+}
+
+// Same computation as calculatePassengerDemand, but also returns the intermediate
+// factors. calculatePassengerDemand delegates here so the two never drift apart.
+export function explainPassengerDemand(
+  originAirport: DemandAirport,
+  destinationAirport: DemandAirport,
+  originRegion: DemandRegion,
+  destinationRegion: DemandRegion,
+  distanceKm: number,
+  existing: DemandAffinity = {},
+): { breakdown: PassengerDemandBreakdown; result: PassengerDemandResult } {
+  const sameCountry = Boolean(originRegion.country_id && originRegion.country_id === destinationRegion.country_id);
+  const business = clamp(existing.business ?? regionalAffinity(originRegion.business_score, destinationRegion.business_score, distanceKm, sameCountry), 0, 1);
+  const tourism = clamp(existing.tourism ?? regionalAffinity(originRegion.tourism_score, destinationRegion.tourism_score, distanceKm, sameCountry), 0, 1);
+  const diaspora = clamp(existing.diaspora ?? diasporaAffinity(originRegion, destinationRegion, distanceKm, sameCountry), 0, 1);
+  const impedance = distanceImpedance(distanceKm);
+  const gravity = gravityDemand(originRegion, destinationRegion, distanceKm);
+  const airportFactor = Math.sqrt(airportMarketFactor(originAirport) * airportMarketFactor(destinationAirport));
+  const affinityFactor = 0.7 + 0.75 * business + 0.55 * tourism + 0.45 * diaspora + (sameCountry ? 0.22 : 0);
+  const baseDemand = gravity * airportFactor * affinityFactor;
+  const directionAb = directionFactor(originRegion, destinationRegion, business, tourism, diaspora);
+  const directionBa = directionFactor(destinationRegion, originRegion, business, tourism, diaspora);
+
+  return {
+    breakdown: {
+      affinityFactor: round2(affinityFactor),
+      airportFactor: round2(airportFactor),
+      baseDemand: round2(baseDemand),
+      business: round2(business),
+      calibrationK: CALIBRATION_K,
+      destinationGdpPerCapita: Math.max(destinationRegion.gdp_per_capita ?? 10_000, 500),
+      destinationPopulation: Math.max(destinationRegion.population ?? 100_000, 50_000),
+      diaspora: round2(diaspora),
+      directionFactorDestinationToOrigin: round2(directionBa),
+      directionFactorOriginToDestination: round2(directionAb),
+      distanceImpedance: round2(impedance),
+      gdpElasticity: GDP_ELASTICITY,
+      gravity: round2(gravity),
+      originGdpPerCapita: Math.max(originRegion.gdp_per_capita ?? 10_000, 500),
+      originPopulation: Math.max(originRegion.population ?? 100_000, 50_000),
+      populationElasticity: POPULATION_ELASTICITY,
+      sameCountry,
+      tourism: round2(tourism),
+    },
+    result: {
+      business: round2(business),
+      destinationToOrigin: Math.max(1, round2(baseDemand * directionBa)),
+      diaspora: round2(diaspora),
+      originToDestination: Math.max(1, round2(baseDemand * directionAb)),
+      tourism: round2(tourism),
+    },
+  };
 }
 
 export function gravityDemand(left: DemandRegion, right: DemandRegion, distanceKm: number): number {

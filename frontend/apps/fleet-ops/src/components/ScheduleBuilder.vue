@@ -1,34 +1,43 @@
 <script setup lang="ts">
 import type { Locale } from "@airlinesim/i18n";
 
-import { AirBadge, AirButton, AirMetricCard, AirSelect } from "@airlinesim/air-ui";
+import { AirButton, AirSelect } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
 import { computed, onMounted, ref, watch } from "vue";
 
 import type { FleetMessageKey } from "../i18n";
-import type { OperationAircraftOption, OperationReason, OperationRoute, ScheduleOptionsResponse, SchedulePreviewResponse } from "../types";
+import type { OperationAircraftOption, OperationRoute, OperationSchedule, ScheduleOptionsResponse } from "../types";
+import type { TimelineBar } from "./schedule-types";
 
-import { createSchedule, getScheduleOptions, getSchedulePreview } from "../api";
-import { formatMoneyValue, formatNumberValue } from "../formatters";
+import { createRoute, getScheduleOptions, replaceAircraftSchedule } from "../api";
+import { formatMoneyValue } from "../formatters";
+import FerryFlightForm from "./FerryFlightForm.vue";
+import RoutePicker from "./RoutePicker.vue";
+import { barsConflict, buildBlockBars, routeCode, routeHours } from "./schedule-bars";
+import ScheduleTimeline from "./ScheduleTimeline.vue";
+import { type ScheduleBlock, useScheduleDrag } from "./useScheduleDrag";
 
 const props = defineProps<{
   appLocale: Locale;
+  appTheme?: "dark" | "light";
+  shellPath?: string;
   t: (key: FleetMessageKey | string) => string;
 }>();
 
+const TURNAROUND_MINUTES = 90;
+const initialRouteId = new URLSearchParams(props.shellPath?.split("?")[1] ?? "").get("route_id") ?? "";
+
 const aircraft = ref<OperationAircraftOption[]>([]);
-const days = ref<number[]>([1, 3, 5]);
-const departureTime = ref("09:00");
+const armedRouteId = ref("");
+const blocks = ref<ScheduleBlock[]>([]);
+const baselineSignature = ref("");
 const error = ref("");
 const isLoading = ref(false);
 const isSaving = ref(false);
-const preview = ref<null | SchedulePreviewResponse["preview"]>(null);
 const routes = ref<OperationRoute[]>([]);
 const selectedAircraftId = ref("");
-const selectedRouteId = ref("");
 const success = ref("");
-// MVP schedules generate one-way legs from the base; turnaround is a fixed default.
-const defaultTurnaroundMinutes = 90;
+const schedules = ref<OperationSchedule[]>([]);
 
 const aircraftOptions = computed(() =>
   aircraft.value.map((option) => ({
@@ -36,37 +45,194 @@ const aircraftOptions = computed(() =>
     value: option.aircraft.id ?? "",
   })),
 );
-const canActivate = computed(() => Boolean(preview.value?.canActivate && selectedAircraftId.value && selectedRouteId.value));
-const sampleFlights = computed(() => preview.value?.sample_flights ?? []);
-// getUTCDay() ordering is 0=Sunday..6=Saturday; show Monday-first for readability.
-const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
-const timeOptions = Array.from({ length: 48 }, (_unused, index) => {
-  const value = `${String(Math.floor(index / 2)).padStart(2, "0")}:${index % 2 === 0 ? "00" : "30"}`;
+const armedRoute = computed(() => routeById.value.get(armedRouteId.value));
+const placements = computed(() => {
+  const byDay = new Map<number, TimelineBar[]>();
 
-  return { label: value, value };
+  for (const block of blocks.value) {
+    for (const bar of barsForBlock(block)) {
+      byDay.set(bar.day, [...(byDay.get(bar.day) ?? []), bar]);
+    }
+  }
+
+  return [...byDay.entries()].map(([day, bars]) => ({ bars, day }));
 });
-const frequencyModes = [
-  { label: "operations.frequency.daily", mode: "daily" },
-  { label: "operations.frequency.threeWeekly", mode: "three" },
-  { label: "operations.frequency.weekly", mode: "weekly" },
-] as const;
-const routeOptions = computed(() =>
-  routes.value.map((route) => ({
-    label: routeLabel(route),
-    value: route.id,
-  })),
+const currentSignature = computed(() => signatureFor(blocks.value));
+const isDirty = computed(() => currentSignature.value !== baselineSignature.value);
+const weeklyFlights = computed(() => blocks.value.length * 2);
+const weeklyProfit = computed(() =>
+  blocks.value.reduce((total, block) => {
+    const profit = routeById.value.get(block.routeId)?.economics_snapshot?.estimated_profit_per_flight ?? 0;
+
+    return total + profit * 2;
+  }, 0),
 );
+const routeById = computed(() => new Map(routes.value.map((route) => [route.id, route])));
+
+const { drag, onBarPointerDown, startRouteDrag } = useScheduleDrag({
+  blocks,
+  hasConflict: blockHasConflict,
+  moveBlock,
+  placeBlock,
+  previewWidthForRoute: (routeId) => (routeHours(routeById.value.get(routeId)) / 24) * 100,
+  routeLabel: (routeId) => routeCode(routeById.value.get(routeId)),
+  setArmedRoute: (routeId) => {
+    armedRouteId.value = routeId;
+  },
+});
 
 onMounted(() => {
   void loadOptions();
 });
 
-watch([selectedRouteId, selectedAircraftId, days, departureTime], () => {
-  void loadPreview();
-}, { deep: true });
+watch(selectedAircraftId, () => {
+  resetBlocksForAircraft(selectedAircraftId.value);
+});
 
-async function activateSchedule(): Promise<void> {
-  if (!canActivate.value) {
+function applyOptionsResponse(response: ScheduleOptionsResponse): void {
+  aircraft.value = response.aircraft;
+  routes.value = response.routes;
+  schedules.value = response.schedules;
+  selectedAircraftId.value ||= preferredAircraftId(response);
+  armedRouteId.value ||= initialRouteId || response.route?.id || "";
+  resetBlocksForAircraft(selectedAircraftId.value);
+}
+
+function barsForBlock(block: ScheduleBlock): TimelineBar[] {
+  return buildBlockBars(block, routeById.value.get(block.routeId), TURNAROUND_MINUTES);
+}
+
+function blockHasConflict(candidate: ScheduleBlock, ignoredBlockId = ""): boolean {
+  const candidateBars = barsForBlock(candidate);
+  const otherBlocks = blocks.value.filter((block) => block.id !== ignoredBlockId);
+
+  return otherBlocks.some((block) => barsConflict(barsForBlock(block), candidateBars));
+}
+
+function dayLabel(day: number): string {
+  return new Intl.DateTimeFormat(props.appLocale, { weekday: "short" }).format(new Date(Date.UTC(2024, 0, 7 + day)));
+}
+
+function existingBlocksForAircraft(aircraftId: string): ScheduleBlock[] {
+  return schedules.value
+    .filter((schedule) => schedule.status === "active" && schedule.aircraft_id === aircraftId)
+    .flatMap((schedule) => schedule.pattern.days_of_week.map((day) => ({
+      day,
+      id: `existing-${schedule.id}-${day}`,
+      routeId: schedule.route_id,
+      saved: true,
+      time: schedule.pattern.departure_local_time,
+    })));
+}
+
+function formatMoney(value: number): string {
+  return formatMoneyValue(props.appLocale, value);
+}
+
+async function loadOptions(): Promise<void> {
+  isLoading.value = true;
+  error.value = "";
+
+  try {
+    applyOptionsResponse(await getScheduleOptions(initialRouteId || undefined));
+  } catch (loadError) {
+    error.value = loadError instanceof Error ? loadError.message : props.t("error.operations");
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+async function materializePendingRoutes(): Promise<Map<string, string>> {
+  // Routes are only created on save (deferred), so turn any "pending:" placeholders into real routes first.
+  const pendingIds = [...new Set(blocks.value.map((block) => block.routeId).filter((id) => id.startsWith("pending:")))];
+  const entries = await Promise.all(pendingIds.map(async (tempId) => {
+    const route = routeById.value.get(tempId);
+    if (!route) {
+      return null;
+    }
+    const response = await createRoute({
+      base_frequency_per_week: 3,
+      destination_airport_id: route.destination_airport_id,
+      origin_airport_id: route.origin_airport_id,
+      selected_aircraft_id: selectedAircraftId.value || undefined,
+    });
+
+    return [tempId, response.route.id] as const;
+  }));
+
+  return new Map(entries.filter((entry): entry is readonly [string, string] => entry !== null));
+}
+
+function moveBlock(barId: string, day: number, time: string): void {
+  const blockId = barId.replace(/(~r)?@\d+$/, "").replace(/~r$/, "");
+  const existingBlock = blocks.value.find((block) => block.id === blockId);
+
+  if (!existingBlock) {
+    return;
+  }
+  const candidate = { ...existingBlock, day, time };
+  if (blockHasConflict(candidate, blockId)) {
+    error.value = props.t("operations.builder.overlap");
+    return;
+  }
+  error.value = "";
+  blocks.value = blocks.value.map((block) => (block.id === blockId ? candidate : block));
+}
+
+function onFerryCreated(): void {
+  airlineSimEventBus.emit("game:snapshot-invalidated", { reason: "manual-refresh", source: "fleet-ops" });
+  void loadOptions();
+}
+
+function onRouteResolved(route: OperationRoute): void {
+  if (!routes.value.some((item) => item.id === route.id)) {
+    routes.value = [...routes.value, route];
+  }
+  armedRouteId.value = route.id;
+  error.value = "";
+}
+
+function placeBlock(day: number, time: string, routeId?: string): void {
+  const selectedRoute = routeId ?? armedRouteId.value;
+
+  if (!selectedRoute) {
+    error.value = props.t("operations.builder.armFirst");
+
+    return;
+  }
+
+  const candidate = { day, id: crypto.randomUUID(), routeId: selectedRoute, time };
+  if (blockHasConflict(candidate)) {
+    error.value = props.t("operations.builder.overlap");
+    return;
+  }
+  error.value = "";
+  armedRouteId.value = selectedRoute;
+  blocks.value = [...blocks.value, candidate];
+}
+
+function preferredAircraftId(response: ScheduleOptionsResponse): string {
+  return response.schedules.find((schedule) => schedule.status === "active")?.aircraft_id
+    ?? response.aircraft.find((option) => option.compatible)?.aircraft.id
+    ?? response.aircraft[0]?.aircraft.id
+    ?? "";
+}
+
+function removeBar(barId: string): void {
+  const blockId = barId.replace(/(~r)?@\d+$/, "").replace(/~r$/, "");
+  blocks.value = blocks.value.filter((block) => block.id !== blockId);
+}
+
+function resetBlocksForAircraft(aircraftId: string): void {
+  const next = existingBlocksForAircraft(aircraftId);
+  blocks.value = next;
+  baselineSignature.value = signatureFor(next);
+  error.value = "";
+  success.value = "";
+}
+
+async function save(): Promise<void> {
+  if (!selectedAircraftId.value || !isDirty.value) {
     return;
   }
 
@@ -75,156 +241,52 @@ async function activateSchedule(): Promise<void> {
   success.value = "";
 
   try {
-    await createSchedule(buildPayload());
+    const routeIdMap = await materializePendingRoutes();
+    await replaceAircraftSchedule({
+      aircraft_id: selectedAircraftId.value,
+      blocks: blocks.value.map((block) => ({ day: block.day, departure_local_time: block.time, route_id: routeIdMap.get(block.routeId) ?? block.routeId })),
+      round_trip: true,
+      turnaround_minutes: TURNAROUND_MINUTES,
+    });
     success.value = props.t("operations.success");
-    airlineSimEventBus.emit("schedule:activated", {
-      routeId: selectedRouteId.value,
-      source: "fleet-ops",
-    });
-    airlineSimEventBus.emit("game:snapshot-invalidated", {
-      reason: "schedule-activated",
-      source: "fleet-ops",
-    });
+    airlineSimEventBus.emit("game:snapshot-invalidated", { reason: "schedule-activated", source: "fleet-ops" });
     airlineSimEventBus.emit("events:invalidated", { reason: "schedule-activated", source: "fleet-ops" });
     airlineSimEventBus.emit("notifications:invalidated", { reason: "schedule-activated", source: "fleet-ops" });
-    airlineSimEventBus.emit("navigation:intent", {
-      source: "mfe",
-      targetPath: "/operations/live-flights",
-    });
-  } catch (loadError) {
-    error.value = loadError instanceof Error ? loadError.message : props.t("error.operations");
+    await loadOptions();
+  } catch (saveError) {
+    error.value = saveError instanceof Error ? saveError.message : props.t("error.operations");
   } finally {
     isSaving.value = false;
   }
 }
 
-function applyOptionsResponse(response: ScheduleOptionsResponse): void {
-  aircraft.value = response.aircraft;
-  routes.value = response.routes;
-  selectedRouteId.value ||= response.route?.id ?? response.routes[0]?.id ?? "";
-  selectedAircraftId.value ||= getDefaultAircraftId(response);
-  departureTime.value = response.default_pattern.departure_local_time;
-  days.value = response.default_pattern.days_of_week;
-}
-
-function buildPayload(): {
-  aircraft_id: string;
-  days_of_week: number[];
-  departure_local_time: string;
-  route_id: string;
-  turnaround_minutes: number;
-} {
-  return {
-    aircraft_id: selectedAircraftId.value,
-    days_of_week: days.value,
-    departure_local_time: departureTime.value,
-    route_id: selectedRouteId.value,
-    turnaround_minutes: defaultTurnaroundMinutes,
-  };
-}
-
-function dayLabel(day: number): string {
-  // 2024-01-07 is a Sunday (getUTCDay 0); offset by the day index for a stable weekday.
-  return new Intl.DateTimeFormat(props.appLocale, { weekday: "short" }).format(new Date(Date.UTC(2024, 0, 7 + day)));
-}
-
-function flightDuration(flight: { arrival_at: string; departure_at: string }): string {
-  const minutes = Math.max(0, Math.round((new Date(flight.arrival_at).getTime() - new Date(flight.departure_at).getTime()) / 60_000));
-
-  return `${Math.floor(minutes / 60)}${props.t("unit.hourShort")} ${minutes % 60}${props.t("unit.minuteShort")}`;
-}
-
-function formatClock(value: string): string {
-  return new Intl.DateTimeFormat(props.appLocale, { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
-}
-
-function formatMoney(value: number | undefined): string {
-  return formatMoneyValue(props.appLocale, value);
-}
-
-function formatNumber(value: number | undefined): string {
-  return formatNumberValue(props.appLocale, value);
-}
-
-function getDefaultAircraftId(response: ScheduleOptionsResponse): string {
-  return response.aircraft.find((option) => option.compatible)?.aircraft.id ?? response.aircraft[0]?.aircraft.id ?? "";
-}
-
-function isDaySelected(day: number): boolean {
-  return days.value.includes(day);
-}
-
-async function loadOptions(): Promise<void> {
-  isLoading.value = true;
-  error.value = "";
-
-  try {
-    const response = await getScheduleOptions();
-    applyOptionsResponse(response);
-    await loadPreview();
-  } catch (loadError) {
-    error.value = loadError instanceof Error ? loadError.message : props.t("error.operations");
-  } finally {
-    isLoading.value = false;
-  }
-}
-
-async function loadPreview(): Promise<void> {
-  if (!selectedRouteId.value || !selectedAircraftId.value) {
-    preview.value = null;
-    return;
-  }
-
-  try {
-    const response = await getSchedulePreview(buildPayload());
-    preview.value = response.preview;
-  } catch {
-    preview.value = null;
-  }
-}
-
-function reasonLabel(reason: OperationReason): string {
-  const key = `warning.${reason.code}` as FleetMessageKey;
-
-  return props.t(key) || reason.message;
-}
-
-function routeLabel(route: OperationRoute): string {
-  return `${route.origin_airport?.label ?? route.origin_airport_id} -> ${route.destination_airport?.label ?? route.destination_airport_id}`;
-}
-
-function setFrequency(mode: "daily" | "three" | "weekly"): void {
-  if (mode === "daily") {
-    days.value = [0, 1, 2, 3, 4, 5, 6];
-    return;
-  }
-  if (mode === "three") {
-    days.value = [1, 3, 5];
-    return;
-  }
-  days.value = [1];
-}
-
-function toggleDay(day: number): void {
-  days.value = isDaySelected(day)
-    ? days.value.filter((item) => item !== day)
-    : [...days.value, day].sort((left, right) => left - right);
+function signatureFor(list: ScheduleBlock[]): string {
+  return list
+    .map((block) => `${block.day}|${block.time}|${block.routeId}`)
+    .sort()
+    .join(";");
 }
 </script>
 
 <template>
   <section class="h-full overflow-y-auto bg-background p-4 text-body text-text-primary sm:p-6">
-    <header class="border-b border-border pb-5">
-      <AirBadge
-        label="Fleet & Ops"
-        variant="primary-soft"
-      />
-      <h1 class="mt-4 text-h2">
-        {{ props.t("operations.schedule.title") }}
-      </h1>
-      <p class="mt-2 max-w-2xl text-body text-text-muted">
-        {{ props.t("operations.schedule.subtitle") }}
-      </p>
+    <header class="flex flex-col gap-3 border-b border-border pb-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <h1 class="text-h2">
+          {{ props.t("operations.schedule.title") }}
+        </h1>
+        <p class="mt-1 max-w-2xl text-body text-text-muted">
+          {{ props.t("operations.schedule.subtitle") }}
+        </p>
+      </div>
+      <div class="flex min-w-0 flex-col gap-1.5">
+        <span class="text-caption text-text-muted">{{ props.t("operations.selectAircraft") }}</span>
+        <AirSelect
+          v-model="selectedAircraftId"
+          label="Aircraft"
+          :options="aircraftOptions"
+        />
+      </div>
     </header>
 
     <div
@@ -235,155 +297,79 @@ function toggleDay(day: number): void {
       {{ error || success }}
     </div>
 
-    <div
-      v-if="!isLoading && routes.length === 0"
-      class="mt-5 rounded-lg border border-border bg-surface p-5"
-    >
-      <p class="text-body text-text-muted">
-        {{ props.t("operations.empty.routes") }}
-      </p>
-      <AirButton
-        class="mt-4"
-        :label="props.t('action.openRoutes')"
-        variant="primary-soft"
-        @click="airlineSimEventBus.emit('navigation:intent', { source: 'mfe', targetPath: '/airports/routes' })"
-      />
-    </div>
-
-    <div
-      v-else
-      class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_26rem]"
-    >
-      <div class="rounded-lg border border-border bg-surface p-4">
-        <div class="grid gap-4 md:grid-cols-2">
-          <AirSelect
-            v-model="selectedRouteId"
-            :label="props.t('operations.selectRoute')"
-            :options="routeOptions"
-          />
-          <AirSelect
-            v-model="selectedAircraftId"
-            :label="props.t('operations.selectAircraft')"
-            :options="aircraftOptions"
-          />
-        </div>
-
-        <div class="mt-5 grid gap-3 sm:grid-cols-3">
-          <AirButton
-            v-for="freq in frequencyModes"
-            :key="freq.mode"
-            :label="props.t(freq.label)"
-            size="sm"
-            variant="primary-soft"
-            @click="setFrequency(freq.mode)"
-          />
-        </div>
-
-        <div class="mt-4 flex flex-wrap gap-2">
-          <button
-            v-for="day in weekdayOrder"
-            :key="day"
-            class="min-w-12 rounded-lg border px-3 py-2 text-caption font-medium capitalize"
-            :class="isDaySelected(day) ? 'border-primary bg-primary text-on-primary' : 'border-border bg-background text-text-muted'"
-            type="button"
-            @click="toggleDay(day)"
-          >
-            {{ dayLabel(day) }}
-          </button>
-        </div>
-
-        <div class="mt-5 flex min-w-0 flex-col gap-1.5">
-          <AirSelect
-            v-model="departureTime"
-            :label="props.t('operations.time')"
-            :options="timeOptions"
-          />
-          <span class="text-caption text-text-muted">{{ props.t("operations.time.hint") }}</span>
-        </div>
-
-        <p class="mt-4 rounded-md border border-border bg-background px-3 py-2 text-caption text-text-muted">
-          {{ props.t("operations.oneWayNote") }}
+    <div class="mt-5 grid gap-4 xl:grid-cols-[20rem_minmax(0,1fr)]">
+      <aside class="grid content-start gap-3 rounded-lg border border-border bg-surface p-3">
+        <p class="text-caption text-text-muted">
+          {{ props.t("operations.routePicker.title") }}
         </p>
-      </div>
-
-      <aside class="rounded-lg border border-border bg-surface p-4">
-        <h2 class="text-subtitle">
-          {{ props.t("operations.preview") }}
-        </h2>
-        <div class="mt-4 grid grid-cols-2 gap-3">
-          <AirMetricCard
-            :label="props.t('operations.weeklyRevenue')"
-            :value="formatMoney(preview?.economics.weekly_revenue)"
-          />
-          <AirMetricCard
-            :label="props.t('operations.weeklyCost')"
-            :value="formatMoney(preview?.economics.weekly_cost)"
-          />
-          <AirMetricCard
-            :label="props.t('operations.weeklyProfit')"
-            :tone="(preview?.economics.weekly_profit ?? 0) > 0 ? 'success' : 'warning'"
-            :value="formatMoney(preview?.economics.weekly_profit)"
-          />
-          <AirMetricCard
-            :label="props.t('operations.utilization')"
-            :value="`${formatNumber(preview?.weekly_utilization_hours)} ${props.t('unit.hourShort')}`"
-          />
-        </div>
+        <RoutePicker
+          :app-locale="props.appLocale"
+          :app-theme="props.appTheme"
+          :existing-routes="routes"
+          :initial-destination-id="armedRoute?.destination_airport_id"
+          :initial-origin-id="armedRoute?.origin_airport_id"
+          :selected-aircraft-id="selectedAircraftId"
+          :t="props.t"
+          @route-resolved="onRouteResolved"
+        />
 
         <div
-          v-if="sampleFlights.length"
-          class="mt-4"
+          v-if="armedRoute"
+          class="flex touch-none select-none items-center justify-between gap-2 rounded-md border border-primary bg-primary-soft px-3 py-2 text-caption text-on-primary-soft active:cursor-grabbing"
+          @pointerdown="startRouteDrag(armedRoute.id, $event)"
         >
-          <p class="text-caption text-text-muted">
-            {{ props.t("operations.sampleFlights") }}
-          </p>
-          <ul class="mt-2 grid gap-1.5">
-            <li
-              v-for="flight in sampleFlights"
-              :key="flight.id"
-              class="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-caption"
-            >
-              <span class="font-medium">{{ flight.flight_number }}</span>
-              <span class="text-text-muted">{{ formatClock(flight.departure_at) }} → {{ formatClock(flight.arrival_at) }}</span>
-              <span class="text-text-muted">{{ flightDuration(flight) }}</span>
-            </li>
-          </ul>
+          <span class="truncate font-semibold">{{ routeCode(armedRoute) }}</span>
+          <span class="shrink-0">{{ formatMoney(armedRoute.economics_snapshot?.estimated_profit_per_flight ?? 0) }}</span>
         </div>
+        <p class="text-caption text-text-muted">
+          {{ props.t("operations.routePicker.dragHint") }}
+        </p>
 
-        <div
-          v-if="preview?.blockers.length"
-          class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-error"
-        >
-          <ul class="list-inside list-disc">
-            <li
-              v-for="reason in preview.blockers"
-              :key="reason.code"
-            >
-              {{ reasonLabel(reason) }}
-            </li>
-          </ul>
-        </div>
-        <div
-          v-if="preview?.warnings.length"
-          class="mt-4 rounded-lg border border-warning bg-warning-bg p-3 text-warning"
-        >
-          <ul class="list-inside list-disc">
-            <li
-              v-for="reason in preview.warnings"
-              :key="reason.code"
-            >
-              {{ reasonLabel(reason) }}
-            </li>
-          </ul>
-        </div>
-
-        <AirButton
-          class="mt-4 w-full"
-          :disabled="!canActivate || isSaving"
-          :label="isSaving ? '...' : props.t('action.activateSchedule')"
-          @click="activateSchedule"
+        <FerryFlightForm
+          :app-locale="props.appLocale"
+          :selected-aircraft-id="selectedAircraftId"
+          :t="props.t"
+          @created="onFerryCreated"
         />
       </aside>
+
+      <div class="grid min-w-0 content-start gap-3">
+        <ScheduleTimeline
+          :armed="Boolean(armedRouteId)"
+          :day-label="dayLabel"
+          :drag="drag"
+          :placements="placements"
+          :t="props.t"
+          @bar-pointer-down="onBarPointerDown"
+          @place="placeBlock"
+          @remove="removeBar"
+        />
+
+        <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3">
+          <div class="flex gap-5 text-caption">
+            <span>{{ props.t("operations.builder.flights") }}: <strong>{{ weeklyFlights }}</strong></span>
+            <span :class="weeklyProfit >= 0 ? 'text-success' : 'text-error'">
+              {{ props.t("operations.weeklyProfit") }}: <strong>{{ formatMoney(weeklyProfit) }}</strong>
+            </span>
+          </div>
+          <AirButton
+            :disabled="!isDirty || isSaving"
+            :label="isSaving ? '...' : props.t('action.saveSchedule')"
+            @click="save"
+          />
+        </div>
+      </div>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="drag.active"
+        class="pointer-events-none fixed z-50 flex h-6 -translate-x-1/2 -translate-y-[140%] items-center rounded px-2 text-[10px] font-semibold shadow-lg"
+        :class="drag.valid || drag.hoverDay === null ? 'bg-primary text-on-primary' : 'bg-error text-white'"
+        :style="{ left: `${drag.x}px`, top: `${drag.y}px` }"
+      >
+        {{ drag.label }}<span v-if="drag.hoverTime" class="ml-1 opacity-80">· {{ drag.hoverTime }}</span>
+      </div>
+    </Teleport>
   </section>
 </template>

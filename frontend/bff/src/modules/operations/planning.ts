@@ -4,9 +4,11 @@ import type { RoutePlanningSnapshot } from "../routes/planning";
 import type { StoredRoute } from "../routes/types";
 import type { OperationReason, SchedulePattern, SchedulePreview, StoredFlight, StoredSchedule } from "./types";
 
-import { arrivalLocalDayOffset, arrivalLocalTime, nightOperationConstraints, rangeConstraints, runwayConstraints } from "../facilities/constraints";
-import { buildSlotCapacity, slotCapacityConstraints } from "../facilities/slots";
+import { arrivalLocalTime, nightOperationConstraints, rangeConstraints, runwayConstraints } from "../facilities/constraints";
+import { currentAircraftAirport } from "./aircraft-position";
 import { estimateBlockHours, estimateUtilizationHours, estimateWeeklyCost, generateFlightsForSchedule, stableScheduleId, summarizeWeeklyEconomics } from "./flights";
+import { buildRoundTripSlotConstraints } from "./planning-slots";
+import { addMinutesToLocalTime } from "./schedule-time";
 
 export type OperationsSnapshot = RoutePlanningSnapshot & {
   flights: StoredFlight[];
@@ -18,6 +20,7 @@ type SchedulePreviewInput = {
   aircraft_id?: string;
   days_of_week?: number[];
   departure_local_time?: string;
+  round_trip?: boolean;
   route_id?: string;
   starts_on?: string;
   turnaround_minutes?: number;
@@ -30,21 +33,21 @@ export function buildSchedulePreview(snapshot: OperationsSnapshot, input: Schedu
   const origin = snapshot.airports.find((item) => item.id === route?.origin_airport_id);
   const destination = snapshot.airports.find((item) => item.id === route?.destination_airport_id);
   const days = normalizeDays(input.days_of_week);
-  const pattern = buildPattern(days, input.departure_local_time, input.turnaround_minutes);
+  const pattern = patternFromInput(input, days);
   const blockers = buildBlockers(snapshot, route, aircraft, type, origin, destination, pattern);
   const warnings = buildWarnings(snapshot, route, aircraft, type, origin, destination, pattern);
-  const sampleFlights = blockers.length === 0 && route && aircraft && type && origin && destination
-    ? generateFlightsForSchedule(snapshot, route, aircraft, type, pattern, input.starts_on, 7).slice(0, 5)
+  const previewFlights = blockers.length === 0 && route && aircraft && type && origin && destination
+    ? generateFlightsForSchedule(snapshot, route, aircraft, type, pattern, input.starts_on, 7)
     : [];
-  const weeklyEconomics = summarizeWeeklyEconomics(sampleFlights, days.length || 1);
+  const weeklyEconomics = summarizeWeeklyEconomics(previewFlights, days.length || 1);
 
   return {
     blockers,
     canActivate: blockers.length === 0,
     economics: weeklyEconomics,
-    sample_flights: sampleFlights,
+    sample_flights: previewFlights.slice(0, 8),
     warnings,
-    weekly_utilization_hours: estimateUtilizationHours(route, type, days.length),
+    weekly_utilization_hours: estimateUtilizationHours(route, type, days.length, pattern.turnaround_minutes),
   };
 }
 
@@ -56,7 +59,7 @@ export function createScheduleFromPreview(snapshot: OperationsSnapshot, input: S
   const aircraft = snapshot.aircrafts.find((item) => item.id === input.aircraft_id);
   const type = snapshot.aircraftTypes.find((item) => item.id === aircraft?.type_id);
   const days = normalizeDays(input.days_of_week);
-  const pattern = buildPattern(days, input.departure_local_time, input.turnaround_minutes);
+  const pattern = patternFromInput(input, days);
   const now = new Date().toISOString();
   const startsOn = input.starts_on ?? now.slice(0, 10);
   const scheduleId = stableScheduleId(route?.id ?? "", aircraft?.id, pattern, startsOn);
@@ -79,8 +82,10 @@ export function createScheduleFromPreview(snapshot: OperationsSnapshot, input: S
       starts_on: startsOn,
     },
   };
+  const creationTime = new Date(now).getTime();
   const flights = preview.canActivate
     ? generateFlightsForSchedule(snapshot, route, aircraft, type, pattern, startsOn, 14, schedule.id)
+        .filter((flight) => new Date(flight.departure_at).getTime() >= creationTime)
     : [];
 
   return { flights, schedule };
@@ -141,9 +146,18 @@ function addNightOpsWarning(
     origin?.timezone,
     destination?.timezone,
   );
+  const returnDepartureTime = addMinutesToLocalTime(arrivalTime ?? "12:00", pattern.turnaround_minutes).time;
+  const returnArrivalTime = arrivalLocalTime(
+    returnDepartureTime,
+    estimateBlockHours(route, type),
+    destination?.timezone,
+    origin?.timezone,
+  );
   const constraints = [
     ...nightOperationConstraints(origin, pattern.departure_local_time),
     ...(arrivalTime ? nightOperationConstraints(destination, arrivalTime) : nightOperationConstraints(destination, "12:00")),
+    ...nightOperationConstraints(destination, returnDepartureTime),
+    ...(returnArrivalTime ? nightOperationConstraints(origin, returnArrivalTime) : nightOperationConstraints(origin, "12:00")),
   ];
 
   for (const item of constraints) {
@@ -184,6 +198,26 @@ function addPerformanceBlockers(
     ...runwayConstraints(origin, type).map(toOperationReason),
     ...runwayConstraints(destination, type).map(toOperationReason),
   );
+}
+
+function addPositionBlocker(
+  blockers: OperationReason[],
+  snapshot: OperationsSnapshot,
+  route: StoredRoute | undefined,
+  aircraft: Aircraft | undefined,
+): void {
+  if (!route || !aircraft?.id) {
+    return;
+  }
+
+  // Position defaults to the aircraft's own base (its delivery hub), not the airline
+  // base — otherwise an aircraft delivered to a secondary hub looks out of position.
+  const homeBase = aircraft.base_airport_id ?? snapshot.airline.starting_airport_id;
+  const location = currentAircraftAirport(aircraft.id, snapshot.flights, homeBase);
+
+  if (location && location !== route.origin_airport_id) {
+    addReason(blockers, "AIRCRAFT_OUT_OF_POSITION", "Aircraft is not at the route origin and must finish its current rotation first.");
+  }
 }
 
 function addReason(reasons: OperationReason[], code: OperationReason["code"], message: string): void {
@@ -239,6 +273,7 @@ function buildBlockers(
 
   addRouteBlockers(blockers, route);
   addAircraftBlockers(blockers, aircraft);
+  addPositionBlocker(blockers, snapshot, route, aircraft);
   addPatternBlockers(blockers, pattern);
   addPerformanceBlockers(blockers, route, type, origin, destination);
   addConflictBlockers(blockers, snapshot, aircraft, pattern);
@@ -252,11 +287,13 @@ function buildPattern(
   days: number[],
   departureLocalTime = "09:00",
   turnaroundMinutes = 90,
+  roundTrip = true,
 ): SchedulePattern {
   return {
     days_of_week: days,
     departure_local_time: departureLocalTime,
     mode: days.length >= 7 ? "daily" : "weekly",
+    round_trip: roundTrip,
     turnaround_minutes: turnaroundMinutes,
   };
 }
@@ -309,8 +346,8 @@ function normalizeDays(days: number[] | undefined): number[] {
   return Array.from(new Set(normalized)).sort((left, right) => left - right);
 }
 
-function projectedUses(pattern: SchedulePattern, dayOffset = 0): Partial<Record<number, number>> {
-  return Object.fromEntries(pattern.days_of_week.map((day) => [((day + dayOffset) % 7 + 7) % 7, 1]));
+function patternFromInput(input: SchedulePreviewInput, days: number[]): SchedulePattern {
+  return buildPattern(days, input.departure_local_time, input.turnaround_minutes, input.round_trip ?? true);
 }
 
 function scheduleSlotConstraints(
@@ -321,17 +358,7 @@ function scheduleSlotConstraints(
   destination: Airport | undefined,
   pattern: SchedulePattern,
 ): AirportConstraint[] {
-  const destinationOffset = arrivalLocalDayOffset(
-    pattern.departure_local_time,
-    estimateBlockHours(route, type),
-    origin?.timezone,
-    destination?.timezone,
-  );
-
-  return [
-    ...slotCapacityConstraints(origin, buildSlotCapacity(origin, snapshot.routes, snapshot.schedules, snapshot.flights, projectedUses(pattern))),
-    ...slotCapacityConstraints(destination, buildSlotCapacity(destination, snapshot.routes, snapshot.schedules, snapshot.flights, projectedUses(pattern, destinationOffset))),
-  ];
+  return buildRoundTripSlotConstraints(snapshot, route, type, origin, destination, pattern);
 }
 
 function toOperationReason(item: AirportConstraint): OperationReason {

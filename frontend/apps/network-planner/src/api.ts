@@ -1,7 +1,9 @@
 import { createApiClient, createAuthClient } from "@airlinesim/game-sdk";
 
 import type {
+  AirportSearchOption,
   CreateRouteResponse,
+  HubItem,
   RouteOpportunitiesResponse,
   RoutePreviewResponse,
   RoutesResponse,
@@ -21,6 +23,10 @@ export type RouteOpportunityFilters = {
   onlyProfitable?: boolean;
 };
 
+export async function addHub(airportId: string): Promise<{ fee: number; hub: { airport_id: string } }> {
+  return apiClient.post("/hubs", { airport_id: airportId });
+}
+
 export async function createRoute(payload: {
   base_frequency_per_week: number;
   destination_airport_id: string;
@@ -28,6 +34,10 @@ export async function createRoute(payload: {
   selected_aircraft_id?: string;
 }): Promise<CreateRouteResponse> {
   return apiClient.post<CreateRouteResponse>("/routes", payload);
+}
+
+export async function getHubs(): Promise<{ hubs: HubItem[] }> {
+  return apiClient.get("/hubs");
 }
 
 export async function getRouteOpportunities(filters: RouteOpportunityFilters): Promise<RouteOpportunitiesResponse> {
@@ -72,4 +82,14 @@ export async function getRoutePreview(destinationAirportId: string, aircraftId?:
 
 export async function getRoutes(): Promise<RoutesResponse> {
   return apiClient.get<RoutesResponse>("/routes");
+}
+
+export async function removeHub(airportId: string): Promise<{ removed: boolean }> {
+  return apiClient.delete(`/hubs/${encodeURIComponent(airportId)}`);
+}
+
+export async function searchAirports(query: string): Promise<AirportSearchOption[]> {
+  const response = await apiClient.get<{ airports: AirportSearchOption[] }>(`/onboarding/airports?q=${encodeURIComponent(query)}`);
+
+  return response.airports;
 }

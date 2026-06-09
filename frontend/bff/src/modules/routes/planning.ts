@@ -10,12 +10,13 @@ import type {
   StoredRoute,
 } from "./types";
 
-import { calculatePassengerDemand } from "../demand/model";
+import { explainPassengerDemand } from "../demand/model";
 import { rangeConstraints, runwayConstraints } from "../facilities/constraints";
 import { buildRouteEconomics } from "./economics";
 import { buildDistanceKm, toRouteAirport } from "./geometry";
 
 export type RoutePlanningSnapshot = FleetSnapshot & {
+  hubAirportIds?: string[];
   regionLinks: RegionLink[];
   regions: Region[];
 };
@@ -144,6 +145,10 @@ export function findAirport(airports: Airport[], id: string | undefined): Airpor
   return airports.find((airport) => airport.id === id);
 }
 
+export function isHubOrigin(snapshot: RoutePlanningSnapshot, originId: string | undefined): boolean {
+  return Boolean(originId) && (originId === snapshot.airline.starting_airport_id || (snapshot.hubAirportIds ?? []).includes(originId ?? ""));
+}
+
 // Recomputes a stored route's demand/economics from current data; the persisted
 // snapshot is only a frozen creation-time cache and can hold stale numbers.
 export function refreshStoredRoute(route: StoredRoute, snapshot: RoutePlanningSnapshot): StoredRoute {
@@ -235,12 +240,14 @@ function buildDemandSnapshot(snapshot: RoutePlanningSnapshot, origin: Airport, d
   const cachedDemand = demandFromLink(link, origin.region_id);
   const originRegion = snapshot.regions.find((region) => region.id === origin.region_id) ?? {};
   const destinationRegion = snapshot.regions.find((region) => region.id === destination.region_id) ?? {};
-  const modeled = calculatePassengerDemand(origin, destination, originRegion, destinationRegion, distanceKm);
-  const originDailyPassengers = Math.max(0, Math.round(cachedDemand > 0 ? cachedDemand : modeled.originToDestination));
+  const { breakdown, result: modeled } = explainPassengerDemand(origin, destination, originRegion, destinationRegion, distanceKm);
+  const usesCachedDemand = cachedDemand > 0;
+  const originDailyPassengers = Math.max(0, Math.round(usesCachedDemand ? cachedDemand : modeled.originToDestination));
 
   return {
+    breakdown: { ...breakdown, source: usesCachedDemand ? "region_link" : "model" },
     calculated_at: new Date().toISOString(),
-    destination_daily_passengers: cachedDemand > 0
+    destination_daily_passengers: usesCachedDemand
       ? Math.max(0, Math.round(originDailyPassengers * 0.92))
       : Math.max(0, Math.round(modeled.destinationToOrigin)),
     distance_km: Math.round(distanceKm),
@@ -258,8 +265,8 @@ function buildRouteBlockers(
 ): RouteReason[] {
   const blockers: RouteReason[] = [];
 
-  if (origin.id !== snapshot.airline.starting_airport_id) {
-    addReason(blockers, "ORIGIN_NOT_BASE", "Origin is not your current base.");
+  if (!isHubOrigin(snapshot, origin.id)) {
+    addReason(blockers, "ORIGIN_NOT_HUB", "Origin must be your base or one of your hubs.");
   }
   if (!origin.id || !destination.id) {
     addReason(blockers, "MISSING_AIRPORT", "Airport data is missing.");

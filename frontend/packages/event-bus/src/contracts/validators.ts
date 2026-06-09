@@ -76,7 +76,7 @@ export const airlineSimEventValidators: ValidatorMap<AirlineSimEvents> = {
     isOneOf(payload.severity, ["error", "info", "success", "warning"]),
   "notifications:invalidated": (payload): payload is AirlineSimEvents["notifications:invalidated"] =>
     isRecord(payload) &&
-    isOneOf(payload.reason, ["aircraft-purchased", "flight-completed", "read-state-changed", "risk-changed", "route-created", "schedule-activated"]) &&
+    isOneOf(payload.reason, ["aircraft-purchased", "flight-completed", "ignored", "read-state-changed", "risk-changed", "route-created", "schedule-activated"]) &&
     isOneOf(payload.source, ["events-news", "finance-stock", "fleet-ops", "network-planner", "shell"]),
   "route:created": (payload): payload is AirlineSimEvents["route:created"] =>
     isRecord(payload) &&

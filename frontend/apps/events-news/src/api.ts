@@ -17,10 +17,14 @@ export async function getEvents(filters: { category?: string; severity?: string 
   return apiClient.get<EventsResponse>(`/events/feed?${query.toString()}`);
 }
 
-export async function getNotifications(state: "active" | "resolved"): Promise<NotificationItem[]> {
+export async function getNotifications(state: NotificationItem["state"]): Promise<NotificationItem[]> {
   const response = await apiClient.get<{ notifications: NotificationItem[] }>(`/notifications?state=${state}`);
 
   return response.notifications;
+}
+
+export async function ignoreNotification(id: string): Promise<void> {
+  await apiClient.patch(`/notifications/${encodeURIComponent(id)}`, { state: "ignored" });
 }
 
 export async function markAllRead(): Promise<void> {

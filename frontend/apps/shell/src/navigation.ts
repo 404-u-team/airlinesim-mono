@@ -71,7 +71,7 @@ export const navigationSections: NavigationSection[] = [
     children: [
       { label: "Overview", path: "/fleet/overview" },
       { label: "Aircraft", path: "/fleet/aircraft" },
-      { enabled: false, label: "Orders", path: "/fleet/orders" },
+      { label: "Order New", path: "/fleet/order/new" },
       { enabled: false, label: "Configurations", path: "/fleet/configurations" },
       { enabled: false, label: "Maintenance", path: "/fleet/maintenance" },
     ],
@@ -82,7 +82,7 @@ export const navigationSections: NavigationSection[] = [
   },
   {
     children: [
-      { enabled: false, label: "My Hubs", path: "/airports/hubs" },
+      { label: "My Hubs", path: "/airports/hubs" },
       { label: "Routes", path: "/airports/routes" },
       { enabled: false, label: "Fees & Slots", path: "/airports/fees-slots" },
       { enabled: false, label: "Contracts", path: "/airports/contracts" },
