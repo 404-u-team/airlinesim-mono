@@ -4,11 +4,12 @@ import type { Locale } from "@airlinesim/i18n";
 import { AirBadge, AirButton, AirMetricCard } from "@airlinesim/air-ui";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
-import type { CalibrationArtifact, CalibrationJobStatus, ScorecardRow } from "../types";
+import type { CalibrationArtifact, CalibrationJobStatus, ScorecardRow, SegmentRow } from "../types";
 
 import { getCalibration, getCalibrationJob, getCountries, getLatestCalibrationJob, runCalibration } from "../api/demandApi";
 import AdminCalibrationParamsTable from "../components/AdminCalibrationParamsTable.vue";
 import AdminCalibrationScorecardTable from "../components/AdminCalibrationScorecardTable.vue";
+import AdminCalibrationSegmentsTable from "../components/AdminCalibrationSegmentsTable.vue";
 import { adminCalibrationMessages, adminText } from "../i18n";
 
 const props = defineProps<{ appLocale: Locale }>();
@@ -16,6 +17,7 @@ const t = (key: keyof typeof adminCalibrationMessages.en) => adminCalibrationMes
 
 const calibration = ref<CalibrationArtifact | null>(null);
 const scorecard = ref<ScorecardRow[]>([]);
+const segments = ref<SegmentRow[]>([]);
 const anchorsTotal = ref(0);
 const anchorsUsed = ref(0);
 const countriesMap = ref<Record<string, { iso: string; name: string }>>({});
@@ -32,7 +34,24 @@ const countryInfo = (id: string) => countriesMap.value[id.toLowerCase()] ?? { is
 const progressDetail = computed(() => activeJob.value?.progress?.message ?? "");
 const reversedLogs = computed(() => [...(activeJob.value?.logs ?? [])].reverse());
 const r2Formatted = computed(() => typeof calibration.value?.quality?.r2 === "number" ? `${(calibration.value.quality.r2 * 100).toFixed(2)}%` : "—");
+// Backend returns MAPE as a fraction (0.15 = 15%); render it as a percent here.
 const mapeFormatted = computed(() => typeof calibration.value?.quality?.mape === "number" ? `${(calibration.value.quality.mape * 100).toFixed(1)}%` : "—");
+const medianRatioFormatted = computed(() => typeof calibration.value?.quality?.medianRatio === "number" ? `×${calibration.value.quality.medianRatio.toFixed(2)}` : "—");
+const biasFormatted = computed(() => typeof calibration.value?.quality?.bias === "number" ? `×${calibration.value.quality.bias.toFixed(2)}` : "—");
+// R² is goodness-of-fit: only a clearly positive value is good. Negative means the
+// fit is worse than predicting the mean, so it must not read as success.
+const r2Tone = computed(() => {
+  const r2 = calibration.value?.quality?.r2;
+  if (typeof r2 !== "number") { return "neutral"; }
+  if (r2 >= 0.3) { return "success"; }
+  return r2 > 0 ? "warning" : "danger";
+});
+// medianRatio is the robust skew signal: ~1 is on-target, far from 1 is biased.
+const medianTone = computed(() => {
+  const m = calibration.value?.quality?.medianRatio;
+  if (typeof m !== "number") { return "neutral"; }
+  return m >= 0.7 && m <= 1.5 ? "success" : "warning";
+});
 const formattedDate = computed(() => calibration.value?.fittedAt ? new Date(calibration.value.fittedAt).toLocaleString(props.appLocale) : "—");
 
 const changedPropensities = computed(() => !calibration.value?.propensityByCountry ? [] : Object.entries(calibration.value.propensityByCountry)
@@ -80,6 +99,7 @@ async function pollJob(jobId: string) {
       successMessage.value = t("success");
       if (res.job.result) {
         calibration.value = res.job.result.artifact; scorecard.value = res.job.result.scorecard;
+        segments.value = res.job.result.segments ?? [];
         anchorsTotal.value = res.job.result.anchorsTotal; anchorsUsed.value = res.job.result.anchorsUsed;
       } else { await loadData(); }
       isCalibrating.value = false;
@@ -215,13 +235,26 @@ function triggerCalibrate(refresh: boolean) {
         <h2 class="text-h4 font-bold mb-4">
           {{ t("quality") }}
         </h2>
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <AirMetricCard :label="t('version')" :value="String(calibration.version)" />
           <AirMetricCard :label="t('fittedAt')" :value="formattedDate" />
-          <AirMetricCard label="R² (Goodness of Fit)" :value="r2Formatted" tone="success" />
-          <AirMetricCard label="MAPE (Avg Error)" :value="mapeFormatted" :tone="calibration.quality?.mape && calibration.quality.mape < 0.25 ? 'success' : 'warning'" />
           <AirMetricCard :label="t('pairsUsed')" :value="calibration.quality?.pairs ? String(calibration.quality.pairs) : (anchorsUsed > 0 ? String(anchorsUsed) : '—')" />
+          <AirMetricCard label="R² (Goodness of Fit)" :value="r2Formatted" :tone="r2Tone" />
+          <AirMetricCard label="MAPE (Avg Error)" :value="mapeFormatted" :tone="typeof calibration.quality?.mape === 'number' && calibration.quality.mape < 0.25 ? 'success' : 'warning'" />
+          <AirMetricCard
+            :label="appLocale === 'ru' ? 'Медиана модель/факт' : 'Median model/real'"
+            :value="medianRatioFormatted"
+            :tone="medianTone"
+          />
+          <AirMetricCard
+            :label="appLocale === 'ru' ? 'Системный сдвиг' : 'Systematic bias'"
+            :value="biasFormatted"
+            :tone="medianTone"
+          />
         </div>
+        <p class="mt-3 text-caption text-text-muted">
+          {{ appLocale === 'ru' ? 'MAPE раздувают тонкие маршруты; медиана и сдвиг устойчивее: ×1.0 — в среднем точно, ×3 — завышение втрое.' : 'MAPE is inflated by thin routes; median & bias are robust: ×1.0 on-target, ×3 = 3× overestimate.' }}
+        </p>
       </section>
 
       <!-- Actions Grid -->
@@ -303,6 +336,19 @@ function triggerCalibrate(refresh: boolean) {
           </div>
         </section>
       </div>
+
+      <!-- Segmented Error Diagnostics -->
+      <section v-if="segments.length > 0" class="rounded-lg border border-border bg-surface p-4">
+        <h2 class="text-h4 font-bold mb-2">
+          {{ appLocale === 'ru' ? 'Ошибка по сегментам' : 'Error by segment' }}
+        </h2>
+        <p class="text-caption text-text-muted mb-4">
+          {{ appLocale === 'ru'
+            ? 'Где модель систематически промахивается. Медиана/среднее = модель/факт (×1 — идеал, >1 — завышение). Помогает понять, какой фактор крутить, а не подбирать вслепую.'
+            : 'Where the model is systematically off. Median/mean = model/real (×1 ideal, >1 over). Tells you which factor to tune instead of guessing.' }}
+        </p>
+        <AdminCalibrationSegmentsTable :app-locale="appLocale" :segments="segments" />
+      </section>
 
       <!-- Scorecard Deviation Table -->
       <section v-if="scorecard.length > 0" class="rounded-lg border border-border bg-surface p-4">

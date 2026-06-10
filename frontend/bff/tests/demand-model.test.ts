@@ -7,6 +7,7 @@ import {
   distanceImpedance,
   explainPairDemand,
   gravityMass,
+  groundCompetitionFactor,
   shortHaulFactor,
 } from "../src/modules/demand/model";
 
@@ -55,6 +56,33 @@ test("short-haul factor collapses intra-metro pairs and saturates by 300 km", ()
   expect(shortHaulFactor(300)).toBe(1);
   expect(shortHaulFactor(700)).toBe(1);
   expect(calculatePairDemand(market(), market({ countryId: "A" }), 44).originToDestination).toBeLessThanOrEqual(1);
+});
+
+test("ground competition penalises same-country medium hauls hardest, cross-border mildly", () => {
+  expect(groundCompetitionFactor(469, true)).toBeLessThan(0.6); // domestic 469 km: rail/road
+  expect(groundCompetitionFactor(200, true)).toBe(0.3); // floor for short domestic
+  expect(groundCompetitionFactor(1500, true)).toBe(1); // long domestic: flying wins again
+  expect(groundCompetitionFactor(800, true)).toBeGreaterThan(groundCompetitionFactor(500, true));
+
+  // Cross-border short hops bleed to rail/adjacent airports too, but less severely.
+  expect(groundCompetitionFactor(469, false)).toBeLessThan(1); // some penalty now
+  expect(groundCompetitionFactor(469, false)).toBeGreaterThan(groundCompetitionFactor(469, true)); // milder than domestic
+  expect(groundCompetitionFactor(150, false)).toBe(0.6); // floor for very short cross-border
+  expect(groundCompetitionFactor(900, false)).toBe(1); // medium+ cross-border: no penalty
+});
+
+test("a short domestic pair is suppressed versus an identical cross-border pair", () => {
+  const a = market({ countryId: "A" });
+  const domestic = calculatePairDemand(a, market({ countryId: "A" }), 469).originToDestination;
+  const international = calculatePairDemand(a, market({ countryId: "B" }), 469).originToDestination;
+
+  expect(domestic).toBeLessThan(international);
+});
+
+test("direction factor is centred near 1.0 (does not double one-way demand)", () => {
+  const { breakdown } = explainPairDemand(market(), market({ countryId: "B" }), 1500);
+  expect(breakdown.directionFactorOriginToDestination).toBeLessThan(1.35);
+  expect(breakdown.directionFactorOriginToDestination).toBeGreaterThan(0.7);
 });
 
 test("breakdown exposes catchment, propensity and direction factors", () => {

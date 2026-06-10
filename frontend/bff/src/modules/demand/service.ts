@@ -1,7 +1,7 @@
 import { type CalibrationArtifact, getCountryPropensity, loadCalibration } from "./calibration";
 import { type DemandAffinity, explainPairDemand, type MarketEndpoint, type PassengerDemandBreakdown } from "./model";
 import { getOverrideMultiplier, loadOverrides } from "./overrides";
-import { getAirportProfile } from "./profiles";
+import { airportPairStrengthFactor, getAirportProfile } from "./profiles";
 
 // Unified demand service. Joins the pure model (Layers 1–3) with the data layers:
 // catchment + metro market (Layer 0, from the import artifact), per-country
@@ -25,6 +25,7 @@ export type DemandAirportInput = {
 
 // Extends the model breakdown with the data-layer provenance the UI surfaces.
 export type DemandBreakdown = PassengerDemandBreakdown & {
+  airportStrengthFactor: number;
   capacityShareFactor: number;
   catchmentSource: "artifact" | "region-fallback";
   destinationCapacityShare: number;
@@ -70,12 +71,14 @@ export function computeAirportPairDemand(
   // equal to the product of each end's capacity share. Summed over all member
   // pairs this returns the full metro market (shares each sum to 1).
   const capacityShareFactor = origin.capacityShare * destination.capacityShare;
+  const strengthFactor = airportPairStrengthFactor(originAirport.icao_code, destinationAirport.icao_code);
   const overrideMultiplier = getOverrideMultiplier(origin.marketKey, destination.marketKey, overrides);
-  const factor = capacityShareFactor * overrideMultiplier;
+  const factor = capacityShareFactor * strengthFactor * overrideMultiplier;
 
   return {
     breakdown: {
       ...breakdown,
+      airportStrengthFactor: round4(strengthFactor),
       capacityShareFactor: round4(capacityShareFactor),
       catchmentSource: origin.usesArtifact && destination.usesArtifact ? "artifact" : "region-fallback",
       destinationCapacityShare: round4(destination.capacityShare),

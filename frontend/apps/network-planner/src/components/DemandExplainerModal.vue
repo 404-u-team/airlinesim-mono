@@ -53,6 +53,7 @@ const rows = computed<Row[]>(() => {
     { label: props.t("demand.affinity"), value: `×${factor(data.affinityFactor)} (${factor(data.business)} / ${factor(data.tourism)} / ${factor(data.diaspora)})` },
     { label: props.t("demand.sameCountry"), value: data.sameCountry ? props.t("demand.yes") : props.t("demand.no") },
     { label: props.t("demand.shortHaul"), value: `×${factor(data.shortHaulFactor)}` },
+    { label: props.t("demand.groundCompetition"), value: `×${factor(data.groundCompetition)}` },
     { label: props.t("demand.baseDemand"), value: props.formatNumber(data.baseDemand) },
     { label: props.t("demand.directionFactor"), value: `×${factor(data.directionFactorOriginToDestination)}` },
   ];

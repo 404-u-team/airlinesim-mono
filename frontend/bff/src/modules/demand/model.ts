@@ -59,6 +59,7 @@ export type PassengerDemandBreakdown = {
   distanceImpedance: number;
   gdpElasticity: number;
   gravity: number;
+  groundCompetition: number;
   originCatchment: number;
   originGdpPerCapita: number;
   originPropensity: number;
@@ -125,8 +126,8 @@ export function explainPairDemand(
   const impedance = distanceImpedance(distanceKm, calibration);
   const gravity = gravityMass(origin, destination, calibration) * impedance;
 
-  const originPropensity = clamp(origin.propensity ?? 1, 0.1, 10);
-  const destinationPropensity = clamp(destination.propensity ?? 1, 0.1, 10);
+  const originPropensity = clamp(origin.propensity ?? 1, 0.25, 4);
+  const destinationPropensity = clamp(destination.propensity ?? 1, 0.25, 4);
   const propensityFactor = Math.sqrt(originPropensity * destinationPropensity);
 
   const affinityFactor =
@@ -136,7 +137,8 @@ export function explainPairDemand(
     calibration.affinityDiaspora * diaspora;
 
   const shortHaul = shortHaulFactor(distanceKm);
-  const baseDemand = calibration.baseScale * gravity * propensityFactor * affinityFactor * shortHaul;
+  const groundCompetition = groundCompetitionFactor(distanceKm, sameCountry);
+  const baseDemand = calibration.baseScale * gravity * propensityFactor * affinityFactor * shortHaul * groundCompetition;
 
   const directionAb = directionFactor(origin, destination, business, tourism, diaspora);
   const directionBa = directionFactor(destination, origin, business, tourism, diaspora);
@@ -156,6 +158,7 @@ export function explainPairDemand(
       distanceImpedance: round2(impedance),
       gdpElasticity: calibration.gdpElasticity,
       gravity: round2(gravity),
+      groundCompetition: round2(groundCompetition),
       originCatchment: catchmentOf(origin),
       originGdpPerCapita: gdpOf(origin),
       originPropensity: round2(originPropensity),
@@ -190,6 +193,22 @@ export function gravityMass(origin: MarketEndpoint, destination: MarketEndpoint,
   );
 }
 
+// Short/medium hauls lose share to the ground (rail/road) and to substitute
+// airports. Same-country pairs are hit hardest — nobody flies Berlin–Cologne when
+// the train is competitive — with air share low under ~350 km and recovering by
+// ~1100 km, beyond which flying wins again (Moscow–Vladivostok, US transcon).
+// Cross-border pairs face a *milder* version of the same effect: short international
+// hops (Brussels–Amsterdam, Aachen–Liège catchments) also bleed to trains and to
+// adjacent airports, just less severely than domestic ones. Busy corridors that beat
+// this average (fast-rail-free routes) can be lifted via an override.
+export function groundCompetitionFactor(distanceKm: number, sameCountry: boolean): number {
+  if (sameCountry) {
+    return rampedShare(distanceKm, 350, 1100, 0.3);
+  }
+  // Cross-border: weaker competition, only bites the genuinely short hops.
+  return rampedShare(distanceKm, 200, 700, 0.6);
+}
+
 // Collapses demand for intra-metro / very short pairs (~40 km, a city's two
 // airports) where nobody flies. Ramps 0 → 1 between 60 and 300 km.
 export function shortHaulFactor(distanceKm: number): number {
@@ -210,17 +229,32 @@ function diasporaAffinity(origin: MarketEndpoint, destination: MarketEndpoint, d
   return (sameCountry ? 0.42 : 0.06) + 0.22 / (1 + distanceKm / 2200) + 0.32 * populationBalance;
 }
 
+// Directional skew centred on 1.0: the two directions of a pair average ~1× the
+// (symmetric) base demand, with a mild lean toward the wealthier origin and more
+// leisure-attractive destination. It must NOT roughly double one-way demand — that
+// was a v2.0 bug. Range ~0.75–1.3, so AB and BA together ≈ 2× base.
 function directionFactor(origin: MarketEndpoint, destination: MarketEndpoint, business: number, tourism: number, diaspora: number): number {
-  const originWealth = Math.sqrt(gdpOf(origin) / 10_000);
-  const destinationLeisure = 0.75 + 0.45 * (destination.tourismScore ?? 0.2);
-  const businessPull = 0.82 + 0.28 * business + 0.12 * (destination.businessScore ?? 0.2);
-  const diasporaPull = 0.92 + 0.16 * diaspora;
+  void business;
+  const wealthLean = (gdpOf(origin) / gdpOf(destination)) ** 0.1;
+  const leisurePull = 0.95 + 0.12 * (destination.tourismScore ?? 0.3);
+  const diasporaPull = 0.97 + 0.06 * diaspora;
 
-  return clamp(originWealth * destinationLeisure * businessPull * diasporaPull, 0.45, 1.8) * (0.88 + 0.24 * tourism);
+  return clamp(wealthLean * leisurePull * diasporaPull * (0.97 + 0.06 * tourism), 0.75, 1.3);
 }
 
 function gdpOf(endpoint: MarketEndpoint): number {
   return Math.max(endpoint.gdpPerCapita ?? 10_000, MIN_GDP);
+}
+
+// Air's share of a pair: `floor` at/below `low`, recovering linearly to 1 at `high`.
+function rampedShare(distanceKm: number, low: number, high: number, floor: number): number {
+  if (distanceKm >= high) {
+    return 1;
+  }
+  if (distanceKm <= low) {
+    return floor;
+  }
+  return floor + (1 - floor) * ((distanceKm - low) / (high - low));
 }
 
 function regionalAffinity(leftScore: number | undefined, rightScore: number | undefined, distanceKm: number, sameCountry: boolean): number {

@@ -9,8 +9,9 @@ afterEach(() => {
   setAirportProfilesForTesting(null);
 });
 
-function profile(iata: string, icao: string, catchment: number): AirportDemandProfile {
+function profile(iata: string, icao: string, catchment: number, capacityIndex = 1): AirportDemandProfile {
   return {
+    capacityIndex,
     capacityShare: 1,
     iataCode: iata,
     icaoCode: icao,
@@ -55,4 +56,8 @@ test("calibration fits propensity from seed anchors and produces a scorecard", a
   expect(result.artifact.propensityByCountry.IT).toBeGreaterThan(0);
   expect(result.scorecard.length).toBe(result.anchorsUsed);
   expect(result.scorecard[0]).toHaveProperty("errorPct");
+  // Segmented diagnostics are produced for transparency.
+  expect(result.segments.length).toBeGreaterThan(0);
+  expect(result.segments[0]).toHaveProperty("medianRatio");
 });
+

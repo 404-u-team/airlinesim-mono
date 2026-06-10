@@ -39,7 +39,7 @@ export type CalibrationArtifact = {
   fittedAt?: string;
   params: CalibrationParams;
   propensityByCountry: Record<string, number>;
-  quality?: { mape?: number; pairs?: number; r2?: number };
+  quality?: { bias?: number; mape?: number; medianRatio?: number; pairs?: number; r2?: number };
   version: number;
 };
 
@@ -88,6 +88,7 @@ export type CalibrationRunResult = {
   anchorsUsed: number;
   artifact: CalibrationArtifact;
   scorecard: ScorecardRow[];
+  segments?: SegmentRow[];
 };
 
 export type FutureEntity = {
@@ -104,6 +105,16 @@ export type ScorecardRow = {
   modelDailyPax: number;
   originIata: string;
   realDailyPax: number;
+};
+
+export type SegmentRow = {
+  count: number;
+  group: "distance" | "realDaily" | "strength";
+  key: string;
+  label: string;
+  mape: number;
+  meanRatio: number;
+  medianRatio: number;
 };
 
 

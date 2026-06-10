@@ -27,6 +27,31 @@ export function getAirportProfile(icaoCode: string | undefined): AirportDemandPr
   return loadProfiles().get(icaoCode.toUpperCase());
 }
 
+// Route-viability / airport-strength factor (Layer 0.5). Latent metro-pair demand
+// only becomes *direct* traffic to the extent both airports are real, well-served
+// fields — a tiny regional strip (FDH, NRN, GRO) captures a fraction of what a hub
+// pair does even at equal catchment. We proxy "airport strength" by the import's
+// capacityIndex (runway length/count, type, night ops, scheduled service; ~0.03 for
+// a grass strip, ~1.8 for a mega-hub). Clamped to a sane band so the factor only
+// reshapes the thin↔trunk gradient; the global level is re-absorbed by baseScale at
+// calibration. Returns 1 (neutral) when no profile exists yet (pre-import fallback).
+const STRENGTH_FLOOR = 0.1;
+const STRENGTH_CEIL = 1.2;
+
+// Capture factor for a *pair*: geometric mean of each end's strength, so one weak
+// end pulls the route down but cannot zero it out.
+export function airportPairStrengthFactor(originIcao: string | undefined, destIcao: string | undefined): number {
+  return Math.sqrt(airportStrengthFactor(originIcao) * airportStrengthFactor(destIcao));
+}
+
+export function airportStrengthFactor(icaoCode: string | undefined): number {
+  const capacityIndex = getAirportProfile(icaoCode)?.capacityIndex;
+  if (capacityIndex === undefined || !Number.isFinite(capacityIndex)) {
+    return 1;
+  }
+  return Math.max(STRENGTH_FLOOR, Math.min(STRENGTH_CEIL, capacityIndex));
+}
+
 export function hasAirportProfiles(): boolean {
   return loadProfiles().size > 0;
 }

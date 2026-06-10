@@ -4,7 +4,7 @@ import { type AnchorStore, getCalibrationAnchors } from "./anchors";
 import { type CalibrationArtifact, loadCalibration, saveCalibration } from "./calibration";
 import { type CalibrationAnchor, fitCalibration } from "./calibration-fit";
 import { DEFAULT_CALIBRATION, explainPairDemand, type MarketEndpoint } from "./model";
-import { getAirportProfile } from "./profiles";
+import { airportPairStrengthFactor, airportStrengthFactor, getAirportProfile } from "./profiles";
 
 // Calibration runner (Layer 2). Resolves each real anchor pair to the model's
 // *structural* prediction (baseScale = 1, propensity = 1), fits baseScale + per-
@@ -29,6 +29,9 @@ export type CalibrationRunResult = {
   anchorsUsed: number;
   artifact: CalibrationArtifact;
   scorecard: ScorecardRow[];
+  // Error broken down by segment so tuning is data-driven, not blind: which
+  // buckets the model systematically over/under-shoots. See buildSegments.
+  segments: SegmentRow[];
 };
 
 export type RunnerAirport = {
@@ -60,6 +63,18 @@ export type ScorecardRow = {
   modelDailyPax: number;
   originIata: string;
   realDailyPax: number;
+};
+
+// One diagnostic bucket: how the calibrated model does on a slice of the anchors.
+// medianRatio/meanRatio are model/real (>1 = overestimation); mape is a fraction.
+export type SegmentRow = {
+  count: number;
+  group: "distance" | "realDaily" | "strength";
+  key: string;
+  label: string;
+  mape: number;
+  meanRatio: number;
+  medianRatio: number;
 };
 
 // Structural calibration: model with baseScale neutralised to 1.
@@ -106,6 +121,50 @@ export function buildScorecard(
       };
     })
     .sort((a, b) => Math.abs(b.errorPct) - Math.abs(a.errorPct));
+}
+
+// Decomposes the calibrated error into segments (real-traffic buckets, airport-
+// strength tiers, distance bands) so we can see *where* the model is biased instead
+// of tuning coefficients blind. Each row reports median & geometric-mean of
+// model/real (>1 = overestimation) and the MAPE fraction for that slice.
+export function buildSegments(
+  anchors: CalibrationAnchor[],
+  baseScale: number,
+  propensity: Record<string, number>,
+): SegmentRow[] {
+  const points = anchors.map((anchor) => {
+    const factor = Math.sqrt((propensity[anchor.originCountry] ?? 1) * (propensity[anchor.destCountry] ?? 1));
+    const model = baseScale * factor * anchor.structural;
+    return {
+      distanceKm: anchor.distanceKm ?? 0,
+      ratio: model / anchor.dailyPax,
+      real: anchor.dailyPax,
+      tier: strengthTier(anchor.originStrength, anchor.destStrength),
+    };
+  });
+
+  const rows: SegmentRow[] = [];
+  const push = (group: SegmentRow["group"], key: string, label: string, subset: typeof points): void => {
+    if (subset.length > 0) {
+      rows.push({ ...ratioStats(subset.map((p) => p.ratio)), count: subset.length, group, key, label });
+    }
+  };
+
+  push("realDaily", "lt50", "real < 50/day", points.filter((p) => p.real < 50));
+  push("realDaily", "50-150", "50–150/day", points.filter((p) => p.real >= 50 && p.real < 150));
+  push("realDaily", "150-500", "150–500/day", points.filter((p) => p.real >= 150 && p.real < 500));
+  push("realDaily", "gte500", "500+/day", points.filter((p) => p.real >= 500));
+
+  push("strength", "primary-primary", "primary ↔ primary", points.filter((p) => p.tier === "primary-primary"));
+  push("strength", "primary-secondary", "primary ↔ secondary", points.filter((p) => p.tier === "primary-secondary"));
+  push("strength", "secondary-secondary", "secondary ↔ secondary", points.filter((p) => p.tier === "secondary-secondary"));
+
+  push("distance", "lt500", "< 500 km", points.filter((p) => p.distanceKm < 500));
+  push("distance", "500-1000", "500–1000 km", points.filter((p) => p.distanceKm >= 500 && p.distanceKm < 1000));
+  push("distance", "1000-2000", "1000–2000 km", points.filter((p) => p.distanceKm >= 1000 && p.distanceKm < 2000));
+  push("distance", "gte2000", "2000+ km", points.filter((p) => p.distanceKm >= 2000));
+
+  return rows;
 }
 
 export function endpointFor(airport: RunnerAirport, region: RunnerRegion | undefined): MarketEndpoint {
@@ -177,8 +236,11 @@ export function resolveAnchors(
         dailyPax: record.dailyPax,
         destCountry: resolved.destCountry,
         destIata: record.destIata.toUpperCase(),
+        destStrength: resolved.destStrength,
+        distanceKm: resolved.distanceKm,
         originCountry: resolved.originCountry,
         originIata: record.originIata.toUpperCase(),
+        originStrength: resolved.originStrength,
         structural: resolved.structural,
       });
     }
@@ -191,7 +253,14 @@ export function resolveStructural(
   destIata: string,
   airportByIata: Map<string, RunnerAirport>,
   regionById: Map<string, RunnerRegion>,
-): null | { destCountry: string; originCountry: string; structural: number } {
+): null | {
+  destCountry: string;
+  destStrength: number;
+  distanceKm: number;
+  originCountry: string;
+  originStrength: number;
+  structural: number;
+} {
   const origin = airportByIata.get(originIata.toUpperCase());
   const destination = airportByIata.get(destIata.toUpperCase());
   if (!origin || !destination) {
@@ -205,18 +274,27 @@ export function resolveStructural(
     return null;
   }
 
+  const distance = pairDistance(origin, destination);
   const { result } = explainPairDemand(
     endpointFor(origin, originRegion),
     endpointFor(destination, destRegion),
-    pairDistance(origin, destination),
+    distance,
     {},
     STRUCTURAL_CALIBRATION,
   );
 
   const shareFactor = airportShare(origin.icao_code) * airportShare(destination.icao_code);
-  const structural = ((result.originToDestination + result.destinationToOrigin) / 2) * shareFactor;
+  const strengthFactor = airportPairStrengthFactor(origin.icao_code, destination.icao_code);
+  const structural = ((result.originToDestination + result.destinationToOrigin) / 2) * shareFactor * strengthFactor;
 
-  return { destCountry, originCountry, structural };
+  return {
+    destCountry,
+    destStrength: airportStrengthFactor(destination.icao_code),
+    distanceKm: distance,
+    originCountry,
+    originStrength: airportStrengthFactor(origin.icao_code),
+    structural,
+  };
 }
 
 export async function runCalibration(input: {
@@ -252,6 +330,7 @@ export async function runCalibration(input: {
     anchorsUsed: fitAnchors.length,
     artifact,
     scorecard: buildScorecard(fitAnchors, fit.baseScale, fit.propensityByCountry),
+    segments: buildSegments(fitAnchors, fit.baseScale, fit.propensityByCountry),
   };
 }
 
@@ -281,4 +360,31 @@ export function saveFitArtifact(
   };
   saveCalibration(artifact);
   return artifact;
+}
+
+// Geometric-mean & median of model/real ratios + the MAPE fraction for a slice.
+// Geometric mean (not arithmetic) so a 10× overshoot and a 10× undershoot cancel.
+function ratioStats(ratios: number[]): { mape: number; meanRatio: number; medianRatio: number } {
+  const sorted = [...ratios].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const medianRatio = sorted.length % 2 === 0 ? ((sorted[mid - 1] ?? 1) + (sorted[mid] ?? 1)) / 2 : sorted[mid] ?? 1;
+  const logMean = ratios.reduce((sum, r) => sum + Math.log(r), 0) / ratios.length;
+  const mape = ratios.reduce((sum, r) => sum + Math.abs(r - 1), 0) / ratios.length;
+  return { mape: round3(mape), meanRatio: round3(Math.exp(logMean)), medianRatio: round3(medianRatio) };
+}
+
+function round3(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
+// A "primary" airport has a strong capacityIndex (≥ 0.8: a real hub/major field).
+// Anything weaker is "secondary" (regional/low-cost/secondary metro field). Missing
+// strength (pre-import) is treated as primary so the fallback stays neutral.
+function strengthTier(originStrength: number | undefined, destStrength: number | undefined): string {
+  const a = (originStrength ?? 1) >= 0.8;
+  const b = (destStrength ?? 1) >= 0.8;
+  if (a && b) {
+    return "primary-primary";
+  }
+  return a || b ? "primary-secondary" : "secondary-secondary";
 }

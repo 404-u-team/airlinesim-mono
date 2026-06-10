@@ -16,8 +16,13 @@ export type CalibrationAnchor = {
   dailyPax: number;
   destCountry: string;
   destIata: string;
+  // airport strength (capacityIndex-based, 0..~1.2) of each end, for diagnostics
+  destStrength?: number;
+  // great-circle km between the airports, for distance-segment diagnostics
+  distanceKm?: number;
   originCountry: string;
   originIata: string;
+  originStrength?: number;
   // model prediction with baseScale = 1 and propensity = 1
   structural: number;
 };
@@ -25,17 +30,35 @@ export type CalibrationAnchor = {
 export type CalibrationFit = {
   baseScale: number;
   propensityByCountry: Record<string, number>;
-  quality: { mape: number; pairs: number; r2: number };
+  quality: FitQuality;
+};
+
+export type FitQuality = {
+  // Geometric-mean ratio model/real. 1 = unbiased; >1 = systematic overestimation.
+  bias: number;
+  // Mean absolute percentage error as a FRACTION (0.15 = 15%). The UI renders it as
+  // a percent; do not multiply by 100 here. MAPE is dominated by tiny-denominator
+  // (thin) routes, so prefer medianRatio/bias when judging systematic skew.
+  mape: number;
+  // Median of model/real across pairs — robust to the thin-route outliers MAPE
+  // explodes on. 1 = a typical pair is bang on.
+  medianRatio: number;
+  pairs: number;
+  // Coefficient of determination in log space (can be negative when the fit is
+  // worse than predicting the mean).
+  r2: number;
 };
 
 const DEFAULT_ITERATIONS = 200;
-const MIN_PROPENSITY = 0.05;
-const MAX_PROPENSITY = 20;
+// Propensity is a relative country multiplier (geomean 1). Kept in a sane band so a
+// few sparse-data / low-GDP countries can't rail to absurd values (Egypt ×18 etc.).
+const MIN_PROPENSITY = 0.25;
+const MAX_PROPENSITY = 4;
 
 export function fitCalibration(anchors: CalibrationAnchor[], iterations = DEFAULT_ITERATIONS): CalibrationFit {
   const usable = anchors.filter((a) => a.dailyPax > 0 && a.structural > 0);
   if (usable.length === 0) {
-    return { baseScale: 1.8, propensityByCountry: {}, quality: { mape: 0, pairs: 0, r2: 0 } };
+    return { baseScale: 1.8, propensityByCountry: {}, quality: { bias: 1, mape: 0, medianRatio: 1, pairs: 0, r2: 0 } };
   }
 
   // r_k = log(real) - log(structural); target r_k ≈ b + 0.5(p_a + p_b).
@@ -92,7 +115,16 @@ function mean(values: number[]): number {
   return values.length === 0 ? 0 : values.reduce((sum, v) => sum + v, 0) / values.length;
 }
 
-function quality(anchors: CalibrationAnchor[], baseScale: number, logProp: Map<string, number>): { mape: number; pairs: number; r2: number } {
+function median(values: number[]): number {
+  if (values.length === 0) {
+    return 0;
+  }
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2 : sorted[mid] ?? 0;
+}
+
+function quality(anchors: CalibrationAnchor[], baseScale: number, logProp: Map<string, number>): FitQuality {
   const observed = anchors.map((a) => Math.log(a.dailyPax));
   const predicted = anchors.map((a) => {
     const factor = Math.sqrt(Math.exp(logProp.get(a.originCountry) ?? 0) * Math.exp(logProp.get(a.destCountry) ?? 0));
@@ -101,10 +133,19 @@ function quality(anchors: CalibrationAnchor[], baseScale: number, logProp: Map<s
   const observedMean = mean(observed);
   const ssTot = observed.reduce((sum, v) => sum + (v - observedMean) ** 2, 0);
   const ssRes = observed.reduce((sum, v, i) => sum + (v - (predicted[i] ?? 0)) ** 2, 0);
-  const mape =
-    mean(anchors.map((a, i) => Math.abs(a.dailyPax - Math.exp(predicted[i] ?? 0)) / a.dailyPax)) * 100;
 
-  return { mape: round3(mape), pairs: anchors.length, r2: round3(ssTot > 0 ? 1 - ssRes / ssTot : 0) };
+  // Ratios model/real, in log space (robust to the wide dynamic range of pax).
+  const logRatios = anchors.map((a, i) => (predicted[i] ?? 0) - Math.log(a.dailyPax));
+  // MAPE as a fraction — the UI multiplies by 100 to render a percent.
+  const mape = mean(anchors.map((a, i) => Math.abs(a.dailyPax - Math.exp(predicted[i] ?? 0)) / a.dailyPax));
+
+  return {
+    bias: round3(Math.exp(mean(logRatios))),
+    mape: round3(mape),
+    medianRatio: round3(Math.exp(median(logRatios))),
+    pairs: anchors.length,
+    r2: round3(ssTot > 0 ? 1 - ssRes / ssTot : 0),
+  };
 }
 
 function round3(value: number): number {

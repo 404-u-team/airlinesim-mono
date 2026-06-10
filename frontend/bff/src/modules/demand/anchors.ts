@@ -35,8 +35,14 @@ export const SEED_ANCHORS: AnchorRecord[] = [
   seed("CDG", "FCO", 2500), seed("AMS", "BCN", 2500), seed("FRA", "IST", 2200),
   seed("MUC", "IST", 1800), seed("FRA", "JFK", 2200), seed("LHR", "JFK", 3500),
   seed("CDG", "JFK", 2500), seed("BER", "CGN", 550), seed("BER", "STR", 900),
-  // Non-EU coverage (no Eurostat): US / RU / TR.
+  // Non-EU coverage (no Eurostat): US domestic / RU / TR.
+  // US domestic carries the high aviation-propensity signal Eurostat can't (it only
+  // sees EU↔US transatlantic). Approximate pre-pandemic one-way O&D pax/day.
   seed("JFK", "LAX", 4000), seed("LAX", "SFO", 4500), seed("ORD", "LGA", 2500),
+  seed("ATL", "MCO", 3500), seed("LAX", "LAS", 3200), seed("JFK", "MIA", 3000),
+  seed("ORD", "DFW", 2600), seed("SEA", "LAX", 2500), seed("BOS", "DCA", 2600),
+  seed("ATL", "LGA", 2400), seed("DEN", "LAX", 2400), seed("SFO", "JFK", 2700),
+  seed("PHX", "LAX", 2000), seed("DFW", "LAX", 2300),
   seed("SVO", "LED", 8000), seed("SVO", "AER", 6500), seed("IST", "AYT", 6000),
   seed("IST", "ESB", 5000),
 ];

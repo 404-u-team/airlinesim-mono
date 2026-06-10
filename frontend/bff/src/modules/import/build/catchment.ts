@@ -202,6 +202,11 @@ export type AirportLite = {
 };
 
 export type AirportDemandProfile = {
+  // Absolute airport strength (runway/type/scheduled-derived, ~0.03–1.8). Unlike
+  // capacityShare (relative *within* a metro), this is the airport's standalone
+  // pull, used by the demand model's route-viability factor so a tiny regional
+  // field (FDH, NRN) doesn't capture trunk-route volumes. See airportStrengthFactor.
+  capacityIndex: number;
   capacityShare: number;
   iataCode: string;
   icaoCode: string;
@@ -244,6 +249,7 @@ export function buildAirportDemandProfiles(
     for (const member of node.members) {
       const share = capacityTotal > 0 ? Math.max(0, member.capacityIndex) / capacityTotal : 1 / node.members.length;
       profiles.set(member.icaoCode.toUpperCase(), {
+        capacityIndex: member.capacityIndex,
         capacityShare: share,
         iataCode: member.iataCode.toUpperCase(),
         icaoCode: member.icaoCode.toUpperCase(),

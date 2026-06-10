@@ -131,6 +131,7 @@ export type RouteDemandBreakdown = {
   distanceImpedance: number;
   gdpElasticity: number;
   gravity: number;
+  groundCompetition: number;
   originCapacityShare: number;
   originCatchment: number;
   originGdpPerCapita: number;

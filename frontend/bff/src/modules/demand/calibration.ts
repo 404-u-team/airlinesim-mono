@@ -1,3 +1,5 @@
+import type { FitQuality } from "./calibration-fit";
+
 import { readDocument, writeDocument } from "../../db/database";
 import { type CalibrationParams, DEFAULT_CALIBRATION } from "./model";
 
@@ -12,7 +14,7 @@ export type CalibrationArtifact = {
   // country sourceKey/id → aviation-propensity multiplier
   propensityByCountry: Record<string, number>;
   // fit quality metrics for transparency in the admin UI
-  quality?: { mape?: number; pairs?: number; r2?: number };
+  quality?: Partial<FitQuality>;
   version: number;
 };
 
