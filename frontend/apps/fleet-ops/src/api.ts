@@ -9,6 +9,7 @@ import type {
   FleetPurchasePreviewResponse,
   FleetPurchaseResponse,
   FlightCard,
+  FlightDetailResponse,
   FlightsResponse,
   FuelHistoryResponse,
   FuelPriceSnapshot,
@@ -113,6 +114,10 @@ export async function getFleetPurchasePreview(
   });
 
   return apiClient.get<FleetPurchasePreviewResponse>(`/fleet/purchase-preview?${search.toString()}`);
+}
+
+export async function getFlightDetail(flightId: string): Promise<FlightDetailResponse> {
+  return apiClient.get<FlightDetailResponse>(`/operations/flights/${encodeURIComponent(flightId)}`);
 }
 
 export async function getFlights(): Promise<FlightsResponse> {

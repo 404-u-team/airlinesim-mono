@@ -195,6 +195,19 @@ export type FlightCard = {
   status: "boarding" | "cancelled" | "completed" | "in_flight" | "scheduled";
 };
 
+export type FlightDetail = FlightCard & {
+  actual?: FlightFinancials;
+  destination_coordinates: null | { latitude: number; longitude: number };
+  origin_coordinates: null | { latitude: number; longitude: number };
+  telemetry: FlightTelemetry;
+};
+
+export type FlightDetailResponse = {
+  aircraft: null | { id: string; model_name?: string; seats?: number; tail_number?: string };
+  flight: FlightDetail;
+  route_id: string;
+};
+
 export type FlightFinancials = {
   cost: number;
   load_factor: number;
@@ -203,6 +216,19 @@ export type FlightFinancials = {
   revenue: number;
 };
 
+export type FlightPhase =
+  | "arrived"
+  | "boarding"
+  | "climb"
+  | "cruise"
+  | "deplaning"
+  | "descent"
+  | "landing"
+  | "scheduled"
+  | "takeoff"
+  | "taxi_in"
+  | "taxi_out";
+
 export type FlightsResponse = {
   flights: FlightCard[];
   summary: {
@@ -210,6 +236,18 @@ export type FlightsResponse = {
     live: number;
     upcoming: number;
   };
+};
+
+export type FlightTelemetry = {
+  air_progress: number;
+  altitude_ft: number;
+  cruise_flight_level: number;
+  eta_minutes: number;
+  fuel_remaining_t: number;
+  ground_speed_kph: number;
+  passengers_on_board: number;
+  phase: FlightPhase;
+  progress: number;
 };
 
 export type FuelHistoryResponse = {

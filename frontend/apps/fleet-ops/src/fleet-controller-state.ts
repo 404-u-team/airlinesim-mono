@@ -58,6 +58,13 @@ export function createFleetControllerState(props: FleetControllerProps) {
 
     return match?.[1] ? decodeURIComponent(match[1]) : "";
   });
+  // A single flight's detail page lives under the live-flights route, e.g.
+  // /operations/live-flights/flight-abc — keeps the "flights" operation mode active.
+  const flightDetailId = computed(() => {
+    const match = /^\/operations\/live-flights\/([^/?#]+)/.exec(currentPath.value);
+
+    return match?.[1] ? decodeURIComponent(match[1]) : "";
+  });
   const fleetPage = computed<FleetPage>(() => resolveFleetPage(currentPath.value, detailAircraftId.value));
   const requiresRiskAcknowledge = computed(() =>
     Boolean(preview.value?.warnings.some((warning) => warning.code === "FLEET_RESERVE_RISK")),
@@ -98,6 +105,7 @@ export function createFleetControllerState(props: FleetControllerProps) {
     filters,
     fleetAircraft,
     fleetPage,
+    flightDetailId,
     hubOptions,
     hubs,
     isConfirmingRisk,

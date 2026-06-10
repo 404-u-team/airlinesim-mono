@@ -29,6 +29,10 @@ function applyMapStateProp(props: RemoteComponentProps): void {
         debugMapState("remote:map-state-prop", mapState);
         mapManager.setMapState(mapState);
     }
+
+    if ("selectedFlightId" in props) {
+        mapManager.setSelectedFlight((props.selectedFlightId as null | string | undefined) ?? null);
+    }
 }
 
 function debugMapState(message: string, mapState: MapState | null): void {

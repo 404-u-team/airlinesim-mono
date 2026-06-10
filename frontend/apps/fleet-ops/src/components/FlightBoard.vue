@@ -2,6 +2,7 @@
 import type { Locale } from "@airlinesim/i18n";
 
 import { AirBadge, AirButton, AirMetricCard, AirPagination, AirSegmentedControl, AirStatePanel } from "@airlinesim/air-ui";
+import { airlineSimEventBus } from "@airlinesim/event-bus";
 import { computed, onMounted, ref, watch } from "vue";
 
 import type { FleetMessageKey } from "../i18n";
@@ -129,6 +130,14 @@ function matchesStatus(flight: FlightCard): boolean {
   }
 
   return true;
+}
+
+// Navigate to the flight's own page (cards lead to their detail page).
+function openFlight(flight: FlightCard): void {
+  airlineSimEventBus.emit("navigation:intent", {
+    source: "mfe",
+    targetPath: `/operations/live-flights/${encodeURIComponent(flight.id)}`,
+  });
 }
 
 function routeLabel(flight: FlightCard): string {
@@ -282,7 +291,8 @@ function statusVariant(status: FlightCard["status"]): "danger-soft" | "primary-s
                   :key="flight.id"
                   class="cursor-pointer border-b border-border transition last:border-b-0 hover:bg-surface-subtle"
                   :class="selectedFlight?.id === flight.id ? 'bg-primary-soft/40' : ''"
-                  @click="selectedFlightId = flight.id"
+                  @click="openFlight(flight)"
+                  @mouseenter="selectedFlightId = flight.id"
                 >
                   <td class="px-4 py-2.5 text-subtitle">
                     <span class="flex flex-wrap items-center gap-1.5">

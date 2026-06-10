@@ -11,11 +11,14 @@ type SelectOption = {
 
 defineProps<{
   aircraftOptions: SelectOption[];
+  hubOptions: SelectOption[];
+  isHubDisabled: boolean;
   maxDistance: string;
   minDemand: string;
   onlyCompatible: boolean;
   onlyProfitable: boolean;
   selectedAircraftId: string;
+  selectedHubId: string;
   t: (key: NetworkMessageKey) => string;
 }>();
 
@@ -25,6 +28,7 @@ const emit = defineEmits<{
   "update:only-compatible": [value: boolean];
   "update:only-profitable": [value: boolean];
   "update:selected-aircraft-id": [value: string];
+  "update:selected-hub-id": [value: string];
 }>();
 
 function updateOnlyCompatible(event: Event): void {
@@ -38,6 +42,17 @@ function updateOnlyProfitable(event: Event): void {
 
 <template>
   <div class="route-planner-filters rounded-lg border border-border bg-surface p-3">
+    <div class="flex min-w-0 flex-col gap-1.5">
+      <span class="text-caption text-text-muted">{{ t("filter.hub") }}</span>
+      <AirSelect
+        class="w-full"
+        :disabled="isHubDisabled"
+        :label="t('filter.hub')"
+        :model-value="selectedHubId"
+        :options="hubOptions"
+        @update:model-value="emit('update:selected-hub-id', $event)"
+      />
+    </div>
     <div class="flex min-w-0 flex-col gap-1.5">
       <span class="text-caption text-text-muted">{{ t("filter.aircraft") }}</span>
       <AirSelect
@@ -93,7 +108,7 @@ function updateOnlyProfitable(event: Event): void {
 @media (min-width: 1280px) {
   .route-planner-filters {
     align-items: end;
-    grid-template-columns: minmax(13rem, 1.2fr) minmax(8rem, 0.75fr) minmax(8rem, 0.75fr) auto auto auto;
+    grid-template-columns: minmax(11rem, 1fr) minmax(13rem, 1.2fr) minmax(8rem, 0.75fr) minmax(8rem, 0.75fr) auto auto auto;
   }
 }
 

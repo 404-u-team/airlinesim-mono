@@ -22,6 +22,7 @@ const controller = useFleetController(props);
     v-if="controller.activeMode !== 'fleet'"
     :app-locale="props.appLocale"
     :app-theme="props.appTheme"
+    :flight-detail-id="controller.flightDetailId"
     :mode="controller.activeMode"
     :shell-path="props.shellPath"
     :t="controller.t"

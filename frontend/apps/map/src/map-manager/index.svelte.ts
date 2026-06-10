@@ -18,7 +18,7 @@ export type MapAirportFeature = {
     properties: {
         id?: string;
         label?: string;
-        role?: "base" | "opportunity" | "route_destination";
+        role?: "base" | "hub" | "opportunity" | "route_destination";
     };
     type: "Feature";
 };
@@ -107,6 +107,10 @@ export class MapManager {
     private pendingCameraState: CameraState | null = null;
 
     private refreshFrameId: null | number = null;
+
+    // The flight currently shown in the dashboard's flight card, highlighted on the map
+    // and used to re-center the camera when selection changes.
+    private selectedFlightId: null | string = null;
 
     private style = $state<MapStyle>(DEFAULT_STYLE);
 
@@ -254,6 +258,36 @@ export class MapManager {
         this.emit();
     }
 
+    // Highlights the flight shown in the dashboard's flight card and re-centers the
+    // camera on its current (interpolated) position. Pass null to clear.
+    public setSelectedFlight(flightId: null | string): void {
+        if (flightId === this.selectedFlightId) {
+            return;
+        }
+
+        if (this.map?.getSource("airlinesim-flights") && this.selectedFlightId !== null) {
+            this.map.setFeatureState({ id: this.selectedFlightId, source: "airlinesim-flights" }, { selected: false });
+        }
+
+        this.selectedFlightId = flightId;
+
+        if (flightId === null) {
+            return;
+        }
+
+        this.applySelectedFlightState();
+
+        const interpolated = this.interpolatedFlights(Date.now()).features as Array<{
+            geometry?: { coordinates?: [number, number] };
+            id?: string;
+        }>;
+        const coordinates = interpolated.find((item) => item.id === flightId)?.geometry?.coordinates;
+
+        if (coordinates && this.map) {
+            this.map.flyTo({ center: coordinates, duration: 800, zoom: Math.max(this.map.getZoom(), 4) });
+        }
+    }
+
     public setRotation(rotationStatus: boolean): void {
         const wasInRotation = this.isInRotation;
         this.isInRotation = rotationStatus;
@@ -302,15 +336,27 @@ export class MapManager {
         }
 
         const airportData = this.mapState?.airports ?? { features: [], type: "FeatureCollection" as const };
-        const flightData = this.mapState?.flights ?? { features: [], type: "FeatureCollection" as const };
         const routeData = this.mapState?.routes ?? { features: [], type: "FeatureCollection" as const };
 
-        this.upsertGeoJsonSource("airlinesim-routes", routeData);
-        this.upsertGeoJsonSource("airlinesim-flights", flightData);
+        // Densify each 2-point route into a great-circle polyline. MapLibre's globe
+        // projection does NOT geodesic-densify a 2-point line — it subdivides in Mercator
+        // space and wraps onto the sphere, so a straight route line lands off the
+        // great-circle flight dots. Pre-densifying keeps the line and the dots on the
+        // same arc.
+        this.upsertGeoJsonSource("airlinesim-routes", densifyRoutes(routeData));
+        // Always publish client-interpolated positions, so a freshly polled map-state
+        // (which carries a server-computed position) never yanks the dot before the next
+        // tick — display is consistent and the aircraft never jumps back.
+        this.upsertGeoJsonSource("airlinesim-flights", this.interpolatedFlights(Date.now()));
+        this.applySelectedFlightState();
         this.upsertGeoJsonSource("airlinesim-airports", airportData);
         this.ensureRouteLayer();
+        this.ensurePlaneIcon();
         this.ensureFlightLayer();
         this.ensureAirportLayers();
+        // Flights must render above route lines and airport points (the highest layer),
+        // so re-assert top-of-stack every refresh — addLayer only orders on first add.
+        this.map.moveLayer("airlinesim-flight-points");
         this.ensureFlightTicker();
         debugLog("layers:applied", {
             counts: this.getFeatureCounts(),
@@ -318,6 +364,17 @@ export class MapManager {
             hasFlightLayer: Boolean(this.map.getLayer("airlinesim-flight-points")),
             hasRouteLayer: Boolean(this.map.getLayer("airlinesim-route-lines")),
         });
+    }
+
+    // Re-asserts the highlighted feature-state for the selected flight after the source
+    // is (re)created — feature-state is keyed by source+id and a fresh `addSource` (e.g.
+    // after a style swap) drops it.
+    private applySelectedFlightState(): void {
+        if (!this.map?.getSource("airlinesim-flights") || this.selectedFlightId === null) {
+            return;
+        }
+
+        this.map.setFeatureState({ id: this.selectedFlightId, source: "airlinesim-flights" }, { selected: true });
     }
 
     private applyStyle(style: MapStyle): void {
@@ -353,6 +410,8 @@ export class MapManager {
                         ["get", "role"],
                         "base",
                         "#2563eb",
+                        "hub",
+                        "#2563eb",
                         "route_destination",
                         "#10b981",
                         "opportunity",
@@ -363,6 +422,8 @@ export class MapManager {
                         "match",
                         ["get", "role"],
                         "base",
+                        8,
+                        "hub",
                         8,
                         "route_destination",
                         7,
@@ -406,27 +467,59 @@ export class MapManager {
         if (!this.map.getLayer("airlinesim-flight-points")) {
             this.map.addLayer({
                 id: "airlinesim-flight-points",
+                layout: {
+                    // Billboard the plane to a geo coordinate; MapLibre re-projects it every
+                    // frame, so it stays glued to its position as the globe spins. "map"
+                    // alignment lets "icon-rotate" express a real compass heading.
+                    "icon-allow-overlap": true,
+                    "icon-image": "airlinesim-plane",
+                    "icon-rotate": ["coalesce", ["get", "bearing"], 0],
+                    "icon-rotation-alignment": "map",
+                    "icon-size": 1.1,
+                },
                 paint: {
-                    "circle-color": [
-                        "match",
-                        ["get", "status"],
-                        "in_flight",
-                        "#16a34a",
-                        "boarding",
-                        "#f59e0b",
-                        "#38bdf8",
+                    // SDF icon → recolour per status, mirroring the old dot colours. The
+                    // flight selected in the dashboard's flight card overrides this with a
+                    // distinct highlight colour via feature-state.
+                    "icon-color": [
+                        "case",
+                        ["boolean", ["feature-state", "selected"], false],
+                        "#e11d48",
+                        [
+                            "match",
+                            ["get", "status"],
+                            "in_flight",
+                            "#16a34a",
+                            "boarding",
+                            "#f59e0b",
+                            "#38bdf8",
+                        ],
                     ],
-                    "circle-radius": 6,
-                    "circle-stroke-color": "#ffffff",
-                    "circle-stroke-width": 2,
+                    "icon-halo-color": "#ffffff",
+                    "icon-halo-width": 1.5,
                 },
                 source: "airlinesim-flights",
-                type: "circle",
+                type: "symbol",
             });
         }
 
         this.map.off("click", "airlinesim-flight-points", this.handleFlightClick);
         this.map.on("click", "airlinesim-flight-points", this.handleFlightClick);
+    }
+
+    // Registers the plane glyph used by the flight symbol layer. Built as an SDF so the
+    // layer can tint it per flight status via "icon-color". Re-added on demand because a
+    // style swap drops all registered images.
+    private ensurePlaneIcon(): void {
+        if (!this.map || this.map.hasImage("airlinesim-plane")) {
+            return;
+        }
+
+        const icon = createPlaneIcon();
+
+        if (icon) {
+            this.map.addImage("airlinesim-plane", icon, { pixelRatio: 2, sdf: true });
+        }
     }
 
     // Drives live aircraft movement entirely on the client: every second the flight
@@ -572,15 +665,22 @@ export class MapManager {
             }
 
             const progress = Math.max(0, Math.min(1, (now - takeoff) / (landing - takeoff)));
+            const coordinates = greatCirclePoint(origin, destination, progress);
+            // Heading toward a point just ahead on the arc, so the plane icon noses along
+            // its great-circle track (which rotates continuously, unlike a fixed bearing).
+            const ahead = greatCirclePoint(origin, destination, Math.min(1, progress + 0.001));
 
             return {
                 ...feature,
                 geometry: {
-                    coordinates: [
-                        origin[0] + (destination[0] - origin[0]) * progress,
-                        origin[1] + (destination[1] - origin[1]) * progress,
-                    ],
+                    // Great-circle (not linear lng/lat) so the dot rides the same arc the
+                    // route line is rendered along under the globe projection.
+                    coordinates,
                     type: "Point",
+                },
+                properties: {
+                    ...properties,
+                    bearing: bearingBetween(coordinates, ahead),
                 },
             };
         });
@@ -710,6 +810,138 @@ function featureCount(data: Record<string, unknown>): number {
     const {features} = data;
 
     return Array.isArray(features) ? features.length : 0;
+}
+
+// Point a fraction `t` along the great circle between two [lng, lat] coordinates.
+// Mirrors how MapLibre densifies a 2-point line into a geodesic on the globe.
+function greatCirclePoint(start: [number, number], end: [number, number], t: number): [number, number] {
+    const toRad = Math.PI / 180;
+    const toDeg = 180 / Math.PI;
+    const lat1 = start[1] * toRad;
+    const lon1 = start[0] * toRad;
+    const lat2 = end[1] * toRad;
+    const lon2 = end[0] * toRad;
+    const delta = 2 * Math.asin(Math.sqrt(
+        Math.sin((lat2 - lat1) / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin((lon2 - lon1) / 2) ** 2,
+    ));
+
+    if (delta === 0) {
+        return start;
+    }
+
+    const a = Math.sin((1 - t) * delta) / Math.sin(delta);
+    const b = Math.sin(t * delta) / Math.sin(delta);
+    const x = a * Math.cos(lat1) * Math.cos(lon1) + b * Math.cos(lat2) * Math.cos(lon2);
+    const y = a * Math.cos(lat1) * Math.sin(lon1) + b * Math.cos(lat2) * Math.sin(lon2);
+    const z = a * Math.sin(lat1) + b * Math.sin(lat2);
+
+    return [Math.atan2(y, x) * toDeg, Math.atan2(z, Math.sqrt(x * x + y * y)) * toDeg];
+}
+
+// Initial bearing (degrees, 0 = north) from one [lng, lat] toward another.
+function bearingBetween(from: [number, number], to: [number, number]): number {
+    const toRad = Math.PI / 180;
+    const lat1 = from[1] * toRad;
+    const lat2 = to[1] * toRad;
+    const dLon = (to[0] - from[0]) * toRad;
+    const y = Math.sin(dLon) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+// Rasterises an upward-pointing plane silhouette to an SDF-able image. Drawn pointing
+// north so "icon-rotate" maps directly to compass bearing. Returns null outside the DOM.
+function createPlaneIcon(): ImageData | null {
+    if (typeof document === "undefined") {
+        return null;
+    }
+
+    const size = 48;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+        return null;
+    }
+
+    const c = size / 2;
+    ctx.fillStyle = "#ffffff";
+    ctx.translate(c, c);
+    ctx.beginPath();
+    // Top-down airliner pointing up: nose, swept wings, fuselage, tailplane.
+    ctx.moveTo(0, -20);
+    ctx.lineTo(3, -8);
+    ctx.lineTo(20, 4);
+    ctx.lineTo(20, 9);
+    ctx.lineTo(3, 4);
+    ctx.lineTo(3, 14);
+    ctx.lineTo(9, 19);
+    ctx.lineTo(9, 22);
+    ctx.lineTo(0, 19);
+    ctx.lineTo(-9, 22);
+    ctx.lineTo(-9, 19);
+    ctx.lineTo(-3, 14);
+    ctx.lineTo(-3, 4);
+    ctx.lineTo(-20, 9);
+    ctx.lineTo(-20, 4);
+    ctx.lineTo(-3, -8);
+    ctx.closePath();
+    ctx.fill();
+
+    return ctx.getImageData(0, 0, size, size);
+}
+
+// Expands each 2-point route LineString into a great-circle polyline so the rendered
+// line tracks the same arc as the great-circle flight dots under globe projection.
+function densifyRoutes(routeData: Record<string, unknown>): Record<string, unknown> {
+    const features = (Array.isArray(routeData.features) ? routeData.features : []).map((feature) => {
+        const geometry = (feature as { geometry?: { coordinates?: unknown; type?: string } }).geometry;
+        const coordinates = geometry?.coordinates;
+
+        if (!geometry || geometry.type !== "LineString" || !Array.isArray(coordinates) || coordinates.length < 2) {
+            return feature;
+        }
+
+        const start = coordinates[0] as [number, number];
+        const end = coordinates[coordinates.length - 1] as [number, number];
+
+        return {
+            ...(feature as Record<string, unknown>),
+            geometry: { coordinates: greatCircleLine(start, end), type: "LineString" },
+        };
+    });
+
+    return { features, type: "FeatureCollection" };
+}
+
+// Sampled great-circle path with longitudes unwrapped past ±180 so a leg crossing the
+// antimeridian draws as one continuous arc instead of a horizontal streak.
+function greatCircleLine(start: [number, number], end: [number, number]): Array<[number, number]> {
+    const steps = 64;
+    const points: Array<[number, number]> = [];
+    let previousLng: null | number = null;
+
+    for (let index = 0; index <= steps; index += 1) {
+        const [rawLng, lat] = greatCirclePoint(start, end, index / steps);
+        let lng = rawLng;
+
+        if (previousLng !== null) {
+            while (lng - previousLng > 180) {
+                lng -= 360;
+            }
+            while (lng - previousLng < -180) {
+                lng += 360;
+            }
+        }
+
+        previousLng = lng;
+        points.push([lng, lat]);
+    }
+
+    return points;
 }
 
 function isDebugLoggingEnabled(): boolean {

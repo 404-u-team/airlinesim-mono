@@ -149,6 +149,7 @@ export const ruMessages = {
   "flight.phase.taxi_in": "Руление к гейту",
   "flight.phase.taxi_out": "Руление на взлёт",
   "flight.seats": "пасс.",
+  "flight.timezone": "UTC",
   "flight.title": "Рейс",
   "knowledge.badge": "Помощь игроку",
   "knowledge.category.concepts": "Понятия",

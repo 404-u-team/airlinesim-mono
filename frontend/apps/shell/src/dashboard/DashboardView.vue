@@ -14,10 +14,12 @@ import { type ShellMessageKey, shellMessages } from "../i18n/messages";
 import { ignore as ignoreNotification } from "../notifications/state";
 import { getDashboardMapState, getDashboardSummary } from "./api";
 import DashboardAlerts from "./DashboardAlerts.vue";
+import DashboardFlightCard from "./DashboardFlightCard.vue";
 import DashboardMetricStrip from "./DashboardMetricStrip.vue";
 import DashboardNextAction from "./DashboardNextAction.vue";
 import DashboardProgressNav from "./DashboardProgressNav.vue";
 import { setDashboardSummary } from "./state";
+import { useFlightCard } from "./useFlightCard";
 
 const props = defineProps<{
   appLocale: Locale;
@@ -33,10 +35,17 @@ const isRefreshing = ref(false);
 const mapState = ref<DashboardMapState | null>(null);
 const selectedAirportId = ref<string | undefined>();
 const summary = ref<DashboardSummary | null>(null);
+const { closeFlight, openFlight, selectedFlight } = useFlightCard();
+
+// Keeps live flight statuses/positions fresh without a manual reload (the map ticks the
+// position client-side; this just refreshes the underlying data).
+const MAP_REFRESH_INTERVAL_MS = 20_000;
 
 let unsubscribeAirportSelected: (() => void) | null = null;
+let unsubscribeFlightSelected: (() => void) | null = null;
 let unsubscribeNetworkRefreshRequested: (() => void) | null = null;
 let unsubscribeSnapshotInvalidated: (() => void) | null = null;
+let mapRefreshTimer: null | ReturnType<typeof setInterval> = null;
 
 const t = computed(() => (key: ShellMessageKey): string =>
   translate(shellMessages, props.appLocale, key),
@@ -58,21 +67,28 @@ onMounted(() => {
     selectedAirportId.value = event.airportId;
     void loadMapState(event.airportId);
   });
+  unsubscribeFlightSelected = airlineSimEventBus.on("flight:selected", (event) => {
+    void openFlight(event.flightId);
+  });
   unsubscribeSnapshotInvalidated = airlineSimEventBus.on("game:snapshot-invalidated", () => {
     void refreshDashboard();
   });
   unsubscribeNetworkRefreshRequested = airlineSimEventBus.on("map:network-refresh-requested", () => {
     void refreshDashboard();
   });
+  mapRefreshTimer = setInterval(() => void loadMapState(selectedAirportId.value), MAP_REFRESH_INTERVAL_MS);
 });
 
 onBeforeUnmount(() => {
   unsubscribeAirportSelected?.();
   unsubscribeAirportSelected = null;
+  unsubscribeFlightSelected?.();
+  unsubscribeFlightSelected = null;
   unsubscribeNetworkRefreshRequested?.();
   unsubscribeNetworkRefreshRequested = null;
   unsubscribeSnapshotInvalidated?.();
   unsubscribeSnapshotInvalidated = null;
+  stopMapRefresh();
 });
 
 function debugMapState(message: string, state: DashboardMapState): void {
@@ -150,6 +166,13 @@ async function refreshDashboard(): Promise<void> {
   await loadDashboard();
   isRefreshing.value = false;
 }
+
+function stopMapRefresh(): void {
+  if (mapRefreshTimer !== null) {
+    clearInterval(mapRefreshTimer);
+    mapRefreshTimer = null;
+  }
+}
 </script>
 
 <template>
@@ -198,7 +221,7 @@ async function refreshDashboard(): Promise<void> {
           <div class="relative min-h-[30rem] overflow-hidden rounded-lg border border-border bg-surface">
             <SvelteWrapper
               :create-fn="createMap"
-              :component-props="{ appLocale: props.appLocale, controls: false, mapState, mode: 'dashboard', remoteId: 'map', rotation: false, selectedAirportId, shellPath: '/dashboard', theme: props.appTheme }"
+              :component-props="{ appLocale: props.appLocale, controls: false, mapState, mode: 'dashboard', remoteId: 'map', rotation: false, selectedAirportId, selectedFlightId: selectedFlight?.flight.id ?? null, shellPath: '/dashboard', theme: props.appTheme }"
             />
             <MapControls :app-locale="props.appLocale" />
 
@@ -236,14 +259,23 @@ async function refreshDashboard(): Promise<void> {
           </div>
 
           <aside class="grid min-h-0 min-w-0 content-start gap-3 overflow-y-auto overflow-x-hidden pr-1">
+            <DashboardFlightCard
+              v-if="selectedFlight"
+              :app-locale="props.appLocale"
+              :detail="selectedFlight"
+              :t="t"
+              @close="closeFlight"
+            />
+
             <DashboardMetricStrip
               :app-locale="props.appLocale"
+              class="min-w-0"
               :summary="summary"
             />
 
             <section
               v-if="selectedAirport"
-              class="rounded-lg border border-border bg-surface p-4"
+              class="min-w-0 rounded-lg border border-border bg-surface p-4"
             >
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
@@ -273,11 +305,11 @@ async function refreshDashboard(): Promise<void> {
               />
             </section>
 
-            <div class="grid gap-3">
-              <article class="rounded-lg border border-border bg-surface p-3">
-                <div class="flex items-center gap-2 text-text-muted">
+            <div class="grid min-w-0 gap-3">
+              <article class="min-w-0 rounded-lg border border-border bg-surface p-3">
+                <div class="flex min-w-0 items-center gap-2 text-text-muted">
                   <Building2 :size="18" />
-                  <span class="text-caption">{{ t("dashboard.base.title") }}</span>
+                  <span class="truncate text-caption">{{ t("dashboard.base.title") }}</span>
                 </div>
                 <h2 class="mt-2 truncate text-subtitle">
                   {{ summary.base.airport?.label ?? t("dashboard.base.missing") }}
@@ -320,10 +352,12 @@ async function refreshDashboard(): Promise<void> {
             <DashboardAlerts
               :alerts="summary.alerts"
               :app-locale="props.appLocale"
+              class="min-w-0"
               @ignore="ignoreAlert"
             />
             <DashboardProgressNav
               :app-locale="props.appLocale"
+              class="min-w-0"
               :items="summary.navigation_progress"
             />
           </aside>

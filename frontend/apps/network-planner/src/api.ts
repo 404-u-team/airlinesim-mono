@@ -24,6 +24,7 @@ export type RouteOpportunityFilters = {
   minDemand?: string;
   onlyCompatible?: boolean;
   onlyProfitable?: boolean;
+  originAirportId?: string;
 };
 
 export async function addHub(airportId: string): Promise<{ fee: number; hub: { airport_id: string } }> {
@@ -75,6 +76,9 @@ export async function getRouteOpportunities(filters: RouteOpportunityFilters): P
   if (filters.aircraftId) {
     search.set("aircraft_id", filters.aircraftId);
   }
+  if (filters.originAirportId) {
+    search.set("origin_airport_id", filters.originAirportId);
+  }
   if (filters.limit) {
     search.set("limit", String(filters.limit));
   }
@@ -84,10 +88,17 @@ export async function getRouteOpportunities(filters: RouteOpportunityFilters): P
   return apiClient.get<RouteOpportunitiesResponse>(`/routes/opportunities${query ? `?${query}` : ""}`);
 }
 
-export async function getRoutePreview(destinationAirportId: string, aircraftId?: string): Promise<RoutePreviewResponse> {
+export async function getRoutePreview(
+  destinationAirportId: string,
+  aircraftId?: string,
+  originAirportId?: string,
+): Promise<RoutePreviewResponse> {
   const search = new URLSearchParams();
   if (aircraftId) {
     search.set("aircraft_id", aircraftId);
+  }
+  if (originAirportId) {
+    search.set("origin_airport_id", originAirportId);
   }
 
   const query = search.toString();

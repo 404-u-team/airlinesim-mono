@@ -78,6 +78,17 @@ const flightLevel = computed(() => isAirborne.value ? telemetry.value.cruise_fli
 const departedAgo = computed(() => formatDuration(now.value - Date.parse(flight.value.departure_at)));
 const arrivalIn = computed(() => formatDuration(telemetry.value.eta_minutes * 60_000));
 
+// Calendar-day delta (in UTC, the world clock the game runs on) between departure and
+// arrival, so overnight and date-line legs surface a +1/-1 day marker on the arrival time.
+const arrivalDayOffset = computed(() => {
+  const departure = new Date(flight.value.departure_at);
+  const arrival = new Date(flight.value.arrival_at);
+  const departureDay = Date.UTC(departure.getUTCFullYear(), departure.getUTCMonth(), departure.getUTCDate());
+  const arrivalDay = Date.UTC(arrival.getUTCFullYear(), arrival.getUTCMonth(), arrival.getUTCDate());
+
+  return Math.round((arrivalDay - departureDay) / 86_400_000);
+});
+
 function airportCity(label: string): string {
   return label.includes(" - ") ? label.split(" - ").slice(1).join(" - ") : label;
 }
@@ -95,15 +106,17 @@ function formatDuration(ms: number): string {
 }
 
 function formatTime(value: string): string {
-  return new Intl.DateTimeFormat(props.appLocale, { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+  // World clock is UTC (matches the shell header), so pin the formatter to UTC instead of
+  // silently rendering the viewer's local timezone.
+  return new Intl.DateTimeFormat(props.appLocale, { hour: "2-digit", minute: "2-digit", timeZone: "UTC" }).format(new Date(value));
 }
 </script>
 
 <template>
-  <article class="flight-card overflow-hidden rounded-xl border border-border bg-surface/95 shadow-lg backdrop-blur">
-    <header class="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+  <article class="flight-card flex w-full min-w-0 flex-col rounded-xl border border-border bg-surface shadow-lg">
+    <header class="flex min-w-0 items-start justify-between gap-3 border-b border-border px-4 py-3">
       <div class="min-w-0">
-        <p class="truncate text-h3">
+        <p class="truncate text-h3 leading-tight">
           {{ flight.flight_number }}
         </p>
         <p
@@ -119,7 +132,7 @@ function formatTime(value: string): string {
           :variant="statusBadge.variant"
         />
         <button
-          aria-label="close"
+          :aria-label="t('flight.close')"
           class="rounded-md p-1 text-text-muted transition-colors hover:bg-surface-subtle hover:text-text-primary"
           type="button"
           @click="emit('close')"
@@ -129,8 +142,8 @@ function formatTime(value: string): string {
       </div>
     </header>
 
-    <div class="px-4 py-3">
-      <div class="flex items-center justify-between gap-2">
+    <div class="flex flex-col gap-4 px-4 py-3">
+      <div class="grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-3">
         <div class="min-w-0 text-left">
           <p class="text-h2 leading-none">
             {{ airportCode(flight.origin_airport) }}
@@ -140,7 +153,7 @@ function formatTime(value: string): string {
           </p>
         </div>
         <Plane
-          class="shrink-0 rotate-90 text-primary"
+          class="shrink-0 rotate-90 justify-self-center text-primary"
           :size="20"
         />
         <div class="min-w-0 text-right">
@@ -153,69 +166,76 @@ function formatTime(value: string): string {
         </div>
       </div>
 
-      <div class="mt-4 flex items-center justify-between text-caption text-text-muted">
-        <div>
+      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-caption text-text-muted">
+        <div class="min-w-0">
           <p class="text-subtitle text-text-primary">
             {{ formatTime(flight.departure_at) }}
           </p>
           <span>{{ t("flight.actual") }}</span>
         </div>
-        <div class="text-right">
+        <span class="justify-self-center rounded bg-surface-subtle px-1.5 py-0.5 text-caption font-medium text-text-muted">
+          {{ t("flight.timezone") }}
+        </span>
+        <div class="min-w-0 text-right">
           <p class="text-subtitle text-text-primary">
-            {{ formatTime(flight.arrival_at) }}
+            {{ formatTime(flight.arrival_at)
+            }}<sup
+              v-if="arrivalDayOffset !== 0"
+              class="ml-0.5 align-super text-caption font-semibold text-primary"
+            >{{ arrivalDayOffset > 0 ? `+${arrivalDayOffset}` : arrivalDayOffset }}</sup>
           </p>
           <span>{{ t("flight.eta") }}</span>
         </div>
       </div>
 
-      <dl class="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-body">
-        <div class="flex items-center gap-2">
+      <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-body">
+        <div class="flex min-w-0 items-center gap-2">
           <Plane
             class="shrink-0 text-text-muted"
             :size="16"
           />
-          <span>{{ phaseLabel }}</span>
+          <span class="truncate">{{ phaseLabel }}</span>
         </div>
-        <div class="flex items-center justify-end gap-2">
+        <div class="flex min-w-0 items-center justify-end gap-2">
           <Mountain
             class="shrink-0 text-text-muted"
             :size="16"
           />
           <span>FL{{ flightLevel }}</span>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex min-w-0 items-center gap-2">
           <Users
             class="shrink-0 text-text-muted"
             :size="16"
           />
-          <span>{{ telemetry.passengers_on_board }}/{{ seats }} {{ t("flight.seats") }}</span>
+          <span class="truncate">{{ telemetry.passengers_on_board }}/{{ seats }} {{ t("flight.seats") }}</span>
         </div>
-        <div class="flex items-center justify-end gap-2">
+        <div class="flex min-w-0 items-center justify-end gap-2">
           <Gauge
             class="shrink-0 text-text-muted"
             :size="16"
           />
           <span>{{ telemetry.ground_speed_kph }} km/h</span>
         </div>
-        <div class="col-span-2 flex items-center gap-2">
+        <div class="col-span-2 flex min-w-0 items-center gap-2">
           <Fuel
             class="shrink-0 text-text-muted"
             :size="16"
           />
-          <span>{{ telemetry.fuel_remaining_t }} t {{ t("flight.fuelRemaining") }}</span>
+          <span class="truncate">{{ telemetry.fuel_remaining_t }} t {{ t("flight.fuelRemaining") }}</span>
         </div>
       </dl>
 
-      <div class="mt-4">
+      <div>
         <div class="relative h-2 overflow-hidden rounded-full bg-surface-subtle">
           <div
             class="h-full rounded-full bg-primary transition-[width] duration-1000 ease-linear"
             :style="{ width: `${progress}%` }"
           />
         </div>
-        <div class="mt-2 flex items-center justify-between text-caption text-text-muted">
-          <span>{{ t("flight.departedAgo").replace("{time}", departedAgo) }}</span>
-          <span>{{ t("flight.arrivalIn").replace("{time}", arrivalIn) }}</span>
+        <div class="mt-2 flex items-center justify-between gap-2 text-caption text-text-muted">
+          <span class="truncate">{{ t("flight.departedAgo").replace("{time}", departedAgo) }}</span>
+          <span class="shrink-0">{{ t("flight.arrivalIn").replace("{time}", arrivalIn) }}</span>
         </div>
       </div>
     </div>

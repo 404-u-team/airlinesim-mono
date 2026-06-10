@@ -427,6 +427,17 @@ test("builds map state route and flight features from overlays", () => {
           id: "flight-1",
           origin_airport_id: "airport-1",
           route_id: "route-1",
+          status: "boarding",
+        },
+        {
+          arrival_at: "2026-06-06T12:00:00.000Z",
+          departure_at: "2026-06-06T10:00:00.000Z",
+          destination_airport_id: "airport-2",
+          expected: { profit: 5000 },
+          flight_number: "SA102",
+          id: "flight-2",
+          origin_airport_id: "airport-1",
+          route_id: "route-1",
           status: "scheduled",
         },
       ],
@@ -434,6 +445,8 @@ test("builds map state route and flight features from overlays", () => {
     },
   );
 
+  // Map shows only flights that have entered the gate/airborne lifecycle (boarding
+  // onward) — a "scheduled" (not-yet-departed) flight should not appear.
   expect(payload).toMatchObject({
     flights: {
       features: [
@@ -442,7 +455,7 @@ test("builds map state route and flight features from overlays", () => {
           properties: {
             flight_number: "SA101",
             id: "flight-1",
-            status: "scheduled",
+            status: "boarding",
           },
         },
       ],

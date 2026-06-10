@@ -147,6 +147,7 @@ export const enMessages = {
   "flight.phase.taxi_in": "Taxiing in",
   "flight.phase.taxi_out": "Taxiing out",
   "flight.seats": "pax",
+  "flight.timezone": "UTC",
   "flight.title": "Flight",
   "knowledge.badge": "Player help",
   "knowledge.category.concepts": "Concepts",

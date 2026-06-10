@@ -5,9 +5,9 @@ import { AirButton, AirStatePanel } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 
-import type { RouteOpportunity, StoredRoute } from "./types";
+import type { HubItem, RouteOpportunity, StoredRoute } from "./types";
 
-import { createRoute, getRouteOpportunities, getRoutePreview, getRoutes } from "./api";
+import { createRoute, getHubs, getRouteOpportunities, getRoutePreview, getRoutes } from "./api";
 import HubsPanel from "./components/HubsPanel.vue";
 import MyRoutesPanel from "./components/MyRoutesPanel.vue";
 import RouteDetailPanel from "./components/RouteDetailPanel.vue";
@@ -16,6 +16,15 @@ import RoutePlannerFilters from "./components/RoutePlannerFilters.vue";
 import RoutePlannerLists from "./components/RoutePlannerLists.vue";
 import RoutePreviewPanel from "./components/RoutePreviewPanel.vue";
 import { type NetworkMessageKey, t as translateNetwork } from "./i18n";
+import {
+  errorMessage,
+  formatMoney,
+  formatNumber,
+  parseFare,
+  recommendationLabel,
+  recommendationVariant,
+  statusLabel,
+} from "./utils";
 
 const props = defineProps<{
   appLocale: Locale;
@@ -42,6 +51,17 @@ const filters = reactive({
   onlyProfitable: false,
 });
 let filterDebounce: null | ReturnType<typeof setTimeout> = null;
+
+const hubs = ref<HubItem[]>([]);
+const selectedHubId = ref("");
+
+const hubOptions = computed(() =>
+  hubs.value.map((hub) => ({
+    label: hub.label,
+    value: hub.airport_id,
+  })),
+);
+const isHubDisabled = computed(() => hubs.value.length <= 1);
 
 const isHubsView = computed(() => Boolean(props.shellPath?.includes("/airports/hubs")));
 const routeDetailId = computed(() => {
@@ -84,10 +104,9 @@ onUnmounted(() => {
   }
 });
 
-watch([filters, selectedAircraftId], () => {
-  if (filterDebounce) {
-    clearTimeout(filterDebounce);
-  }
+watch([filters, selectedAircraftId, selectedHubId], ([_f, _a, newHub], [_of, _oa, oldHub]) => {
+  if (oldHub === "" && newHub !== "") {return;}
+  if (filterDebounce) {clearTimeout(filterDebounce);}
   filterDebounce = setTimeout(() => void loadData(), 300);
 }, { deep: true });
 
@@ -140,37 +159,37 @@ async function createSelectedRoute(): Promise<void> {
       targetPath: `/operations/schedule?route_id=${encodeURIComponent(created.route.id)}`,
     });
   } catch (loadError) {
-    error.value = errorMessage(loadError);
+    error.value = errorMessage(loadError, tr("error.load"));
   } finally {
     isCreating.value = false;
   }
 }
 
-function errorMessage(value: unknown): string {
-  return value instanceof Error ? value.message : tr("error.load");
-}
-
-function formatMoney(value: number | undefined): string {
-  return new Intl.NumberFormat(props.appLocale, {
-    currency: "USD",
-    maximumFractionDigits: 0,
-    style: "currency",
-  }).format(value ?? 0);
-}
-
-function formatNumber(value: number | undefined): string {
-  return new Intl.NumberFormat(props.appLocale, { maximumFractionDigits: 0 }).format(value ?? 0);
-}
+const formatMoneyVal = (value: number | undefined) => formatMoney(props.appLocale, value);
+const formatNumberVal = (value: number | undefined) => formatNumber(props.appLocale, value);
 
 async function loadData(): Promise<void> {
   isLoading.value = true;
   error.value = "";
 
   try {
-    const [opportunityResponse, routeResponse] = await Promise.all([
-      getRouteOpportunities({ ...filters, aircraftId: selectedAircraftId.value }),
+    const [hubsResponse, routeResponse] = await Promise.all([
+      getHubs(),
       getRoutes(),
     ]);
+    hubs.value = hubsResponse.hubs;
+
+    if (!selectedHubId.value || !hubs.value.some((h) => h.airport_id === selectedHubId.value)) {
+      const baseHub = hubs.value.find((h) => h.is_base);
+      selectedHubId.value = baseHub ? baseHub.airport_id : (hubs.value[0]?.airport_id ?? "");
+    }
+
+    const opportunityResponse = await getRouteOpportunities({
+      ...filters,
+      aircraftId: selectedAircraftId.value,
+      originAirportId: selectedHubId.value || undefined,
+    });
+
     opportunities.value = opportunityResponse.opportunities;
     routes.value = routeResponse.routes;
     if (!opportunities.value.some((opportunity) => opportunity.destination_airport.id === selectedDestinationId.value)) {
@@ -178,7 +197,7 @@ async function loadData(): Promise<void> {
     }
     await loadPreview();
   } catch (loadError) {
-    error.value = errorMessage(loadError);
+    error.value = errorMessage(loadError, tr("error.load"));
   } finally {
     isLoading.value = false;
   }
@@ -194,65 +213,37 @@ async function loadPreview(): Promise<void> {
   isPreviewLoading.value = true;
 
   try {
-    const response = await getRoutePreview(destinationId, selectedAircraftId.value || undefined);
+    const response = await getRoutePreview(
+      destinationId,
+      selectedAircraftId.value || undefined,
+      selectedHubId.value || undefined,
+    );
     preview.value = response.preview;
   } catch (loadError) {
-    error.value = errorMessage(loadError);
+    error.value = errorMessage(loadError, tr("error.load"));
   } finally {
     isPreviewLoading.value = false;
   }
 }
 
-function navigateToSchedule(route: StoredRoute): void {
-  airlineSimEventBus.emit("navigation:intent", {
-    source: "mfe",
-    targetPath: `${route.next_action.target_path}?route_id=${encodeURIComponent(route.id)}`,
-  });
-}
+const navigateToSchedule = (route: StoredRoute) => airlineSimEventBus.emit("navigation:intent", {
+  source: "mfe",
+  targetPath: `${route.next_action.target_path}?route_id=${encodeURIComponent(route.id)}`,
+});
 
-// Empty / non-positive input means "use the automatic reference fare".
-function parseFare(value: string): number | undefined {
-  const parsed = Number(value);
+const recommendationLabelVal = (value: RouteOpportunity["recommendation"]) => recommendationLabel(value, tr);
 
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-}
-
-function recommendationLabel(value: RouteOpportunity["recommendation"]): string {
-  return tr(`recommendation.${value}` as NetworkMessageKey);
-}
-
-function recommendationVariant(value: RouteOpportunity["recommendation"]): "danger-soft" | "success-soft" | "warning-soft" {
-  if (value === "open") {
-    return "success-soft";
-  }
-  if (value === "blocked") {
-    return "danger-soft";
-  }
-  return "warning-soft";
-}
-
-function selectOpportunity(opportunity: RouteOpportunity): void {
-  selectedDestinationId.value = opportunity.destination_airport.id ?? "";
-  selectedAircraftId.value ||= opportunity.compatible_aircraft.find((option) => option.isCompatible)?.aircraft.id ?? "";
+const selectOpportunity = (opp: RouteOpportunity) => {
+  selectedDestinationId.value = opp.destination_airport.id ?? "";
+  selectedAircraftId.value ||= opp.compatible_aircraft.find((opt) => opt.isCompatible)?.aircraft.id ?? "";
   void loadPreview();
-}
+};
 
-function statusLabel(status: string): string {
-  const key = `status.${status}` as NetworkMessageKey;
-  return key in tMap ? tr(key) : status;
-}
+const statusLabelVal = (status: string) => statusLabel(status, tr);
 
 function tr(key: NetworkMessageKey): string {
   return translateNetwork(props.appLocale, key);
 }
-
-const tMap = {
-  "status.active": true,
-  "status.awaiting_schedule": true,
-  "status.draft": true,
-  "status.paused": true,
-  "status.scheduled": true,
-};
 </script>
 
 <template>
@@ -291,8 +282,8 @@ const tMap = {
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-3 text-caption text-text-muted">
-          <span>{{ tr("panel.results") }}: {{ formatNumber(opportunities.length) }}</span>
-          <span>{{ tr("panel.saved") }}: {{ formatNumber(routes.length) }}</span>
+          <span>{{ tr("panel.results") }}: {{ formatNumberVal(opportunities.length) }}</span>
+          <span>{{ tr("panel.saved") }}: {{ formatNumberVal(routes.length) }}</span>
           <AirButton
             :disabled="isLoading"
             :label="isLoading ? '...' : tr('action.refresh')"
@@ -317,17 +308,21 @@ const tMap = {
 
       <RoutePlannerFilters
         :aircraft-options="aircraftOptions"
+        :hub-options="hubOptions"
+        :is-hub-disabled="isHubDisabled"
         :max-distance="filters.maxDistance"
         :min-demand="filters.minDemand"
         :only-compatible="filters.onlyCompatible"
         :only-profitable="filters.onlyProfitable"
         :selected-aircraft-id="selectedAircraftId"
+        :selected-hub-id="selectedHubId"
         :t="tr"
         @update:max-distance="filters.maxDistance = $event"
         @update:min-demand="filters.minDemand = $event"
         @update:only-compatible="filters.onlyCompatible = $event"
         @update:only-profitable="filters.onlyProfitable = $event"
         @update:selected-aircraft-id="selectedAircraftId = $event"
+        @update:selected-hub-id="selectedHubId = $event"
       />
 
       <div class="route-planner-workspace">
@@ -345,11 +340,11 @@ const tMap = {
           :current-preview="currentPreview"
           :fare-outbound="fareOutbound"
           :fare-return="fareReturn"
-          :format-money="formatMoney"
-          :format-number="formatNumber"
+          :format-money="formatMoneyVal"
+          :format-number="formatNumberVal"
           :is-creating="isCreating"
           :is-preview-loading="isPreviewLoading"
-          :recommendation-label="recommendationLabel"
+          :recommendation-label="recommendationLabelVal"
           :recommendation-variant="recommendationVariant"
           :t="tr"
           @create-selected-route="createSelectedRoute"
@@ -359,15 +354,15 @@ const tMap = {
       </div>
 
       <RoutePlannerLists
-        :format-money="formatMoney"
-        :format-number="formatNumber"
+        :format-money="formatMoneyVal"
+        :format-number="formatNumberVal"
         :is-loading="isLoading"
         :opportunities="opportunities"
-        :recommendation-label="recommendationLabel"
+        :recommendation-label="recommendationLabelVal"
         :recommendation-variant="recommendationVariant"
         :routes="routes"
         :selected-destination-id="selectedDestinationId"
-        :status-label="statusLabel"
+        :status-label="statusLabelVal"
         :t="tr"
         @navigate-to-schedule="navigateToSchedule"
         @select-opportunity="selectOpportunity"

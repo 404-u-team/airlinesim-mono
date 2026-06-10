@@ -12,7 +12,9 @@ import { buildBaseFacilitiesOverview } from "../facilities/overview";
 import { loadFacilitiesSnapshot } from "../facilities/snapshot";
 import { sumLedger } from "../finance/calculator";
 import { listLedgerForAirline } from "../finance/storage";
+import { listHubsForAirline } from "../hubs/storage";
 import { airborneWindow } from "../operations/flight-phases";
+import { updateFlightStatuses } from "../operations/flights";
 import { listFlightsForAirline, listSchedulesForAirline } from "../operations/storage";
 import { listRoutesForAirline } from "../routes/storage";
 
@@ -140,6 +142,7 @@ export function buildMapState(
   searchParams: URLSearchParams,
   routes: OverlayRoute[] = [],
   operations: OverlayOperations = { flights: [], schedules: [] },
+  hubAirportIds: string[] = [],
 ): Record<string, unknown> {
   const baseAirport = getBaseAirport(snapshot);
   const includeOpportunities = searchParams.get("include_opportunities") !== "false";
@@ -155,7 +158,10 @@ export function buildMapState(
   const routeDestinations = routes
     .map((route) => snapshot.airports.find((airport) => airport.id === route.destination_airport_id))
     .filter((airport): airport is Airport => Boolean(airport));
-  const airportFeatures = buildMapAirportFeatures(baseAirport, opportunities, routeDestinations);
+  const hubAirports = hubAirportIds
+    .map((airportId) => snapshot.airports.find((airport) => airport.id === airportId))
+    .filter((airport): airport is Airport => Boolean(airport));
+  const airportFeatures = buildMapAirportFeatures(baseAirport, opportunities, routeDestinations, hubAirports);
 
   const warnings = [
     ...(baseAirport && !pointFromAirport(baseAirport) ? ["MISSING_BASE_COORDINATES"] : []),
@@ -231,12 +237,14 @@ export async function handleGameRequest(
   }
 
   if (url.pathname === "/game/map-state") {
-    const [routes, operations] = await Promise.all([
+    const [routes, operations, hubs] = await Promise.all([
       listRoutesForAirline(snapshot.airline.id ?? ""),
       loadOverlayOperations(snapshot.airline.id ?? ""),
+      listHubsForAirline(snapshot.airline.id ?? ""),
     ]);
+    const hubAirportIds = hubs.map((hub) => hub.airport_id);
 
-    return jsonResponse(buildMapState(snapshot, url.searchParams, routes, operations));
+    return jsonResponse(buildMapState(snapshot, url.searchParams, routes, operations, hubAirportIds));
   }
 
   if (url.pathname === "/game/finance-overview") {
@@ -395,6 +403,7 @@ function buildMapAirportFeatures(
   baseAirport: Airport | undefined,
   opportunities: RouteOpportunity[],
   routeDestinations: Airport[] = [],
+  hubAirports: Airport[] = [],
 ): Map<string, Record<string, unknown>> {
   const airportFeatures = new Map<string, Record<string, unknown>>();
 
@@ -418,6 +427,18 @@ function buildMapAirportFeatures(
       continue;
     }
     const feature = toAirportFeature(airport, "route_destination", 0);
+    if (feature) {
+      airportFeatures.set(airport.id, feature);
+    }
+  }
+
+  // Established hubs take precedence over everything but the base — they're "ours" too,
+  // even if they're also a route destination or opportunity.
+  for (const airport of hubAirports) {
+    if (!airport.id || airport.id === baseAirport?.id) {
+      continue;
+    }
+    const feature = toAirportFeature(airport, "hub", 0);
     if (feature) {
       airportFeatures.set(airport.id, feature);
     }
@@ -643,7 +664,10 @@ async function loadOverlayOperations(airlineId: string): Promise<OverlayOperatio
     listSchedulesForAirline(airlineId),
   ]);
 
-  return { flights, schedules };
+  // Stored flight status is set at creation time and only persisted-updated by the
+  // operations endpoints; recompute it from departure/arrival here too, so a flight
+  // that has already landed doesn't linger as "in_flight" on the dashboard map.
+  return { flights: updateFlightStatuses(flights), schedules };
 }
 
 function maintenanceRatio(aircraft: Aircraft): number {
@@ -713,7 +737,7 @@ function routesState(hasAircraft: boolean, hasRoutes: boolean): string {
 
 function toAirportFeature(
   airport: Airport,
-  role: "base" | "opportunity" | "route_destination",
+  role: "base" | "hub" | "opportunity" | "route_destination",
   score: number,
   demand?: number,
 ): null | Record<string, unknown> {
@@ -763,7 +787,9 @@ function toAirportSummary(airport: Airport): Record<string, unknown> {
 }
 
 function toFlightFeature(flight: OverlayFlight, snapshot: GameSnapshot): null | Record<string, unknown> {
-  if (flight.status === "cancelled" || flight.status === "completed") {
+  // Only show flights that have entered the gate/airborne lifecycle (boarding onward) —
+  // not-yet-departed scheduled flights would otherwise clutter the map with static dots.
+  if (flight.status !== "boarding" && flight.status !== "in_flight") {
     return null;
   }
 
