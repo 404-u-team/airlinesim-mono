@@ -7,6 +7,7 @@ export { default as AirDataTable } from "./components/AirDataTable";
 export type { AirDataTableColumn } from "./components/AirDataTable/AirDataTable.vue";
 export { default as AirFormPanel } from "./components/AirFormPanel";
 export { default as AirIconButton } from "./components/AirIconButton";
+export { default as AirImagePreview } from "./components/AirImagePreview";
 export { default as AirMetricCard } from "./components/AirMetricCard";
 export { default as AirModal } from "./components/AirModal";
 export { default as AirPagination } from "./components/AirPagination";
@@ -18,4 +19,5 @@ export { default as AirStatePanel } from "./components/AirStatePanel";
 export { default as AirTextField } from "./components/AirTextField";
 export { default as AirTimeline } from "./components/AirTimeline";
 export type { AirTimelineItem } from "./components/AirTimeline";
+
 

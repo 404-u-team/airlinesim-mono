@@ -2,6 +2,7 @@ import { requireAdminCapability } from "./auth";
 import { getConfig } from "./config";
 import { jsonResponse, notFound } from "./http";
 import { handleAdminRequest } from "./modules/admin";
+import { handleAdminAircraftTypesRequest, handleAircraftImageFileRequest } from "./modules/admin/aircraft-types";
 import { handleAdminDemandRequest } from "./modules/admin/demand";
 import { handleDemandRequest } from "./modules/demand";
 import { handleEventsRequest } from "./modules/events";
@@ -40,6 +41,7 @@ async function routeProductRequest(request: Request, url: URL): Promise<null | R
 
 async function routeRequest(request: Request, url: URL): Promise<Response> {
   return (
+    handleAircraftImageFileRequest(request, url) ??
     (await routeProductRequest(request, url)) ??
     (await handleProxyRequest(request, url, config)) ??
     notFound()
@@ -48,6 +50,7 @@ async function routeRequest(request: Request, url: URL): Promise<Response> {
 
 async function routeWorldRequest(request: Request, url: URL): Promise<null | Response> {
   return (
+    (await handleAdminAircraftTypesRequest(request, url, config)) ??
     (await handleAdminDemandRequest(request, url, config)) ??
     (await handleAdminRequest(request, url, config)) ??
     (await handleImportRequest(request, url, config)) ??

@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --force",
     "build": "vue-tsc -b && vite build",
     "lint": "eslint . --max-warnings=0 && vue-tsc -b --noEmit",
     "lint:fix": "eslint . --fix",

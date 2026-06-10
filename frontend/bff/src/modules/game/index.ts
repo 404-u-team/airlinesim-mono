@@ -10,6 +10,9 @@ import { reconcileNotificationsForDashboard, reconcileNotificationsForRequest } 
 import { listEventsForAirline } from "../events/storage";
 import { buildBaseFacilitiesOverview } from "../facilities/overview";
 import { loadFacilitiesSnapshot } from "../facilities/snapshot";
+import { sumLedger } from "../finance/calculator";
+import { listLedgerForAirline } from "../finance/storage";
+import { airborneWindow } from "../operations/flight-phases";
 import { listFlightsForAirline, listSchedulesForAirline } from "../operations/storage";
 import { listRoutesForAirline } from "../routes/storage";
 
@@ -618,10 +621,17 @@ async function loadGameSnapshot(config: BffConfig, request: Request, userAuthori
     requestBackendJson<{ regions?: Region[] }>(config, "/regions", { token }),
   ]);
 
+  const ledger = await listLedgerForAirline(airline.id ?? "");
+  const ledgerDelta = sumLedger(ledger);
+  const adjustedAirline = {
+    ...airline,
+    balance: (airline.balance ?? 0) + ledgerDelta,
+  };
+
   return {
     aircrafts: aircrafts.items ?? [],
     aircraftTypes: aircraftTypes.items ?? [],
-    airline,
+    airline: adjustedAirline,
     airports: airports.airports ?? [],
     regions: regions.regions ?? [],
   };
@@ -767,6 +777,9 @@ function toFlightFeature(flight: OverlayFlight, snapshot: GameSnapshot): null | 
   }
 
   const position = interpolateFlightPosition(originPoint, destinationPoint, flight);
+  // Embed the endpoints and the airborne window so the client can interpolate the
+  // position locally on a tick — live movement with no extra round-trips or remounts.
+  const window = airborneWindow(flight.departure_at ?? "", flight.arrival_at ?? "");
 
   return {
     geometry: {
@@ -775,12 +788,18 @@ function toFlightFeature(flight: OverlayFlight, snapshot: GameSnapshot): null | 
     },
     id: flight.id,
     properties: {
+      arrival_at: flight.arrival_at,
+      departure_at: flight.departure_at,
+      destination: [destinationPoint.longitude, destinationPoint.latitude],
       flight_number: flight.flight_number,
       id: flight.id,
       label: flight.flight_number ?? "Flight",
+      landing_at: window?.landing_at,
+      origin: [originPoint.longitude, originPoint.latitude],
       profit: flight.expected?.profit ?? 0,
       route_id: flight.route_id,
       status: flight.status ?? "scheduled",
+      takeoff_at: window?.takeoff_at,
     },
     type: "Feature",
   };

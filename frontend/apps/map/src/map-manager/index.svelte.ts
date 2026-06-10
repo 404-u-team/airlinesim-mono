@@ -86,12 +86,17 @@ export class MapManager {
         return this.style;
     }
     private animationId: null | number = null;
+    private flightTickerId: null | ReturnType<typeof setInterval> = null;
     private interactable = $state(true);
     private interactableWasTrue = $state(true);
 
     private isGlobe = $state(true);
 
     private isInRotation = $state(false);
+
+    // Last viewport applied, so polled map-state updates do not re-center the camera
+    // (only a genuinely changed viewport, e.g. selecting another airport, refits).
+    private lastViewportKey: null | string = null;
 
     private readonly listeners = new SvelteSet<MapManagerListener>();
 
@@ -124,6 +129,8 @@ export class MapManager {
             cancelAnimationFrame(this.animationId);
             this.animationId = null;
         }
+
+        this.stopFlightTicker();
 
         if (this.refreshFrameId !== null) {
             cancelAnimationFrame(this.refreshFrameId);
@@ -304,6 +311,7 @@ export class MapManager {
         this.ensureRouteLayer();
         this.ensureFlightLayer();
         this.ensureAirportLayers();
+        this.ensureFlightTicker();
         debugLog("layers:applied", {
             counts: this.getFeatureCounts(),
             hasAirportLayer: Boolean(this.map.getLayer("airlinesim-airport-points")),
@@ -421,6 +429,17 @@ export class MapManager {
         this.map.on("click", "airlinesim-flight-points", this.handleFlightClick);
     }
 
+    // Drives live aircraft movement entirely on the client: every second the flight
+    // positions are re-interpolated from the embedded origin/destination + airborne
+    // window and pushed to the source. No refetch, no remount, no camera change.
+    private ensureFlightTicker(): void {
+        if (this.flightTickerId !== null) {
+            return;
+        }
+
+        this.flightTickerId = setInterval(() => this.tickFlightPositions(), 1000);
+    }
+
     private ensureRouteLayer(): void {
         if (!this.map) {
             return;
@@ -451,6 +470,14 @@ export class MapManager {
         if (!this.map || !this.mapState?.viewport) {
             return;
         }
+
+        // Skip when the viewport is unchanged (real-time polls/ticks), so the camera is
+        // not yanked back every refresh while the player is panning the map.
+        const viewportKey = JSON.stringify(this.mapState.viewport);
+        if (viewportKey === this.lastViewportKey) {
+            return;
+        }
+        this.lastViewportKey = viewportKey;
 
         const { bounds, center, zoom } = this.mapState.viewport;
 
@@ -532,6 +559,35 @@ export class MapManager {
         );
     }
 
+    private interpolatedFlights(now: number): Record<string, unknown> {
+        const features = (this.mapState?.flights?.features ?? []).map((feature) => {
+            const properties = (feature as { properties?: Record<string, unknown> }).properties ?? {};
+            const origin = properties.origin as [number, number] | undefined;
+            const destination = properties.destination as [number, number] | undefined;
+            const takeoff = Date.parse(typeof properties.takeoff_at === "string" ? properties.takeoff_at : "");
+            const landing = Date.parse(typeof properties.landing_at === "string" ? properties.landing_at : "");
+
+            if (!origin || !destination || !Number.isFinite(takeoff) || !Number.isFinite(landing) || landing <= takeoff) {
+                return feature;
+            }
+
+            const progress = Math.max(0, Math.min(1, (now - takeoff) / (landing - takeoff)));
+
+            return {
+                ...feature,
+                geometry: {
+                    coordinates: [
+                        origin[0] + (destination[0] - origin[0]) * progress,
+                        origin[1] + (destination[1] - origin[1]) * progress,
+                    ],
+                    type: "Point",
+                },
+            };
+        });
+
+        return { features, type: "FeatureCollection" };
+    }
+
     private restoreCameraState(): void {
         if (!this.map || !this.pendingCameraState) {
             return;
@@ -588,6 +644,22 @@ export class MapManager {
         this.map.jumpTo({ center: currentCenter });
 
         this.animationId = requestAnimationFrame(() => this.spinGlobe());
+    }
+
+    private stopFlightTicker(): void {
+        if (this.flightTickerId !== null) {
+            clearInterval(this.flightTickerId);
+            this.flightTickerId = null;
+        }
+    }
+
+    private tickFlightPositions(): void {
+        if (!this.map?.isStyleLoaded() || !this.mapState?.flights?.features.length) {
+            return;
+        }
+
+        const source = this.map.getSource("airlinesim-flights") as undefined | { setData?: (data: Record<string, unknown>) => void };
+        source?.setData?.(this.interpolatedFlights(Date.now()));
     }
 
     private upsertGeoJsonSource(id: string, data: Record<string, unknown>): void {

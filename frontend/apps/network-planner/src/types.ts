@@ -80,6 +80,26 @@ export type HubPreviewResponse = {
   region: HubPreviewRegion | null;
 };
 
+export type PriceAnalysisLeg = {
+  auto_fare: number;
+  auto_profit_per_flight: number;
+  projected_load_factor: number;
+  projected_passengers: number;
+  projected_profit_per_flight: number;
+  suggested_fare: number;
+  uplift_per_flight: number;
+};
+
+export type PriceAnalysisResponse = {
+  analysis: {
+    currency: string;
+    fee: number;
+    flights_per_week: number;
+    outbound: PriceAnalysisLeg;
+    return: PriceAnalysisLeg;
+  };
+};
+
 export type RouteAircraftOption = {
   aircraft: {
     id?: string;
@@ -153,11 +173,73 @@ export type RouteDemandSnapshot = {
   origin_daily_passengers: number;
 };
 
+export type RouteDetailAircraft = {
+  baseAirportName?: string;
+  id?: string;
+  modelName?: string;
+  status?: string;
+  tail_number?: string;
+  type?: null | {
+    icao_code?: string;
+    image_url?: string;
+    model_name?: string;
+  };
+  type_id?: string;
+};
+
+export type RouteDetailFlight = {
+  actual?: RouteFlightFinancials;
+  arrival_at: string;
+  departure_at: string;
+  destination_airport?: null | RouteAirport;
+  expected: RouteFlightFinancials;
+  flight_number: string;
+  id: string;
+  origin_airport?: null | RouteAirport;
+  status: string;
+};
+
+export type RouteDetailResponse = {
+  aircraft: RouteDetailAircraft[];
+  demand: {
+    average_daily_passengers: number;
+    destination_daily_passengers: number;
+    distance_km: number;
+    origin_daily_passengers: number;
+  };
+  fare: {
+    outbound: null | number;
+    return: null | number;
+  };
+  route: StoredRoute;
+  schedules: RouteDetailSchedule[];
+  upcoming_flights: RouteDetailFlight[];
+};
+
+export type RouteDetailSchedule = {
+  aircraft_id: string;
+  id: string;
+  pattern: {
+    days_of_week: number[];
+    departure_local_time: string;
+  };
+  status: string;
+};
+
 export type RouteEconomics = {
   estimated_cost_per_flight: number;
+  estimated_fare_per_passenger?: number;
   estimated_profit_per_flight: number;
   estimated_revenue_per_flight: number;
   expected_load_factor: number;
+};
+
+export type RouteFlightFinancials = {
+  cost: number;
+  load_factor: number;
+  passengers: number;
+  profit: number;
+  revenue: number;
 };
 
 export type RouteOpportunitiesResponse = {
@@ -197,6 +279,8 @@ export type StoredRoute = {
   demand_snapshot: RouteDemandSnapshot;
   destination_airport: null | RouteAirport;
   economics_snapshot: RouteEconomics;
+  fare_override_outbound?: number;
+  fare_override_return?: number;
   id: string;
   next_action: {
     code: string;

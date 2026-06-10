@@ -3,6 +3,7 @@ import type { BffConfig } from "../../config";
 import { getAdminCapabilityProbe, requireAdminCapability } from "../../auth";
 import { BackendHttpError } from "../../backend-http";
 import { jsonResponse } from "../../http";
+import { handleAdminAirlinesRequest } from "./airlines";
 import { listAdminAudit } from "./audit";
 import { buildWorldReadiness } from "./readiness";
 import { handleAdminWorldRequest } from "./world";
@@ -24,17 +25,8 @@ export async function handleAdminRequest(
     if (authError) {
       return authError;
     }
-    if (request.method === "GET" && url.pathname === "/admin/world/readiness") {
-      return jsonResponse(await buildWorldReadiness(request, config));
-    }
-    if (request.method === "GET" && url.pathname === "/admin/audit") {
-      return jsonResponse({ entries: await listAdminAudit() });
-    }
-    if (url.pathname.startsWith("/admin/import/")) {
-      return null;
-    }
 
-    return await handleAdminWorldRequest(request, url, config);
+    return await routeAdminRequest(request, url, config);
   } catch (error) {
     if (error instanceof BackendHttpError) {
       return jsonResponse(error.toNormalizedJson(), { status: error.status });
@@ -51,4 +43,19 @@ export async function handleAdminRequest(
       { status: 503 },
     );
   }
+}
+
+// Dispatches an authenticated admin request to the matching sub-handler.
+async function routeAdminRequest(request: Request, url: URL, config: BffConfig): Promise<null | Response> {
+  if (request.method === "GET" && url.pathname === "/admin/world/readiness") {
+    return jsonResponse(await buildWorldReadiness(request, config));
+  }
+  if (request.method === "GET" && url.pathname === "/admin/audit") {
+    return jsonResponse({ entries: await listAdminAudit() });
+  }
+  if (url.pathname.startsWith("/admin/import/")) {
+    return null;
+  }
+
+  return (await handleAdminAirlinesRequest(request, url, config)) ?? (await handleAdminWorldRequest(request, url, config));
 }

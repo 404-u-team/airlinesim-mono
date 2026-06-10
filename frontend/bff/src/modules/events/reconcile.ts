@@ -46,7 +46,7 @@ export async function reconcileNotificationsForRequest(request: Request, config:
     .reduce((total, transaction) => total + signedAmount(transaction), 0);
   const risks: NotificationRisk[] = [
     ...buildFinanceRisks(
-      (snapshot.airline.balance ?? 0) + ledger.reduce((total, transaction) => total + signedAmount(transaction), 0),
+      snapshot.airline.balance ?? 0,
       weeklyProfit,
       Boolean(snapshot.airline.is_bankrupt),
       routeProfits,

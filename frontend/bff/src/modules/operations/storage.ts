@@ -8,6 +8,15 @@ import { readDocument, writeDocument } from "../../db/database";
 const flightsLegacyPath = resolve(import.meta.dir, "../../../data/game-state/flights.json");
 const schedulesLegacyPath = resolve(import.meta.dir, "../../../data/game-state/schedules.json");
 
+export async function deleteFlightsForRoute(routeId: string): Promise<void> {
+  const currentFlights = readFlights();
+  const remaining = currentFlights.filter((flight) => flight.route_id !== routeId);
+
+  if (remaining.length !== currentFlights.length) {
+    writeDocument("flights", remaining);
+  }
+}
+
 export async function deleteFutureFlightsForSchedules(scheduleIds: string[]): Promise<void> {
   if (scheduleIds.length === 0) {
     return;
@@ -36,6 +45,15 @@ export async function deleteSchedulesForAircraft(airlineId: string, aircraftId: 
   writeDocument("schedules", schedules.filter((schedule) => !removedIds.has(schedule.id)));
 
   return [...removedIds];
+}
+
+export async function deleteSchedulesForRoute(routeId: string): Promise<void> {
+  const schedules = readSchedules();
+  const remaining = schedules.filter((schedule) => schedule.route_id !== routeId);
+
+  if (remaining.length !== schedules.length) {
+    writeDocument("schedules", remaining);
+  }
 }
 
 export async function listFlightsForAirline(airlineId: string): Promise<StoredFlight[]> {

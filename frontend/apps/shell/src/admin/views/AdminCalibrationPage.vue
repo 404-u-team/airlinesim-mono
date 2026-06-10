@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import type { Locale } from "@airlinesim/i18n";
 
-import { AirBadge, AirButton, AirMetricCard } from "@airlinesim/air-ui";
+import { AirBadge, AirButton } from "@airlinesim/air-ui";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
 import type { CalibrationArtifact, CalibrationJobStatus, ScorecardRow, SegmentRow } from "../types";
 
 import { getCalibration, getCalibrationJob, getCountries, getLatestCalibrationJob, runCalibration } from "../api/demandApi";
 import AdminCalibrationParamsTable from "../components/AdminCalibrationParamsTable.vue";
+import AdminCalibrationQuality from "../components/AdminCalibrationQuality.vue";
+import AdminCalibrationScatter from "../components/AdminCalibrationScatter.vue";
 import AdminCalibrationScorecardTable from "../components/AdminCalibrationScorecardTable.vue";
 import AdminCalibrationSegmentsTable from "../components/AdminCalibrationSegmentsTable.vue";
+import AdminDemandPairLookup from "../components/AdminDemandPairLookup.vue";
 import { adminCalibrationMessages, adminText } from "../i18n";
 
 const props = defineProps<{ appLocale: Locale }>();
@@ -33,26 +36,6 @@ let pollTimer: null | ReturnType<typeof setTimeout> = null;
 const countryInfo = (id: string) => countriesMap.value[id.toLowerCase()] ?? { iso: id.slice(0, 4).toUpperCase(), name: "" };
 const progressDetail = computed(() => activeJob.value?.progress?.message ?? "");
 const reversedLogs = computed(() => [...(activeJob.value?.logs ?? [])].reverse());
-const r2Formatted = computed(() => typeof calibration.value?.quality?.r2 === "number" ? `${(calibration.value.quality.r2 * 100).toFixed(2)}%` : "—");
-// Backend returns MAPE as a fraction (0.15 = 15%); render it as a percent here.
-const mapeFormatted = computed(() => typeof calibration.value?.quality?.mape === "number" ? `${(calibration.value.quality.mape * 100).toFixed(1)}%` : "—");
-const medianRatioFormatted = computed(() => typeof calibration.value?.quality?.medianRatio === "number" ? `×${calibration.value.quality.medianRatio.toFixed(2)}` : "—");
-const biasFormatted = computed(() => typeof calibration.value?.quality?.bias === "number" ? `×${calibration.value.quality.bias.toFixed(2)}` : "—");
-// R² is goodness-of-fit: only a clearly positive value is good. Negative means the
-// fit is worse than predicting the mean, so it must not read as success.
-const r2Tone = computed(() => {
-  const r2 = calibration.value?.quality?.r2;
-  if (typeof r2 !== "number") { return "neutral"; }
-  if (r2 >= 0.3) { return "success"; }
-  return r2 > 0 ? "warning" : "danger";
-});
-// medianRatio is the robust skew signal: ~1 is on-target, far from 1 is biased.
-const medianTone = computed(() => {
-  const m = calibration.value?.quality?.medianRatio;
-  if (typeof m !== "number") { return "neutral"; }
-  return m >= 0.7 && m <= 1.5 ? "success" : "warning";
-});
-const formattedDate = computed(() => calibration.value?.fittedAt ? new Date(calibration.value.fittedAt).toLocaleString(props.appLocale) : "—");
 
 const changedPropensities = computed(() => !calibration.value?.propensityByCountry ? [] : Object.entries(calibration.value.propensityByCountry)
   .map(([country, propensity]) => ({ country, propensity }))
@@ -231,31 +214,7 @@ function triggerCalibrate(refresh: boolean) {
     <!-- Dashboard Content -->
     <div v-if="calibration" class="mt-6 space-y-6">
       <!-- Quality Scorecard -->
-      <section class="rounded-lg border border-border bg-surface p-4">
-        <h2 class="text-h4 font-bold mb-4">
-          {{ t("quality") }}
-        </h2>
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <AirMetricCard :label="t('version')" :value="String(calibration.version)" />
-          <AirMetricCard :label="t('fittedAt')" :value="formattedDate" />
-          <AirMetricCard :label="t('pairsUsed')" :value="calibration.quality?.pairs ? String(calibration.quality.pairs) : (anchorsUsed > 0 ? String(anchorsUsed) : '—')" />
-          <AirMetricCard label="R² (Goodness of Fit)" :value="r2Formatted" :tone="r2Tone" />
-          <AirMetricCard label="MAPE (Avg Error)" :value="mapeFormatted" :tone="typeof calibration.quality?.mape === 'number' && calibration.quality.mape < 0.25 ? 'success' : 'warning'" />
-          <AirMetricCard
-            :label="appLocale === 'ru' ? 'Медиана модель/факт' : 'Median model/real'"
-            :value="medianRatioFormatted"
-            :tone="medianTone"
-          />
-          <AirMetricCard
-            :label="appLocale === 'ru' ? 'Системный сдвиг' : 'Systematic bias'"
-            :value="biasFormatted"
-            :tone="medianTone"
-          />
-        </div>
-        <p class="mt-3 text-caption text-text-muted">
-          {{ appLocale === 'ru' ? 'MAPE раздувают тонкие маршруты; медиана и сдвиг устойчивее: ×1.0 — в среднем точно, ×3 — завышение втрое.' : 'MAPE is inflated by thin routes; median & bias are robust: ×1.0 on-target, ×3 = 3× overestimate.' }}
-        </p>
-      </section>
+      <AdminCalibrationQuality :anchors-used="anchorsUsed" :app-locale="appLocale" :artifact="calibration" />
 
       <!-- Actions Grid -->
       <section class="grid gap-4 md:grid-cols-2">
@@ -303,7 +262,7 @@ function triggerCalibrate(refresh: boolean) {
           <h2 class="text-h4 font-bold mb-4">
             {{ t("parameters") }}
           </h2>
-          <AdminCalibrationParamsTable :params="calibration.params" />
+          <AdminCalibrationParamsTable :app-locale="appLocale" :params="calibration.params" />
         </section>
 
         <!-- Propensities Column -->
@@ -349,6 +308,17 @@ function triggerCalibrate(refresh: boolean) {
         </p>
         <AdminCalibrationSegmentsTable :app-locale="appLocale" :segments="segments" />
       </section>
+
+      <!-- Real vs Model scatter + tails -->
+      <section v-if="scorecard.length > 0" class="rounded-lg border border-border bg-surface p-4">
+        <h2 class="text-h4 font-bold mb-4">
+          {{ appLocale === 'ru' ? 'Факт против модели' : 'Real vs model' }}
+        </h2>
+        <AdminCalibrationScatter :app-locale="appLocale" :scorecard="scorecard" />
+      </section>
+
+      <!-- Manual pair demand inspector -->
+      <AdminDemandPairLookup :app-locale="appLocale" />
 
       <!-- Scorecard Deviation Table -->
       <section v-if="scorecard.length > 0" class="rounded-lg border border-border bg-surface p-4">

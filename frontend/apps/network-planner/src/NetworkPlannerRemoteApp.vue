@@ -9,6 +9,8 @@ import type { RouteOpportunity, StoredRoute } from "./types";
 
 import { createRoute, getRouteOpportunities, getRoutePreview, getRoutes } from "./api";
 import HubsPanel from "./components/HubsPanel.vue";
+import MyRoutesPanel from "./components/MyRoutesPanel.vue";
+import RouteDetailPanel from "./components/RouteDetailPanel.vue";
 import RouteMapPanel from "./components/RouteMapPanel.vue";
 import RoutePlannerFilters from "./components/RoutePlannerFilters.vue";
 import RoutePlannerLists from "./components/RoutePlannerLists.vue";
@@ -31,6 +33,8 @@ const preview = ref<null | RouteOpportunity>(null);
 const routes = ref<StoredRoute[]>([]);
 const selectedDestinationId = ref("");
 const selectedAircraftId = ref("");
+const fareOutbound = ref("");
+const fareReturn = ref("");
 const filters = reactive({
   maxDistance: "",
   minDemand: "",
@@ -40,6 +44,13 @@ const filters = reactive({
 let filterDebounce: null | ReturnType<typeof setTimeout> = null;
 
 const isHubsView = computed(() => Boolean(props.shellPath?.includes("/airports/hubs")));
+const routeDetailId = computed(() => {
+  const match = /\/airports\/my-routes\/([^/?#]+)/.exec(props.shellPath ?? "");
+
+  return match?.[1] ? decodeURIComponent(match[1]) : "";
+});
+const isRouteDetailView = computed(() => Boolean(routeDetailId.value));
+const isMyRoutesView = computed(() => Boolean(props.shellPath?.includes("/airports/my-routes")) && !routeDetailId.value);
 const currentPreview = computed(() => preview.value ?? selectedOpportunity.value ?? null);
 const selectedOpportunity = computed(() =>
   opportunities.value.find((opportunity) => opportunity.destination_airport.id === selectedDestinationId.value) ?? null,
@@ -93,10 +104,17 @@ async function createSelectedRoute(): Promise<void> {
   error.value = "";
   message.value = "";
 
+  const fareOverrideOutbound = parseFare(fareOutbound.value);
+  const fareOverrideReturn = parseFare(fareReturn.value);
+  fareOutbound.value = "";
+  fareReturn.value = "";
+
   try {
-    await createRoute({
+    const created = await createRoute({
       base_frequency_per_week: 3,
       destination_airport_id: destinationAirportId,
+      fare_override_outbound: fareOverrideOutbound,
+      fare_override_return: fareOverrideReturn,
       origin_airport_id: originAirportId,
       selected_aircraft_id: selectedAircraftId.value || selected.compatible_aircraft.find((option) => option.isCompatible)?.aircraft.id,
     });
@@ -116,7 +134,11 @@ async function createSelectedRoute(): Promise<void> {
       reason: "route-created",
       source: "network-planner",
     });
-    await loadData();
+    // Jump straight into scheduling the freshly created route.
+    airlineSimEventBus.emit("navigation:intent", {
+      source: "mfe",
+      targetPath: `/operations/schedule?route_id=${encodeURIComponent(created.route.id)}`,
+    });
   } catch (loadError) {
     error.value = errorMessage(loadError);
   } finally {
@@ -188,6 +210,13 @@ function navigateToSchedule(route: StoredRoute): void {
   });
 }
 
+// Empty / non-positive input means "use the automatic reference fare".
+function parseFare(value: string): number | undefined {
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 function recommendationLabel(value: RouteOpportunity["recommendation"]): string {
   return tr(`recommendation.${value}` as NetworkMessageKey);
 }
@@ -227,7 +256,22 @@ const tMap = {
 </script>
 
 <template>
-  <section class="route-planner-shell h-full overflow-y-auto bg-background p-3 text-body text-text-primary sm:p-4 xl:overflow-hidden">
+  <MyRoutesPanel
+    v-if="isMyRoutesView"
+    :app-locale="props.appLocale"
+    :t="tr"
+  />
+  <RouteDetailPanel
+    v-else-if="isRouteDetailView"
+    :app-locale="props.appLocale"
+    :app-theme="props.appTheme ?? 'light'"
+    :route-id="routeDetailId"
+    :t="tr"
+  />
+  <section
+    v-else
+    class="route-planner-shell h-full overflow-y-auto bg-background p-3 text-body text-text-primary sm:p-4 xl:overflow-hidden"
+  >
     <HubsPanel
       v-if="isHubsView"
       :app-locale="props.appLocale"
@@ -299,6 +343,8 @@ const tMap = {
         <RoutePreviewPanel
           class="route-planner-preview"
           :current-preview="currentPreview"
+          :fare-outbound="fareOutbound"
+          :fare-return="fareReturn"
           :format-money="formatMoney"
           :format-number="formatNumber"
           :is-creating="isCreating"
@@ -307,6 +353,8 @@ const tMap = {
           :recommendation-variant="recommendationVariant"
           :t="tr"
           @create-selected-route="createSelectedRoute"
+          @update:fare-outbound="fareOutbound = $event"
+          @update:fare-return="fareReturn = $event"
         />
       </div>
 

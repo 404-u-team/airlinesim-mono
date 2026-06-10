@@ -1,6 +1,6 @@
 import { createApiClient } from "@airlinesim/game-sdk";
 
-import type { CalibrationArtifact, CalibrationJobStatus } from "../types";
+import type { CalibrationArtifact, CalibrationJobStatus, DemandPairResult } from "../types";
 
 import { authState } from "../../auth";
 
@@ -18,6 +18,12 @@ export async function getCalibrationJob(jobId: string): Promise<{ job: Calibrati
 
 export async function getCountries(): Promise<{ countries: Array<{ id: string; intl_name: string; iso: string; local_name: string }> }> {
   return apiClient.get("/admin/world/countries");
+}
+
+export async function getDemandPair(origin: string, destination: string): Promise<DemandPairResult> {
+  return apiClient.get<DemandPairResult>(
+    `/admin/demand/pair?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`,
+  );
 }
 
 export async function getLatestCalibrationJob(): Promise<null | { job: CalibrationJobStatus }> {

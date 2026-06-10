@@ -7,6 +7,12 @@ export type AircraftImageMap = Record<string, AircraftVisualImage>;
 // attach images to aircraft types at serve time without any backend schema
 // change (the game backend has no aircraft-type update endpoint).
 export type AircraftVisualImage = {
+  // Locally cached, optimized copy of `imageUrl`. When `cachedEtag` is set the
+  // BFF serves the bytes itself; the remote `imageUrl` is kept only as the
+  // re-download source and as a fallback when the cache is missing.
+  cachedAt?: string;
+  cachedEtag?: string;
+  cachedSourceUrl?: string;
   commonsFile?: string;
   imageUrl: string;
   pageUrl?: string;
@@ -20,14 +26,26 @@ const DOCUMENT_NAME = "aircraft-images";
 
 let memo: AircraftImageMap | null = null;
 
+// Public URL the client should load for an aircraft type. Prefers the locally
+// cached, optimized WebP served by the BFF (same-origin, long-cacheable) and
+// falls back to the remote source URL when no cache has been built yet.
 export function getAircraftImageUrl(icaoCode: string | undefined): string | undefined {
   if (!icaoCode) {
     return undefined;
   }
 
-  const image = readAircraftImages()[icaoCode.toUpperCase()];
+  const code = icaoCode.toUpperCase();
+  const image = readAircraftImages()[code];
 
-  return image?.imageUrl;
+  if (!image) {
+    return undefined;
+  }
+
+  if (image.cachedEtag) {
+    return `${publicBaseUrl()}/aircraft-images/file/${encodeURIComponent(code)}.webp?v=${image.cachedEtag}`;
+  }
+
+  return image.imageUrl;
 }
 
 export function readAircraftImages(): AircraftImageMap {
@@ -44,4 +62,13 @@ export function readAircraftImages(): AircraftImageMap {
 export function writeAircraftImages(images: AircraftImageMap): void {
   writeDocument(DOCUMENT_NAME, images);
   memo = images;
+}
+
+function publicBaseUrl(): string {
+  const explicit = Bun.env.BFF_PUBLIC_BASE_URL?.replace(/\/+$/, "");
+  if (explicit) {
+    return explicit;
+  }
+
+  return `http://localhost:${Bun.env.BFF_PORT ?? "4200"}`;
 }

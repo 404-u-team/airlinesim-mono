@@ -5,6 +5,8 @@ import type {
   CreateRouteResponse,
   HubItem,
   HubPreviewResponse,
+  PriceAnalysisResponse,
+  RouteDetailResponse,
   RouteOpportunitiesResponse,
   RoutePreviewResponse,
   RoutesResponse,
@@ -31,10 +33,16 @@ export async function addHub(airportId: string): Promise<{ fee: number; hub: { a
 export async function createRoute(payload: {
   base_frequency_per_week: number;
   destination_airport_id: string;
+  fare_override_outbound?: number;
+  fare_override_return?: number;
   origin_airport_id: string;
   selected_aircraft_id?: string;
 }): Promise<CreateRouteResponse> {
   return apiClient.post<CreateRouteResponse>("/routes", payload);
+}
+
+export async function deleteRoute(routeId: string): Promise<{ route: unknown }> {
+  return apiClient.delete<{ route: unknown }>(`/routes/${encodeURIComponent(routeId)}`);
 }
 
 export async function getHubPreview(airportId: string): Promise<HubPreviewResponse> {
@@ -43,6 +51,10 @@ export async function getHubPreview(airportId: string): Promise<HubPreviewRespon
 
 export async function getHubs(): Promise<{ hubs: HubItem[] }> {
   return apiClient.get("/hubs");
+}
+
+export async function getRouteDetail(routeId: string): Promise<RouteDetailResponse> {
+  return apiClient.get<RouteDetailResponse>(`/operations/routes/${encodeURIComponent(routeId)}/detail`);
 }
 
 export async function getRouteOpportunities(filters: RouteOpportunityFilters): Promise<RouteOpportunitiesResponse> {
@@ -93,8 +105,22 @@ export async function removeHub(airportId: string): Promise<{ removed: boolean }
   return apiClient.delete(`/hubs/${encodeURIComponent(airportId)}`);
 }
 
+export async function requestPriceAnalysis(routeId: string): Promise<PriceAnalysisResponse> {
+  return apiClient.post<PriceAnalysisResponse>(`/routes/${encodeURIComponent(routeId)}/price-analysis`, {});
+}
+
 export async function searchAirports(query: string): Promise<AirportSearchOption[]> {
   const response = await apiClient.get<{ airports: AirportSearchOption[] }>(`/onboarding/airports?q=${encodeURIComponent(query)}`);
 
   return response.airports;
+}
+
+export async function updateRouteFare(
+  routeId: string,
+  fare: { outbound: null | number; return: null | number },
+): Promise<CreateRouteResponse> {
+  return apiClient.patch<CreateRouteResponse>(`/routes/${encodeURIComponent(routeId)}`, {
+    fare_override_outbound: fare.outbound,
+    fare_override_return: fare.return,
+  });
 }

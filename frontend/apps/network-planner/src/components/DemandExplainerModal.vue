@@ -56,6 +56,7 @@ const rows = computed<Row[]>(() => {
     { label: props.t("demand.groundCompetition"), value: `×${factor(data.groundCompetition)}` },
     { label: props.t("demand.baseDemand"), value: props.formatNumber(data.baseDemand) },
     { label: props.t("demand.directionFactor"), value: `×${factor(data.directionFactorOriginToDestination)}` },
+    { label: props.t("demand.directionFactorReturn"), value: `×${factor(data.directionFactorDestinationToOrigin)}` },
   ];
 
   if (hasMetroSplit.value) {
@@ -132,15 +133,34 @@ function factor(value: number): string {
               {{ row.value }}
             </dd>
           </div>
-          <div class="flex items-center justify-between gap-3 rounded-md border border-primary bg-primary-soft px-3 py-2 text-on-primary-soft">
-            <dt class="min-w-0 text-caption">
-              {{ t("demand.result") }}
+          <div class="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2">
+            <dt class="min-w-0 text-caption text-text-muted">
+              {{ t("demand.result.outbound") }}
             </dt>
-            <dd class="shrink-0 text-subtitle font-semibold">
+            <dd class="shrink-0 text-body font-semibold">
               {{ formatNumber(demand.origin_daily_passengers) }} {{ t("metric.paxPerDay") }}
             </dd>
           </div>
+          <div class="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2">
+            <dt class="min-w-0 text-caption text-text-muted">
+              {{ t("demand.result.return") }}
+            </dt>
+            <dd class="shrink-0 text-body font-semibold">
+              {{ formatNumber(demand.destination_daily_passengers) }} {{ t("metric.paxPerDay") }}
+            </dd>
+          </div>
+          <div class="flex items-center justify-between gap-3 rounded-md border border-primary bg-primary-soft px-3 py-2 text-on-primary-soft">
+            <dt class="min-w-0 text-caption">
+              {{ t("demand.result.average") }}
+            </dt>
+            <dd class="shrink-0 text-subtitle font-semibold">
+              {{ formatNumber(Math.round((demand.origin_daily_passengers + demand.destination_daily_passengers) / 2)) }} {{ t("metric.paxPerDay") }}
+            </dd>
+          </div>
         </dl>
+        <p class="mt-2 text-caption text-text-muted">
+          {{ t("demand.averageNote") }}
+        </p>
       </section>
 
       <p

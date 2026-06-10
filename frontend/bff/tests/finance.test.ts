@@ -19,8 +19,17 @@ test("creates a balanced operational ledger for a completed flight", () => {
   expect(transactions.filter((item) => item.direction === "debit").reduce((sum, item) => sum + item.amount, 0)).toBe(6_000);
 });
 
-test("does not create transactions before flight completion", () => {
-  expect(buildFlightTransactions(flight({ status: "in_flight" }))).toEqual([]);
+test("does not create transactions before departure", () => {
+  const future = new Date(Date.now() + 24 * 60 * 60_000).toISOString();
+
+  expect(buildFlightTransactions(flight({ departure_at: future, status: "scheduled" }))).toEqual([]);
+});
+
+test("recognises transactions at departure, dated to departure time", () => {
+  const transactions = buildFlightTransactions(flight({ status: "in_flight" }));
+
+  expect(transactions).toHaveLength(4);
+  expect(transactions.every((item) => item.occurred_at === "2026-06-04T10:00:00.000Z")).toBe(true);
 });
 
 test("surfaces the actionable MVP finance risks", () => {

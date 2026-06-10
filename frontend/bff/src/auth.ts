@@ -2,6 +2,7 @@ import type { BffConfig } from "./config";
 
 import { BackendHttpError, requestBackend, requestBackendJson } from "./backend-http";
 import { jsonResponse } from "./http";
+import { upsertAirlineRegistry } from "./modules/admin/airline-registry";
 
 export type AdminCapability = "world.manage";
 
@@ -110,6 +111,12 @@ export async function getValidatedUserAirline<TAirline>(
 
   const airline = await requestBackendJson<TAirline>(config, "/airline/me", { token: authorization });
   userAirlineByRequest.set(request, { airline, authorization });
+
+  // Record the airline in the admin-facing registry (best-effort, never blocks the request).
+  const identity = airline as { id?: string; name?: string };
+  if (identity.id) {
+    void upsertAirlineRegistry({ id: identity.id, name: identity.name }).catch(() => undefined);
+  }
 
   return airline;
 }

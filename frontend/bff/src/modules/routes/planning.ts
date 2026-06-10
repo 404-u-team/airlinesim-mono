@@ -51,6 +51,7 @@ export function buildRouteOpportunity(
   destinationAirportId: string,
   existingRoutes: StoredRoute[],
   selectedAircraftId?: string,
+  fareOverrideOutbound?: number,
 ): null | RouteOpportunity {
   const origin = findAirport(snapshot.airports, originAirportId ?? snapshot.airline.starting_airport_id);
   const destination = findAirport(snapshot.airports, destinationAirportId);
@@ -65,7 +66,7 @@ export function buildRouteOpportunity(
     aircraftOptions.find((option) => option.isCompatible) ??
     aircraftOptions[0] ??
     null;
-  const economics = buildRouteEconomics(demand, selectedOption?.type ?? null, origin, destination);
+  const economics = buildRouteEconomics(demand, selectedOption?.type ?? null, origin, destination, fareOverrideOutbound);
   const existingRoute = existingRoutes.find(
     (route) =>
       route.origin_airport_id === origin.id &&
@@ -95,6 +96,8 @@ export function createStoredRouteFromOpportunity(
   opportunity: RouteOpportunity,
   options: {
     baseFrequencyPerWeek?: number;
+    fareOverrideOutbound?: number;
+    fareOverrideReturn?: number;
     selectedAircraftId?: string;
     selectedAircraftTypeId?: string;
   },
@@ -110,6 +113,8 @@ export function createStoredRouteFromOpportunity(
     demand_snapshot: opportunity.demand,
     destination_airport_id: opportunity.destination_airport.id ?? "",
     economics_snapshot: opportunity.economics,
+    fare_override_outbound: options.fareOverrideOutbound,
+    fare_override_return: options.fareOverrideReturn,
     id: crypto.randomUUID(),
     origin_airport_id: opportunity.origin_airport.id ?? "",
     selected_aircraft_id: selectedAircraft?.id,
@@ -131,7 +136,14 @@ export function isHubOrigin(snapshot: RoutePlanningSnapshot, originId: string | 
 // Recomputes a stored route's demand/economics from current data; the persisted
 // snapshot is only a frozen creation-time cache and can hold stale numbers.
 export function refreshStoredRoute(route: StoredRoute, snapshot: RoutePlanningSnapshot): StoredRoute {
-  const opportunity = buildRouteOpportunity(snapshot, route.origin_airport_id, route.destination_airport_id, [], route.selected_aircraft_id);
+  const opportunity = buildRouteOpportunity(
+    snapshot,
+    route.origin_airport_id,
+    route.destination_airport_id,
+    [],
+    route.selected_aircraft_id,
+    route.fare_override_outbound,
+  );
 
   return opportunity ? { ...route, demand_snapshot: opportunity.demand, economics_snapshot: opportunity.economics } : route;
 }

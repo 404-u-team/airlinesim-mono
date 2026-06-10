@@ -1,5 +1,7 @@
 import type { AircraftVisualImage } from "./storage";
 
+import { searchOpenverseCandidates } from "./openverse";
+
 // Resolves a representative photo for an aircraft type.
 //
 // Primary source: Wikipedia REST `page/summary/{title}` — returns the lead
@@ -96,7 +98,7 @@ export function normalizeAircraftModelForSearch(modelName: string, icaoCode: str
   return modelName;
 }
 
-async function fetchCommonsImageUrl(commonsFile: string): Promise<null | string> {
+async function fetchCommonsImageUrl(commonsFile: string, signal?: AbortSignal): Promise<null | string> {
   try {
     const url = [
       "https://commons.wikimedia.org/w/api.php",
@@ -106,7 +108,7 @@ async function fetchCommonsImageUrl(commonsFile: string): Promise<null | string>
       "&iiprop=url|mime",
       "&format=json",
     ].join("");
-    const data = await fetchWikimediaJson<CommonsImageInfoResponse>(url);
+    const data = await fetchWikimediaJson<CommonsImageInfoResponse>(url, signal);
     const pages = data.query?.pages ?? {};
     const firstPage = Object.values(pages)[0];
 
@@ -119,10 +121,11 @@ async function fetchCommonsImageUrl(commonsFile: string): Promise<null | string>
 async function fetchWikidataAircraftDetails(
   qid: string,
   searchQuery: string,
+  signal?: AbortSignal,
 ): Promise<AircraftVisualImage | null> {
   try {
     const url = `https://www.wikidata.org/wiki/Special:EntityData/${qid}.json`;
-    const data = await fetchWikimediaJson<WikidataEntityResponse>(url);
+    const data = await fetchWikimediaJson<WikidataEntityResponse>(url, signal);
     const { entities } = data;
     if (!entities) {
       return null;
@@ -138,7 +141,7 @@ async function fetchWikidataAircraftDetails(
       return null;
     }
 
-    const imageUrl = await fetchCommonsImageUrl(commonsFile);
+    const imageUrl = await fetchCommonsImageUrl(commonsFile, signal);
 
     if (!imageUrl) {
       return null;
@@ -180,7 +183,7 @@ async function fetchWikidataAircraftImage(
   return null;
 }
 
-async function fetchWikimediaJson<TValue>(url: string): Promise<TValue> {
+async function fetchWikimediaJson<TValue>(url: string, signal?: AbortSignal): Promise<TValue> {
   let lastError: unknown = null;
 
   for (let attempt = 0; attempt <= WIKIMEDIA_MAX_RETRIES; attempt++) {
@@ -194,6 +197,7 @@ async function fetchWikimediaJson<TValue>(url: string): Promise<TValue> {
         "Api-User-Agent": WIKIMEDIA_USER_AGENT,
         "User-Agent": WIKIMEDIA_USER_AGENT,
       },
+      signal,
     });
 
     if (response.ok) {
@@ -290,7 +294,7 @@ function retryAfterToMs(value: null | string): null | number {
   return Number.isFinite(dateMs) ? Math.max(1_000, dateMs - Date.now()) : null;
 }
 
-async function searchWikidataAircraft(query: string): Promise<string[]> {
+async function searchWikidataAircraft(query: string, signal?: AbortSignal): Promise<string[]> {
   try {
     const url = [
       "https://www.wikidata.org/w/api.php",
@@ -300,14 +304,15 @@ async function searchWikidataAircraft(query: string): Promise<string[]> {
       "&format=json",
       `&limit=${String(WIKIDATA_SEARCH_LIMIT)}`,
     ].join("");
-    const data = await fetchWikimediaJson<WikidataSearchResponse>(url);
+    const data = await fetchWikimediaJson<WikidataSearchResponse>(url, signal);
 
     return (data.search ?? [])
       .filter((item) => Boolean(item.id))
       .sort((left, right) => wikidataAircraftSearchScore(right) - wikidataAircraftSearchScore(left))
       .map((item) => item.id)
       .filter((id): id is string => Boolean(id));
-  } catch {
+  } catch (err) {
+    console.warn(`[BFF/Wikidata] Failed to search aircraft "${query}":`, err);
     return [];
   }
 }
@@ -341,12 +346,13 @@ const SCORE_RULES = [
 ];
 const NEGATIVE_TRIGGERS = ["accident", "incident", "crash"];
 
-export async function searchAircraftImageCandidates(query: string): Promise<AircraftVisualImage[]> {
-  const [wiki, wikidata] = await Promise.all([
-    searchWikipediaCandidate(query),
-    searchWikidataCandidates(query),
+export async function searchAircraftImageCandidates(query: string, signal?: AbortSignal): Promise<AircraftVisualImage[]> {
+  const [wiki, wikidata, openverse] = await Promise.all([
+    searchWikipediaCandidate(query, signal),
+    searchWikidataCandidates(query, signal),
+    searchOpenverseCandidates(query, signal),
   ]);
-  const candidates = wiki ? [wiki, ...wikidata] : wikidata;
+  const candidates = [...(wiki ? [wiki] : []), ...wikidata, ...openverse];
   const seen = new Set<string>();
   return candidates.filter((c) => {
     if (seen.has(c.imageUrl)) {
@@ -357,22 +363,25 @@ export async function searchAircraftImageCandidates(query: string): Promise<Airc
   });
 }
 
-export async function searchWikidataCandidates(query: string): Promise<AircraftVisualImage[]> {
-  const qids = await searchWikidataAircraft(query);
+export async function searchWikidataCandidates(query: string, signal?: AbortSignal): Promise<AircraftVisualImage[]> {
+  const qids = await searchWikidataAircraft(query, signal);
   const details = await Promise.all(
     qids.slice(0, 5).map(async (qid) => {
       try {
-        return await fetchWikidataAircraftDetails(qid, query);
-      } catch { return null; }
+        return await fetchWikidataAircraftDetails(qid, query, signal);
+      } catch (err) {
+        console.warn(`[BFF/Wikidata] Failed to fetch details for ${qid}:`, err);
+        return null;
+      }
     })
   );
   return details.filter((d): d is AircraftVisualImage => Boolean(d?.imageUrl));
 }
 
-export async function searchWikipediaCandidate(query: string): Promise<AircraftVisualImage | null> {
+export async function searchWikipediaCandidate(query: string, signal?: AbortSignal): Promise<AircraftVisualImage | null> {
   try {
     const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`;
-    const response = await fetchWikimediaJson<WikipediaSummaryResponse>(url);
+    const response = await fetchWikimediaJson<WikipediaSummaryResponse>(url, signal);
     const imageUrl = response.originalimage?.source ?? response.thumbnail?.source;
     if (imageUrl) {
       return {
@@ -383,39 +392,27 @@ export async function searchWikipediaCandidate(query: string): Promise<AircraftV
         title: response.title ?? query,
       };
     }
-  } catch { /* ignore */ }
+  } catch (err) {
+    console.warn(`[BFF/Wikipedia] Failed to search summary page for "${query}":`, err);
+  }
   return null;
 }
 
 function wikidataAircraftSearchScore(item: { description?: string; label?: string }): number {
   const text = `${item.label ?? ""} ${item.description ?? ""}`.toLowerCase();
-  let score = 0;
-
-  for (const rule of SCORE_RULES) {
-    if (text.includes(rule.trigger)) {
-      score += rule.value;
-    }
-  }
-
-  if (text.includes("narrow-body") || text.includes("wide-body")) {
-    score += 3;
-  }
-
-  if (NEGATIVE_TRIGGERS.some((trigger) => text.includes(trigger))) {
-    score -= 12;
-  }
-
+  let score = SCORE_RULES.reduce((acc, rule) => acc + (text.includes(rule.trigger) ? rule.value : 0), 0);
+  if (text.includes("narrow-body") || text.includes("wide-body")) { score += 3; }
+  if (NEGATIVE_TRIGGERS.some((trigger) => text.includes(trigger))) { score -= 12; }
   return score;
 }
 
 function wikidataQueriesForAircraft(input: AircraftImageInput): string[] {
-  const normalized = normalizeAircraftModelForSearch(input.modelName, input.icaoCode);
-  const { manufacturer, model } = realWorldMetadata(input.characteristics);
-
+  const norm = normalizeAircraftModelForSearch(input.modelName, input.icaoCode);
+  const { manufacturer: mfg, model: md } = realWorldMetadata(input.characteristics);
   return uniqueStrings([
-    `${normalized} aircraft`,
-    normalized,
-    manufacturer && model ? `${manufacturer} ${model} aircraft` : "",
+    `${norm} aircraft`,
+    norm,
+    mfg && md ? `${mfg} ${md} aircraft` : "",
     `${input.modelName} aircraft`,
     input.modelName,
     input.icaoCode.toUpperCase(),
@@ -423,13 +420,8 @@ function wikidataQueriesForAircraft(input: AircraftImageInput): string[] {
 }
 
 function wikipediaTitlesForAircraft(input: AircraftImageInput): string[] {
-  const normalized = normalizeAircraftModelForSearch(input.modelName, input.icaoCode);
-  const { manufacturer, model } = realWorldMetadata(input.characteristics);
-
-  return uniqueStrings([
-    normalized,
-    manufacturer && model ? `${manufacturer} ${model}` : "",
-    input.modelName,
-  ]);
+  const norm = normalizeAircraftModelForSearch(input.modelName, input.icaoCode);
+  const { manufacturer: mfg, model: md } = realWorldMetadata(input.characteristics);
+  return uniqueStrings([norm, mfg && md ? `${mfg} ${md}` : "", input.modelName]);
 }
 

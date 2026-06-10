@@ -57,6 +57,34 @@ defineProps<{
             {{ adminText(appLocale, "demandCalibration") }}
           </RouterLink>
           <RouterLink
+            to="/admin/aircraft-types"
+            class="block rounded-md px-2 py-2 text-body transition hover:bg-surface-subtle"
+            :class="activePath === '/admin/aircraft-types' ? 'text-primary font-medium' : 'text-text-muted'"
+          >
+            {{ adminText(appLocale, "aircraftTypes") }}
+          </RouterLink>
+          <RouterLink
+            to="/admin/fuel"
+            class="block rounded-md px-2 py-2 text-body transition hover:bg-surface-subtle"
+            :class="activePath === '/admin/fuel' ? 'text-primary font-medium' : 'text-text-muted'"
+          >
+            {{ adminText(appLocale, "fuel") }}
+          </RouterLink>
+          <RouterLink
+            to="/admin/airlines"
+            class="block rounded-md px-2 py-2 text-body transition hover:bg-surface-subtle"
+            :class="activePath === '/admin/airlines' ? 'text-primary font-medium' : 'text-text-muted'"
+          >
+            {{ adminText(appLocale, "airlines") }}
+          </RouterLink>
+          <RouterLink
+            to="/admin/settings"
+            class="block rounded-md px-2 py-2 text-body transition hover:bg-surface-subtle"
+            :class="activePath === '/admin/settings' ? 'text-primary font-medium' : 'text-text-muted'"
+          >
+            {{ adminText(appLocale, "settings") }}
+          </RouterLink>
+          <RouterLink
             v-for="entity in entities"
             :key="entity.id"
             :to="`/admin/${entity.id}`"

@@ -1,6 +1,8 @@
 import type { StoredFlight } from "../operations/types";
 import type { FinanceRisk, LedgerTransaction } from "./types";
 
+import { hasDeparted } from "../operations/settlement";
+
 export function buildFinanceRisks(
   availableBalance: number,
   weeklyProfit: number,
@@ -27,12 +29,13 @@ export function buildFinanceRisks(
 }
 
 export function buildFlightTransactions(flight: StoredFlight): LedgerTransaction[] {
-  if (flight.status !== "completed") {
+  // Revenue and costs are recognised at departure, not arrival.
+  if (!hasDeparted(flight)) {
     return [];
   }
 
   const financials = flight.actual ?? flight.expected;
-  const occurredAt = flight.arrival_at;
+  const occurredAt = flight.departure_at;
   const cost = Math.max(financials.cost, 0);
   const parts = {
     airport: Math.round(cost * 0.25),

@@ -4,6 +4,7 @@ import type { ImportProgressReporter } from "../import/runtime/progress";
 
 import { getBackendAdminToken } from "../../auth";
 import { backendRequest } from "../import/backend/api";
+import { cacheAircraftImage } from "./cache";
 import { fetchAircraftVisualImage } from "./fetch";
 import { type AircraftImageMap, readAircraftImages, writeAircraftImages } from "./storage";
 
@@ -129,6 +130,14 @@ async function refreshTypeImage(
     });
 
     if (image?.imageUrl) {
+      try {
+        const cached = await cacheAircraftImage(icaoCode, image.imageUrl);
+        image.cachedAt = new Date().toISOString();
+        image.cachedEtag = cached.etag;
+        image.cachedSourceUrl = cached.sourceUrl;
+      } catch {
+        // Keep the remote URL as a fallback when optimization/caching fails.
+      }
       // eslint-disable-next-line require-atomic-updates
       images[icaoCode] = image;
       writeAircraftImages(images);

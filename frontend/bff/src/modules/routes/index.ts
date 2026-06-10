@@ -1,17 +1,24 @@
 import type { BffConfig } from "../../config";
+import type { AircraftType } from "../fleet/types";
 import type { RouteOpportunity, StoredRoute } from "./types";
 
 import { BackendHttpError } from "../../backend-http";
 import { jsonResponse, readJson } from "../../http";
 import { recordGameEvent } from "../events/producer";
 import { reconcileNotificationsAfterMutation } from "../events/reconcile";
-import { buildRouteListItem, buildRouteOpportunities, buildRouteOpportunity, createStoredRouteFromOpportunity } from "./planning";
+import { sumLedger } from "../finance/calculator";
+import { listLedgerForAirline, saveLedgerTransactions } from "../finance/storage";
+import { deleteFlightsForRoute, deleteSchedulesForRoute } from "../operations/storage";
+import { buildRouteListItem, buildRouteOpportunities, buildRouteOpportunity, createStoredRouteFromOpportunity, refreshStoredRoute, type RoutePlanningSnapshot } from "./planning";
+import { analyzeRoutePrice, PRICE_ANALYSIS_FEE, priceAnalysisFeeTransaction } from "./price-analysis";
 import { loadRoutePlanningSnapshot } from "./snapshot";
 import { deleteRoute, findRoute, listRoutesForAirline, saveRoute } from "./storage";
 
 type CreateRouteRequest = {
   base_frequency_per_week?: number;
   destination_airport_id?: string;
+  fare_override_outbound?: number;
+  fare_override_return?: number;
   origin_airport_id?: string;
   selected_aircraft_id?: string;
   selected_aircraft_type_id?: string;
@@ -19,6 +26,8 @@ type CreateRouteRequest = {
 
 type PatchRouteRequest = {
   base_frequency_per_week?: number;
+  fare_override_outbound?: null | number;
+  fare_override_return?: null | number;
   selected_aircraft_id?: string;
   status?: StoredRoute["status"];
 };
@@ -47,6 +56,55 @@ export async function listStoredRoutesForRequest(request: Request, config: BffCo
   return listRoutesForAirline(snapshot.airline.id ?? "");
 }
 
+async function analyzeRoutePriceRequest(request: Request, config: BffConfig, routeId: string): Promise<Response> {
+  const snapshot = await loadRoutePlanningSnapshot(request, config);
+  const airlineId = snapshot.airline.id ?? "";
+  const route = await findRoute(routeId, airlineId);
+
+  if (!route) {
+    return jsonResponse({ error: { code: "ROUTE_NOT_FOUND", message: "Route not found." } }, { status: 404 });
+  }
+
+  const origin = snapshot.airports.find((airport) => airport.id === route.origin_airport_id);
+  const destination = snapshot.airports.find((airport) => airport.id === route.destination_airport_id);
+  const type = resolveRouteAircraftType(route, snapshot);
+
+  if (!origin || !destination || !type) {
+    return jsonResponse(
+      { error: { code: "PRICE_ANALYSIS_UNAVAILABLE", message: "Assign a compatible aircraft to analyze pricing." } },
+      { status: 409 },
+    );
+  }
+
+  const ledger = await listLedgerForAirline(airlineId);
+  const availableBalance = (snapshot.airline.balance ?? 0) + sumLedger(ledger);
+  if (availableBalance < PRICE_ANALYSIS_FEE) {
+    return jsonResponse(
+      { error: { code: "INSUFFICIENT_FUNDS", message: "Not enough balance to pay for the analysis." } },
+      { status: 402 },
+    );
+  }
+
+  const analysis = analyzeRoutePrice(route, type, origin, destination);
+  await saveLedgerTransactions([priceAnalysisFeeTransaction(airlineId, route.id)]);
+  await recordGameEvent({
+    airline_id: airlineId,
+    category: "finance",
+    code: "ROUTE_PRICE_ANALYSIS",
+    dedupe_key: `price-analysis:${route.id}:${crypto.randomUUID()}`,
+    occurred_at: new Date().toISOString(),
+    parameters: { fee: analysis.fee, suggested_fare_outbound: analysis.outbound.suggested_fare, suggested_fare_return: analysis.return.suggested_fare },
+    related: { route_id: route.id },
+    severity: "info",
+    source_id: route.id,
+    source_type: "route",
+    target_path: `/airports/my-routes/${encodeURIComponent(route.id)}`,
+  });
+  await reconcileNotificationsAfterMutation(request, config);
+
+  return jsonResponse({ analysis });
+}
+
 async function createRoute(request: Request, config: BffConfig): Promise<Response> {
   const snapshot = await loadRoutePlanningSnapshot(request, config);
   const payload = await readJson<CreateRouteRequest>(request);
@@ -65,6 +123,8 @@ async function createRoute(request: Request, config: BffConfig): Promise<Respons
 
   const route = createStoredRouteFromOpportunity(snapshot, opportunity, {
     baseFrequencyPerWeek: payload.base_frequency_per_week,
+    fareOverrideOutbound: resolveFareOverride(payload.fare_override_outbound ?? null, undefined),
+    fareOverrideReturn: resolveFareOverride(payload.fare_override_return ?? null, undefined),
     selectedAircraftId: payload.selected_aircraft_id,
     selectedAircraftTypeId: payload.selected_aircraft_type_id,
   });
@@ -102,11 +162,13 @@ async function deleteRouteRequest(request: Request, config: BffConfig, routeId: 
   if (!route) {
     return jsonResponse({ error: { code: "ROUTE_NOT_FOUND", message: "Route not found." } }, { status: 404 });
   }
-  if (route.status === "scheduled" || route.status === "active") {
-    return jsonResponse({ error: { code: "ROUTE_HAS_DEPENDENCIES", message: "Scheduled routes cannot be deleted." } }, { status: 409 });
-  }
 
+  // Deleting a route cascades to its flights and schedules, so even a scheduled or
+  // active route can be removed cleanly.
   await deleteRoute(routeId, snapshot.airline.id ?? "");
+  await deleteFlightsForRoute(routeId);
+  await deleteSchedulesForRoute(routeId);
+  await reconcileNotificationsAfterMutation(request, config);
 
   return jsonResponse({ route });
 }
@@ -188,13 +250,16 @@ async function patchRoute(request: Request, config: BffConfig, routeId: string):
   }
 
   const payload = await readJson<PatchRouteRequest>(request);
-  const updatedRoute = {
+  // null explicitly clears a fare override (revert to reference fare); undefined keeps it.
+  const updatedRoute = refreshStoredRoute({
     ...route,
     base_frequency_per_week: payload.base_frequency_per_week ?? route.base_frequency_per_week,
+    fare_override_outbound: resolveFareOverride(payload.fare_override_outbound, route.fare_override_outbound),
+    fare_override_return: resolveFareOverride(payload.fare_override_return, route.fare_override_return),
     selected_aircraft_id: payload.selected_aircraft_id ?? route.selected_aircraft_id,
     status: payload.status ?? route.status,
     updated_at: new Date().toISOString(),
-  };
+  }, snapshot);
 
   await saveRoute(updatedRoute);
 
@@ -228,6 +293,30 @@ async function readRoute(request: Request, config: BffConfig, routeId: string): 
   }
 
   return jsonResponse({ route: buildRouteListItem(route, snapshot) });
+}
+
+// Tri-state fare update: undefined keeps the current value, null clears the override
+// (back to reference fare), a positive number sets it. Non-positive values are ignored.
+function resolveFareOverride(next: null | number | undefined, current: number | undefined): number | undefined {
+  if (next === undefined) {
+    return current;
+  }
+  if (next === null || !(next > 0)) {
+    return undefined;
+  }
+
+  return next;
+}
+
+function resolveRouteAircraftType(route: StoredRoute, snapshot: RoutePlanningSnapshot): AircraftType | undefined {
+  const byType = snapshot.aircraftTypes.find((type) => type.id === route.selected_aircraft_type_id);
+  if (byType) {
+    return byType;
+  }
+
+  const aircraft = snapshot.aircrafts.find((item) => item.id === route.selected_aircraft_id);
+
+  return snapshot.aircraftTypes.find((type) => type.id === aircraft?.type_id);
 }
 
 async function routeCollectionRequest(request: Request, url: URL, config: BffConfig): Promise<Response> {
@@ -296,6 +385,15 @@ async function routeRequest(request: Request, url: URL, config: BffConfig): Prom
   const previewMatch = /^\/routes\/opportunities\/([^/]+)\/preview$/.exec(url.pathname);
   if (previewMatch?.[1]) {
     return routeOpportunityPreviewRequest(request, url, config, decodeURIComponent(previewMatch[1]));
+  }
+
+  const priceAnalysisMatch = /^\/routes\/([^/]+)\/price-analysis$/.exec(url.pathname);
+  if (priceAnalysisMatch?.[1]) {
+    if (request.method !== "POST") {
+      return jsonResponse({ error: { code: "METHOD_NOT_ALLOWED", message: "Method not allowed." } }, { status: 405 });
+    }
+
+    return analyzeRoutePriceRequest(request, config, decodeURIComponent(priceAnalysisMatch[1]));
   }
 
   // Exact collection endpoints must be matched before the `/routes/:id` detail

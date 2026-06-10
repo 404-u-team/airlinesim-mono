@@ -5,10 +5,12 @@ type AircraftImageSource = {
   icao_code?: string;
 };
 
-// Resolves the image URL for an aircraft type at serve time. Prefers an image
-// baked into `characteristics.visual.imageUrl` (set during a fresh import), then
-// falls back to the BFF SQLite overlay keyed by ICAO code (populated by the
-// standalone aircraft-image refresh). Used across fleet/operations/facilities/routes.
+// Resolves the image URL for an aircraft type at serve time. Prefers the BFF
+// SQLite overlay keyed by ICAO code (populated by admin overrides and the
+// standalone aircraft-image refresh), then falls back to an image baked into
+// `characteristics.visual.imageUrl` (set during a fresh import). The overlay
+// must win so admin-set/refreshed images actually take effect. Used across
+// fleet/operations/facilities/routes.
 export function resolveAircraftImageUrl(
   type: AircraftImageSource | null | undefined,
 ): string | undefined {
@@ -16,7 +18,7 @@ export function resolveAircraftImageUrl(
     return undefined;
   }
 
-  return imageUrlFromCharacteristics(type.characteristics) ?? getAircraftImageUrl(type.icao_code);
+  return getAircraftImageUrl(type.icao_code) ?? imageUrlFromCharacteristics(type.characteristics);
 }
 
 function imageUrlFromCharacteristics(characteristics: string | undefined): string | undefined {

@@ -4,10 +4,10 @@ import type { OperationsSnapshot } from "./planning";
 import type { FlightFinancials, SchedulePattern, SchedulePreview, StoredFlight } from "./types";
 
 import { getCurrentFuelUnitPrice } from "../fuel/price";
-import { expectedPassengersPerFlight, MAX_LOAD_FACTOR } from "./passenger-load";
+import { expectedPassengersPerFlight, MAX_LOAD_FACTOR, referenceFare } from "./passenger-load";
 import { zonedWallTimeToUtc } from "./schedule-time";
 
-type FlightLeg = "outbound" | "return";
+export type FlightLeg = "outbound" | "return";
 
 // Builds a single one-way "ferry" flight (e.g. to reposition an aircraft between
 // hubs). It still carries passengers: load is computed from one day's worth of the
@@ -68,6 +68,51 @@ export function currentFlightStatus(flight: StoredFlight, now = new Date()): Sto
 
 export function estimateBlockHours(route: StoredRoute | undefined, type: AircraftType | undefined): number {
   return Math.max(0.75, (route?.demand_snapshot.distance_km ?? 900) / (type?.cruising_speed_kph ?? 740) + 0.35);
+}
+
+export function estimateFlightFinancials(
+  route: StoredRoute,
+  type: AircraftType,
+  origin: Airport,
+  destination: Airport,
+  daysPerWeek: number,
+  leg: FlightLeg,
+): FlightFinancials {
+  const seats = type.max_planned_seat_capacity ?? 100;
+  const dailyDemand = leg === "return"
+    ? route.demand_snapshot.destination_daily_passengers
+    : route.demand_snapshot.origin_daily_passengers;
+  // Player fare override (per leg) takes precedence; otherwise the distance-based
+  // reference fare. Drives both revenue and, via elasticity, the load factor.
+  const fareOverride = leg === "return" ? route.fare_override_return : route.fare_override_outbound;
+  const fare = fareOverride && fareOverride > 0 ? fareOverride : referenceFare(route.demand_snapshot.distance_km);
+  const passengers = expectedPassengersPerFlight({
+    dailyDemand,
+    distanceKm: route.demand_snapshot.distance_km,
+    fare,
+    flightsPerWeek: daysPerWeek,
+    seats,
+  });
+  const loadFactor = clamp(passengers / Math.max(seats, 1), 0, MAX_LOAD_FACTOR);
+  const revenue = Math.round(fare * passengers);
+  const blockHours = estimateBlockHours(route, type);
+  const cost = Math.round(
+    // fuel_consumption_per_hour is kg/h; the fuel unit price is per tonne, so convert.
+    ((type.fuel_consumption_per_hour ?? 2000) / 1000) * blockHours * getCurrentFuelUnitPrice() +
+      (type.maint_cost_per_flight_hour ?? 600) * blockHours +
+      (origin.runway_fee ?? 0) +
+      (origin.gate_fee ?? 0) +
+      (destination.runway_fee ?? 0) +
+      (destination.stand_fee ?? 0),
+  );
+
+  return {
+    cost,
+    load_factor: Number(loadFactor.toFixed(2)),
+    passengers,
+    profit: revenue - cost,
+    revenue,
+  };
 }
 
 export function estimateUtilizationHours(
@@ -298,48 +343,6 @@ function buildStoredFlight(
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
-}
-
-function estimateFlightFinancials(
-  route: StoredRoute,
-  type: AircraftType,
-  origin: Airport,
-  destination: Airport,
-  daysPerWeek: number,
-  leg: FlightLeg,
-): FlightFinancials {
-  const seats = type.max_planned_seat_capacity ?? 100;
-  const dailyDemand = leg === "return"
-    ? route.demand_snapshot.destination_daily_passengers
-    : route.demand_snapshot.origin_daily_passengers;
-  const fare = route.economics_snapshot.estimated_fare_per_passenger;
-  const passengers = expectedPassengersPerFlight({
-    dailyDemand,
-    distanceKm: route.demand_snapshot.distance_km,
-    fare,
-    flightsPerWeek: daysPerWeek,
-    seats,
-  });
-  const loadFactor = clamp(passengers / Math.max(seats, 1), 0, MAX_LOAD_FACTOR);
-  const revenue = Math.round(fare * passengers);
-  const blockHours = estimateBlockHours(route, type);
-  const cost = Math.round(
-    // fuel_consumption_per_hour is kg/h; the fuel unit price is per tonne, so convert.
-    ((type.fuel_consumption_per_hour ?? 2000) / 1000) * blockHours * getCurrentFuelUnitPrice() +
-      (type.maint_cost_per_flight_hour ?? 600) * blockHours +
-      (origin.runway_fee ?? 0) +
-      (origin.gate_fee ?? 0) +
-      (destination.runway_fee ?? 0) +
-      (destination.stand_fee ?? 0),
-  );
-
-  return {
-    cost,
-    load_factor: Number(loadFactor.toFixed(2)),
-    passengers,
-    profit: revenue - cost,
-    revenue,
-  };
 }
 
 function getAirlinePrefix(name: string | undefined): string {

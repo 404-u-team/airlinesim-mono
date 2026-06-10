@@ -13,6 +13,7 @@ import { annotateOutOfPosition } from "./aircraft-position";
 import { createFerryFlightResponse } from "./ferry";
 import { attachAirportRefs } from "./flight-airports";
 import { recordCompletedFlightEvents, recordScheduleReplacedEvent } from "./flight-events";
+import { flightAircraftSummary, flightTelemetryFor } from "./flight-read";
 import { updateFlightStatuses } from "./flights";
 import { dedupeGeneratedFlights, loadOperationsSnapshot } from "./load";
 import { buildSchedulePreview, createScheduleFromPreview, type OperationsSnapshot } from "./planning";
@@ -129,6 +130,31 @@ async function completeFlight(request: Request, config: BffConfig, flightId: str
   return jsonResponse({ flight: completedFlight });
 }
 
+// Everything the single-flight page needs: the flight with live financials, resolved
+// airports (+ coordinates), the synthesized telemetry/phase and an aircraft summary.
+async function flightDetail(request: Request, config: BffConfig, flightId: string): Promise<Response> {
+  const snapshot = await loadOperationsSnapshot(request, config);
+  const annotated = annotateOutOfPosition(
+    updateFlightStatuses(snapshot.flights),
+    snapshot.aircrafts,
+    snapshot.airline.starting_airport_id,
+  );
+  const flight = annotated.find((item) => item.id === flightId);
+
+  if (!flight) {
+    return jsonResponse({ error: { code: "FLIGHT_NOT_FOUND", message: "Flight not found." } }, { status: 404 });
+  }
+
+  const [withAirports] = attachAirportRefs([flight], snapshot.airports);
+  const aircraft = flightAircraftSummary(flight, snapshot);
+
+  return jsonResponse({
+    aircraft,
+    flight: { ...withAirports, ...flightTelemetryFor(flight, snapshot) },
+    route_id: flight.route_id,
+  });
+}
+
 async function flightRequest(request: Request, url: URL, config: BffConfig): Promise<Response> {
   if (request.method === "GET" && url.pathname === "/operations/flights") {
     return listFlights(request, url, config);
@@ -137,6 +163,11 @@ async function flightRequest(request: Request, url: URL, config: BffConfig): Pro
   const completeMatch = /^\/operations\/flights\/([^/]+)\/complete$/.exec(url.pathname);
   if (request.method === "POST" && completeMatch?.[1]) {
     return completeFlight(request, config, decodeURIComponent(completeMatch[1]));
+  }
+
+  const detailMatch = /^\/operations\/flights\/([^/]+)$/.exec(url.pathname);
+  if (request.method === "GET" && detailMatch?.[1]) {
+    return flightDetail(request, config, decodeURIComponent(detailMatch[1]));
   }
 
   return jsonResponse({ error: { code: "OPERATIONS_NOT_FOUND", message: "Operations endpoint not found." } }, { status: 404 });
@@ -192,7 +223,7 @@ async function listFlights(request: Request, url: URL, config: BffConfig): Promi
       .filter((flight) => !url.searchParams.get("aircraft_id") || flight.aircraft_id === url.searchParams.get("aircraft_id"))
       .sort((left, right) => left.departure_at.localeCompare(right.departure_at)),
     snapshot.airports,
-  );
+  ).map((flight) => ({ ...flight, ...flightTelemetryFor(flight, snapshot) }));
 
   return jsonResponse({
     flights,
@@ -237,6 +268,11 @@ async function operationRequest(request: Request, url: URL, config: BffConfig): 
   if (request.method === "POST" && url.pathname === "/operations/ferry-flights") {
     return createFerryFlightResponse(request, config);
   }
+
+  const routeDetailMatch = /^\/operations\/routes\/([^/]+)\/detail$/.exec(url.pathname);
+  if (request.method === "GET" && routeDetailMatch?.[1]) {
+    return routeDetail(request, config, decodeURIComponent(routeDetailMatch[1]));
+  }
   if (url.pathname.startsWith("/operations/flights")) {
     return flightRequest(request, url, config);
   }
@@ -275,6 +311,62 @@ async function replaceSchedules(request: Request, config: BffConfig): Promise<Re
   await reconcileNotificationsAfterMutation(request, config);
 
   return jsonResponse({ flights, previews, schedules }, { status: 200 });
+}
+
+// Aggregates everything the "My Routes" detail page needs: the route with live
+// economics, two-way demand, all schedules on it, the next departures, and the
+// aircraft currently or soon flying it.
+async function routeDetail(request: Request, config: BffConfig, routeId: string): Promise<Response> {
+  const snapshot = await loadOperationsSnapshot(request, config);
+  const route = snapshot.routes.find((item) => item.id === routeId);
+
+  if (!route) {
+    return jsonResponse({ error: { code: "ROUTE_NOT_FOUND", message: "Route not found." } }, { status: 404 });
+  }
+
+  const now = Date.now();
+  // Show only departures in the next 7 days, capped at 5 — whichever is fewer.
+  const horizon = now + 7 * 24 * 60 * 60_000;
+  const routeFlights = updateFlightStatuses(snapshot.flights).filter((flight) => flight.route_id === routeId);
+  const upcomingFlights = attachAirportRefs(
+    routeFlights
+      .filter((flight) => {
+        const departure = new Date(flight.departure_at).getTime();
+        return flight.status !== "cancelled" && departure >= now && departure <= horizon;
+      })
+      .sort((left, right) => left.departure_at.localeCompare(right.departure_at))
+      .slice(0, 5),
+    snapshot.airports,
+  );
+  const schedules = snapshot.schedules.filter((schedule) => schedule.route_id === routeId);
+  const aircraftIds = new Set<string>([
+    ...schedules.map((schedule) => schedule.aircraft_id),
+    ...routeFlights
+      .filter((flight) => flight.status !== "cancelled" && new Date(flight.arrival_at).getTime() >= now)
+      .map((flight) => flight.aircraft_id),
+  ]);
+  const aircraft = snapshot.aircrafts
+    .filter((item) => aircraftIds.has(item.id ?? ""))
+    .map((item) => enrichOwnedAircraft(item, snapshot.aircraftTypes, snapshot.airports));
+
+  return jsonResponse({
+    aircraft,
+    demand: {
+      average_daily_passengers: Math.round(
+        (route.demand_snapshot.origin_daily_passengers + route.demand_snapshot.destination_daily_passengers) / 2,
+      ),
+      destination_daily_passengers: route.demand_snapshot.destination_daily_passengers,
+      distance_km: route.demand_snapshot.distance_km,
+      origin_daily_passengers: route.demand_snapshot.origin_daily_passengers,
+    },
+    fare: {
+      outbound: route.fare_override_outbound ?? null,
+      return: route.fare_override_return ?? null,
+    },
+    route: buildRouteListItem(route, snapshot),
+    schedules,
+    upcoming_flights: upcomingFlights,
+  });
 }
 
 async function scheduleRequest(request: Request, url: URL, config: BffConfig): Promise<Response> {

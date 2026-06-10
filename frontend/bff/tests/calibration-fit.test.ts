@@ -45,6 +45,23 @@ test("fit recovers per-country propensity ratios and base scale from clean ancho
   expect(fit.quality.r2).toBeGreaterThan(0.99);
   expect(fit.quality.mape).toBeLessThan(1);
   expect(fit.quality.pairs).toBe(9);
+  // Perfect fit ⇒ log-error percentiles ≈ 0, and they must be ordered.
+  expect(fit.quality.medianAbsLogError).toBeLessThan(0.01);
+  expect(fit.quality.p95AbsLogError).toBeGreaterThanOrEqual(fit.quality.p90AbsLogError);
+  expect(fit.quality.p90AbsLogError).toBeGreaterThanOrEqual(fit.quality.medianAbsLogError);
+});
+
+test("log-error percentiles widen with noisy anchors and stay ordered", () => {
+  // Inject multiplicative noise so the fit cannot be perfect; percentiles must grow.
+  const noisy: CalibrationAnchor[] = [];
+  const factors = [0.2, 0.5, 1, 1, 1, 2, 5, 1.3, 0.7];
+  factors.forEach((f, i) => {
+    noisy.push({ dailyPax: 100 * f, destCountry: "B", destIata: `B${String(i)}`, originCountry: "A", originIata: `A${String(i)}`, structural: 100 });
+  });
+  const fit = fitCalibration(noisy);
+  expect(fit.quality.medianAbsLogError).toBeGreaterThan(0);
+  expect(fit.quality.p90AbsLogError).toBeGreaterThanOrEqual(fit.quality.medianAbsLogError);
+  expect(fit.quality.p95AbsLogError).toBeGreaterThanOrEqual(fit.quality.p90AbsLogError);
 });
 
 test("empty anchors return safe defaults", () => {

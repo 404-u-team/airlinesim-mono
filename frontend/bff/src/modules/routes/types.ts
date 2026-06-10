@@ -128,6 +128,10 @@ export type StoredRoute = {
   demand_snapshot: RouteDemandSnapshot;
   destination_airport_id: string;
   economics_snapshot: RouteEconomics;
+  // Player-set fare per seat (one-way). When unset the route uses the distance-based
+  // referenceFare. Stored per leg so outbound/return can be priced independently.
+  fare_override_outbound?: number;
+  fare_override_return?: number;
   id: string;
   origin_airport_id: string;
   selected_aircraft_id?: string;

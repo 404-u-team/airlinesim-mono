@@ -223,8 +223,8 @@ async function overview(request: Request, config: BffConfig): Promise<Response> 
   const weekly = inWindow(snapshot.ledger, 7);
   const today = inWindow(snapshot.ledger, 1);
   const ledgerDelta = sumLedger(snapshot.ledger);
-  const baselineBalance = snapshot.fleet.airline.balance ?? 0;
-  const availableBalance = baselineBalance + ledgerDelta;
+  const availableBalance = snapshot.fleet.airline.balance ?? 0;
+  const baselineBalance = availableBalance - ledgerDelta;
   const typeById = new Map(snapshot.fleet.aircraftTypes.map((type) => [type.id, type]));
   const fleetValue = snapshot.fleet.aircrafts.reduce((total, aircraft) => total + (typeById.get(aircraft.type_id)?.price_per_unit ?? 0), 0);
   const weeklySummary = summarize(weekly);

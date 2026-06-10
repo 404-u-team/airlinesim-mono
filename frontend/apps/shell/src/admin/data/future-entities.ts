@@ -2,13 +2,6 @@ import type { FutureEntity } from "../types";
 
 export const futureEntities: FutureEntity[] = [
   {
-    description: "Current base fuel price history from ERD World block.",
-    missing: ["OpenAPI schema", "list/create/update/delete endpoints"],
-    route: "/admin/future/global-fuel-prices",
-    title: "Global Fuel Prices",
-    unlockCriteria: ["Add GlobalFuelPrice schema and CRUD paths to OpenAPI."],
-  },
-  {
     description: "Airline ownership, balance, IPO flags and ratings.",
     missing: ["OpenAPI schema", "admin list endpoint", "admin mutation endpoints"],
     route: "/admin/future/airlines",
@@ -35,13 +28,6 @@ export const futureEntities: FutureEntity[] = [
     route: "/admin/future/aircraft-manufacturers",
     title: "Aircraft Manufacturers",
     unlockCriteria: ["Add Aircraft_Manufacturer schema and upload reference rules to OpenAPI."],
-  },
-  {
-    description: "Aircraft type catalog, performance, pricing and maintenance parameters.",
-    missing: ["OpenAPI schema", "CRUD endpoints", "manufacturer reference endpoint"],
-    route: "/admin/future/aircraft-types",
-    title: "Aircraft Types",
-    unlockCriteria: ["Publish Aircraft_Type schema and CRUD endpoints in OpenAPI."],
   },
   {
     description: "Aircraft instances, ownership, base airport and maintenance state.",

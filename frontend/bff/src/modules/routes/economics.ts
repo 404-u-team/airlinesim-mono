@@ -2,19 +2,24 @@ import type { AircraftType, Airport } from "../fleet/types";
 import type { RouteDemandSnapshot, RouteEconomics } from "./types";
 
 import { getCurrentFuelUnitPrice } from "../fuel/price";
-import { MAX_LOAD_FACTOR, referenceFare } from "../operations/passenger-load";
+import { FARE_ELASTICITY, MAX_LOAD_FACTOR, referenceFare } from "../operations/passenger-load";
 
 export function buildRouteEconomics(
   demand: RouteDemandSnapshot,
   type: AircraftType | null,
   origin: Airport,
   destination: Airport,
+  fareOverride?: number,
 ): RouteEconomics {
   const seats = getAircraftSeats(type);
   const distance = demand.distance_km;
   const flightHours = getFlightHours(distance, type);
-  const fare = referenceFare(distance);
-  const loadFactor = clamp(demand.origin_daily_passengers / Math.max(seats, 1), 0, MAX_LOAD_FACTOR);
+  const reference = referenceFare(distance);
+  const fare = fareOverride && fareOverride > 0 ? fareOverride : reference;
+  // Price feeds back into demand: a fare above the reference suppresses bookings,
+  // below it lifts them (same elasticity used per-flight in passenger-load).
+  const effectiveDemand = demand.origin_daily_passengers * (fare / reference) ** -FARE_ELASTICITY;
+  const loadFactor = clamp(effectiveDemand / Math.max(seats, 1), 0, MAX_LOAD_FACTOR);
   const revenue = seats * loadFactor * fare;
   const cost = getFuelCost(type, flightHours) + getMaintenanceCost(type, flightHours) + getAirportCost(origin, destination);
 

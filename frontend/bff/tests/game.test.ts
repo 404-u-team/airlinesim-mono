@@ -463,6 +463,59 @@ test("builds map state route and flight features from overlays", () => {
   });
 });
 
+import { saveLedgerTransactions } from "../src/modules/finance/storage";
+
+test("exposes adjusted balance taking ledger delta into account", async () => {
+  await saveLedgerTransactions([
+    {
+      airline_id: "airline-adjusted-balance-test",
+      amount: 1_500_000,
+      category: "system",
+      created_at: new Date().toISOString(),
+      currency: "USD",
+      direction: "credit",
+      id: "test-trans-1",
+      idempotency_key: "test-key-1",
+      occurred_at: new Date().toISOString(),
+      source_id: "system",
+      source_type: "system_adjustment",
+    },
+  ]);
+
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url === "http://backend.test/airline/me") {
+      return json({ balance: 10_000_000, id: "airline-adjusted-balance-test" });
+    }
+    if (url === "http://backend.test/auth/login") {
+      return json({ access_token: token() });
+    }
+    if (url === "http://backend.test/aircrafts") {
+      return json({ items: [] });
+    }
+    if (url === "http://backend.test/aircraft-types") {
+      return json({ items: [] });
+    }
+    if (url === "http://backend.test/airports") {
+      return json({ airports: [] });
+    }
+    if (url === "http://backend.test/regions") {
+      return json({ regions: [] });
+    }
+    return json({ error: "unexpected" }, 500);
+  };
+
+  const response = await handleGameRequest(
+    authorizedRequest("http://bff.test/game/dashboard-summary"),
+    new URL("http://bff.test/game/dashboard-summary"),
+    config,
+  );
+
+  expect(response?.status).toBe(200);
+  const payload = await response?.json();
+  expect(payload.airline.balance).toBe(11_500_000);
+});
+
 function authorizedRequest(url: string): Request {
   return new Request(url, {
     headers: {

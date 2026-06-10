@@ -92,7 +92,7 @@ function airportLabel(airport: Airport | undefined): string {
 }
 
 function availableBalance(context: HubsContext): number {
-  return (context.snapshot.airline.balance ?? 0) + context.ledger.reduce((sum, transaction) => sum + signedAmount(transaction), 0);
+  return context.snapshot.airline.balance ?? 0;
 }
 
 function hubError(error: unknown): Response {

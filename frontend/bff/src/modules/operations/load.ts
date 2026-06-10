@@ -6,6 +6,7 @@ import { refreshStoredRoute } from "../routes/planning";
 import { loadRoutePlanningSnapshot } from "../routes/snapshot";
 import { listRoutesForAirline } from "../routes/storage";
 import { recomputeFlightExpected } from "./flights";
+import { settleDepartedFlights } from "./settlement";
 import { listFlightsForAirline, listSchedulesForAirline } from "./storage";
 
 // Drops generated flights whose (route, aircraft, departure) key already exists, so
@@ -39,5 +40,9 @@ export async function loadOperationsSnapshot(request: Request, config: BffConfig
     schedules,
   };
 
-  return { ...snapshot, flights: flights.map((flight) => recomputeFlightExpected(flight, snapshot)) };
+  // Recompute the live estimate first, then freeze `actual` for any flight that has
+  // already departed so finance/operations consumers settle on the same numbers.
+  const recomputed = flights.map((flight) => recomputeFlightExpected(flight, snapshot));
+
+  return { ...snapshot, flights: settleDepartedFlights(recomputed) };
 }

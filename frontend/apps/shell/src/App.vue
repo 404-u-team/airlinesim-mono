@@ -33,10 +33,10 @@ type AppTheme = "dark" | "light";
 const SIDEBAR_STORAGE_KEY = "airlinesim:sidebar-open";
 const THEME_STORAGE_KEY = "airlinesim:theme";
 
-const isSidebarOpen = ref(false);
+const isSidebarOpen = ref(getPreferredSidebarOpen());
 const isNotificationPanelOpen = ref(false);
-const locale = ref<Locale>("en");
-const theme = ref<AppTheme>("light");
+const locale = ref<Locale>(getPreferredLocale());
+const theme = ref<AppTheme>(getPreferredTheme());
 const companyName = computed(() => authState.airlineName.value);
 const route = useRoute();
 const router = useRouter();
@@ -104,9 +104,6 @@ function toggleSidebar(): void {
 }
 
 onMounted(() => {
-  locale.value = getPreferredLocale();
-  theme.value = getPreferredTheme();
-  isSidebarOpen.value = getPreferredSidebarOpen();
   unsubscribePanelRequested = airlineSimEventBus.on("shell:panel-requested", (event) => {
     if (event.panel === "notifications") {
       isNotificationPanelOpen.value = true;

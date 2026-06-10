@@ -9,6 +9,8 @@ import DemandExplainerModal from "./DemandExplainerModal.vue";
 
 const props = defineProps<{
   currentPreview: null | RouteOpportunity;
+  fareOutbound: string;
+  fareReturn: string;
   formatMoney: (value: number | undefined) => string;
   formatNumber: (value: number | undefined) => string;
   isCreating: boolean;
@@ -20,7 +22,20 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "create-selected-route": [];
+  "update:fare-outbound": [value: string];
+  "update:fare-return": [value: string];
 }>();
+
+// Demand shown at planning time is the average of both directions (origin↔destination),
+// a fairer headline than the one-way origin figure.
+const averageDailyDemand = computed(() => {
+  const demand = props.currentPreview?.demand;
+  if (!demand) {
+    return 0;
+  }
+
+  return Math.round((demand.origin_daily_passengers + demand.destination_daily_passengers) / 2);
+});
 
 const DEFAULT_DEPARTURE_HOUR = 9;
 const TURNAROUND_HOURS = 1.5;
@@ -71,27 +86,22 @@ function reasonLabel(reason: { code: string; message: string }): string {
     >
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0 flex-1">
-          <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2">
-            <div class="min-w-0">
-              <p class="text-h3 leading-tight">
-                {{ airportCode(currentPreview.origin_airport) }}
-              </p>
-              <p class="mt-1 truncate text-caption text-text-muted">
-                {{ currentPreview.origin_airport.label }}
-              </p>
-            </div>
-            <span
-              aria-hidden="true"
-              class="route-preview-direction mt-1"
-            />
-            <div class="min-w-0 text-right">
-              <p class="text-h3 leading-tight">
-                {{ airportCode(currentPreview.destination_airport) }}
-              </p>
-              <p class="mt-1 truncate text-caption text-text-muted">
-                {{ currentPreview.destination_airport.label }}
-              </p>
-            </div>
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-h3 font-semibold leading-tight shrink-0">
+              {{ airportCode(currentPreview.origin_airport) }}
+            </span>
+            <span class="text-text-muted shrink-0 text-lg">→</span>
+            <span class="text-h3 font-semibold leading-tight shrink-0">
+              {{ airportCode(currentPreview.destination_airport) }}
+            </span>
+          </div>
+          <div class="mt-1.5 text-caption text-text-muted space-y-0.5 min-w-0">
+            <p class="truncate" :title="currentPreview.origin_airport.label">
+              {{ currentPreview.origin_airport.label }}
+            </p>
+            <p class="truncate" :title="currentPreview.destination_airport.label">
+              {{ currentPreview.destination_airport.label }}
+            </p>
           </div>
         </div>
         <AirBadge
@@ -103,7 +113,7 @@ function reasonLabel(reason: { code: string; message: string }): string {
       <div class="mt-4 grid grid-cols-2 gap-2">
         <div class="rounded-md border border-border bg-background px-3 py-2">
           <span class="text-caption text-text-muted">{{ t("metric.distance") }}</span>
-          <p class="text-subtitle">
+          <p class="text-subtitle truncate">
             {{ formatNumber(currentPreview.demand.distance_km) }} {{ t("metric.km") }}
           </p>
         </div>
@@ -120,27 +130,27 @@ function reasonLabel(reason: { code: string; message: string }): string {
               i
             </button>
           </span>
-          <p class="text-subtitle">
-            {{ formatNumber(currentPreview.demand.origin_daily_passengers) }}
+          <p class="text-subtitle truncate">
+            {{ formatNumber(averageDailyDemand) }}
           </p>
         </div>
-        <div class="col-span-2 flex items-center justify-between rounded-md border border-border bg-background px-3 py-2">
-          <div>
-            <span class="text-caption text-text-muted">{{ t("metric.roundTrip") }}</span>
-            <p class="text-subtitle">
-              {{ formatDuration(roundTripHours) }}
-            </p>
-          </div>
-          <AirBadge
-            v-if="returnsNextDay"
-            :label="t('metric.nextDay')"
-            variant="warning-soft"
-          />
+        <div class="rounded-md border border-border bg-background px-3 py-2">
+          <span class="text-caption text-text-muted">{{ t("metric.roundTrip") }}</span>
+          <p class="text-subtitle flex items-center gap-1.5 flex-wrap">
+            <span class="truncate">{{ formatDuration(roundTripHours) }}</span>
+            <span
+              v-if="returnsNextDay"
+              class="rounded bg-warning-soft px-1 text-[10px] font-medium leading-normal text-warning shrink-0"
+              :title="t('metric.nextDay')"
+            >
+              +1d
+            </span>
+          </p>
         </div>
-        <div class="col-span-2 rounded-md border border-border bg-background px-3 py-2">
+        <div class="rounded-md border border-border bg-background px-3 py-2">
           <span class="text-caption text-text-muted">{{ t("metric.profit") }}</span>
           <p
-            class="text-subtitle"
+            class="text-subtitle truncate"
             :class="currentPreview.economics.estimated_profit_per_flight > 0 ? 'text-success' : 'text-error'"
           >
             {{ formatMoney(currentPreview.economics.estimated_profit_per_flight) }}
@@ -211,6 +221,40 @@ function reasonLabel(reason: { code: string; message: string }): string {
           </li>
         </ul>
       </div>
+      <div class="mt-3 rounded-md border border-border bg-background p-3">
+        <p class="text-caption text-text-muted">
+          {{ t("price.title") }}
+        </p>
+        <p class="mt-1 text-[11px] leading-normal text-text-muted">
+          {{ t("price.hint") }}
+        </p>
+        <div class="mt-3 grid grid-cols-2 gap-3">
+          <label class="grid gap-1 text-caption text-text-muted">
+            {{ t("price.outbound") }}
+            <input
+              class="w-full min-w-0 rounded-md border border-border bg-surface px-2 py-1 text-body text-text-primary focus:border-primary focus:outline-none"
+              inputmode="numeric"
+              min="0"
+              :placeholder="t('price.auto')"
+              type="number"
+              :value="fareOutbound"
+              @input="emit('update:fare-outbound', ($event.target as HTMLInputElement).value)"
+            />
+          </label>
+          <label class="grid gap-1 text-caption text-text-muted">
+            {{ t("price.return") }}
+            <input
+              class="w-full min-w-0 rounded-md border border-border bg-surface px-2 py-1 text-body text-text-primary focus:border-primary focus:outline-none"
+              inputmode="numeric"
+              min="0"
+              :placeholder="t('price.auto')"
+              type="number"
+              :value="fareReturn"
+              @input="emit('update:fare-return', ($event.target as HTMLInputElement).value)"
+            />
+          </label>
+        </div>
+      </div>
       <AirButton
         class="mt-3 w-full"
         :disabled="isCreating || isPreviewLoading || currentPreview.recommendation === 'blocked'"
@@ -233,29 +277,15 @@ function reasonLabel(reason: { code: string; message: string }): string {
 </template>
 
 <style scoped>
-.route-preview-direction {
-  align-items: center;
-  display: inline-flex;
-  height: 1.25rem;
-  justify-content: center;
-  position: relative;
-  width: 1.75rem;
+/* Hide Chrome/Safari/Edge/Opera spin buttons */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
-.route-preview-direction::before {
-  background: currentcolor;
-  content: "";
-  height: 0.125rem;
-  width: 1.25rem;
-}
-
-.route-preview-direction::after {
-  border-right: 0.125rem solid currentcolor;
-  border-top: 0.125rem solid currentcolor;
-  content: "";
-  height: 0.45rem;
-  margin-left: -0.45rem;
-  transform: rotate(45deg);
-  width: 0.45rem;
+/* Hide Firefox spin buttons */
+input[type="number"] {
+  -moz-appearance: textfield;
 }
 </style>

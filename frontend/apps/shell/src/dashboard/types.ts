@@ -27,6 +27,12 @@ export type DashboardAlert = {
   target_path: string;
 };
 
+export type DashboardFlightDetail = {
+  aircraft: null | { id: string; model_name?: string; seats?: number; tail_number?: string };
+  flight: FlightDetailCard;
+  route_id: string;
+};
+
 export type DashboardMapState = {
   airports: {
     features: MapAirportFeature[];
@@ -118,6 +124,49 @@ export type DashboardSummary = {
   updated_at: string;
 };
 
+export type FlightDetailCard = {
+  actual?: FlightFinancials;
+  aircraft_id: string;
+  arrival_at: string;
+  departure_at: string;
+  destination_airport: FlightAirportRef;
+  destination_airport_id: string;
+  destination_coordinates: FlightCoordinates | null;
+  expected: FlightFinancials;
+  flight_number: string;
+  id: string;
+  origin_airport: FlightAirportRef;
+  origin_airport_id: string;
+  origin_coordinates: FlightCoordinates | null;
+  status: "boarding" | "cancelled" | "completed" | "in_flight" | "scheduled";
+  telemetry: FlightTelemetry;
+};
+
+export type FlightPhase =
+  | "arrived"
+  | "boarding"
+  | "climb"
+  | "cruise"
+  | "deplaning"
+  | "descent"
+  | "landing"
+  | "scheduled"
+  | "takeoff"
+  | "taxi_in"
+  | "taxi_out";
+
+export type FlightTelemetry = {
+  air_progress: number;
+  altitude_ft: number;
+  cruise_flight_level: number;
+  eta_minutes: number;
+  fuel_remaining_t: number;
+  ground_speed_kph: number;
+  passengers_on_board: number;
+  phase: FlightPhase;
+  progress: number;
+};
+
 export type MapAirportFeature = {
   geometry: {
     coordinates: [number, number];
@@ -140,4 +189,16 @@ export type ShellStatusSummary = {
   aircraft: number;
   alerts: number;
   balance: number;
+};
+
+type FlightAirportRef = { iata_code?: string; label: string };
+
+type FlightCoordinates = { latitude: number; longitude: number };
+
+type FlightFinancials = {
+  cost: number;
+  load_factor: number;
+  passengers: number;
+  profit: number;
+  revenue: number;
 };

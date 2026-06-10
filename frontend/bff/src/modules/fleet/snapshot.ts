@@ -3,6 +3,8 @@ import type { Aircraft, AircraftType, Airline, Airport, Country, FleetSnapshot }
 
 import { getBackendAdminToken, getUserAuthorization, getValidatedUserAirline } from "../../auth";
 import { BackendHttpError, requestBackendJson } from "../../backend-http";
+import { sumLedger } from "../finance/calculator";
+import { listLedgerForAirline } from "../finance/storage";
 import { getCachedListInternal } from "../proxy";
 
 export function getCountryForAirport(snapshot: FleetSnapshot, airportId: string | undefined): Country | undefined {
@@ -26,10 +28,17 @@ export async function loadFleetSnapshot(request: Request, config: BffConfig): Pr
     getCachedListInternal<Country>(adminRequest, config, "/countries", "countries"),
   ]);
 
+  const ledger = await listLedgerForAirline(airline.id ?? "");
+  const ledgerDelta = sumLedger(ledger);
+  const adjustedAirline = {
+    ...airline,
+    balance: (airline.balance ?? 0) + ledgerDelta,
+  };
+
   return {
     aircrafts: aircrafts.items ?? [],
     aircraftTypes,
-    airline,
+    airline: adjustedAirline,
     airports,
     countries,
   };

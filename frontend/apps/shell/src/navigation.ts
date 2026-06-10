@@ -83,7 +83,8 @@ export const navigationSections: NavigationSection[] = [
   {
     children: [
       { label: "My Hubs", path: "/airports/hubs" },
-      { label: "Routes", path: "/airports/routes" },
+      { label: "My Routes", path: "/airports/my-routes" },
+      { label: "Route Planner", path: "/airports/routes" },
       { enabled: false, label: "Fees & Slots", path: "/airports/fees-slots" },
       { enabled: false, label: "Contracts", path: "/airports/contracts" },
     ],

@@ -87,8 +87,17 @@ export const DEFAULT_CALIBRATION: CalibrationParams = {
   affinityDiaspora: 0.45,
   affinityTourism: 0.55,
   baseScale: 1.8,
-  distanceD0: 1800,
-  distanceP: 1.25,
+  // Distance curve flattened 2026-06 (D0 1800→2500, p 1.25→1.0) after the
+  // benchmark — binned by distance (an independent variable, so not a regression-
+  // to-the-mean artefact) — showed the old curve over-predicted 500–2000 km hauls
+  // (×1.27) and under-predicted 2000 km+ (×0.79). Flattening lifts long-haul to
+  // ≈×0.87 and improves MAPE/R² without losing correlation. The aviation-gravity
+  // ceiling is corr≈0.53 (gravity explains ~28% of route-level variance); the
+  // real↔model traffic "slope" is mostly regression to the mean and is deliberately
+  // NOT chased via elasticities, which only inflate variance. See
+  // docs/passenger-demand-model.md "Калибровка формы".
+  distanceD0: 2500,
+  distanceP: 1.0,
   gdpElasticity: 0.55,
   populationElasticity: 0.62,
 };

@@ -39,3 +39,11 @@ export const Tones: Story = {
     `,
   }),
 };
+
+export const WithInfo: Story = {
+  args: {
+    infoLabel: "Show more information",
+    label: "Metric with Info",
+    value: "100%",
+  },
+};

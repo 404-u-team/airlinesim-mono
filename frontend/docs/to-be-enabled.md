@@ -17,6 +17,8 @@ CRUD-страниц - `docs/swagger.yaml` и сгенерированные ти
 | Airports | `/admin/airports` | OpenAPI `Airport` | Требует `world.manage`; используются справочники стран и регионов; CRUD через `/admin/world/airports`. |
 | Region Links | `/admin/region-links` | OpenAPI `Region Link` | Требует `world.manage`; используется справочник регионов; CRUD через `/admin/world/region-links`. |
 | Import | `/admin/import` | BFF protected import pipeline | Требует `world.manage`; поддерживает dry-run, import, structured report и job status. |
+| Aircraft Types | `/admin/aircraft-types` | OpenAPI `AircraftType` | Требует `world.manage`; список типов самолётов, просмотр деталей, создание новых типов и кастомные картинки. |
+| Global Fuel Prices | `/admin/fuel` | BFF simulated fuel endpoints | Требует `world.manage`; мониторинг текущих цен на топливо и истории. |
 | Capabilities | `/admin/capabilities` | ERD/OpenAPI gap registry | Единственный экран для всех disabled сущностей. |
 
 ## Disabled до появления OpenAPI
@@ -26,12 +28,10 @@ CRUD-страниц - `docs/swagger.yaml` и сгенерированные ти
 
 | Страница | Роут | Чего не хватает | Когда включать |
 | --- | --- | --- | --- |
-| Global Fuel Prices | `/admin/future/global-fuel-prices` | OpenAPI-схема, list/create/update/delete endpoints | После добавления `GlobalFuelPrice` schema и CRUD paths в OpenAPI. |
 | Airlines | `/admin/future/airlines` | OpenAPI-схема, admin list endpoint, admin mutation endpoints | После публикации admin-схемы `Airline` и endpoints в OpenAPI. |
 | Staff Configs | `/admin/future/staff-configs` | OpenAPI-схема, CRUD endpoints, контракт enum `staff_type` | После добавления `StaffConfig` schema с типизированными `staff_type`. |
 | Airline To Airports | `/admin/future/airline-airports` | OpenAPI-схема, CRUD endpoints, references для airline/airport | После экспорта `AirlineToAirport` schema и справочников через OpenAPI. |
 | Aircraft Manufacturers | `/admin/future/aircraft-manufacturers` | OpenAPI-схема, CRUD endpoints, upload/logo contract | После добавления `Aircraft_Manufacturer` schema и правил upload reference. |
-| Aircraft Types | `/admin/future/aircraft-types` | OpenAPI-схема, CRUD endpoints, manufacturer reference | После публикации `Aircraft_Type` schema и CRUD endpoints. |
 | Aircraft | `/admin/future/aircraft` | OpenAPI-схема, CRUD endpoints, references type/airline/airport | После экспорта `Aircraft` schema и reference lists. |
 | Tariff Classes | `/admin/future/tariff-classes` | OpenAPI-схема, CRUD endpoints, airline reference | После добавления `TariffClass` schema и endpoints. |
 | Aircraft Seats | `/admin/future/aircraft-seats` | OpenAPI-схема, CRUD endpoints, aircraft/tariff references | После экспорта `AircraftSeat` schema и references. |

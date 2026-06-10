@@ -6,6 +6,8 @@ import { requestBackendJson } from "../../backend-http";
 import { jsonResponse, readJson } from "../../http";
 import { recordGameEvent } from "../events/producer";
 import { reconcileNotificationsAfterMutation } from "../events/reconcile";
+import { sumLedger } from "../finance/calculator";
+import { listLedgerForAirline } from "../finance/storage";
 import { cache } from "../proxy";
 import { buildPurchasePreview } from "./preview";
 import { enrichOwnedAircraft } from "./scoring";
@@ -122,6 +124,10 @@ async function buildPurchaseResponse(
     getCreatedAircraft(config, authorization, aircraftId, preview.tailNumber.normalizedValue),
   ]);
 
+  const ledger = await listLedgerForAirline(snapshot.airline.id ?? "");
+  const ledgerDelta = sumLedger(ledger);
+  const currentAvailableBalance = (currentAirline.balance ?? 0) + ledgerDelta;
+
   return {
     aircraft: createdAircraft ? enrichOwnedAircraft(createdAircraft, snapshot.aircraftTypes, snapshot.airports) : null,
     event: {
@@ -131,7 +137,7 @@ async function buildPurchaseResponse(
     },
     finance: {
       aircraftPrice: preview.aircraftPrice,
-      currentBalance: currentAirline.balance,
+      currentBalance: currentAvailableBalance,
       previousBalance: snapshot.airline.balance ?? 0,
     },
     recommendedNextAction: {

@@ -40,12 +40,18 @@ export type FitQuality = {
   // a percent; do not multiply by 100 here. MAPE is dominated by tiny-denominator
   // (thin) routes, so prefer medianRatio/bias when judging systematic skew.
   mape: number;
+  // |log(model/real)| percentiles — the honest dispersion of the fit, unswayed by
+  // the tiny-denominator routes MAPE explodes on. median ≈ typical multiplicative
+  // error (0.69 ≈ a typical pair is off by ~2×); p90/p95 size the tail.
+  medianAbsLogError: number;
   // Median of model/real across pairs — robust to the thin-route outliers MAPE
   // explodes on. 1 = a typical pair is bang on.
   medianRatio: number;
+  p90AbsLogError: number;
+  p95AbsLogError: number;
   pairs: number;
   // Coefficient of determination in log space (can be negative when the fit is
-  // worse than predicting the mean).
+  // worse than predicting the mean — common here as gravity caps at corr≈0.53).
   r2: number;
 };
 
@@ -58,7 +64,11 @@ const MAX_PROPENSITY = 4;
 export function fitCalibration(anchors: CalibrationAnchor[], iterations = DEFAULT_ITERATIONS): CalibrationFit {
   const usable = anchors.filter((a) => a.dailyPax > 0 && a.structural > 0);
   if (usable.length === 0) {
-    return { baseScale: 1.8, propensityByCountry: {}, quality: { bias: 1, mape: 0, medianRatio: 1, pairs: 0, r2: 0 } };
+    return {
+      baseScale: 1.8,
+      propensityByCountry: {},
+      quality: { bias: 1, mape: 0, medianAbsLogError: 0, medianRatio: 1, p90AbsLogError: 0, p95AbsLogError: 0, pairs: 0, r2: 0 },
+    };
   }
 
   // r_k = log(real) - log(structural); target r_k ≈ b + 0.5(p_a + p_b).
@@ -124,6 +134,15 @@ function median(values: number[]): number {
   return sorted.length % 2 === 0 ? ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2 : sorted[mid] ?? 0;
 }
 
+// Percentile of an already-ascending array (nearest-rank).
+function percentile(sortedAsc: number[], q: number): number {
+  if (sortedAsc.length === 0) {
+    return 0;
+  }
+  const index = Math.min(sortedAsc.length - 1, Math.floor(q * sortedAsc.length));
+  return sortedAsc[index] ?? 0;
+}
+
 function quality(anchors: CalibrationAnchor[], baseScale: number, logProp: Map<string, number>): FitQuality {
   const observed = anchors.map((a) => Math.log(a.dailyPax));
   const predicted = anchors.map((a) => {
@@ -136,13 +155,17 @@ function quality(anchors: CalibrationAnchor[], baseScale: number, logProp: Map<s
 
   // Ratios model/real, in log space (robust to the wide dynamic range of pax).
   const logRatios = anchors.map((a, i) => (predicted[i] ?? 0) - Math.log(a.dailyPax));
+  const absLogSorted = logRatios.map(Math.abs).sort((x, y) => x - y);
   // MAPE as a fraction — the UI multiplies by 100 to render a percent.
   const mape = mean(anchors.map((a, i) => Math.abs(a.dailyPax - Math.exp(predicted[i] ?? 0)) / a.dailyPax));
 
   return {
     bias: round3(Math.exp(mean(logRatios))),
     mape: round3(mape),
+    medianAbsLogError: round3(percentile(absLogSorted, 0.5)),
     medianRatio: round3(Math.exp(median(logRatios))),
+    p90AbsLogError: round3(percentile(absLogSorted, 0.9)),
+    p95AbsLogError: round3(percentile(absLogSorted, 0.95)),
     pairs: anchors.length,
     r2: round3(ssTot > 0 ? 1 - ssRes / ssTot : 0),
   };

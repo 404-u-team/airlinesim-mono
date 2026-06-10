@@ -45,6 +45,8 @@
 - `docs/knowledge-base/` - markdown-источник пользовательской базы знаний; до реализации wiki UI новые инструкции для пользователей добавлять туда и связывать с соответствующими продуктовым сценариями.
 - `docs/map-state.md` - контракт BFF map-state и правила Shell-owned Dashboard -> Map remote visual widget.
 - `docs/passenger-demand-model.md` - реализованная модель пассажирского спроса, формулы, ограничения и связь с Grosche et al.
+- `docs/flight-load-model.md` - модель загрузки конкретного рейса (v2: эластичность + S-кривая частоты + spill), различие route-preview vs per-flight LF и ценообразование авто/оптимальная цена.
+- `docs/flight-phases.md` - синтез фаз рейса и косметической телеметрии (FL/скорость/топливо/пассажиры/ETA); разделение персистентного `status` и производного `phase`; контракт позиции борта на карте.
 - `docs/application-modules.md` - Mermaid-схема актуальных модулей приложения, BFF, backend и внешних источников.
 - `docs/swagger.yaml` - OpenAPI/Swagger контракт backend API; `docs/swagger.json` лежит рядом как fallback для генерации.
 - `docs/erd.txt` - доменная ERD модель.

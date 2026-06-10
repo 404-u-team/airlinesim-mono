@@ -1,4 +1,4 @@
-import type { DashboardMapState, DashboardSummary } from "./types";
+import type { DashboardFlightDetail, DashboardMapState, DashboardSummary } from "./types";
 
 import { apiClient } from "../api";
 
@@ -17,4 +17,8 @@ export async function getDashboardMapState(selectedAirportId?: string): Promise<
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {
   return apiClient.get<DashboardSummary>("/game/dashboard-summary");
+}
+
+export async function getFlightDetail(flightId: string): Promise<DashboardFlightDetail> {
+  return apiClient.get<DashboardFlightDetail>(`/operations/flights/${encodeURIComponent(flightId)}`);
 }
