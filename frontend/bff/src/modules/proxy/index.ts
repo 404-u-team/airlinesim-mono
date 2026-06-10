@@ -78,6 +78,47 @@ export async function getCachedListInternal<T>(
   return result.items as T[];
 }
 
+type AircraftTypeResponse = {
+  [key: string]: unknown;
+  characteristics?: Record<string, unknown> | string;
+  icao_code?: string;
+  image_url?: string;
+};
+
+export async function handleAircraftTypeProxyResponse(response: Response): Promise<Response> {
+  try {
+    const data = (await response.json()) as AircraftTypeResponse & Record<string, unknown>;
+    if (typeof data === "object") {
+      const { resolveAircraftImageUrl } = await import("../aircraft-images/resolve");
+      data.image_url = resolveAircraftImageUrl({
+        characteristics: typeof data.characteristics === "string"
+          ? data.characteristics
+          : JSON.stringify(data.characteristics ?? {}),
+        icao_code: typeof data.icao_code === "string" ? data.icao_code : undefined,
+      });
+      return jsonResponse(data);
+    }
+  } catch {
+    // fallback
+  }
+  return response;
+}
+
+export function handleLegacyProxyRoute(
+  request: Request,
+  url: URL,
+  config: BffConfig,
+): null | Promise<Response> {
+  if (url.pathname.startsWith("/proxy/") && request.method === "GET") {
+    const legacyPath = url.pathname.replace(/^\/proxy/, "");
+    const legacyRoute = cacheableRoutes.find((route) => route.path === legacyPath);
+    if (legacyRoute) {
+      return handleCacheableRoute(request, url, config, legacyRoute);
+    }
+  }
+  return null;
+}
+
 export async function handleProxyRequest(
   request: Request,
   url: URL,
@@ -96,16 +137,16 @@ export async function handleProxyRequest(
     return handleCacheableRoute(request, url, config, cacheableRoute);
   }
 
-  if (url.pathname.startsWith("/proxy/") && request.method === "GET") {
-    const legacyPath = url.pathname.replace(/^\/proxy/, "");
-    const legacyRoute = cacheableRoutes.find((route) => route.path === legacyPath);
-
-    if (legacyRoute) {
-      return handleCacheableRoute(request, url, config, legacyRoute);
-    }
+  const legacyResponse = handleLegacyProxyRoute(request, url, config);
+  if (legacyResponse) {
+    return legacyResponse;
   }
 
   const response = await forwardBackendRequest(request, url, config);
+
+  if (request.method === "GET" && response.ok && /^\/aircraft-types\/[^/]+$/.test(url.pathname)) {
+    return handleAircraftTypeProxyResponse(response);
+  }
 
   if (request.method !== "GET" && response.ok) {
     cache.clear();
@@ -119,7 +160,7 @@ function isAdminMutation(request: Request, url: URL): boolean {
     return false;
   }
 
-  return /^\/(?:airport|country|region|region-link)(?:\/|$)/.test(url.pathname);
+  return /^\/(?:airport|country|region|region-link|aircraft-types)(?:\/|$)/.test(url.pathname);
 }
 
 function buildBackendHeaders(request: Request): Headers {
@@ -325,9 +366,22 @@ async function loadCacheableRouteInternal(
 
   const backendPayload = (await response.json()) as Record<string, unknown>;
   const items = backendPayload[route.collectionKey];
+  let itemsArray = Array.isArray(items) ? (items as JsonObject[]) : [];
+
+  if (route.path === "/aircraft-types") {
+    const { resolveAircraftImageUrl } = await import("../aircraft-images/resolve");
+    itemsArray = itemsArray.map((item) => ({
+      ...item,
+      image_url: resolveAircraftImageUrl({
+        characteristics: typeof item.characteristics === "string" ? item.characteristics : JSON.stringify(item.characteristics ?? {}),
+        icao_code: typeof item.icao_code === "string" ? item.icao_code : undefined,
+      }),
+    }));
+  }
+
   const payload = {
     fetchedAt: Date.now(),
-    items: Array.isArray(items) ? (items as JsonObject[]) : [],
+    items: itemsArray,
   };
 
   cache.set(route.path, payload);

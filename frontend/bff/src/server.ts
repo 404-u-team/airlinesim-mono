@@ -2,6 +2,7 @@ import { requireAdminCapability } from "./auth";
 import { getConfig } from "./config";
 import { jsonResponse, notFound } from "./http";
 import { handleAdminRequest } from "./modules/admin";
+import { handleAdminDemandRequest } from "./modules/admin/demand";
 import { handleDemandRequest } from "./modules/demand";
 import { handleEventsRequest } from "./modules/events";
 import { handleFacilitiesRequest } from "./modules/facilities";
@@ -47,6 +48,7 @@ async function routeRequest(request: Request, url: URL): Promise<Response> {
 
 async function routeWorldRequest(request: Request, url: URL): Promise<null | Response> {
   return (
+    (await handleAdminDemandRequest(request, url, config)) ??
     (await handleAdminRequest(request, url, config)) ??
     (await handleImportRequest(request, url, config)) ??
     (await handleDemandRequest(request, url, config)) ??

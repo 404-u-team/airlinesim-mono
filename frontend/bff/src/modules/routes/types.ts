@@ -1,4 +1,4 @@
-import type { PassengerDemandBreakdown } from "../demand/model";
+import type { DemandBreakdown } from "../demand/service";
 import type { Aircraft, AircraftType, Airport } from "../fleet/types";
 
 export type Region = {
@@ -39,10 +39,10 @@ export type RouteAirport = Airport & {
   label: string;
 };
 
-export type RouteDemandBreakdown = PassengerDemandBreakdown & {
-  // "region_link" when the displayed number came from a cached backend RegionLink
-  // rather than the live gravity model below.
-  source: "model" | "region_link";
+export type RouteDemandBreakdown = DemandBreakdown & {
+  // "override" when a manual per-pair override (Layer 4) changed the number,
+  // otherwise "model".
+  source: "model" | "override";
 };
 
 export type RouteDemandSnapshot = {
@@ -51,7 +51,6 @@ export type RouteDemandSnapshot = {
   destination_daily_passengers: number;
   distance_km: number;
   origin_daily_passengers: number;
-  region_link_id?: string;
 };
 
 export type RouteEconomics = {

@@ -50,6 +50,13 @@ defineProps<{
             {{ adminText(appLocale, "worldImport") }}
           </RouterLink>
           <RouterLink
+            to="/admin/calibration"
+            class="block rounded-md px-2 py-2 text-body transition hover:bg-surface-subtle"
+            :class="activePath === '/admin/calibration' ? 'text-primary font-medium' : 'text-text-muted'"
+          >
+            {{ adminText(appLocale, "demandCalibration") }}
+          </RouterLink>
+          <RouterLink
             v-for="entity in entities"
             :key="entity.id"
             :to="`/admin/${entity.id}`"

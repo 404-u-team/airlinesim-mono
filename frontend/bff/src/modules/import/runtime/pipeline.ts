@@ -37,6 +37,10 @@ export async function runWorldDataImport(
   reportProgress?.({ counts: progressCounts(report), message: "Validating world data", percent: 36, stage: "validating" });
   validateWorldData(data, issues);
   await writeJsonFile(`${paths.stageDir}/world-data.latest.json`, data);
+  // Separate artifact the BFF demand model reads at runtime (Layer 0 catchment).
+  await writeJsonFile(`${paths.stageDir}/airport-demand-profile.latest.json`, {
+    profiles: data.airportDemandProfiles ?? [],
+  });
 
   reportProgress?.({ counts: progressCounts(report), message: "Preparing backend reconciliation", percent: 44, stage: "reconciling" });
   const state = await prepareReconcileState(config, options.mode, paths.mappingPath, report);

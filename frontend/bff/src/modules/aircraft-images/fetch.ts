@@ -20,11 +20,7 @@ export type AircraftImageInput = {
   modelName: string;
 };
 
-type CommonsImageInfoResponse = {
-  query?: {
-    pages?: Record<string, { imageinfo?: Array<{ url?: string }> }>;
-  };
-};
+type CommonsImageInfoResponse = { query?: { pages?: Record<string, { imageinfo?: Array<{ url?: string }> }> } };
 
 type WikidataEntity = NonNullable<NonNullable<WikidataEntityResponse["entities"]>[string]>;
 
@@ -43,12 +39,7 @@ type WikidataSearchResponse = {
   search?: Array<{ description?: string; id?: string; label?: string }>;
 };
 
-type WikipediaSummaryResponse = {
-  content_urls?: { desktop?: { page?: string } };
-  originalimage?: { source?: string };
-  thumbnail?: { source?: string };
-  title?: string;
-};
+type WikipediaSummaryResponse = { content_urls?: { desktop?: { page?: string } }; originalimage?: { source?: string }; thumbnail?: { source?: string }; title?: string };
 
 const WIKIMEDIA_USER_AGENT = "AirlineSim-Import-Agent/1.0";
 const WIKIMEDIA_MIN_DELAY_MS = 350;
@@ -342,18 +333,59 @@ async function waitForWikimediaThrottle(): Promise<void> {
 }
 
 const SCORE_RULES = [
-  { trigger: "aircraft", value: 10 },
-  { trigger: "airliner", value: 10 },
-  { trigger: "airplane", value: 8 },
-  { trigger: "jet", value: 4 },
-  { trigger: "turboprop", value: 4 },
-  { trigger: "family", value: 2 },
-  { trigger: "airport", value: -15 },
-  { trigger: "airline", value: -12 },
+  { trigger: "aircraft", value: 10 }, { trigger: "airliner", value: 10 },
+  { trigger: "airplane", value: 8 }, { trigger: "jet", value: 4 },
+  { trigger: "turboprop", value: 4 }, { trigger: "family", value: 2 },
+  { trigger: "airport", value: -15 }, { trigger: "airline", value: -12 },
   { trigger: "flight ", value: -8 },
 ];
-
 const NEGATIVE_TRIGGERS = ["accident", "incident", "crash"];
+
+export async function searchAircraftImageCandidates(query: string): Promise<AircraftVisualImage[]> {
+  const [wiki, wikidata] = await Promise.all([
+    searchWikipediaCandidate(query),
+    searchWikidataCandidates(query),
+  ]);
+  const candidates = wiki ? [wiki, ...wikidata] : wikidata;
+  const seen = new Set<string>();
+  return candidates.filter((c) => {
+    if (seen.has(c.imageUrl)) {
+      return false;
+    }
+    seen.add(c.imageUrl);
+    return true;
+  });
+}
+
+export async function searchWikidataCandidates(query: string): Promise<AircraftVisualImage[]> {
+  const qids = await searchWikidataAircraft(query);
+  const details = await Promise.all(
+    qids.slice(0, 5).map(async (qid) => {
+      try {
+        return await fetchWikidataAircraftDetails(qid, query);
+      } catch { return null; }
+    })
+  );
+  return details.filter((d): d is AircraftVisualImage => Boolean(d?.imageUrl));
+}
+
+export async function searchWikipediaCandidate(query: string): Promise<AircraftVisualImage | null> {
+  try {
+    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`;
+    const response = await fetchWikimediaJson<WikipediaSummaryResponse>(url);
+    const imageUrl = response.originalimage?.source ?? response.thumbnail?.source;
+    if (imageUrl) {
+      return {
+        imageUrl,
+        pageUrl: response.content_urls?.desktop?.page,
+        searchQuery: query,
+        source: "Wikipedia",
+        title: response.title ?? query,
+      };
+    }
+  } catch { /* ignore */ }
+  return null;
+}
 
 function wikidataAircraftSearchScore(item: { description?: string; label?: string }): number {
   const text = `${item.label ?? ""} ${item.description ?? ""}`.toLowerCase();
@@ -400,3 +432,4 @@ function wikipediaTitlesForAircraft(input: AircraftImageInput): string[] {
     input.modelName,
   ]);
 }
+

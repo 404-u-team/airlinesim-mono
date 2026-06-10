@@ -1,60 +1,72 @@
 import { expect, test } from "bun:test";
 
-import { calculatePassengerDemand, gravityDemand, shortHaulFactor } from "../src/modules/demand/model";
+import type { MarketEndpoint } from "../src/modules/demand/model";
 
-const airport = {
-  fuel_price_multiplier: 1,
-  gate_fee: 250,
-  iata_code: "AAA",
-  max_runway_length_m: 3600,
-  max_runway_uses_per_day: 600,
-  runway_fee: 900,
-  stand_fee: 150,
-  works_at_night: true,
-};
+import {
+  calculatePairDemand,
+  distanceImpedance,
+  explainPairDemand,
+  gravityMass,
+  shortHaulFactor,
+} from "../src/modules/demand/model";
 
-test("gravity demand rises with population and GDP and falls with distance", () => {
-  const base = { gdp_per_capita: 20_000, population: 5_000_000 };
-  const larger = { gdp_per_capita: 40_000, population: 15_000_000 };
+function market(overrides: Partial<MarketEndpoint> = {}): MarketEndpoint {
+  return {
+    businessScore: 0.6,
+    catchmentPopulation: 3_000_000,
+    countryId: "A",
+    gdpPerCapita: 30_000,
+    tourismScore: 0.4,
+    ...overrides,
+  };
+}
 
-  expect(gravityDemand(larger, base, 1000)).toBeGreaterThan(gravityDemand(base, base, 1000));
-  expect(gravityDemand(base, base, 500)).toBeGreaterThan(gravityDemand(base, base, 5000));
+test("gravity mass rises with catchment and GDP", () => {
+  const base = market({ catchmentPopulation: 3_000_000, gdpPerCapita: 20_000 });
+  const bigger = market({ catchmentPopulation: 12_000_000, gdpPerCapita: 45_000 });
+
+  expect(gravityMass(bigger, base)).toBeGreaterThan(gravityMass(base, base));
 });
 
-test("passenger demand preserves directional differences", () => {
-  const result = calculatePassengerDemand(
-    airport,
-    airport,
-    { business_score: 0.8, country_id: "A", gdp_per_capita: 55_000, population: 12_000_000, tourism_score: 0.4 },
-    { business_score: 0.5, country_id: "B", gdp_per_capita: 12_000, population: 18_000_000, tourism_score: 0.95 },
-    2200,
-    { business: 0.7, diaspora: 0.4, tourism: 0.8 },
-  );
+test("distance impedance falls with distance", () => {
+  expect(distanceImpedance(500)).toBeGreaterThan(distanceImpedance(5000));
+});
+
+test("pair demand preserves directional differences", () => {
+  const origin = market({ businessScore: 0.8, catchmentPopulation: 12_000_000, countryId: "A", gdpPerCapita: 55_000, tourismScore: 0.4 });
+  const destination = market({ businessScore: 0.5, catchmentPopulation: 18_000_000, countryId: "B", gdpPerCapita: 12_000, tourismScore: 0.95 });
+
+  const result = calculatePairDemand(origin, destination, 2200, { business: 0.7, diaspora: 0.4, tourism: 0.8 });
 
   expect(result.originToDestination).toBeGreaterThan(1);
   expect(result.destinationToOrigin).toBeGreaterThan(1);
   expect(result.originToDestination).not.toBe(result.destinationToOrigin);
 });
 
+test("higher aviation propensity raises demand for the same market", () => {
+  const sleepy = calculatePairDemand(market({ propensity: 1 }), market({ countryId: "B", propensity: 1 }), 1200);
+  const lively = calculatePairDemand(market({ propensity: 2 }), market({ countryId: "B", propensity: 2 }), 1200);
+
+  expect(lively.originToDestination).toBeGreaterThan(sleepy.originToDestination);
+});
+
 test("short-haul factor collapses intra-metro pairs and saturates by 300 km", () => {
   expect(shortHaulFactor(44)).toBe(0);
   expect(shortHaulFactor(300)).toBe(1);
   expect(shortHaulFactor(700)).toBe(1);
+  expect(calculatePairDemand(market(), market({ countryId: "A" }), 44).originToDestination).toBeLessThanOrEqual(1);
 });
 
-test("very short pairs (a city's two airports) carry essentially no demand", () => {
-  const region = { business_score: 0.6, country_id: "A", gdp_per_capita: 20_000, population: 10_000_000, tourism_score: 0.4 };
+test("breakdown exposes catchment, propensity and direction factors", () => {
+  const { breakdown } = explainPairDemand(
+    market({ catchmentPopulation: 4_000_000 }),
+    market({ catchmentPopulation: 9_000_000, countryId: "B" }),
+    1500,
+  );
 
-  expect(calculatePassengerDemand(airport, airport, region, region, 44).originToDestination).toBeLessThanOrEqual(1);
-});
-
-test("domestic pairs out-demand otherwise-identical international pairs", () => {
-  const origin = { business_score: 0.6, country_id: "A", gdp_per_capita: 20_000, population: 10_000_000, tourism_score: 0.4 };
-  const sameCountry = { ...origin };
-  const otherCountry = { ...origin, country_id: "B" };
-
-  const domestic = calculatePassengerDemand(airport, airport, origin, sameCountry, 1200).originToDestination;
-  const international = calculatePassengerDemand(airport, airport, origin, otherCountry, 1200).originToDestination;
-
-  expect(domestic).toBeGreaterThan(international);
+  expect(breakdown.originCatchment).toBe(4_000_000);
+  expect(breakdown.destinationCatchment).toBe(9_000_000);
+  expect(breakdown.propensityFactor).toBe(1);
+  expect(breakdown.sameCountry).toBe(false);
+  expect(breakdown.baseDemand).toBeGreaterThan(0);
 });

@@ -9,6 +9,7 @@ import AdminEntityPage from "../components/AdminEntityPage.vue";
 import AdminFuturePage from "../components/AdminFuturePage.vue";
 import { adminEntityConfigs, defaultAdminEntity } from "../data/entity-configs";
 import { futureEntities } from "../data/future-entities";
+import AdminCalibrationPage from "./AdminCalibrationPage.vue";
 import AdminImportPage from "./AdminImportPage.vue";
 import AdminOverviewPage from "./AdminOverviewPage.vue";
 
@@ -25,6 +26,7 @@ const entitySlug = computed(() => {
 const activeEntity = computed(
   () => adminEntityConfigs.find((config) => config.id === entitySlug.value) ?? defaultAdminEntity,
 );
+const isCalibrationRoute = computed(() => route.path === "/admin/calibration");
 const isCapabilitiesRoute = computed(() => route.path === "/admin/capabilities");
 const isImportRoute = computed(() => route.path === "/admin/import");
 const isOverviewRoute = computed(() => route.path === "/admin/overview");
@@ -41,6 +43,7 @@ const isOverviewRoute = computed(() => route.path === "/admin/overview");
 
     <AdminOverviewPage v-if="isOverviewRoute" :app-locale="appLocale" />
     <AdminImportPage v-else-if="isImportRoute" :app-locale="appLocale" />
+    <AdminCalibrationPage v-else-if="isCalibrationRoute" :app-locale="appLocale" />
     <AdminFuturePage
       v-else-if="isCapabilitiesRoute"
       :entities="futureEntities"

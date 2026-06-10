@@ -16,11 +16,12 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
 });
 
-test("generates airport-pair demand and lazily creates the region link", async () => {
-  const mutations: Array<{ body: unknown; path: string }> = [];
+test("computes airport-pair demand locally without touching region links", async () => {
+  const requestedPaths: string[] = [];
 
-  globalThis.fetch = async (input, init) => {
+  globalThis.fetch = async (input) => {
     const url = String(input);
+    requestedPaths.push(url);
 
     if (url === "http://backend.test/airline/me") {
       return json({ id: "airline-1" });
@@ -33,8 +34,8 @@ test("generates airport-pair demand and lazily creates the region link", async (
     if (url === "http://backend.test/airports") {
       return json({
         airports: [
-          airport("airport-a", "AAA", "region-a", "POINT(29.000000 41.000000)", 840),
-          airport("airport-b", "BBB", "region-b", "POINT(2.550000 49.010000)", 720),
+          airport("airport-a", "AAA", "region-a", "POINT(29.000000 41.000000)"),
+          airport("airport-b", "BBB", "region-b", "POINT(2.550000 49.010000)"),
         ],
       });
     }
@@ -48,78 +49,46 @@ test("generates airport-pair demand and lazily creates the region link", async (
       });
     }
 
-    if (url === "http://backend.test/region-links") {
-      return json({ region_links: [] });
-    }
-
-    if (url === "http://backend.test/region-link" && init?.method === "POST") {
-      mutations.push({
-        body: JSON.parse(String(init.body)),
-        path: url,
-      });
-
-      return json({ id: "link-1" });
-    }
-
     return json({ error: "unexpected" }, 500);
   };
 
   const response = await handleDemandRequest(
     new Request("http://bff.test/demand/airport-pair?origin_airport_id=airport-a&destination_airport_id=airport-b", {
-      headers: {
-        Authorization: "Bearer user-token",
-      },
+      headers: { Authorization: "Bearer user-token" },
     }),
     new URL("http://bff.test/demand/airport-pair?origin_airport_id=airport-a&destination_airport_id=airport-b"),
     config,
   );
 
   expect(response?.status).toBe(200);
-  expect(await response?.json()).toMatchObject({
-    demand: {
-      cached: true,
-      destination_airport_id: "airport-b",
-      origin_airport_id: "airport-a",
-      region_link_id: "link-1",
-    },
+  const body = (await response?.json()) as { demand: Record<string, unknown> };
+  expect(body.demand).toMatchObject({
+    destination_airport_id: "airport-b",
+    origin_airport_id: "airport-a",
   });
-  expect(mutations).toHaveLength(1);
-  expect(mutations[0]?.body).toMatchObject({
-    base_daily_demand_ab: expect.any(Number),
-    base_daily_demand_ba: expect.any(Number),
-    region_a: "region-a",
-    region_b: "region-b",
-  });
+  expect(body.demand.origin_daily_passengers).toBeGreaterThan(0);
+  expect(body.demand.destination_daily_passengers).toBeGreaterThan(0);
+  expect(body.demand.distance_km).toBeGreaterThan(0);
+  expect(body.demand.breakdown).toBeDefined();
+
+  // The demand path must no longer read or write backend region links.
+  expect(requestedPaths.some((path) => path.includes("/region-link"))).toBe(false);
 });
 
-function airport(
-  id: string,
-  iataCode: string,
-  regionId: string,
-  geom: string,
-  runwayUses: number,
-): Record<string, unknown> {
+function airport(id: string, iataCode: string, regionId: string, geom: string): Record<string, unknown> {
   return {
-    fuel_price_multiplier: 1,
-    gate_fee: 250,
     geom,
     iata_code: iataCode,
+    icao_code: `IC${iataCode}`,
     id,
     intl_name: iataCode,
-    max_runway_length_m: 3600,
-    max_runway_uses_per_day: runwayUses,
     region_id: regionId,
-    runway_fee: 900,
-    stand_fee: 150,
-    works_at_night: true,
   };
 }
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     status,
   });
 }

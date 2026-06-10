@@ -1,50 +1,69 @@
 import { clamp, round2 } from "../import/shared/math";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Passenger demand model v2 (layered). See docs/passenger-demand-model.md.
+//
+//   Layer 1  Gravity      shape: catchment^α · GDPpc^β · D(distance)
+//   Layer 2  Propensity   level: per-country aviation-propensity multiplier
+//   Layer 3  Affinity     business / tourism / diaspora
+//   Layer 4  Override     surgical per-pair multiplier (applied by the caller)
+//
+// This module is a pure function of its inputs. Catchment population and the
+// per-country propensity come from upstream (import artifact + calibration); the
+// caller supplies them. The metro→airport capacity split is applied by the caller
+// (route layer), not here — this computes the *market* (metro-pair) demand.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type CalibrationParams = {
+  affinityBase: number;
+  affinityBusiness: number;
+  affinityDiaspora: number;
+  affinityTourism: number;
+  baseScale: number;
+  distanceD0: number;
+  distanceP: number;
+  gdpElasticity: number;
+  populationElasticity: number;
+};
+
+// Optional precomputed affinity (0..1). If omitted, synthesized from scores.
 export type DemandAffinity = {
   business?: number;
   diaspora?: number;
   tourism?: number;
 };
 
-export type DemandAirport = {
-  fuel_price_multiplier?: number;
-  gate_fee?: number;
-  iata_code?: string;
-  max_runway_length_m?: number;
-  max_runway_uses_per_day?: number;
-  runway_fee?: number;
-  stand_fee?: number;
-  works_at_night?: boolean;
+// One end of a market pair (a metro market, or a single-airport market).
+export type MarketEndpoint = {
+  businessScore?: number;
+  // Population this market can draw on (metro catchment), in people.
+  catchmentPopulation: number;
+  countryId?: string;
+  gdpPerCapita?: number;
+  // Aviation-propensity multiplier for this market's country (1 = neutral).
+  propensity?: number;
+  tourismScore?: number;
 };
 
-export type DemandRegion = {
-  business_score?: number;
-  country_id?: string;
-  gdp_per_capita?: number;
-  population?: number;
-  tourism_score?: number;
-};
-
-// Per-pair factor breakdown so the UI can explain *why* a demand number is what it
-// is (and surface that the calibration constant K is a game knob, not a real value).
 export type PassengerDemandBreakdown = {
   affinityFactor: number;
-  airportFactor: number;
   baseDemand: number;
+  baseScale: number;
   business: number;
-  calibrationK: number;
+  destinationCatchment: number;
   destinationGdpPerCapita: number;
-  destinationPopulation: number;
+  destinationPropensity: number;
   diaspora: number;
   directionFactorDestinationToOrigin: number;
   directionFactorOriginToDestination: number;
   distanceImpedance: number;
-  domesticMultiplier: number;
   gdpElasticity: number;
   gravity: number;
+  originCatchment: number;
   originGdpPerCapita: number;
-  originPopulation: number;
+  originPropensity: number;
   populationElasticity: number;
+  propensityFactor: number;
   sameCountry: boolean;
   shortHaulFactor: number;
   tourism: number;
@@ -58,74 +77,90 @@ export type PassengerDemandResult = {
   tourism: number;
 };
 
-// Calibrated 2026-06 against real O&D anchors (Moscow–Sochi/Ufa/Istanbul/Copenhagen)
-// and the gravity-model literature (Grosche et al. 2007; global city-pair model 2018),
-// which put population/GDPpc elasticities in the 0.6–0.8 range. See docs/passenger-demand-model.md.
-const CALIBRATION_K = 2.6;
-const GDP_ELASTICITY = 0.55;
-const POPULATION_ELASTICITY = 0.62;
-// Domestic air markets are larger than a naive gravity predicts (no border friction,
-// weaker long-distance rail), so same-country pairs get a multiplicative boost.
-const DOMESTIC_MULTIPLIER = 1.8;
+// Defaults are sane starting points; the calibration layer (Phase 3) fits and
+// overrides these against real Eurostat/BTS anchors. baseScale replaces the old
+// global K. Propensity defaults to 1 per country until calibration fills it in.
+export const DEFAULT_CALIBRATION: CalibrationParams = {
+  affinityBase: 0.7,
+  affinityBusiness: 0.75,
+  affinityDiaspora: 0.45,
+  affinityTourism: 0.55,
+  baseScale: 1.8,
+  distanceD0: 1800,
+  distanceP: 1.25,
+  gdpElasticity: 0.55,
+  populationElasticity: 0.62,
+};
 
-export function calculatePassengerDemand(
-  originAirport: DemandAirport,
-  destinationAirport: DemandAirport,
-  originRegion: DemandRegion,
-  destinationRegion: DemandRegion,
+const MIN_CATCHMENT = 5_000;
+const MIN_GDP = 500;
+
+export function calculatePairDemand(
+  origin: MarketEndpoint,
+  destination: MarketEndpoint,
   distanceKm: number,
-  existing: DemandAffinity = {},
+  affinity: DemandAffinity = {},
+  calibration: CalibrationParams = DEFAULT_CALIBRATION,
 ): PassengerDemandResult {
-  return explainPassengerDemand(originAirport, destinationAirport, originRegion, destinationRegion, distanceKm, existing).result;
+  return explainPairDemand(origin, destination, distanceKm, affinity, calibration).result;
 }
 
-export function distanceImpedance(distanceKm: number): number {
-  return 1 / (1 + Math.max(distanceKm, 50) / 1800) ** 1.25;
+export function distanceImpedance(distanceKm: number, calibration: CalibrationParams = DEFAULT_CALIBRATION): number {
+  return 1 / (1 + Math.max(distanceKm, 50) / calibration.distanceD0) ** calibration.distanceP;
 }
 
-// Same computation as calculatePassengerDemand, but also returns the intermediate
-// factors. calculatePassengerDemand delegates here so the two never drift apart.
-export function explainPassengerDemand(
-  originAirport: DemandAirport,
-  destinationAirport: DemandAirport,
-  originRegion: DemandRegion,
-  destinationRegion: DemandRegion,
+export function explainPairDemand(
+  origin: MarketEndpoint,
+  destination: MarketEndpoint,
   distanceKm: number,
-  existing: DemandAffinity = {},
+  affinity: DemandAffinity = {},
+  calibration: CalibrationParams = DEFAULT_CALIBRATION,
 ): { breakdown: PassengerDemandBreakdown; result: PassengerDemandResult } {
-  const sameCountry = Boolean(originRegion.country_id && originRegion.country_id === destinationRegion.country_id);
-  const business = clamp(existing.business ?? regionalAffinity(originRegion.business_score, destinationRegion.business_score, distanceKm, sameCountry), 0, 1);
-  const tourism = clamp(existing.tourism ?? regionalAffinity(originRegion.tourism_score, destinationRegion.tourism_score, distanceKm, sameCountry), 0, 1);
-  const diaspora = clamp(existing.diaspora ?? diasporaAffinity(originRegion, destinationRegion, distanceKm, sameCountry), 0, 1);
-  const impedance = distanceImpedance(distanceKm);
-  const gravity = gravityDemand(originRegion, destinationRegion, distanceKm);
-  const airportFactor = Math.sqrt(airportMarketFactor(originAirport) * airportMarketFactor(destinationAirport));
-  const affinityFactor = 0.7 + 0.75 * business + 0.55 * tourism + 0.45 * diaspora;
-  const domesticMultiplier = sameCountry ? DOMESTIC_MULTIPLIER : 1;
+  const sameCountry = Boolean(origin.countryId && origin.countryId === destination.countryId);
+
+  const business = clamp(affinity.business ?? regionalAffinity(origin.businessScore, destination.businessScore, distanceKm, sameCountry), 0, 1);
+  const tourism = clamp(affinity.tourism ?? regionalAffinity(origin.tourismScore, destination.tourismScore, distanceKm, sameCountry), 0, 1);
+  const diaspora = clamp(affinity.diaspora ?? diasporaAffinity(origin, destination, distanceKm, sameCountry), 0, 1);
+
+  const impedance = distanceImpedance(distanceKm, calibration);
+  const gravity = gravityMass(origin, destination, calibration) * impedance;
+
+  const originPropensity = clamp(origin.propensity ?? 1, 0.1, 10);
+  const destinationPropensity = clamp(destination.propensity ?? 1, 0.1, 10);
+  const propensityFactor = Math.sqrt(originPropensity * destinationPropensity);
+
+  const affinityFactor =
+    calibration.affinityBase +
+    calibration.affinityBusiness * business +
+    calibration.affinityTourism * tourism +
+    calibration.affinityDiaspora * diaspora;
+
   const shortHaul = shortHaulFactor(distanceKm);
-  const baseDemand = gravity * airportFactor * affinityFactor * domesticMultiplier * shortHaul;
-  const directionAb = directionFactor(originRegion, destinationRegion, business, tourism, diaspora);
-  const directionBa = directionFactor(destinationRegion, originRegion, business, tourism, diaspora);
+  const baseDemand = calibration.baseScale * gravity * propensityFactor * affinityFactor * shortHaul;
+
+  const directionAb = directionFactor(origin, destination, business, tourism, diaspora);
+  const directionBa = directionFactor(destination, origin, business, tourism, diaspora);
 
   return {
     breakdown: {
       affinityFactor: round2(affinityFactor),
-      airportFactor: round2(airportFactor),
       baseDemand: round2(baseDemand),
+      baseScale: calibration.baseScale,
       business: round2(business),
-      calibrationK: CALIBRATION_K,
-      destinationGdpPerCapita: Math.max(destinationRegion.gdp_per_capita ?? 10_000, 500),
-      destinationPopulation: Math.max(destinationRegion.population ?? 100_000, 50_000),
+      destinationCatchment: catchmentOf(destination),
+      destinationGdpPerCapita: gdpOf(destination),
+      destinationPropensity: round2(destinationPropensity),
       diaspora: round2(diaspora),
       directionFactorDestinationToOrigin: round2(directionBa),
       directionFactorOriginToDestination: round2(directionAb),
       distanceImpedance: round2(impedance),
-      domesticMultiplier: round2(domesticMultiplier),
-      gdpElasticity: GDP_ELASTICITY,
+      gdpElasticity: calibration.gdpElasticity,
       gravity: round2(gravity),
-      originGdpPerCapita: Math.max(originRegion.gdp_per_capita ?? 10_000, 500),
-      originPopulation: Math.max(originRegion.population ?? 100_000, 50_000),
-      populationElasticity: POPULATION_ELASTICITY,
+      originCatchment: catchmentOf(origin),
+      originGdpPerCapita: gdpOf(origin),
+      originPropensity: round2(originPropensity),
+      populationElasticity: calibration.populationElasticity,
+      propensityFactor: round2(propensityFactor),
       sameCountry,
       shortHaulFactor: round2(shortHaul),
       tourism: round2(tourism),
@@ -140,68 +175,55 @@ export function explainPassengerDemand(
   };
 }
 
-export function gravityDemand(left: DemandRegion, right: DemandRegion, distanceKm: number): number {
-  const leftPopulationMillions = Math.max(left.population ?? 100_000, 50_000) / 1_000_000;
-  const rightPopulationMillions = Math.max(right.population ?? 100_000, 50_000) / 1_000_000;
-  const leftGdpThousands = Math.max(left.gdp_per_capita ?? 10_000, 500) / 1000;
-  const rightGdpThousands = Math.max(right.gdp_per_capita ?? 10_000, 500) / 1000;
-  const marketMass =
-    leftPopulationMillions ** POPULATION_ELASTICITY *
-    rightPopulationMillions ** POPULATION_ELASTICITY *
-    leftGdpThousands ** GDP_ELASTICITY *
-    rightGdpThousands ** GDP_ELASTICITY;
+// Catchment-based gravity mass (no distance term — that is applied separately).
+export function gravityMass(origin: MarketEndpoint, destination: MarketEndpoint, calibration: CalibrationParams = DEFAULT_CALIBRATION): number {
+  const originPopMln = catchmentOf(origin) / 1_000_000;
+  const destinationPopMln = catchmentOf(destination) / 1_000_000;
+  const originGdpK = gdpOf(origin) / 1000;
+  const destinationGdpK = gdpOf(destination) / 1000;
 
-  return CALIBRATION_K * marketMass * distanceImpedance(distanceKm);
+  return (
+    originPopMln ** calibration.populationElasticity *
+    destinationPopMln ** calibration.populationElasticity *
+    originGdpK ** calibration.gdpElasticity *
+    destinationGdpK ** calibration.gdpElasticity
+  );
 }
 
-// Collapses demand for intra-metro / very short pairs (e.g. a city's two airports
-// ~40 km apart) where nobody flies. Ramps 0 → 1 between 60 and 300 km.
+// Collapses demand for intra-metro / very short pairs (~40 km, a city's two
+// airports) where nobody flies. Ramps 0 → 1 between 60 and 300 km.
 export function shortHaulFactor(distanceKm: number): number {
   return clamp((distanceKm - 60) / 240, 0, 1);
 }
 
-function airportMarketFactor(airport: DemandAirport): number {
-  const runwayFactor = clamp((airport.max_runway_length_m ?? 1800) / 3500, 0.25, 1.35);
-  const slotFactor = clamp(Math.sqrt(airport.max_runway_uses_per_day ?? 90) / Math.sqrt(650), 0.25, 1.35);
-  const nightFactor = airport.works_at_night === false ? 0.82 : 1.08;
-  const feeTotal = (airport.runway_fee ?? 0) + (airport.gate_fee ?? 0) + (airport.stand_fee ?? 0);
-  const feeFactor = clamp(1.16 - feeTotal / 25_000, 0.72, 1.12);
-  const fuelFactor = clamp(1.08 - ((airport.fuel_price_multiplier ?? 1) - 1) * 0.18, 0.84, 1.1);
-  const codeFactor = airport.iata_code ? 1.08 : 0.86;
-
-  return clamp(runwayFactor * slotFactor * nightFactor * feeFactor * fuelFactor * codeFactor, 0.12, 1.8);
+function catchmentOf(endpoint: MarketEndpoint): number {
+  return Math.max(endpoint.catchmentPopulation || 0, MIN_CATCHMENT);
 }
 
-function diasporaAffinity(left: DemandRegion, right: DemandRegion, distanceKm: number, sameCountry: boolean): number {
-  const populationBalance = Math.sqrt(
-    Math.max(1, Math.min(left.population ?? 1, right.population ?? 1)) /
-      Math.max(1, Math.max(left.population ?? 1, right.population ?? 1)),
-  );
+// Fallback diaspora affinity when no real migrant-corridor data is supplied. The
+// data-driven version (Layer 3) overrides this via the `affinity.diaspora` input.
+function diasporaAffinity(origin: MarketEndpoint, destination: MarketEndpoint, distanceKm: number, sameCountry: boolean): number {
+  const a = Math.max(1, catchmentOf(origin));
+  const b = Math.max(1, catchmentOf(destination));
+  const populationBalance = Math.sqrt(Math.min(a, b) / Math.max(a, b));
 
   return (sameCountry ? 0.42 : 0.06) + 0.22 / (1 + distanceKm / 2200) + 0.32 * populationBalance;
 }
 
-function directionFactor(
-  origin: DemandRegion,
-  destination: DemandRegion,
-  business: number,
-  tourism: number,
-  diaspora: number,
-): number {
-  const originWealth = Math.sqrt(Math.max(origin.gdp_per_capita ?? 10_000, 500) / 10_000);
-  const destinationLeisure = 0.75 + 0.45 * (destination.tourism_score ?? 0.2);
-  const businessPull = 0.82 + 0.28 * business + 0.12 * (destination.business_score ?? 0.2);
+function directionFactor(origin: MarketEndpoint, destination: MarketEndpoint, business: number, tourism: number, diaspora: number): number {
+  const originWealth = Math.sqrt(gdpOf(origin) / 10_000);
+  const destinationLeisure = 0.75 + 0.45 * (destination.tourismScore ?? 0.2);
+  const businessPull = 0.82 + 0.28 * business + 0.12 * (destination.businessScore ?? 0.2);
   const diasporaPull = 0.92 + 0.16 * diaspora;
 
   return clamp(originWealth * destinationLeisure * businessPull * diasporaPull, 0.45, 1.8) * (0.88 + 0.24 * tourism);
 }
 
-function regionalAffinity(
-  leftScore: number | undefined,
-  rightScore: number | undefined,
-  distanceKm: number,
-  sameCountry: boolean,
-): number {
+function gdpOf(endpoint: MarketEndpoint): number {
+  return Math.max(endpoint.gdpPerCapita ?? 10_000, MIN_GDP);
+}
+
+function regionalAffinity(leftScore: number | undefined, rightScore: number | undefined, distanceKm: number, sameCountry: boolean): number {
   const score = Math.sqrt(Math.max(leftScore ?? 0.15, 0.01) * Math.max(rightScore ?? 0.15, 0.01));
 
   return score * (0.42 + 0.58 / (1 + distanceKm / 5200)) * (sameCountry ? 1.16 : 1);

@@ -5,7 +5,7 @@ import { getBackendAdminToken, getUserAuthorization, getValidatedUserAirline, re
 import { requestBackendJson } from "../../backend-http";
 import { parseGeoPoint } from "../../geo";
 import { jsonResponse } from "../../http";
-import { calculatePassengerDemand } from "../demand/model";
+import { computeAirportPairDemand } from "../demand/service";
 import { reconcileNotificationsForDashboard, reconcileNotificationsForRequest } from "../events/reconcile";
 import { listEventsForAirline } from "../events/storage";
 import { buildBaseFacilitiesOverview } from "../facilities/overview";
@@ -79,7 +79,6 @@ type GameSnapshot = {
   aircraftTypes: AircraftType[];
   airline: Airline;
   airports: Airport[];
-  regionLinks: RegionLink[];
   regions: Region[];
 };
 
@@ -124,17 +123,6 @@ type Region = {
   local_name?: string;
   population?: number;
   tourism_score?: number;
-};
-
-type RegionLink = {
-  base_daily_demand_ab?: number;
-  base_daily_demand_ba?: number;
-  business?: number;
-  diaspora?: number;
-  id?: string;
-  region_a?: string;
-  region_b?: string;
-  tourism?: number;
 };
 
 type RouteOpportunity = {
@@ -596,26 +584,6 @@ function dashboardAlerts(notifications: DashboardNotification[]): Array<Record<s
     }));
 }
 
-function demandFromLink(link: RegionLink | undefined, originRegionId: string | undefined): number {
-  if (!link) {
-    return 0;
-  }
-
-  if ((link.base_daily_demand_ab ?? -1) > 0 && (link.base_daily_demand_ba ?? -1) > 0) {
-    return link.region_a === originRegionId ? link.base_daily_demand_ab ?? 0 : link.base_daily_demand_ba ?? 0;
-  }
-
-  return 80 * ((link.business ?? 0) * 0.42 + (link.tourism ?? 0) * 0.36 + (link.diaspora ?? 0) * 0.22);
-}
-
-function findRegionLink(links: RegionLink[], leftRegionId: string | undefined, rightRegionId: string | undefined): RegionLink | undefined {
-  return links.find(
-    (link) =>
-      (link.region_a === leftRegionId && link.region_b === rightRegionId) ||
-      (link.region_a === rightRegionId && link.region_b === leftRegionId),
-  );
-}
-
 function getBaseAirport(snapshot: GameSnapshot): Airport | undefined {
   return snapshot.airports.find((airport) => airport.id === snapshot.airline.starting_airport_id);
 }
@@ -642,13 +610,12 @@ function interpolateFlightPosition(
 
 async function loadGameSnapshot(config: BffConfig, request: Request, userAuthorization: string): Promise<GameSnapshot> {
   const token = await getBackendAdminToken(config);
-  const [airline, aircrafts, aircraftTypes, airports, regions, regionLinks] = await Promise.all([
+  const [airline, aircrafts, aircraftTypes, airports, regions] = await Promise.all([
     getValidatedUserAirline<Airline>(request, config),
     requestBackendJson<{ items?: Aircraft[] }>(config, "/aircrafts", { token: userAuthorization }),
     requestBackendJson<{ items?: AircraftType[] }>(config, "/aircraft-types", { token }),
     requestBackendJson<{ airports?: Airport[] }>(config, "/airports", { token }),
     requestBackendJson<{ regions?: Region[] }>(config, "/regions", { token }),
-    loadOptionalRegionLinks(config, token),
   ]);
 
   return {
@@ -656,21 +623,8 @@ async function loadGameSnapshot(config: BffConfig, request: Request, userAuthori
     aircraftTypes: aircraftTypes.items ?? [],
     airline,
     airports: airports.airports ?? [],
-    regionLinks: regionLinks.region_links ?? [],
     regions: regions.regions ?? [],
   };
-}
-
-async function loadOptionalRegionLinks(
-  config: BffConfig,
-  token: string,
-): Promise<{ region_links?: RegionLink[] }> {
-  try {
-    return await requestBackendJson<{ region_links?: RegionLink[] }>(config, "/region-links", { token });
-  } catch (error) {
-    console.warn("BFF game snapshot is using an empty region-link fallback:", error);
-    return { region_links: [] };
-  }
 }
 
 async function loadOverlayOperations(airlineId: string): Promise<OverlayOperations> {
@@ -862,14 +816,10 @@ function toRouteFeature(route: OverlayRoute, snapshot: GameSnapshot): null | Rec
 }
 
 function toRouteOpportunity(origin: Airport, destination: Airport, snapshot: GameSnapshot): RouteOpportunity {
-  const link = findRegionLink(snapshot.regionLinks, origin.region_id, destination.region_id);
-  const originRegion = snapshot.regions.find((item) => item.id === origin.region_id) ?? {};
+  const originRegion = snapshot.regions.find((item) => item.id === origin.region_id);
   const region = snapshot.regions.find((item) => item.id === destination.region_id);
-  const cachedDemand = demandFromLink(link, origin.region_id);
   const distanceKm = opportunityDistanceKm(origin, destination);
-  const demand = cachedDemand > 0
-    ? cachedDemand
-    : Math.round(calculatePassengerDemand(origin, destination, originRegion, region ?? {}, distanceKm).originToDestination);
+  const demand = computeAirportPairDemand(origin, destination, originRegion, region, distanceKm).originDailyPassengers;
   const slotFactor = Math.sqrt(Math.max(destination.max_runway_uses_per_day ?? 1, 1));
   const score = demand * (0.75 + (region?.business_score ?? 0) * 0.2 + (region?.tourism_score ?? 0) * 0.25) * slotFactor;
 

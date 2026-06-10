@@ -3,6 +3,7 @@ import type { ImportLogger } from "../runtime/logger";
 
 import { buildAirportShells, finalizeAirports, selectAirportRows } from "./airports";
 import { buildAircraftTypes } from "./aircraftTypes";
+import { buildAirportDemandProfiles, buildCityGrid } from "./catchment";
 import { buildCountries } from "./countries";
 import { buildRegions } from "./regions";
 import { buildRunwayMap } from "./runways";
@@ -22,5 +23,22 @@ export async function buildWorldData(options: BuildOptions, issues: SourceIssueS
   const regions = buildRegions(context, selectedRegions, airportShells, countries);
   const airports = finalizeAirports(context, airportShells, countries, regions);
 
-  return { aircraftTypes, airports, countries, regionLinks: [], regions };
+  // Layer 0 demand profiles: catchment population + metro market + capacity share
+  // per airport, computed from GeoNames cities. Written to a separate stage
+  // artifact and consumed by the demand model. See docs/passenger-demand-model.md.
+  const cityGrid = buildCityGrid(raw.geoCities);
+  const airportDemandProfiles = [
+    ...buildAirportDemandProfiles(
+      airports.map((airport) => ({
+        capacityIndex: airport.capacityIndex,
+        iataCode: airport.payload.iata_code,
+        icaoCode: airport.payload.icao_code,
+        latitude: airport.latitude,
+        longitude: airport.longitude,
+      })),
+      cityGrid,
+    ).values(),
+  ];
+
+  return { aircraftTypes, airportDemandProfiles, airports, countries, regionLinks: [], regions };
 }

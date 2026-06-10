@@ -4,6 +4,7 @@ import type { OperationsSnapshot } from "./planning";
 import type { FlightFinancials, SchedulePattern, SchedulePreview, StoredFlight } from "./types";
 
 import { getCurrentFuelUnitPrice } from "../fuel/price";
+import { expectedPassengersPerFlight, MAX_LOAD_FACTOR } from "./passenger-load";
 import { zonedWallTimeToUtc } from "./schedule-time";
 
 type FlightLeg = "outbound" | "return";
@@ -311,10 +312,16 @@ function estimateFlightFinancials(
   const dailyDemand = leg === "return"
     ? route.demand_snapshot.destination_daily_passengers
     : route.demand_snapshot.origin_daily_passengers;
-  const demandPerFlight = (dailyDemand * 7) / Math.max(daysPerWeek, 1);
-  const loadFactor = clamp(demandPerFlight / Math.max(seats, 1), 0.35, 0.95);
-  const passengers = Math.round(seats * loadFactor);
-  const revenue = Math.round(route.economics_snapshot.estimated_fare_per_passenger * passengers);
+  const fare = route.economics_snapshot.estimated_fare_per_passenger;
+  const passengers = expectedPassengersPerFlight({
+    dailyDemand,
+    distanceKm: route.demand_snapshot.distance_km,
+    fare,
+    flightsPerWeek: daysPerWeek,
+    seats,
+  });
+  const loadFactor = clamp(passengers / Math.max(seats, 1), 0, MAX_LOAD_FACTOR);
+  const revenue = Math.round(fare * passengers);
   const blockHours = estimateBlockHours(route, type);
   const cost = Math.round(
     // fuel_consumption_per_hour is kg/h; the fuel unit price is per tonne, so convert.

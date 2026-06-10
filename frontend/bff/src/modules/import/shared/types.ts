@@ -1,3 +1,5 @@
+import type { AirportDemandProfile } from "../build/catchment";
+
 export type AircraftTypePayload = {
   base_maintenance_points: number;
   base_turnaround_points: number;
@@ -195,6 +197,10 @@ export type SourceIssueSink = {
 
 export type WorldData = {
   aircraftTypes: FinalAircraftType[];
+  // Per-airport demand profiles (catchment + metro market + capacity share).
+  // Written to a separate stage artifact and consumed by the demand model; not a
+  // backend entity. See docs/passenger-demand-model.md "Слой 0".
+  airportDemandProfiles?: AirportDemandProfile[];
   airports: FinalAirport[];
   countries: FinalCountry[];
   regionLinks: FinalRegionLink[];

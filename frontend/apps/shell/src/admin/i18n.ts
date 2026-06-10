@@ -13,6 +13,7 @@ const adminTextMessages = {
     delete: "Delete",
     deleteDescription: "This record will be removed from the backend.",
     deleteTitle: "Delete record?",
+    demandCalibration: "Demand calibration",
     disabled: "Disabled",
     discardDescription: "Your changes will be lost if you continue.",
     edit: "Edit",
@@ -47,6 +48,7 @@ const adminTextMessages = {
     delete: "Удалить",
     deleteDescription: "Эта запись будет удалена из backend.",
     deleteTitle: "Удалить запись?",
+    demandCalibration: "Калибровка спроса",
     disabled: "Отключено",
     discardDescription: "Если продолжить, все изменения будут потеряны.",
     edit: "Редактировать",
@@ -242,6 +244,68 @@ export const adminImportMessages = {
 } as const;
 
 export type AdminImportMessageKey = keyof typeof adminImportMessages.en;
+
+export const adminCalibrationMessages = {
+  en: {
+    cancel: "Cancel",
+    confirm: "Confirm",
+    description: "Fit gravity demand parameters and country aviation-propensity against real traffic anchors (Eurostat/BTS).",
+    destination: "Destination",
+    deviation: "Error %",
+    error: "Calibration error",
+    fittedAt: "Last fitted",
+    modelPax: "Model Daily Pax",
+    noCalibration: "No calibration performed yet.",
+    origin: "Origin",
+    pairsTotal: "Total Anchors",
+    pairsUsed: "Anchors Used",
+    parameters: "Model Parameters",
+    propensities: "Country Propensities",
+    quality: "Fit Quality",
+    realPax: "Real Daily Pax",
+    runConfirm: "Run calibration?",
+    runConfirmDesc: "This will recalculate demand parameters and save them. Sane defaults apply if anything fails.",
+    runFull: "Full Eurostat refresh",
+    runFullDesc: "Download fresh anchors from Eurostat, then run calibration.",
+    runQuick: "Run calibration",
+    runQuickDesc: "Run regression fit on cached anchors. Saves versioned results to DB.",
+    scorecard: "Pair Deviation Scorecard",
+    success: "Calibration completed successfully",
+    title: "Demand calibration",
+    version: "Version",
+  },
+  ru: {
+    cancel: "Отмена",
+    confirm: "Подтвердить",
+    description: "Калибрует параметры гравитационной модели (baseScale) и склонность стран к перелетам (propensity) на основе реального пассажиропотока (Eurostat/BTS).",
+    destination: "Назначение",
+    deviation: "Отклонение %",
+    error: "Ошибка калибровки",
+    fittedAt: "Последний расчет",
+    modelPax: "Модель (пасс/день)",
+    noCalibration: "Калибровка еще ни разу не запускалась.",
+    origin: "Отправление",
+    pairsTotal: "Всего пар в базе",
+    pairsUsed: "Использовано пар",
+    parameters: "Параметры модели",
+    propensities: "Склонности стран",
+    quality: "Качество подгонки",
+    realPax: "Факт (пасс/день)",
+    runConfirm: "Запустить калибровку?",
+    runConfirmDesc: "Это пересчитает параметры спроса и сохранит новые значения. В случае сбоя будут использоваться значения по умолчанию.",
+    runFull: "Обновление Eurostat и калибровка",
+    runFullDesc: "Скачать свежие данные якорей из Eurostat и выполнить калибровку.",
+    runQuick: "Запуск калибровки",
+    runQuickDesc: "Запустить подгонку на локально сохраненных якорях. Результаты сохраняются в БД.",
+    scorecard: "Сравнительная ведомость",
+    success: "Калибровка успешно завершена",
+    title: "Калибровка спроса",
+    version: "Версия",
+  },
+} as const;
+
+export type AdminCalibrationMessageKey = keyof typeof adminCalibrationMessages.en;
+
 
 export function adminText(locale: Locale, key: AdminTextKey): string {
   return translate(adminTextMessagesTyped, locale, key);

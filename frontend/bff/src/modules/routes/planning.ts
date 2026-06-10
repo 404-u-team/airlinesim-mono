@@ -1,7 +1,6 @@
 import type { Aircraft, AircraftType, Airport, FleetSnapshot } from "../fleet/types";
 import type {
   Region,
-  RegionLink,
   RouteAircraftOption,
   RouteDemandSnapshot,
   RouteEconomics,
@@ -13,14 +12,13 @@ import type {
 } from "./types";
 
 import { resolveAircraftImageUrl } from "../aircraft-images/resolve";
-import { explainPassengerDemand } from "../demand/model";
+import { computeAirportPairDemand } from "../demand/service";
 import { rangeConstraints, runwayConstraints } from "../facilities/constraints";
 import { buildRouteEconomics } from "./economics";
 import { buildDistanceKm, toRouteAirport } from "./geometry";
 
 export type RoutePlanningSnapshot = FleetSnapshot & {
   hubAirportIds?: string[];
-  regionLinks: RegionLink[];
   regions: Region[];
 };
 
@@ -217,23 +215,16 @@ function buildAircraftOptions(
 
 function buildDemandSnapshot(snapshot: RoutePlanningSnapshot, origin: Airport, destination: Airport): RouteDemandSnapshot {
   const distanceKm = buildDistanceKm(origin, destination);
-  const link = findRegionLink(snapshot.regionLinks, origin.region_id, destination.region_id);
-  const cachedDemand = demandFromLink(link, origin.region_id);
-  const originRegion = snapshot.regions.find((region) => region.id === origin.region_id) ?? {};
-  const destinationRegion = snapshot.regions.find((region) => region.id === destination.region_id) ?? {};
-  const { breakdown, result: modeled } = explainPassengerDemand(origin, destination, originRegion, destinationRegion, distanceKm);
-  const usesCachedDemand = cachedDemand > 0;
-  const originDailyPassengers = Math.max(0, Math.round(usesCachedDemand ? cachedDemand : modeled.originToDestination));
+  const originRegion = snapshot.regions.find((region) => region.id === origin.region_id);
+  const destinationRegion = snapshot.regions.find((region) => region.id === destination.region_id);
+  const demand = computeAirportPairDemand(origin, destination, originRegion, destinationRegion, distanceKm);
 
   return {
-    breakdown: { ...breakdown, source: usesCachedDemand ? "region_link" : "model" },
+    breakdown: { ...demand.breakdown, source: demand.breakdown.overrideMultiplier === 1 ? "model" : "override" },
     calculated_at: new Date().toISOString(),
-    destination_daily_passengers: usesCachedDemand
-      ? Math.max(0, Math.round(originDailyPassengers * 0.92))
-      : Math.max(0, Math.round(modeled.destinationToOrigin)),
+    destination_daily_passengers: demand.destinationDailyPassengers,
     distance_km: Math.round(distanceKm),
-    origin_daily_passengers: originDailyPassengers,
-    region_link_id: link?.id,
+    origin_daily_passengers: demand.originDailyPassengers,
   };
 }
 
@@ -296,24 +287,6 @@ function dedupeReasons(reasons: RouteReason[]): RouteReason[] {
     seen.add(reason.code);
     return true;
   });
-}
-
-function demandFromLink(link: RegionLink | undefined, originRegionId: string | undefined): number {
-  if (!link) {
-    return 0;
-  }
-  if ((link.base_daily_demand_ab ?? -1) > 0 && (link.base_daily_demand_ba ?? -1) > 0) {
-    return link.region_a === originRegionId ? link.base_daily_demand_ab ?? 0 : link.base_daily_demand_ba ?? 0;
-  }
-  return 80 * ((link.business ?? 0) * 0.42 + (link.tourism ?? 0) * 0.36 + (link.diaspora ?? 0) * 0.22);
-}
-
-function findRegionLink(links: RegionLink[], leftRegionId: string | undefined, rightRegionId: string | undefined): RegionLink | undefined {
-  return links.find(
-    (link) =>
-      (link.region_a === leftRegionId && link.region_b === rightRegionId) ||
-      (link.region_a === rightRegionId && link.region_b === leftRegionId),
-  );
 }
 
 function getRecommendation(

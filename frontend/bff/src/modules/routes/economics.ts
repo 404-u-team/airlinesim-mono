@@ -2,6 +2,7 @@ import type { AircraftType, Airport } from "../fleet/types";
 import type { RouteDemandSnapshot, RouteEconomics } from "./types";
 
 import { getCurrentFuelUnitPrice } from "../fuel/price";
+import { MAX_LOAD_FACTOR, referenceFare } from "../operations/passenger-load";
 
 export function buildRouteEconomics(
   demand: RouteDemandSnapshot,
@@ -12,13 +13,15 @@ export function buildRouteEconomics(
   const seats = getAircraftSeats(type);
   const distance = demand.distance_km;
   const flightHours = getFlightHours(distance, type);
-  const fare = Math.max(55, 38 + distance * 0.12);
-  const loadFactor = clamp(demand.origin_daily_passengers / Math.max(seats, 1), 0.35, 0.95);
+  const fare = referenceFare(distance);
+  const loadFactor = clamp(demand.origin_daily_passengers / Math.max(seats, 1), 0, MAX_LOAD_FACTOR);
   const revenue = seats * loadFactor * fare;
   const cost = getFuelCost(type, flightHours) + getMaintenanceCost(type, flightHours) + getAirportCost(origin, destination);
 
   return {
-    confidence: demand.region_link_id ? "high" : "medium",
+    // High confidence once demand uses real catchment data (post-import artifact);
+    // medium while falling back to admin1 region population.
+    confidence: demand.breakdown?.catchmentSource === "artifact" ? "high" : "medium",
     estimated_cost_per_flight: Math.round(cost),
     estimated_fare_per_passenger: Math.round(fare),
     estimated_profit_per_flight: Math.round(revenue - cost),

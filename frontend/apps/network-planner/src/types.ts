@@ -115,25 +115,33 @@ export type RouteAirport = {
 
 export type RouteDemandBreakdown = {
   affinityFactor: number;
-  airportFactor: number;
   baseDemand: number;
+  baseScale: number;
   business: number;
-  calibrationK: number;
+  capacityShareFactor: number;
+  catchmentSource: "artifact" | "region-fallback";
+  destinationCapacityShare: number;
+  destinationCatchment: number;
   destinationGdpPerCapita: number;
-  destinationPopulation: number;
+  destinationMarketKey: string;
+  destinationPropensity: number;
   diaspora: number;
   directionFactorDestinationToOrigin: number;
   directionFactorOriginToDestination: number;
   distanceImpedance: number;
-  domesticMultiplier: number;
   gdpElasticity: number;
   gravity: number;
+  originCapacityShare: number;
+  originCatchment: number;
   originGdpPerCapita: number;
-  originPopulation: number;
+  originMarketKey: string;
+  originPropensity: number;
+  overrideMultiplier: number;
   populationElasticity: number;
+  propensityFactor: number;
   sameCountry: boolean;
   shortHaulFactor: number;
-  source: "model" | "region_link";
+  source: "model" | "override";
   tourism: number;
 };
 
