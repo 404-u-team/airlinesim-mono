@@ -120,6 +120,40 @@ async function fetchSource(url: string, path: string, log?: ImportLogger): Promi
   }
 }
 
+export async function loadJson<TValue>(path: string, url: string, refreshRaw: boolean, log?: ImportLogger): Promise<TValue> {
+  const text = await fetchCachedText(path, url, refreshRaw, log);
+
+  return JSON.parse(text) as TValue;
+}
+
+// Внешние JSON API (REST Countries, World Bank) могут вернуть объект ошибки с
+// HTTP 200; такой ответ попадает в кэш и ломает все последующие импорты.
+// Поэтому при невалидной форме данных кэш игнорируется и источник скачивается заново.
+export async function loadJsonArray<TItem>(path: string, url: string, refreshRaw: boolean, log?: ImportLogger): Promise<TItem[]> {
+  const payload = await loadJson<unknown>(path, url, refreshRaw, log);
+
+  if (Array.isArray(payload)) {
+    return payload as TItem[];
+  }
+
+  if (!refreshRaw) {
+    log?.({
+      details: { path, payloadPreview: JSON.stringify(payload).slice(0, 200), url },
+      level: "warning",
+      message: "Cached source is not a JSON array, refetching",
+      operation: "source.fetch",
+      stage: "building",
+    });
+    const refetched = await loadJson<unknown>(path, url, true, log);
+
+    if (Array.isArray(refetched)) {
+      return refetched as TItem[];
+    }
+  }
+
+  throw new Error(`Source ${url} returned non-array JSON: ${JSON.stringify(payload).slice(0, 200)}`);
+}
+
 export async function readJsonFile<TValue>(path: string, fallback: TValue): Promise<TValue> {
   const text = await readTextIfExists(path);
 

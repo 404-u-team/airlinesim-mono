@@ -739,7 +739,7 @@ export class MapManager {
         }
 
         const currentCenter = this.map.getCenter();
-        currentCenter.lng += 0.1;
+        currentCenter.lng += 0.05;
 
         this.map.jumpTo({ center: currentCenter });
 
@@ -865,7 +865,9 @@ function debugWarn(message: string, details: Record<string, unknown>): void {
 // Expands each 2-point route LineString into a great-circle polyline so the rendered
 // line tracks the same arc as the great-circle flight dots under globe projection.
 function densifyRoutes(routeData: Record<string, unknown>): Record<string, unknown> {
-    const features = (Array.isArray(routeData.features) ? routeData.features : []).map((feature) => {
+    // Array.isArray narrows to any[]; an explicit unknown[] keeps the map callback type-safe.
+    const rawFeatures: unknown[] = Array.isArray(routeData.features) ? routeData.features : [];
+    const features = rawFeatures.map((feature) => {
         const {geometry} = (feature as { geometry?: { coordinates?: unknown; type?: string } });
         const coordinates = geometry?.coordinates;
 

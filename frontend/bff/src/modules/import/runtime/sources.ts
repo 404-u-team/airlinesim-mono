@@ -1,14 +1,18 @@
 import type { BuildOptions } from "../shared/types";
 import type { ImportLogger } from "./logger";
 
+import { indexRestCountries, loadRestCountries, type RestCountry } from "./rest-countries";
 import {
   fetchCachedText,
   fetchCachedZipText,
   getImportPaths,
+  loadJsonArray,
   parseCsv,
   parseTsv,
   readJsonFile,
 } from "./storage";
+
+export type { RestCountry } from "./rest-countries";
 
 export type AircraftMetadataRow = Record<string, string>;
 export type AirportRow = Record<string, string>;
@@ -24,22 +28,6 @@ export type GeoCity = {
   name: string;
   population: number;
   timezone: string;
-};
-
-export type RestCountry = {
-  area?: number;
-  borders?: string[];
-  capital?: string[];
-  cca2?: string;
-  cca3?: string;
-  landlocked?: boolean;
-  languages?: Record<string, string>;
-  latlng?: number[];
-  name?: { common?: string; nativeName?: Record<string, { common?: string }> };
-  population?: number;
-  region?: string;
-  subregion?: string;
-  translations?: Record<string, { common?: string }>;
 };
 
 export type WorldBankCountry = {
@@ -91,9 +79,6 @@ const URLS = {
   openapSynonyms: "https://raw.githubusercontent.com/junzis/openap/refs/heads/master/openap/data/aircraft/_synonym.csv",
   openflightsPlanes: "https://raw.githubusercontent.com/jpatokal/openflights/refs/heads/master/data/planes.dat",
   regions: "https://davidmegginson.github.io/ourairports-data/regions.csv",
-  restCountriesA:
-    "https://restcountries.com/v3.1/all?fields=cca2,cca3,name,translations,region,subregion,capital,area,population,languages",
-  restCountriesB: "https://restcountries.com/v3.1/all?fields=cca2,landlocked,borders,latlng",
   runways: "https://davidmegginson.github.io/ourairports-data/runways.csv",
   wbCountries: "https://api.worldbank.org/v2/country?format=json&per_page=400",
   wbGdp:
@@ -109,7 +94,7 @@ export async function loadRawSources(options: BuildOptions, log?: ImportLogger):
   const refreshRaw = options.refreshRaw ?? options.source === "fetch";
   const [
     openflightsPlanes, openapSynonyms, openapFuel, openapEngines, openapAircraftYamlFiles,
-    airports, countries, regions, runways, restA, restB, wbCountries, wbPopulation,
+    airports, countries, regions, runways, restRows, wbCountries, wbPopulation,
     wbGdp, wbTourism, geoAdmin1, geoCities, manual
   ] = await Promise.all([
     fetchCachedText(`${paths.rawDir}/openflights-planes.dat`, URLS.openflightsPlanes, refreshRaw, log),
@@ -121,8 +106,7 @@ export async function loadRawSources(options: BuildOptions, log?: ImportLogger):
     loadCsv(`${paths.rawDir}/countries.csv`, URLS.countries, refreshRaw, log),
     loadCsv(`${paths.rawDir}/regions.csv`, URLS.regions, refreshRaw, log),
     loadCsv(`${paths.rawDir}/runways.csv`, URLS.runways, refreshRaw, log),
-    loadJson<RestCountry[]>(`${paths.rawDir}/rest-countries-a.json`, URLS.restCountriesA, refreshRaw, log),
-    loadJson<RestCountry[]>(`${paths.rawDir}/rest-countries-b.json`, URLS.restCountriesB, refreshRaw, log),
+    loadRestCountries(paths.rawDir, refreshRaw, log),
     loadWorldBankCountries(`${paths.rawDir}/worldbank-countries.json`, refreshRaw, log),
     loadWorldBankValues(`${paths.rawDir}/worldbank-population.json`, URLS.wbPopulation, refreshRaw, log),
     loadWorldBankValues(`${paths.rawDir}/worldbank-gdp.json`, URLS.wbGdp, refreshRaw, log),
@@ -135,7 +119,7 @@ export async function loadRawSources(options: BuildOptions, log?: ImportLogger):
   return {
     airports, countries, geoAdmin1, geoCities, manual,
     openapAircraftYamlFiles, openapEngines, openapFuel, openapSynonyms,
-    openflightsPlanes, regions, restCountries: joinRestCountries(restA, restB),
+    openflightsPlanes, regions, restCountries: indexRestCountries(restRows),
     runways, worldBankCountries: wbCountries, worldBankGdp: wbGdp,
     worldBankPopulation: wbPopulation, worldBankTourism: wbTourism,
   };
@@ -205,12 +189,6 @@ async function loadGeoCities(path: string, refreshRaw: boolean, log?: ImportLogg
   }));
 }
 
-async function loadJson<TValue>(path: string, url: string, refreshRaw: boolean, log?: ImportLogger): Promise<TValue> {
-  const text = await fetchCachedText(path, url, refreshRaw, log);
-
-  return JSON.parse(text) as TValue;
-}
-
 async function loadManual(manualDir: string): Promise<ManualOverrides> {
   const [countries, regions, airports, aircraftTypes] = await Promise.all([
     readJsonFile<Record<string, Record<string, unknown>>>(`${manualDir}/countries.json`, {}),
@@ -222,34 +200,27 @@ async function loadManual(manualDir: string): Promise<ManualOverrides> {
   return { aircraftTypes, airports, countries, regions };
 }
 
+// World Bank API отдает [meta, rows]; rows извлекаются после валидации формы массива.
+async function loadWorldBankRows<TRow>(path: string, url: string, refreshRaw: boolean, log?: ImportLogger): Promise<TRow[]> {
+  const payload = await loadJsonArray<unknown>(path, url, refreshRaw, log);
+
+  return Array.isArray(payload[1]) ? (payload[1] as TRow[]) : [];
+}
+
 async function loadWorldBankCountries(path: string, refreshRaw: boolean, log?: ImportLogger): Promise<Map<string, WorldBankCountry>> {
-  const payload = await loadJson<unknown[]>(path, URLS.wbCountries, refreshRaw, log);
-  const rows = Array.isArray(payload[1]) ? (payload[1] as WorldBankCountry[]) : [];
+  const rows = await loadWorldBankRows<WorldBankCountry>(path, URLS.wbCountries, refreshRaw, log);
 
   return new Map(rows.filter((row) => row.iso2Code).map((row) => [row.iso2Code ?? "", row]));
 }
 
 async function loadWorldBankValues(path: string, url: string, refreshRaw: boolean, log?: ImportLogger): Promise<Map<string, number>> {
-  const payload = await loadJson<unknown[]>(path, url, refreshRaw, log);
-  const rows = Array.isArray(payload[1]) ? (payload[1] as WorldBankValue[]) : [];
+  const rows = await loadWorldBankRows<WorldBankValue>(path, url, refreshRaw, log);
 
   return new Map(
     rows
       .filter((row) => row.countryiso3code && typeof row.value === "number")
       .map((row) => [row.countryiso3code ?? "", row.value ?? 0]),
   );
-}
-
-function joinRestCountries(left: RestCountry[], right: RestCountry[]): Map<string, RestCountry> {
-  const byIso = new Map(left.filter((country) => country.cca2).map((country) => [country.cca2 ?? "", country]));
-
-  for (const country of right) {
-    if (country.cca2) {
-      byIso.set(country.cca2, { ...byIso.get(country.cca2), ...country });
-    }
-  }
-
-  return byIso;
 }
 
 export function normalizeName(value: string): string {

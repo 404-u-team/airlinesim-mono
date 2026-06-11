@@ -103,6 +103,10 @@ function toggleSidebar(): void {
   isSidebarOpen.value = !isSidebarOpen.value;
 }
 
+function toggleTheme(): void {
+  theme.value = theme.value === "dark" ? "light" : "dark";
+}
+
 onMounted(() => {
   unsubscribePanelRequested = airlineSimEventBus.on("shell:panel-requested", (event) => {
     if (event.panel === "notifications") {
@@ -243,6 +247,7 @@ watch(
       :app-locale="locale"
       :app-theme="theme"
       @toggle-locale="toggleLocale"
+      @toggle-theme="toggleTheme"
     />
   </RouterView>
   <RouterView

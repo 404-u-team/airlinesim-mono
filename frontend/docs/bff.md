@@ -373,4 +373,5 @@ Admin surface отделен namespace `/admin`.
 - Новые модули добавлять в `bff/src/modules/<module-name>`.
 - Пользовательский `Authorization` token проверять на входе protected endpoints.
 - Для backend admin-действий использовать env `backend_admin_login` / `backend_admin_password`, а не пользовательский token.
+- Источник стран world-data import: REST Countries v5 (`https://api.restcountries.com/countries/v5`) с ключом из env `REST_COUNTRIES_API_KEY`; при пустом ключе импорт автоматически использует статический датасет `mledoze/countries` (GitHub raw). REST Countries v3.1 закрыт и возвращает HTTP 200 с объектом ошибки — такие ответы больше не кэшируются: загрузчики валидируют форму JSON и перекачивают источник при битом кэше.
 - Browser-facing frontend-код использует `VITE_BFF_URL`; прямой `VITE_BACKEND_URL` в приложениях и `game-sdk` не допускается.

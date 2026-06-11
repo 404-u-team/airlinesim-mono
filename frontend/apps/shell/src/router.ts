@@ -6,6 +6,7 @@ import DashboardView from "./dashboard/DashboardView.vue";
 import { createMfeRouteRecords, defaultRoutePath, resolveMfeRoute } from "./mfe-routing";
 import AuthView from "./views/AuthView.vue";
 import KnowledgeBaseView from "./views/KnowledgeBaseView.vue";
+import LandingView from "./views/LandingView.vue";
 import ShellRemoteView from "./views/ShellRemoteView.vue";
 import SystemSettingsView from "./views/SystemSettingsView.vue";
 
@@ -13,8 +14,13 @@ export const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
+      component: LandingView,
+      meta: {
+        public: true,
+        publicLayout: true,
+      },
+      name: "landing",
       path: "/",
-      redirect: defaultRoutePath,
     },
     {
       component: AuthView,
