@@ -9,16 +9,19 @@
   },
   "scripts": {
     "check": "turbo lint",
-    "dev": "bun run generate:openapi && turbo dev --concurrency=12",
+    "dev": "bun run generate:openapi && bun run generate:bff-openapi && turbo dev --concurrency=14",
     "dev:fresh": "bun run ports:clear && bun run dev",
-    "generate:openapi": "bun run --cwd packages/api-contracts generate",
+    "generate:bff-openapi": "bun bff/src/scripts/generate-openapi.ts",
+    "generate:openapi": "bun packages/api-contracts/scripts/generate-openapi.ts",
     "lint": "turbo lint",
     "lint:fix": "turbo run lint:fix --continue=always --force",
-    "ports:clear": "bun run scripts/clear-dev-ports.ts"
+    "ports:clear": "bun run scripts/clear-dev-ports.ts",
+    "test": "turbo test"
   },
   "private": true,
   "type": "module",
   "workspaces": [
+    "bff",
     "packages/*",
     "apps/*"
   ],

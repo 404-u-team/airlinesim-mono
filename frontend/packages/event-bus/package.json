@@ -27,7 +27,8 @@
     "build": "tsc --noEmit && vite build",
     "dev": "vite build --watch",
     "lint": "eslint . --max-warnings=0 && tsc --noEmit",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "bun test"
   },
   "devDependencies": {
     "@airlinesim/eslint-config": "workspace:*",

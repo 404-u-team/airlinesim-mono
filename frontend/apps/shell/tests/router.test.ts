@@ -1,0 +1,157 @@
+import { expect, test, mock } from "bun:test";
+import { ref } from "vue";
+
+// 1. Mock the DOM environment for vue-router
+globalThis.window = {
+  location: { pathname: "/", search: "", hash: "" },
+  history: {
+    length: 0,
+    state: {},
+    pushState: () => {},
+    replaceState: () => {},
+  },
+  addEventListener: () => {},
+  removeEventListener: () => {},
+} as any;
+
+globalThis.history = globalThis.window.history;
+globalThis.location = globalThis.window.location;
+
+globalThis.document = {
+  querySelector: () => null,
+  addEventListener: () => {},
+  removeEventListener: () => {},
+} as any;
+
+// 2. Mock Vue SFC imports to return dummy components for vue-router
+mock.module("../src/views/AuthView.vue", () => ({ default: { name: "AuthView" } }));
+mock.module("../src/views/KnowledgeBaseView.vue", () => ({ default: { name: "KnowledgeBaseView" } }));
+mock.module("../src/views/ShellRemoteView.vue", () => ({ default: { name: "ShellRemoteView" } }));
+mock.module("../src/admin/views/AdminView.vue", () => ({ default: { name: "AdminView" } }));
+mock.module("../src/dashboard/DashboardView.vue", () => ({ default: { name: "DashboardView" } }));
+mock.module("../src/views/SystemSettingsView.vue", () => ({ default: { name: "SystemSettingsView" } }));
+
+// 3. Mock the auth module to control isAuthenticated and airline refs in tests
+mock.module("../src/auth", () => {
+  const isAuthenticated = ref(false);
+  const isAdminAuthorized = ref(false);
+  const isRestoringSession = ref(false);
+  const airline = ref<any>(null);
+  return {
+    authState: {
+      airline,
+      isAdminAuthorized,
+      isAuthenticated,
+      isRestoringSession,
+    },
+  };
+});
+
+// 4. Import router after DOM and module mocks setup
+const { router } = await import("../src/router");
+const { authState } = await import("../src/auth");
+const { resolveRemoteId } = await import("../src/mfe-routing");
+const { navigationSections } = await import("../src/navigation");
+
+test("Router Guard - unauthenticated redirects to /login", async () => {
+  (authState.isAuthenticated as any).value = false;
+  (authState.isAdminAuthorized as any).value = false;
+  (authState.isRestoringSession as any).value = false;
+  (authState.airline as any).value = null;
+
+  await router.push("/dashboard");
+  expect(router.currentRoute.value.path).toBe("/login");
+});
+
+test("Router Guard - authenticated without airline redirects to /onboarding/airline", async () => {
+  (authState.isAuthenticated as any).value = true;
+  (authState.isAdminAuthorized as any).value = false;
+  (authState.isRestoringSession as any).value = false;
+  (authState.airline as any).value = null;
+
+  // Move away from onboarding route first to force a transition
+  await router.push("/login");
+
+  await router.push("/dashboard");
+  expect(router.currentRoute.value.path).toBe("/onboarding/airline");
+});
+
+test("Router Guard - authenticated while restoring session does not redirect to onboarding early", async () => {
+  (authState.isAuthenticated as any).value = true;
+  (authState.isAdminAuthorized as any).value = false;
+  (authState.isRestoringSession as any).value = true;
+  (authState.airline as any).value = null;
+
+  await router.push("/login");
+  await router.push("/dashboard");
+
+  expect(router.currentRoute.value.path).toBe("/dashboard");
+});
+
+test("Router Guard - authenticated with airline redirects away from onboarding/airline", async () => {
+  (authState.isAuthenticated as any).value = true;
+  (authState.isAdminAuthorized as any).value = false;
+  (authState.isRestoringSession as any).value = false;
+  (authState.airline as any).value = { id: "airline-1", name: "Capital Fly" };
+
+  // Move away from onboarding route first to force a transition
+  await router.push("/dashboard");
+
+  await router.push("/onboarding/airline");
+  expect(router.currentRoute.value.path).toBe("/dashboard");
+
+  // Move to a public route, should redirect to dashboard
+  await router.push("/login");
+  expect(router.currentRoute.value.path).toBe("/dashboard");
+});
+
+test("MFE route resolution follows the current URL across remote transitions", async () => {
+  (authState.isAuthenticated as any).value = true;
+  (authState.isAdminAuthorized as any).value = false;
+  (authState.isRestoringSession as any).value = false;
+  (authState.airline as any).value = { id: "airline-1", name: "Capital Fly" };
+
+  await router.push("/finances/overview");
+  expect(resolveRemoteId(router.currentRoute.value.path)).toBe("finance-stock");
+  expect(router.currentRoute.value.meta.remoteId).toBeUndefined();
+
+  await router.push("/fleet/overview");
+  expect(resolveRemoteId(router.currentRoute.value.path)).toBe("fleet-ops");
+
+  await router.push("/airports/routes");
+  expect(resolveRemoteId(router.currentRoute.value.path)).toBe("network-planner");
+});
+
+test("Router Guard - regular player cannot open admin routes", async () => {
+  (authState.isAuthenticated as any).value = true;
+  (authState.isAdminAuthorized as any).value = false;
+  (authState.isRestoringSession as any).value = false;
+  (authState.airline as any).value = { id: "airline-1", name: "Capital Fly" };
+
+  await router.push("/admin/countries");
+
+  expect(router.currentRoute.value.path).toBe("/dashboard");
+});
+
+test("Router Guard - admin without airline can open admin routes", async () => {
+  (authState.isAuthenticated as any).value = true;
+  (authState.isAdminAuthorized as any).value = true;
+  (authState.isRestoringSession as any).value = false;
+  (authState.airline as any).value = null;
+
+  await router.push("/admin/countries");
+
+  expect(router.currentRoute.value.path).toBe("/admin/countries");
+});
+
+test("Admin routes use standalone layout and stay out of main navigation", async () => {
+  (authState.isAuthenticated as any).value = true;
+  (authState.isAdminAuthorized as any).value = true;
+  (authState.isRestoringSession as any).value = false;
+  (authState.airline as any).value = null;
+
+  await router.push("/admin/countries");
+
+  expect(router.currentRoute.value.meta.adminLayout).toBe(true);
+  expect(navigationSections.some((section: { path: string }) => section.path === "/admin")).toBe(false);
+});

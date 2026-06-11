@@ -18,10 +18,40 @@ export const airlineSimEventValidators: ValidatorMap<AirlineSimEvents> = {
   "auth:register-failed": hasString("message"),
   "auth:register-succeeded": hasString("accessToken"),
   "auth:session-restored": hasString("accessToken"),
+  "events:invalidated": (payload): payload is AirlineSimEvents["events:invalidated"] =>
+    isRecord(payload) &&
+    isOneOf(payload.reason, ["aircraft-purchased", "flight-completed", "risk-changed", "route-created", "schedule-activated"]) &&
+    isOneOf(payload.source, ["events-news", "finance-stock", "fleet-ops", "network-planner", "shell"]),
+  "fleet:aircraft-purchased": (payload): payload is AirlineSimEvents["fleet:aircraft-purchased"] =>
+    isRecord(payload) &&
+    hasOptionalStringValue(payload, "aircraftId") &&
+    hasOptionalStringValue(payload, "baseAirportId") &&
+    hasOptionalStringValue(payload, "modelName") &&
+    hasOptionalNumberValue(payload, "price") &&
+    hasOptionalStringValue(payload, "tailNumber") &&
+    hasOptionalStringValue(payload, "typeId"),
   "flight:selected": (payload): payload is AirlineSimEvents["flight:selected"] =>
     isRecord(payload) &&
     typeof payload.flightId === "string" &&
     isOneOf(payload.source, ["fleet-ops", "map", "shell"]),
+  "game:snapshot-invalidated": (payload): payload is AirlineSimEvents["game:snapshot-invalidated"] =>
+    isRecord(payload) &&
+    isOneOf(payload.reason, ["aircraft-purchased", "manual-refresh", "route-created", "schedule-activated"]) &&
+    isOneOf(payload.source, ["fleet-ops", "network-planner", "shell"]),
+  "i18n:locale-changed": (payload): payload is AirlineSimEvents["i18n:locale-changed"] =>
+    isRecord(payload) && isOneOf(payload.locale, ["en", "ru"]),
+  "map:airport-selected": (payload): payload is AirlineSimEvents["map:airport-selected"] =>
+    isRecord(payload) &&
+    typeof payload.airportId === "string" &&
+    isOneOf(payload.source, ["dashboard", "map", "network-planner"]),
+  "map:network-refresh-requested": (payload): payload is AirlineSimEvents["map:network-refresh-requested"] =>
+    isRecord(payload) &&
+    isOneOf(payload.reason, ["aircraft-purchased", "manual-refresh", "route-created", "schedule-activated"]) &&
+    isOneOf(payload.source, ["fleet-ops", "network-planner", "shell"]),
+  "map:route-selected": (payload): payload is AirlineSimEvents["map:route-selected"] =>
+    isRecord(payload) &&
+    typeof payload.routeId === "string" &&
+    isOneOf(payload.source, ["dashboard", "map", "network-planner"]),
   "mfe:ready": hasRemoteId,
   "navigation:changed": (payload): payload is NavigationChangedEvent =>
     isRecord(payload) &&
@@ -44,9 +74,30 @@ export const airlineSimEventValidators: ValidatorMap<AirlineSimEvents> = {
     isRecord(payload) &&
     typeof payload.message === "string" &&
     isOneOf(payload.severity, ["error", "info", "success", "warning"]),
+  "notifications:invalidated": (payload): payload is AirlineSimEvents["notifications:invalidated"] =>
+    isRecord(payload) &&
+    isOneOf(payload.reason, ["aircraft-purchased", "flight-completed", "ignored", "read-state-changed", "risk-changed", "route-created", "schedule-activated"]) &&
+    isOneOf(payload.source, ["events-news", "finance-stock", "fleet-ops", "network-planner", "shell"]),
+  "route:created": (payload): payload is AirlineSimEvents["route:created"] =>
+    isRecord(payload) &&
+    typeof payload.destinationAirportId === "string" &&
+    typeof payload.originAirportId === "string" &&
+    payload.source === "network-planner",
+  "schedule:activated": (payload): payload is AirlineSimEvents["schedule:activated"] =>
+    isRecord(payload) &&
+    typeof payload.routeId === "string" &&
+    payload.source === "fleet-ops",
   "shell:panel-requested": (payload): payload is AirlineSimEvents["shell:panel-requested"] =>
     isRecord(payload) && isOneOf(payload.panel, ["flight-details", "notifications", "profile"]),
 };
+
+function hasOptionalNumberValue(record: Record<string, unknown>, key: string): boolean {
+  return record[key] === undefined || typeof record[key] === "number";
+}
+
+function hasOptionalStringValue(record: Record<string, unknown>, key: string): boolean {
+  return record[key] === undefined || typeof record[key] === "string";
+}
 
 function hasRemoteId(payload: unknown): payload is { remoteId: RemoteId } {
   return (

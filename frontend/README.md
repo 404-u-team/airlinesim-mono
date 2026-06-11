@@ -27,10 +27,27 @@ bun run check
 `bun run lint` запускает `turbo lint` и проходит каждый workspace-пакет, где есть `lint`-скрипт.
 `bun run lint:fix` запускает `turbo run lint:fix --continue=always --force`: ESLint пытается исправить все workspace-пакеты, даже если один из них завершился с ошибкой.
 
+В dev shell остается на `4100`, remote-приложения на `4101-4106`, а API/BFF вызывается как same-origin `/bff/*`; Vite shell-dev-server проксирует этот путь на локальный BFF `4200`.
+
+## Production Docker
+
+```bash
+docker compose -f docker-compose.yaml up --build
+```
+
+Compose собирает shell и все remote-приложения в production-режиме одним Turbo build, затем раздает shell и MFE-статику через один nginx-контейнер. BFF запускается отдельным Bun-контейнером.
+
+Наружу публикуется только один frontend-порт:
+
+- `4100` - shell, MFE static через `/mfe/<app>` и BFF proxy через `/bff/*`.
+
+По умолчанию BFF ходит в backend по `https://api.master.stand.airlinesim.ms0ur.dev/`. Для другого адреса задайте `BFF_BACKEND_BASE_URL` перед запуском compose. Browser-facing адреса `VITE_BFF_URL`, `VITE_SOCKET_URL` и `VITE_MFE_BASE_URL` вшиваются на этапе сборки; в compose API/BFF по умолчанию идут через same-origin `/bff`, поэтому credentialed auth не требует wildcard CORS.
+
 ## Приложения
 
 - `apps/shell` - host-приложение на Vue 3 + Vite. Отвечает за общий layout, глобальные состояния, авторизацию, уведомления, i18n и lazy import remote-модулей.
 - `apps/map` - remote `World Map` на Svelte + MapLibre GL. Экспортирует карту через Module Federation и использует shared UI/SDK.
+- `bff` - Bun backend-for-frontend вне `apps/*`; предназначен для импорта реальных world data и proxy/composition endpoints. Подробнее: [`docs/bff.md`](docs/bff.md).
 
 Диаграмма `docs/FE.png` описывает весь целевой frontend, даже если часть модулей пока не создана физически:
 
@@ -59,6 +76,8 @@ bun run check
 - Backend REST API используется через `game-sdk` и будущий `api-contracts`.
 - Backend Socket.IO используется shell и remotes для live events/notifications через общий `event-bus`.
 - UI-компоненты, Tailwind CSS, icons и theme tokens приходят из `air-ui`.
+- I18N-контракт RU/EN описан в [`docs/I18N.md`](docs/I18N.md): shell владеет текущей локалью, remotes получают `appLocale` и событие `i18n:locale-changed`.
+- BFF-контракт описан в [`docs/bff.md`](docs/bff.md): `import` нормализует реальные данные мира, `proxy` добавляет frontend-specific фильтры поверх backend API.
 
 ## Доменная Модель
 

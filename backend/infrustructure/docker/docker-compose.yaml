@@ -106,7 +106,8 @@ services:
             KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://localhost:9092
             KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT"
             KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
-            KAFKA_LOG4J_ROOT_LOGLEVEL: "${KAFKA_LOG_LEVEL:-WARN}"
+            KAFKA_LOG4J_ROOT_LOGLEVEL: "ERROR"
+            KAFKA_LOG4J_LOGGERS: "kafka=ERROR,kafka.authorizer.logger=ERROR,kafka.controller=ERROR,kafka.log.LogCleaner=ERROR,kafka.network.RequestChannel$=ERROR,kafka.producer.async.DefaultEventHandler=ERROR,kafka.request.logger=ERROR,state.change.logger=ERROR"
 
             # Default topics / settings
             KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -137,7 +138,7 @@ services:
                     "kafka-topics --bootstrap-server kafka:29092 --list | grep -qx 'operations_airport_created' && kafka-topics --bootstrap-server kafka:29092 --list | grep -qx 'operations_airports_deleted' && kafka-topics --bootstrap-server kafka:29092 --list | grep -qx 'tick_15_min_elapsed' && kafka-topics --bootstrap-server kafka:29092 --list | grep -qx 'tick_1_hour_elapsed'",
                 ]
             interval: 10s
-            timeout: 5s
+            timeout: 20s
             retries: 10
 
     tick-service:
@@ -177,17 +178,6 @@ services:
             airline-db:
                 condition: service_healthy
 
-    fleet-service:
-        build:
-            context: ../../../
-            dockerfile: backend/services/fleet-service/Dockerfile
-        restart: on-failure
-        env_file:
-            - ../../services/fleet-service/.env
-        depends_on:
-            fleet-db:
-                condition: service_healthy
-
     auth-service:
         build:
             context: ../../../
@@ -199,10 +189,22 @@ services:
             user-db:
                 condition: service_healthy
 
+    fleet-service:
+        build:
+            context: ../../../
+            dockerfile: backend/services/fleet-service/Dockerfile
+        restart: on-failure
+        env_file:
+            - ../../services/fleet-service/.env
+        depends_on:
+            fleet-db:
+                condition: service_healthy
+
     api-gateway:
         build:
             context: ../../../
             dockerfile: backend/services/api-gateway/Dockerfile
+        container_name: airlinesim-api-gateway
         restart: on-failure
         env_file:
             - ../../services/api-gateway/.env
@@ -210,6 +212,8 @@ services:
             - auth-service
             - operations-service
             - fleet-service
+        networks:
+            - default
         ports:
             - "8080:8080"
 

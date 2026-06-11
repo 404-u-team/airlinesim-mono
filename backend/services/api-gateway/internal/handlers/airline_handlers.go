@@ -233,3 +233,66 @@ func (h *AirlineHandler) UpdateAirline(c *gin.Context) {
 
 	c.JSON(http.StatusOK, resp)
 }
+
+// AdjustAirlineBalance godoc
+// @Summary      Adjust airline balance (admin only)
+// @Description  Adds or subtracts the given amount from the airline's balance. Positive amount credits, negative debits. Requires admin role.
+// @Tags         Airline
+// @Accept       json
+// @Produce      json
+// @Param        id      path      string  true  "Airline ID"
+// @Param        request body      object  true  "Amount to adjust: { \"amount\": float64 }"
+// @Success      200     {object}  airlinepb.AdjustBalanceResponse
+// @Failure      400     {object}  dto.ErrorResponse "Invalid request body or amount is zero"
+// @Failure      401     "Unauthorized"
+// @Failure      403     "Forbidden – admin only"
+// @Failure      404     {object}  dto.ErrorResponse "Airline not found"
+// @Failure      500     {object}  dto.ErrorResponse "Internal server error"
+// @Router       /airline/{id}/adjust-balance [post]
+func (h *AirlineHandler) AdjustAirlineBalance(c *gin.Context) {
+	airlineID := c.Param("id")
+	if airlineID == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	var payload struct {
+		Amount float64 `json:"amount"`
+	}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+	if payload.Amount == 0 {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.config.RequestTimeoutSeconds)
+	defer cancel()
+
+	// Resolve owner_id from airline record (AdjustBalance gRPC takes owner_id, not airline_id)
+	existing, err := h.airlineClient.GetAirlineByID(ctx, &airlinepb.GetAirlineByIDRequest{Id: airlineID})
+	if err != nil {
+		if errors.Is(err, customerrors.ErrAirlineNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{ErrorCode: 2})
+			return
+		}
+		log.Println("adjust-balance: failed to fetch airline by id,", err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	resp, err := h.airlineClient.AdjustBalance(ctx, &airlinepb.AdjustBalanceRequest{
+		OwnerId: existing.OwnerId,
+		Amount:  payload.Amount,
+	})
+	if err != nil {
+		log.Println("adjust-balance: gRPC AdjustBalance failed,", err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{ErrorCode: 1})
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+

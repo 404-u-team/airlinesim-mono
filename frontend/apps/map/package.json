@@ -9,13 +9,15 @@
     "lint": "eslint . --max-warnings=0 && svelte-check --tsconfig ./tsconfig.json",
     "lint:fix": "eslint . --fix",
     "preview": "rsbuild preview",
-    "svelte-check": "svelte-check --tsconfig ./tsconfig.json"
+    "svelte-check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "bun test"
   },
   "dependencies": {
     "@airlinesim/air-ui": "workspace:*",
     "@airlinesim/api-contracts": "workspace:*",
     "@airlinesim/event-bus": "workspace:*",
     "@airlinesim/game-sdk": "workspace:*",
+    "@airlinesim/i18n": "workspace:*",
     "@turf/turf": "^7.3.4",
     "@types/three": "^0.183.1",
     "maplibre-gl": "^5.23.0",

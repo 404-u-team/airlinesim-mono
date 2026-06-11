@@ -1,24 +1,26 @@
 <script setup lang="ts">
 import { airlineSimEventBus, type RemoteId } from "@airlinesim/event-bus";
-import { computed, defineAsyncComponent, watch } from "vue";
+import { type Locale, translate } from "@airlinesim/i18n";
+import { computed, defineAsyncComponent, nextTick, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 
 import AppLoader from "../components/AppLoader.vue";
 import MapControls from "../components/MapControls.vue";
 import SvelteWrapper from "../components/SvelteWrapper.vue";
+import { type ShellMessageKey, shellMessages } from "../i18n/messages";
 import { getRemoteIdByPath } from "../navigation";
 
+const props = defineProps<{
+  appLocale: Locale;
+  appTheme: "dark" | "light";
+}>();
+
 const route = useRoute();
+const isRouteLoading = ref(false);
 
-const activeRemoteId = computed<RemoteId | undefined>(() => {
-  const { remoteId } = route.meta;
-
-  if (typeof remoteId === "string") {
-    return remoteId as RemoteId;
-  }
-
-  return getRemoteIdByPath(route.path);
-});
+// URL is the only reliable source of truth while Vue Router reuses this view
+// between different MFE route records.
+const activeRemoteId = computed<RemoteId | undefined>(() => getRemoteIdByPath(route.path));
 
 const createMap = async (
   target: HTMLElement,
@@ -49,10 +51,17 @@ const activeVueRemote = computed(() => {
 
   return remoteComponents[activeRemoteId.value];
 });
+const remoteInstanceKey = computed(() =>
+  activeRemoteId.value ? `${activeRemoteId.value}:${route.fullPath}` : route.fullPath,
+);
+const t = computed(() => (key: ShellMessageKey): string =>
+  translate(shellMessages, props.appLocale, key),
+);
 
 watch(
   () => route.path,
-  (path, fromPath) => {
+  async (path, fromPath) => {
+    isRouteLoading.value = true;
     const remoteId = getRemoteIdByPath(path);
 
     if (remoteId) {
@@ -67,6 +76,9 @@ watch(
         remoteId,
       });
     }
+
+    await nextTick();
+    isRouteLoading.value = false;
   },
   { immediate: true },
 );
@@ -74,23 +86,30 @@ watch(
 
 <template>
   <main class="relative min-h-0 overflow-hidden bg-background">
+    <AppLoader
+      v-if="isRouteLoading"
+      class="absolute inset-0 z-10 bg-background/90"
+      :label="t('remote.loading')"
+    />
     <template v-if="activeRemoteId === 'map'">
       <SvelteWrapper
-        :key="activeRemoteId"
+        :key="remoteInstanceKey"
         :create-fn="createMap"
-        :component-props="{ controls: false, remoteId: activeRemoteId, rotation: false, shellPath: route.path }"
+        :component-props="{ appLocale: props.appLocale, controls: false, remoteId: activeRemoteId, rotation: false, shellPath: route.fullPath, theme: props.appTheme }"
       />
-      <MapControls />
+      <MapControls :app-locale="props.appLocale" />
     </template>
     <Suspense v-else-if="activeRemoteId">
       <component
         :is="activeVueRemote"
-        :key="activeRemoteId"
+        :key="remoteInstanceKey"
+        :app-theme="props.appTheme"
         :remote-id="activeRemoteId"
-        :shell-path="route.path"
+        :app-locale="props.appLocale"
+        :shell-path="route.fullPath"
       />
       <template #fallback>
-        <AppLoader label="Connecting to remote..." />
+        <AppLoader :label="t('remote.loading')" />
       </template>
     </Suspense>
     <div
@@ -99,10 +118,10 @@ watch(
     >
       <div class="max-w-md">
         <h2 class="text-h3 text-text-primary">
-          Empty Section
+          {{ t("empty.title") }}
         </h2>
         <p class="mt-2 text-body text-text-muted">
-          This route ({{ route.path }}) has no MFE assigned yet.
+          {{ t("empty.description").replace("{path}", route.path) }}
         </p>
       </div>
     </div>

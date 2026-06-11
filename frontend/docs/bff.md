@@ -1,0 +1,377 @@
+# BFF
+
+`bff` - отдельное Bun-приложение внутри frontend-монорепозитория, но не MFE и не frontend app. Оно лежит в `frontend/bff`, потому что это backend-for-frontend слой, а не UI-приложение из `apps/*`.
+
+## Назначение
+
+BFF закрывает задачи, которые фронтенду неудобно или неправильно решать напрямую:
+
+- импорт реальных данных мира, нормализация и отправка в backend;
+- proxy/composition endpoints поверх backend API, когда backend-ручка есть, но ей не хватает фильтров или frontend-specific формы ответа;
+- единая точка входа для HTTP API: frontend вызывает BFF, а BFF вызывает backend;
+- сохранение тонкого shell/remotes: UI вызывает BFF, а BFF уже договаривается с backend.
+
+## Runtime
+
+- Bun.
+- Без runtime-библиотек по умолчанию: использовать `Bun.serve`, `fetch`, Web APIs и стандартные возможности Bun.
+- Скрипты:
+
+```bash
+bun run dev
+bun --cwd bff run dev
+bun --cwd bff run lint
+```
+
+Корневой `bun run dev` из `frontend` запускает BFF через Turbo как задачу `@airlinesim/bff#dev` вместе с shell/remotes/packages. `bun --cwd bff run dev` нужен только для изолированного запуска BFF.
+
+Переменные окружения:
+
+- `BFF_PORT` - порт BFF, по умолчанию `4200`.
+- `BFF_BACKEND_BASE_URL` - base URL backend API, по умолчанию `https://api.master.stand.airlinesim.ms0ur.dev/`.
+- `BFF_BACKEND_READ_TIMEOUT_MS` - бюджет safe read-запроса к backend, по умолчанию `1500`.
+- `BFF_BACKEND_AUTH_TIMEOUT_MS` - бюджет auth/session проверки к backend, по умолчанию `1500`.
+- `BFF_BACKEND_MUTATION_TIMEOUT_MS` - бюджет mutation-запроса к backend, по умолчанию `5000`.
+- `BFF_BACKEND_MAX_SAFE_ATTEMPTS` - число попыток для safe GET/HEAD и auth paths, по умолчанию `2`; обычные mutations без явного `retryMutating` не повторяются.
+- `BFF_IDLE_TIMEOUT_SECONDS` - максимальное время простоя входящего запроса BFF, по умолчанию `120` секунд. Значение должно быть больше суммарного времени backend retry, иначе Bun оборвет соединение до возврата нормализованной ошибки.
+- `backend_admin_login` / `BACKEND_ADMIN_LOGIN` - backend admin login для служебных операций BFF.
+- `backend_admin_password` / `BACKEND_ADMIN_PASSWORD` - backend admin password для служебных операций BFF.
+
+## Авторизация
+
+BFF проверяет токен обычного пользователя из `Authorization: Bearer ...` перед выполнением protected endpoints. Проверка идет через backend API; если backend возвращает `401` или `403`, BFF отвечает `401`.
+
+Для служебных backend-действий BFF не использует пользовательский token. Например, `import` логинится в backend через `backend_admin_login` / `backend_admin_password`, кеширует admin access token в памяти процесса и отправляет данные в backend с этим admin token.
+
+Все browser-facing admin/import endpoints требуют пользовательский `Authorization` token и capability `world.manage`. Service admin credentials используются только внутри реального import pipeline и никогда не возвращаются клиенту.
+
+## Модули
+
+### Общий backend HTTP
+
+Папка/файл: `bff/src/backend-http.ts`.
+
+Все BFF-модули, которые обращаются к backend API, должны использовать общий helper `requestBackend` / `requestBackendJson`, а не raw `fetch`. Helper отвечает за:
+
+- сбор backend URL из `BFF_BACKEND_BASE_URL`;
+- bearer token и JSON headers;
+- timeout через `AbortController`;
+- retry для сетевых ошибок, timeout, `408`, `429`, `500`, `502`, `503`, `504` внутри короткого request budget;
+- coalescing одинаковых in-flight JSON `GET`/`HEAD` запросов с тем же URL, token/header set и request budget;
+- запрет retry для обычных client/authz/validation ошибок: `400`, `401`, `403`, `404`, `409`, `422`;
+- осторожную политику mutating-запросов: `GET`/`HEAD` безопасно повторяются, auth-запросы могут повторяться, остальные mutation requests повторяются только при явном `retryMutating`;
+- нормализацию backend ошибок в JSON вида `{ "error": { "code": "...", "message": "...", "retryable": false } }`.
+
+Browser-facing приложения не должны реализовывать retry к backend напрямую: они вызывают BFF, а BFF уже применяет общую backend retry-политику. Shared browser SDK держит обычный UI timeout `8000` ms; более длинные операции должны быть оформлены как job/status flow.
+
+### `import`
+
+Папка: `bff/src/modules/import`.
+
+Модуль отвечает за загрузку реальных данных мира, их очистку, нормализацию, синтез игровых параметров, валидацию и отправку в backend. Это ETL-пайплайн, а не прокидывание CSV в backend.
+
+HTTP endpoints:
+
+- `POST /admin/import/world-data`
+- `POST /admin/import/world-data/dry-run`
+- `POST /admin/import/world-data/run`
+- `GET /admin/import/world-data/status?jobId=<jobId>`
+- `GET /admin/import/world-data/jobs/<jobId>`
+
+Legacy aliases без `/admin` сохраняются для совместимости, но проходят ту же server-side
+проверку `world.manage`.
+
+`POST` endpoints запускают in-memory job и отвечают `202 Accepted` с `jobId`, `status` и `statusUrl`. Полный отчет не возвращается в стартовом ответе. Статус и краткий summary нужно получать через status endpoint; полный JSON report пишется в `bff/data/import/world-data/reports`.
+
+CLI из `frontend/bff`:
+
+```bash
+bun run import:world-data:dry-run
+bun run import:world-data
+```
+
+Флаги CLI:
+
+- `--fetch` / `--refresh-raw` - обновить raw cache из открытых источников.
+
+Raw/cache/stage/report/mapping данные хранятся в `bff/data/import/world-data`:
+
+- `raw/` - скачанные CSV/JSON/TXT/ZIP источники.
+- `manual/` - ручные override-файлы `countries.json`, `regions.json`, `airports.json`, `region-links.json`.
+- `stage/world-data.latest.json` - последний построенный датасет.
+- `reports/` - machine-readable отчеты dry-run/import.
+- `mappings/source-mapping.json` - соответствие source key -> backend id + payload hash.
+
+Порядок backend-импорта строгий:
+
+1. Country.
+2. Region.
+3. Airport.
+4. RegionLink.
+
+Идемпотентность основана на стабильных source keys и hash payload. Если mapping есть и hash не изменился, запись пропускается. Если hash изменился, BFF использует `PUT` endpoint из OpenAPI. Если mapping отсутствует, BFF пытается свериться с backend list endpoints по естественным ключам (`iso`, `local_code`, `icao_code`) перед созданием.
+
+Для служебных действий модуль логинится в backend через `backend_admin_login` / `BACKEND_ADMIN_LOGIN` и `backend_admin_password` / `BACKEND_ADMIN_PASSWORD`. Dry-run без этих переменных построит датасет и отчет, но не сможет сверить уже существующие backend сущности.
+
+Dry-run не вызывает create/update endpoints backend. Реальный импорт выполняется только в `import` mode (`POST /import/world-data/run`, `POST /import/world-data?mode=import` или `bun run import:world-data`) и отправляет сущности по одной в порядке Country -> Region -> Airport -> RegionLink. Если job завершается быстро, смотреть причину нужно через status endpoint: например, import mode без backend admin credentials завершится ошибкой до отправки сущностей.
+
+### `proxy`
+
+Папка: `bff/src/modules/proxy`.
+
+Модуль отвечает за BFF-ручки поверх backend API. Все frontend HTTP-запросы идут только на BFF URL (`VITE_BFF_URL`), а BFF уже делает запрос в backend из `BFF_BACKEND_BASE_URL`. Browser-facing код не должен использовать прямой backend URL.
+
+Повторы backend-запросов выполняются через общий helper `bff/src/backend-http.ts`; локальная retry-логика в модулях не допускается.
+
+Кэшируемые list endpoints:
+
+- `GET /aircraft-types`
+- `GET /airports`
+- `GET /countries`
+- `GET /regions`
+- `GET /region-links`
+
+BFF хранит ответы этих backend list endpoints в памяти процесса. Запрос `?refresh=true` принудительно обновляет кэш. Любая успешная non-GET мутация через BFF сбрасывает весь list cache.
+
+Если backend `/region-links` временно недоступен, BFF отвечает пустой коллекцией с `meta.degraded=true`. Это позволяет Dashboard, Map, Routes и Operations продолжать работу без route opportunities до восстановления backend.
+
+Для кэшируемых endpoints доступны:
+
+- `q` - поиск по всем строковым полям объекта.
+- Любой другой query parameter - точный case-insensitive фильтр по одноименному полю объекта, например `country_id=<id>` или `iata_code=IST`.
+
+Legacy endpoint `GET /proxy/airports` оставлен как совместимый alias для `GET /airports`.
+
+OpenAPI BFF генерируется как `docs/swagger.json` / `docs/swagger.yaml` плюс BFF overlay для кэшируемых endpoints:
+
+```bash
+bun run generate:bff-openapi
+```
+
+Файл результата: `docs/bff-openapi.json`. Корневой `bun run dev` генерирует его перед запуском Turbo. `packages/api-contracts` использует `docs/bff-openapi.json`, если файл есть, и только при его отсутствии возвращается к backend `docs/swagger.yaml` / `docs/swagger.json`.
+
+### `demand`
+
+Папка: `bff/src/modules/demand`.
+
+Модуль считает спрос лениво по запросу клиента и сохраняет результат в backend `RegionLink`, потому что backend хранит базовый спрос именно на связи регионов.
+
+HTTP endpoint:
+
+- `GET /demand/airport-pair?origin_airport_id=<id>&destination_airport_id=<id>`
+
+Подробная формула, ограничения и сравнение с Grosche et al. описаны в
+`docs/passenger-demand-model.md`.
+
+Правила:
+
+- endpoint требует пользовательский `Authorization: Bearer ...` и проверяет его через backend;
+- BFF внутри использует backend admin credentials, потому что list/mutate endpoints регионов и region-links сейчас admin-only;
+- BFF загружает airports, regions и region-links, находит регионы пары аэропортов, затем ищет связь этих регионов;
+- если `base_daily_demand_ab` и `base_daily_demand_ba` уже положительные, возвращается сохраненный спрос;
+- если спрос не сгенерирован, BFF считает его гравитационной формулой на основе population, GDP per capita, tourism/business scores, region-link affinity, расстояния аэропортов, runway capacity, night operations, fee/fuel multipliers и наличия IATA;
+- если region-link существует, BFF обновляет его через `PUT /region-link/:id`;
+- если region-link отсутствует, BFF создает его через `POST /region-link` с рассчитанными affinity и demand values;
+- в ответе направление `origin_daily_passengers` / `destination_daily_passengers` соответствует аэропортам из запроса, даже если backend хранит пару регионов в отсортированном порядке `region_a`/`region_b`.
+
+### `fleet`
+
+Папка: `bff/src/modules/fleet`.
+
+Модуль закрывает продуктовый сценарий покупки первого самолета без изменений backend. UI Fleet & Ops не склеивает `/aircraft-types`, `/airports`, `/aircrafts`, `/aircraft` и `/airline/me` самостоятельно: он вызывает BFF `/fleet/*`, а BFF возвращает frontend-facing модель с совместимостью, предупреждениями и следующими действиями.
+
+HTTP endpoints:
+
+- `GET /fleet/market?base_airport_id=<id>&q=<query>&min_range=<km>&min_capacity=<seats>&max_price=<money>&sort=<recommended|price|capacity|range>` - каталог типов самолетов, обогащенный балансом авиакомпании, стартовой базой, пригодностью к ВПП, доступностью по бюджету, score и предупреждениями.
+- `GET /fleet/purchase-preview?aircraft_type_id=<id>&base_airport_id=<id>&tail_number=<value>` - read-only предпросмотр покупки: `canPurchase`, blocking reasons, warnings, цена, остаток баланса, recommended reserve, daily maintenance reserve и validation tail number.
+- `POST /fleet/aircraft` - product-facing покупка самолета. BFF повторяет проверки preview, нормализует tail number, вызывает backend `POST /aircraft`, сбрасывает list cache и возвращает enriched aircraft card, финансовый summary и next action.
+- `GET /fleet/aircraft` - enriched список купленных самолетов и product-facing empty state.
+- `GET /fleet/aircraft/{id}` - enriched карточка самолета с типом, базой, maintenance ratio и route-assignment placeholder.
+- `PATCH /fleet/aircraft/{id}/tail-number` - validation/normalization wrapper над backend `PATCH /aircraft/{id}`.
+
+Правила:
+
+- Все endpoints требуют пользовательский `Authorization: Bearer ...`; отсутствие токена на `/fleet/*` возвращает normalized `AUTH_REQUIRED`.
+- Справочники `aircraft-types`, `airports`, `countries` читаются через общий proxy cache и backend admin token, пока backend держит эти list routes в admin-only группе.
+- `GET` endpoints используют общий retry из `requestBackend` / `requestBackendJson`.
+- `POST /fleet/aircraft` и `PATCH /fleet/aircraft/{id}/tail-number` не делают unsafe automatic retry: для mutation requests задан `maxAttempts: 1`, потому что backend не дает idempotency key.
+- После успешной покупки BFF сбрасывает cache из `modules/proxy`, чтобы последующие read models увидели свежий fleet state.
+- Fleet scoring живет в `bff/src/modules/fleet/scoring.ts`; UI не должен дублировать правила пригодности.
+
+Статусы пригодности:
+
+- `recommended` - хватает денег, база совместима, остаток выше recommended reserve и нет предупреждений.
+- `available` - покупка возможна, но есть мягкие предупреждения.
+- `risky` - покупка возможна, но остаток ниже recommended reserve или первый самолет слишком крупный/дорогой.
+- `blocked` - покупка невозможна из-за денег, ВПП, отсутствующих критичных данных, отсутствующего типа/базы или invalid tail number.
+
+Reason/warning codes:
+
+- `FLEET_AIRCRAFT_TYPE_NOT_FOUND`
+- `FLEET_BASE_AIRPORT_NOT_FOUND`
+- `FLEET_INSUFFICIENT_FUNDS`
+- `FLEET_LARGE_AIRCRAFT_FIRST_PURCHASE`
+- `FLEET_LOW_SLOT_CAPACITY`
+- `FLEET_MISSING_PRICE`
+- `FLEET_MISSING_RUNWAY_DATA`
+- `FLEET_NO_NIGHT_OPS`
+- `FLEET_RESERVE_RISK`
+- `FLEET_RUNWAY_TOO_SHORT`
+- `FLEET_TAIL_NUMBER_EXISTS`
+- `FLEET_TAIL_NUMBER_INVALID`
+
+Пользовательская документация для этого сценария лежит в `docs/knowledge-base/` и должна использоваться будущим разделом "База знаний".
+
+### `game`
+
+Папка: `bff/src/modules/game`.
+
+Модуль собирает frontend-facing игровые ответы для MFE из уже готовых backend routes. Пользовательские данные (`/airline/me`, `/aircrafts`) читаются с пользовательским `Authorization` token. Справочники world-data и aircraft types читаются через backend admin credentials, потому что соответствующие backend list routes сейчас находятся в admin-only группе.
+
+HTTP endpoints:
+
+- `GET /game/dashboard-summary` - единый read model для shell Dashboard: airline/base/fleet/routes/flights/alerts/next action/navigation progress.
+- `GET /game/map-state?scope=dashboard&include_opportunities=true` - GeoJSON/read model для карты Dashboard: стартовая база, важные аэропорты, будущие route lines и selected airport detail.
+- `GET /game/finance-overview` - баланс авиакомпании, стоимость флота, maintenance reserve, credit/safety/reputation.
+- `GET /game/facilities-overview` - starting airport, базированные борта, совместимые типы самолетов, слоты и ground costs.
+- `GET /game/events-feed` - compatibility wrapper устойчивой event feed из `events` overlay.
+- `GET /game/network-opportunities?origin_airport_id=<id>` - список route opportunities из airports, regions и region-links. Если `origin_airport_id` не передан, используется `airline.starting_airport_id`.
+
+Правило развития: если backend позже откроет read-only world-data routes для обычного пользователя, `game` должен перестать использовать admin-token для чтения этих справочников.
+
+`dashboard-summary` и `map-state` возвращают `routes`/`flights` capabilities и читают BFF-owned overlays из модулей `routes` и `operations`. Пока backend routes/flights отсутствуют, эти overlays являются источником истины для MVP-маршрутов, расписаний и рейсов.
+
+Map remote не делает HTTP-запросы к backend или BFF в dashboard-сценарии. Shell загружает `map-state` и передает его в `apps/map` через Module Federation props; выбор объектов карты отправляется обратно через `@airlinesim/event-bus`.
+
+### `routes`
+
+Папка: `bff/src/modules/routes`.
+
+Модуль реализует MVP route overlay до появления backend route endpoints. Backend не меняется; BFF использует airline/fleet/airports/regions/region-links из существующего backend API и хранит созданные пользователем маршруты в `bff/data/game-state/routes.json`.
+
+HTTP endpoints:
+
+- `GET /routes/opportunities` - список направлений из базы игрока с demand, distance, aircraft compatibility, rough economics и recommendation.
+- `GET /routes/opportunities/:destinationAirportId/preview` - детальный preview выбранного направления.
+- `POST /routes` - создает маршрут в статусе `awaiting_schedule` или `draft`, если есть blockers.
+- `GET /routes` - список маршрутов текущей airline.
+- `GET /routes/:id` - карточка маршрута.
+- `PATCH /routes/:id` - обновление статуса, самолета или базовой частоты.
+- `DELETE /routes/:id` - удаление draft/awaiting_schedule маршрута без расписания.
+
+Правила:
+
+- данные изолированы по `airline_id`, который BFF получает через backend `/airline/me`;
+- клиентский `airline_id` не принимается как trusted input;
+- сохранение выполняется атомарно через временный JSON-файл и rename;
+- route line features попадают в `/game/map-state`;
+- route counts и next action попадают в `/game/dashboard-summary`;
+- это MVP overlay, который надо заменить backend route endpoints, когда они появятся.
+
+### `operations`
+
+Папка: `bff/src/modules/operations`.
+
+Модуль реализует MVP schedule/flight overlay до появления backend schedule/flight endpoints. Он читает созданные BFF routes, fleet snapshot и airport constraints, затем хранит расписания в `bff/data/game-state/schedules.json`, а рейсы в `bff/data/game-state/flights.json`.
+
+HTTP endpoints:
+
+- `GET /operations/schedule-options?route_id=<id>` - данные для формы расписания: route, routes, compatible aircraft и default pattern.
+- `POST /operations/schedule-preview` - проверка ограничений и расчет sample flights/weekly economics.
+- `POST /operations/schedules` - создание active schedule и генерация upcoming flights.
+- `GET /operations/schedules` - список расписаний airline.
+- `GET /operations/flights` - flight board с live/upcoming/completed summary.
+- `POST /operations/flights/:id/complete` - idempotent MVP/demo completion endpoint.
+
+Правила:
+
+- schedules/flights изолированы по `airline_id`;
+- flight status обновляется детерминированно по текущему времени;
+- BFF проверяет range/runway/status/conflicts/night ops/oversupply/cash reserve;
+- Dashboard, Events и Map читают operations overlay для next action, flight counts и route status;
+- expected flight financials являются MVP estimate и готовят вход для финансового раздела.
+
+### `finance`
+
+Папка: `bff/src/modules/finance`.
+
+Модуль реализует финансовый контур MVP поверх существующего backend-баланса и BFF-owned operations overlay. Backend не меняется: завершенные рейсы идемпотентно превращаются в проводки, которые хранятся в `bff/data/game-state/ledger.json`.
+
+HTTP endpoints:
+
+- `GET /finance/overview` - доступный баланс, результат операций, стоимость флота, недельные метрики и финансовые риски.
+- `GET /finance/ledger` - журнал доходов и расходов текущей авиакомпании.
+- `GET /finance/routes` - прибыльность маршрутов по завершенным рейсам.
+- `GET /finance/flights/:id` - финансовый результат конкретного рейса.
+- `POST /finance/recalculate` - повторная безопасная сверка завершенных рейсов с журналом.
+
+Правила:
+
+- backend balance является базовой суммой, BFF ledger хранит только операционный delta;
+- проводки одного рейса защищены idempotency key и не дублируются при повторной сверке;
+- выручка, топливо, аэропортовые сборы и резерв обслуживания создаются только для завершенных рейсов;
+- UI показывает финансовые риски с переходом к проблемному разделу;
+- фондовый рынок и кредиты не входят в MVP и остаются отключенными в навигации.
+
+### `onboarding`
+
+Папка: `bff/src/modules/onboarding`.
+
+Модуль закрывает первый пользовательский сценарий: восстановление сессии, проверка наличия авиакомпании, выбор стартовой базы и создание авиакомпании. Backend не меняется; BFF использует существующие backend endpoints и добавляет frontend-friendly ответы.
+
+HTTP endpoints:
+
+- `GET /onboarding/session` - возвращает состояние входа: `AUTH_REQUIRED`, `AIRLINE_REQUIRED` или `READY`, данные авиакомпании, стартовую базу и рекомендованный следующий route.
+- `GET /onboarding/airports?q=<query>&country_id=<id>&region_id=<id>&limit=<n>` - возвращает список аэропортов для выбора стартовой базы с score и предупреждениями.
+- `POST /onboarding/airline` - валидирует payload создания авиакомпании, проверяет стартовый аэропорт и вызывает backend `POST /airline`.
+
+Правила:
+
+- `/onboarding/session` без токена отвечает `AUTH_REQUIRED`, а не backend ошибкой.
+- protected onboarding endpoints требуют пользовательский `Authorization: Bearer ...`.
+- аэропорты читаются через BFF list cache/proxy; если backend list routes остаются admin-only, BFF использует существующую служебную модель доступа.
+- `POST /onboarding/airline` не дублирует backend бизнес-логику, а только валидирует UX-вход, нормализует ошибки и обогащает ответ для shell.
+- после успешного создания авиакомпании BFF возвращает `recommendedNextRoute`; для пустого флота это `/fleet/overview`.
+
+## Правила развития
+
+### `facilities`
+
+`bff/src/modules/facilities` является единственным источником правил runway, range, night operations, slot planning headroom и airport costs.
+
+- `GET /facilities/base-overview` возвращает продуктовый read model стартовой базы.
+- `GET /facilities/airports/:id/constraints` возвращает diagnostics для выбранного airport/aircraft/type/route.
+- Night window MVP: `23:00-06:00` local.
+- Slot utilization `80-100%` создает warning, projected utilization выше `100%` блокирует schedule activation.
+- `GET /game/facilities-overview` оставлен как compatibility wrapper.
+
+### `events`
+
+`bff/src/modules/events` хранит immutable event feed и notification lifecycle в runtime overlays.
+
+- `GET /events/feed`, `GET /events/feed/:id`.
+- `GET /notifications`, `GET /notifications/summary`.
+- `PATCH /notifications/:id`, `POST /notifications/read-all`.
+- Mutation events пишутся идемпотентно по dedupe key.
+- Notification reconcile запускается при открытии notification endpoints и после ключевых mutations.
+- Dashboard alerts читаются из notification read model.
+
+### `admin`
+
+Admin surface отделен namespace `/admin`.
+
+- `GET /admin/session` возвращает capability probe.
+- `GET /admin/audit` возвращает ограниченный BFF audit trail без токенов и credentials.
+- `GET /admin/world/readiness` проверяет минимальный игровой мир.
+- `/admin/world/countries|regions|airports|region-links` являются защищенными CRUD wrappers.
+- `/admin/import/world-data` и job status защищены `world.manage`.
+- После world mutation/import очищается list cache.
+- Import job status хранится в памяти процесса и теряется после restart; итоговые import reports и BFF admin audit сохраняются на диск.
+- Capability probe является переходным решением до появления явного backend identity/capabilities endpoint.
+
+- Не добавлять библиотеки без явной необходимости; Bun уже дает HTTP server, fetch, env и файловые API.
+- Новые модули добавлять в `bff/src/modules/<module-name>`.
+- Пользовательский `Authorization` token проверять на входе protected endpoints.
+- Для backend admin-действий использовать env `backend_admin_login` / `backend_admin_password`, а не пользовательский token.
+- Источник стран world-data import: REST Countries v5 (`https://api.restcountries.com/countries/v5`) с ключом из env `REST_COUNTRIES_API_KEY`; при пустом ключе импорт автоматически использует статический датасет `mledoze/countries` (GitHub raw). REST Countries v3.1 закрыт и возвращает HTTP 200 с объектом ошибки — такие ответы больше не кэшируются: загрузчики валидируют форму JSON и перекачивают источник при битом кэше.
+- Browser-facing frontend-код использует `VITE_BFF_URL`; прямой `VITE_BACKEND_URL` в приложениях и `game-sdk` не допускается.

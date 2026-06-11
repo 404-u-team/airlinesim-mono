@@ -3,6 +3,8 @@ import type { Component } from "vue";
 
 import {
   Banknote,
+  Bell,
+  BookOpen,
   BriefcaseBusiness,
   Building2,
   CalendarDays,
@@ -22,9 +24,14 @@ import {
   Wrench,
 } from "@lucide/vue";
 
+import type { ShellStatusSummary } from "./dashboard/types";
+import type { FuelPriceSnapshot } from "./fuel/types";
+import type { ShellMessageKey } from "./i18n/messages";
+
 import { resolveRemoteId } from "./mfe-routing";
 
 export type NavigationChild = {
+  enabled?: boolean;
   label: string;
   path: string;
 };
@@ -37,6 +44,12 @@ export type NavigationSection = {
   remoteId?: RemoteId;
 };
 
+export type StatusMetric = {
+  icon: Component;
+  label: string;
+  value: string;
+};
+
 export const navigationSections: NavigationSection[] = [
   {
     icon: Home,
@@ -46,11 +59,21 @@ export const navigationSections: NavigationSection[] = [
   },
   {
     children: [
+      { label: "Feed", path: "/events/feed" },
+      { label: "Notifications", path: "/events/notifications" },
+    ],
+    icon: Bell,
+    label: "Events",
+    path: "/events",
+    remoteId: "events-news",
+  },
+  {
+    children: [
       { label: "Overview", path: "/fleet/overview" },
       { label: "Aircraft", path: "/fleet/aircraft" },
-      { label: "Orders", path: "/fleet/orders" },
-      { label: "Configurations", path: "/fleet/configurations" },
-      { label: "Maintenance", path: "/fleet/maintenance" },
+      { label: "Order New", path: "/fleet/order/new" },
+      { enabled: false, label: "Configurations", path: "/fleet/configurations" },
+      { enabled: false, label: "Maintenance", path: "/fleet/maintenance" },
     ],
     icon: Plane,
     label: "Fleet",
@@ -60,9 +83,10 @@ export const navigationSections: NavigationSection[] = [
   {
     children: [
       { label: "My Hubs", path: "/airports/hubs" },
-      { label: "Routes", path: "/airports/routes" },
-      { label: "Fees & Slots", path: "/airports/fees-slots" },
-      { label: "Contracts", path: "/airports/contracts" },
+      { label: "My Routes", path: "/airports/my-routes" },
+      { label: "Route Planner", path: "/airports/routes" },
+      { enabled: false, label: "Fees & Slots", path: "/airports/fees-slots" },
+      { enabled: false, label: "Contracts", path: "/airports/contracts" },
     ],
     icon: Map,
     label: "Airports",
@@ -74,8 +98,8 @@ export const navigationSections: NavigationSection[] = [
       { label: "Live flights", path: "/operations/live-flights" },
       { label: "Schedule", path: "/operations/schedule" },
       { label: "Fuel", path: "/operations/fuel" },
-      { label: "Ground services", path: "/operations/ground-services" },
-      { label: "R&D", path: "/operations/research" },
+      { enabled: false, label: "Ground services", path: "/operations/ground-services" },
+      { enabled: false, label: "R&D", path: "/operations/research" },
     ],
     icon: Gauge,
     label: "Operations",
@@ -87,8 +111,8 @@ export const navigationSections: NavigationSection[] = [
       { label: "Overview", path: "/finances/overview" },
       { label: "R&F profit", path: "/finances/profit" },
       { label: "Costs", path: "/finances/costs" },
-      { label: "Loans & leasing", path: "/finances/loans-leasing" },
-      { label: "Stock market", path: "/finances/stock-market" },
+      { enabled: false, label: "Loans & leasing", path: "/finances/loans-leasing" },
+      { enabled: false, label: "Stock market", path: "/finances/stock-market" },
     ],
     icon: CircleDollarSign,
     label: "Finances",
@@ -98,58 +122,72 @@ export const navigationSections: NavigationSection[] = [
   {
     children: [
       { label: "Overview", path: "/staff/overview" },
-      { label: "Crew", path: "/staff/crew" },
-      { label: "Ground staff", path: "/staff/ground-staff" },
-      { label: "Rosters", path: "/staff/rosters" },
-      { label: "Training", path: "/staff/training" },
+      { enabled: false, label: "Crew", path: "/staff/crew" },
+      { enabled: false, label: "Ground staff", path: "/staff/ground-staff" },
+      { enabled: false, label: "Rosters", path: "/staff/rosters" },
+      { enabled: false, label: "Training", path: "/staff/training" },
     ],
     icon: Users,
-    label: "Staff",
+    label: "Base & Facilities",
     path: "/staff",
     remoteId: "hr-facilities",
   },
   {
     children: [
-      { label: "Company", path: "/settings/company" },
-      { label: "Access", path: "/settings/access" },
-      { label: "Notifications", path: "/settings/notifications" },
+      { enabled: false, label: "Company", path: "/settings/company" },
+      { enabled: false, label: "Access", path: "/settings/access" },
+      { enabled: false, label: "Notifications", path: "/settings/notifications" },
+      { label: "System", path: "/settings/system" },
     ],
     icon: Settings,
     label: "Settings",
     path: "/settings",
-    remoteId: "events-news",
   },
   {
-    children: [
-      { label: "Countries", path: "/admin/countries" },
-      { label: "Regions", path: "/admin/regions" },
-      { label: "Airports", path: "/admin/airports" },
-      { label: "Region links", path: "/admin/region-links" },
-      { label: "To be enabled", path: "/admin/future" },
-    ],
-    icon: ShieldCheck,
-    label: "Admin",
-    path: "/admin",
+    icon: BookOpen,
+    label: "Knowledge Base",
+    path: "/knowledge-base",
   },
 ];
 
-export const statusMetrics = [
-  {
-    icon: CircleDollarSign,
-    label: "Account",
-    value: "$50,000,000",
-  },
-  {
-    icon: Fuel,
-    label: "Fuel",
-    value: "30,000 t",
-  },
-  {
-    icon: PlaneTakeoff,
-    label: "Planes",
-    value: "122",
-  },
-];
+export function getStatusMetrics(
+  t: (key: ShellMessageKey) => string,
+  status: null | ShellStatusSummary,
+  fuel: FuelPriceSnapshot | null = null,
+  locale = "en",
+): StatusMetric[] {
+  return [
+    {
+      icon: CircleDollarSign,
+      label: t("status.account"),
+      value: status ? formatMoney(status.balance, locale) : "-",
+    },
+    {
+      icon: Fuel,
+      label: t("status.fuel"),
+      value: fuel ? formatMoney(fuel.unit_price, locale) : "-",
+    },
+    {
+      icon: PlaneTakeoff,
+      label: t("status.planes"),
+      value: status ? String(status.aircraft) : "-",
+    },
+    {
+      icon: Bell,
+      label: t("status.alerts"),
+      value: status ? String(status.alerts) : "-",
+    },
+  ];
+}
+
+function formatMoney(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale, {
+    currency: "USD",
+    maximumFractionDigits: 0,
+    notation: value >= 1_000_000 ? "compact" : "standard",
+    style: "currency",
+  }).format(value);
+}
 
 export const quickActions = [
   { icon: RadioTower, label: "Live ops" },

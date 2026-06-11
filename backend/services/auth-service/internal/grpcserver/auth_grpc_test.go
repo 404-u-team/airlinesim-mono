@@ -14,6 +14,7 @@ type mockAuthService struct {
 	login        func(context.Context, *authpb.LoginRequest, *config.Config) (*authpb.TokenResponse, error)
 	refreshToken func(context.Context, *authpb.RefreshTokenRequest, *config.Config) (*authpb.TokenResponse, error)
 	verifyToken  func(context.Context, *authpb.VerifyTokenRequest, *config.Config) (*authpb.VerifyResponse, error)
+	verifyUser   func(context.Context, *authpb.VerifyUserRequest) (*authpb.VerifyResponse, error)
 }
 
 func (m *mockAuthService) Register(ctx context.Context, payload *authpb.RegisterRequest, config *config.Config) (*authpb.TokenResponse, error) {
@@ -30,6 +31,10 @@ func (m *mockAuthService) RefreshToken(ctx context.Context, payload *authpb.Refr
 
 func (m *mockAuthService) VerifyToken(ctx context.Context, payload *authpb.VerifyTokenRequest, config *config.Config) (*authpb.VerifyResponse, error) {
 	return m.verifyToken(ctx, payload, config)
+}
+
+func (m *mockAuthService) VerifyUser(ctx context.Context, payload *authpb.VerifyUserRequest) (*authpb.VerifyResponse, error) {
+	return m.verifyUser(ctx, payload)
 }
 
 func TestRegister(t *testing.T) {
@@ -220,6 +225,34 @@ func TestRefresh(t *testing.T) {
 		}
 		if err != customerrors.ErrUserWithSuchNicknameExists {
 			t.Fatalf("want nickname exists error, got %v", err)
+		}
+	})
+}
+
+func TestVerifyUser(t *testing.T) {
+	t.Run("captured payload and expected response", func(t *testing.T) {
+		verifyResponseExpected := &authpb.VerifyResponse{Valid: true}
+		var capturedPayload *authpb.VerifyUserRequest
+
+		service := &mockAuthService{
+			verifyUser: func(ctx context.Context, payload *authpb.VerifyUserRequest) (*authpb.VerifyResponse, error) {
+				capturedPayload = payload
+				return verifyResponseExpected, nil
+			},
+		}
+
+		authServer := NewAuthServer(service)
+
+		verifyRequest := &authpb.VerifyUserRequest{
+			UserId: "some-user-id",
+		}
+		verifyResponse, _ := authServer.VerifyUser(context.Background(), verifyRequest)
+		if verifyRequest != capturedPayload {
+			t.Fatalf("capture payload is not the same with passed one, got %v, want %v", capturedPayload, verifyRequest)
+		}
+
+		if verifyResponse.Valid != verifyResponseExpected.Valid {
+			t.Fatalf("returned verify response is not what expected, want %v, got %v", verifyResponseExpected.Valid, verifyResponse.Valid)
 		}
 	})
 }

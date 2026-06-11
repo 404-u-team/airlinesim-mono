@@ -39,4 +39,6 @@ var ErrAirlineNotFound = status.Error(codes.NotFound, "airline is not found")
 var ErrAirlineBalanceInsufficient = status.Error(codes.FailedPrecondition, "airline balance is insufficient")
 
 var ErrAircraftTypeNotFound = status.Error(codes.InvalidArgument, "aircraft type is not found")
+var ErrAircraftTypeIcaoConflict = status.Error(codes.AlreadyExists, "icao taken by aircraft type")
+var ErrAircraftTypeIataConflict = status.Error(codes.AlreadyExists, "iata taken by aircraft type")
 var ErrAircraftTailNumberConflict = status.Error(codes.AlreadyExists, "tail number taken by aircraft")

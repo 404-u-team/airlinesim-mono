@@ -391,3 +391,70 @@ func TestAuthService_Refresh_RepositoryError(t *testing.T) {
 		t.Fatalf("error in repository should return ErrInternal")
 	}
 }
+
+func TestAuthService_VerifyUser(t *testing.T) {
+	userID := uuid.New()
+
+	t.Run("success exists", func(t *testing.T) {
+		repo := &mockUserRepository{
+			isUserExists: func(ctx context.Context, id uuid.UUID) (bool, error) {
+				if id != userID {
+					t.Fatalf("expected to check user ID %v, got %v", userID, id)
+				}
+				return true, nil
+			},
+		}
+
+		authService := NewAuthService(repo)
+		res, err := authService.VerifyUser(context.Background(), &authpb.VerifyUserRequest{UserId: userID.String()})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !res.Valid {
+			t.Fatalf("expected valid response")
+		}
+	})
+
+	t.Run("success not exists", func(t *testing.T) {
+		repo := &mockUserRepository{
+			isUserExists: func(ctx context.Context, id uuid.UUID) (bool, error) {
+				return false, nil
+			},
+		}
+
+		authService := NewAuthService(repo)
+		res, err := authService.VerifyUser(context.Background(), &authpb.VerifyUserRequest{UserId: userID.String()})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res.Valid {
+			t.Fatalf("expected invalid response")
+		}
+	})
+
+	t.Run("invalid UUID", func(t *testing.T) {
+		repo := &mockUserRepository{}
+		authService := NewAuthService(repo)
+		res, err := authService.VerifyUser(context.Background(), &authpb.VerifyUserRequest{UserId: "invalid-uuid"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res.Valid {
+			t.Fatalf("expected invalid response for bad uuid")
+		}
+	})
+
+	t.Run("repository error", func(t *testing.T) {
+		repo := &mockUserRepository{
+			isUserExists: func(ctx context.Context, id uuid.UUID) (bool, error) {
+				return false, errors.New("db error")
+			},
+		}
+
+		authService := NewAuthService(repo)
+		_, err := authService.VerifyUser(context.Background(), &authpb.VerifyUserRequest{UserId: userID.String()})
+		if !errors.Is(err, customerrors.ErrInternal) {
+			t.Fatalf("expected ErrInternal, got %v", err)
+		}
+	})
+}

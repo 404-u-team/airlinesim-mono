@@ -35,15 +35,15 @@ const emit = defineEmits<{
 }>();
 
 const variantClasses: Record<ButtonVariant, string> = {
-  danger: "bg-error text-white hover:brightness-110 focus-visible:outline-error",
-  "danger-soft": "bg-error-bg text-slate-950 hover:brightness-95 focus-visible:outline-error",
+  danger: "bg-error text-on-error hover:brightness-110 focus-visible:outline-error",
+  "danger-soft": "bg-error-bg text-on-error-soft hover:brightness-95 focus-visible:outline-error",
   primary: "bg-primary text-on-primary hover:brightness-110 focus-visible:outline-primary",
   "primary-soft":
     "bg-primary-soft text-on-primary-soft hover:brightness-95 focus-visible:outline-primary",
-  success: "bg-success text-white hover:brightness-110 focus-visible:outline-success",
-  "success-soft": "bg-success-bg text-slate-950 hover:brightness-95 focus-visible:outline-success",
-  warning: "bg-warning text-white hover:brightness-110 focus-visible:outline-warning",
-  "warning-soft": "bg-warning-bg text-slate-950 hover:brightness-95 focus-visible:outline-warning",
+  success: "bg-success text-on-success hover:brightness-110 focus-visible:outline-success",
+  "success-soft": "bg-success-bg text-on-success-soft hover:brightness-95 focus-visible:outline-success",
+  warning: "bg-warning text-on-warning hover:brightness-110 focus-visible:outline-warning",
+  "warning-soft": "bg-warning-bg text-on-warning-soft hover:brightness-95 focus-visible:outline-warning",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

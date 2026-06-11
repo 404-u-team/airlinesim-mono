@@ -8,15 +8,20 @@
     "build": "vue-tsc -b && rsbuild build",
     "lint": "eslint . --max-warnings=0 && vue-tsc -b --noEmit",
     "lint:fix": "eslint . --fix",
-    "preview": "rsbuild preview"
+    "preview": "rsbuild preview",
+    "test": "bun test"
   },
   "dependencies": {
     "@airlinesim/air-ui": "workspace:*",
     "@airlinesim/api-contracts": "workspace:*",
     "@airlinesim/event-bus": "workspace:*",
     "@airlinesim/game-sdk": "workspace:*",
+    "@airlinesim/i18n": "workspace:*",
+    "@lucide/vue": "^1.16.0",
+    "chart.js": "^4.5.1",
     "tailwindcss": "^4.2.2",
-    "vue": "^3.5.32"
+    "vue": "^3.5.32",
+    "vue-chartjs": "^5.3.3"
   },
   "devDependencies": {
     "@airlinesim/eslint-config": "workspace:*",

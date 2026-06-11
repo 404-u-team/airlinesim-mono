@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, useId } from "vue";
 
-type TextFieldType = "email" | "password" | "search" | "text";
+type TextFieldType = "date" | "email" | "number" | "password" | "search" | "text" | "time";
 
 const props = withDefaults(
   defineProps<{
@@ -44,6 +44,7 @@ const inputClass = computed(() => [
 ]);
 
 function updateValue(event: Event): void {
+  // eslint-disable-next-line vue/custom-event-name-casing -- required by Vue v-model
   emit("update:modelValue", (event.target as HTMLInputElement).value);
 }
 </script>

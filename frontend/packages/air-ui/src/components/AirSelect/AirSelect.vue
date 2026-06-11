@@ -25,6 +25,7 @@ const emit = defineEmits<{
 
 const selectedValue = computed({
   get: () => props.modelValue,
+  // eslint-disable-next-line vue/custom-event-name-casing -- required by Vue v-model
   set: (value: string) => emit("update:modelValue", value),
 });
 </script>

@@ -157,6 +157,11 @@ func (h *FleetHandler) CreateAircraftType(c *gin.Context) {
 
 	resp, err := h.fleetClient.CreateAircraftType(ctx, &payload)
 	if err != nil {
+		if errors.Is(err, customerrors.ErrAircraftTypeIcaoConflict) ||
+			errors.Is(err, customerrors.ErrAircraftTypeIataConflict) {
+			c.JSON(http.StatusConflict, dto.ErrorResponse{ErrorCode: 2})
+			return
+		}
 		log.Println("got error when tried to create aircraft type via gRPC, ", err)
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{ErrorCode: 1})
 		return

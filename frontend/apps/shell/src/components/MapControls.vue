@@ -1,32 +1,26 @@
 <script setup lang="ts">
 import type { MapManagerSnapshot } from "map/Map";
 
-import { AirIconButton, AirSelect } from "@airlinesim/air-ui";
-import { Globe, Layers, Map as MapIcon, Pause, RotateCw, ZoomIn, ZoomOut } from "@lucide/vue";
+import { AirIconButton } from "@airlinesim/air-ui";
+import { type Locale, translate } from "@airlinesim/i18n";
+import { Globe, Map as MapIcon, ZoomIn, ZoomOut } from "@lucide/vue";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
+import { type ShellMessageKey, shellMessages } from "../i18n/messages";
+
 type MapManagerRemote = typeof import("map/Map")["mapManager"];
+
+const props = defineProps<{
+  appLocale: Locale;
+}>();
 
 const snapshot = ref<MapManagerSnapshot | null>(null);
 
 let mapManager: MapManagerRemote | null = null;
 let unsubscribe: (() => void) | null = null;
-
-const styleOptions = computed(() => {
-  return (
-    snapshot.value?.styles.map((style) => ({
-      label: style.name,
-      value: style.name,
-    })) ?? []
-  );
-});
-
-const selectedStyle = computed({
-  get: () => snapshot.value?.selectedStyleName ?? "",
-  set: (styleName: string) => {
-    mapManager?.changeStyle(styleName);
-  },
-});
+const t = computed(() => (key: ShellMessageKey): string =>
+  translate(shellMessages, props.appLocale, key),
+);
 
 onMounted(async () => {
   const remote = await import("map/Map");
@@ -45,10 +39,6 @@ function setProjection(isGlobe: boolean): void {
   mapManager?.setGlobeProjection(isGlobe);
 }
 
-function toggleRotation(): void {
-  mapManager?.setRotation(!(snapshot.value?.isRotating ?? false));
-}
-
 function zoomIn(): void {
   mapManager?.zoomIn();
 }
@@ -65,14 +55,14 @@ function zoomOut(): void {
     >
       <div class="flex items-center gap-1">
         <AirIconButton
-          label="Zoom in"
+          :label="t('map.zoomIn')"
           :disabled="!snapshot?.isReady"
           @click="zoomIn"
         >
           <ZoomIn :size="18" />
         </AirIconButton>
         <AirIconButton
-          label="Zoom out"
+          :label="t('map.zoomOut')"
           :disabled="!snapshot?.isReady"
           @click="zoomOut"
         >
@@ -82,7 +72,7 @@ function zoomOut(): void {
 
       <div class="flex items-center gap-1">
         <AirIconButton
-          label="2D map"
+          :label="t('map.2d')"
           :active="snapshot?.isGlobe === false"
           :disabled="!snapshot?.isReady"
           @click="setProjection(false)"
@@ -90,42 +80,13 @@ function zoomOut(): void {
           <MapIcon :size="18" />
         </AirIconButton>
         <AirIconButton
-          label="3D globe"
+          :label="t('map.3d')"
           :active="snapshot?.isGlobe === true"
           :disabled="!snapshot?.isReady"
           @click="setProjection(true)"
         >
           <Globe :size="18" />
         </AirIconButton>
-        <AirIconButton
-          :label="snapshot?.isRotating ? 'Pause globe rotation' : 'Rotate globe'"
-          :active="snapshot?.isRotating === true"
-          :disabled="!snapshot?.isReady"
-          @click="toggleRotation"
-        >
-          <Pause
-            v-if="snapshot?.isRotating"
-            :size="18"
-          />
-          <RotateCw
-            v-else
-            :size="18"
-          />
-        </AirIconButton>
-      </div>
-
-      <div class="flex items-center gap-2">
-        <Layers
-          class="text-text-muted"
-          :size="18"
-          aria-hidden="true"
-        />
-        <AirSelect
-          v-model="selectedStyle"
-          label="Map style"
-          :options="styleOptions"
-          :disabled="!snapshot?.isReady"
-        />
       </div>
     </div>
   </div>

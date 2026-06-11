@@ -18,7 +18,8 @@
     "dev": "bun --watch run scripts/generate-openapi.ts",
     "generate": "bun run scripts/generate-openapi.ts",
     "lint": "eslint . --max-warnings=0 && tsc --noEmit",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "bun test"
   },
   "dependencies": {
     "zod": "^4.2.0"
@@ -28,7 +29,6 @@
     "eslint": "latest",
     "typescript": "~6.0.2",
     "vite": "^8.0.10",
-    "vite-plugin-dts": "^4.5.4",
-    "yaml": "^2.8.2"
+    "vite-plugin-dts": "^4.5.4"
   }
 }

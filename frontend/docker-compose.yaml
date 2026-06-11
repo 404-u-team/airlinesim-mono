@@ -1,0 +1,29 @@
+services:
+  bff:
+    build:
+      context: .
+      dockerfile: Dockerfile.bff
+    environment:
+      BFF_PORT: 4200
+      BFF_BACKEND_BASE_URL: ${BFF_BACKEND_BASE_URL:-https://api.master.stand.airlinesim.ms0ur.dev/}
+      BACKEND_ADMIN_LOGIN: ${BACKEND_ADMIN_LOGIN:-admin}
+      BACKEND_ADMIN_PASSWORD: ${BACKEND_ADMIN_PASSWORD:-change-me}
+    expose:
+      - "4200"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  web:
+    image: airlinesim-frontend-web
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL:-/bff}
+        VITE_BFF_URL: ${VITE_BFF_URL:-/bff}
+        VITE_SOCKET_URL: ${VITE_SOCKET_URL:-https://api.master.stand.airlinesim.ms0ur.dev/}
+        VITE_MFE_BASE_URL: ${VITE_MFE_BASE_URL:-http://localhost:4100}
+    ports:
+      - "4100:80"
+    depends_on:
+      - bff

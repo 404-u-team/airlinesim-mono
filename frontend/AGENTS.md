@@ -8,10 +8,15 @@
 - Перед изменениями проверять этот файл и локальные README/STYLING документы.
 - Не смешивать backend и frontend задачи без явной просьбы.
 - Для frontend проверок использовать `bun run lint` из `frontend`.
+- Для тестов использовать `bun run test` из `frontend`; правила создания и запуска тестов описаны в `docs/TESTS.md`.
 - Для автоисправлений использовать `bun run lint:fix` из `frontend`; команда продолжает обходить остальные пакеты через Turbo даже после ошибки в одном пакете.
 - Для изменений запускать применимые проверки: минимум `bun run lint` из `frontend`, а при наличии/добавлении более точечных тестов или storybook-проверок запускать соответствующие package scripts.
+- Правила lint/complexity/max-lines/sort и другие quality gates отключать только в крайнем случае. Если срабатывание можно исправить декомпозицией, упрощением функции, разносом логики по модулям, сортировкой ключей или более явной типизацией, нужно исправлять код, а не ставить `eslint-disable`. Любое точечное отключение правила должно быть локальным, обоснованным и не заменять нормальный рефакторинг.
 - Для workspace-скриптов полагаться на Turborepo.
+- Для исправления стилистических правил eslint можно положиться на `bun run lint:fix`.
 - Любой frontend UI обязан поддерживать адаптивность и разные размеры экранов: desktop, tablet, mobile, узкие sidebar/topbar состояния и отсутствие горизонтального overflow.
+- Любой новый пользовательский текст должен добавляться на двух языках (`en`, `ru`) в словарь приложения/feature, которая владеет этим UI. Shell-строки разделены по файлам `apps/shell/src/i18n/en.ts` и `apps/shell/src/i18n/ru.ts`, а `apps/shell/src/i18n/messages.ts` только собирает локали и экспортирует тип ключей. Shared контракт локалей и helper `translate` лежат в `packages/i18n`. Подробности и MFE-контракт: `docs/I18N.md`.
+- Нереализованные страницы в основном меню должны быть помечены `enabled: false` в `apps/shell/src/navigation.ts` и отображаться disabled без навигации. При реализации страницы обязательно включить соответствующий пункт меню и проверить реальный пользовательский сценарий по его route.
 - При создании сложного корневого функционала, который меняет архитектурные правила или общий контракт между приложениями/пакетами, нужно создать отдельную понятную документацию в `docs/` на русском языке и добавить ссылку на нее в этот `AGENTS.md`. Документация должна объяснять контекст, источник истины, основные сценарии и правила для будущих агентов и людей.
 
 ## Структура
@@ -23,15 +28,26 @@
 - `apps/network-planner` - целевой Vue 3 remote для маршрутной сети.
 - `apps/events-news` - целевой Vue 3 remote для событий и новостей.
 - `apps/hr-facilities` - целевой Vue 3 remote для HR и объектов.
+- `bff` - Bun backend-for-frontend приложение, не MFE и не `apps/*`; модули для import/proxy/onboarding/game/fleet/routes/operations живут в `bff/src/modules`, правила BFF-first API, retry, onboarding и Fleet purchase endpoints и MVP overlays описаны в `docs/bff.md`.
 - `packages/air-ui` - Vue UI-kit, Tailwind theme tokens, Storybook.
 - `packages/game-sdk` - клиентский SDK для backend API.
 - `packages/eslint-config` - shared ESLint flat configs: `base`, `vue`, `svelte`.
 - `packages/event-bus` - целевой shared package для cross-MFE pub/sub.
 - `packages/api-contracts` - целевой shared package для OpenAPI -> TS types и Zod-схем.
-- `docs/FE.png` - целевая MFE-архитектура.
-- `docs/MFE-MF-CONNECT-EXAMPLE.png` - последовательность навигации Shell -> Vue Router -> Module Federation runtime -> remote app, включая кеширование remoteEntry и событие `mfe:ready`.
-- `docs/MFE_EXAMPLE.png` - пример cross-MFE сценария через singleton `event-bus`: выбор рейса/самолета на карте, обработка в Shell и подготовка виджета Fleet & Ops.
+- `docs/FE.png` - целевая MFE-архитектура. Реальная архитектурная схема в формате PlantUML описана в [docs/architecture-puml.md](file:///u:/DEV/airlinesim-kr/frontend/docs/architecture-puml.md).
+- `docs/MFE-MF-CONNECT-EXAMPLE.png` - последовательность навигации Shell -> Vue Router -> Module Federation runtime -> remote app, включая кеширование remoteEntry и событие `mfe:ready`. Реальная Mermaid-диаграмма логики описана в [docs/mfe-connection-sequence.md](file:///u:/DEV/airlinesim-kr/frontend/docs/mfe-connection-sequence.md).
+- `docs/MFE_EXAMPLE.png` - пример cross-MFE сценария через singleton `event-bus`: выбор рейса/самолета на карте, обработка в Shell и подготовка виджета Fleet & Ops. Реальная Mermaid-диаграмма логики описана в [docs/flight-selection-sequence.md](file:///u:/DEV/airlinesim-kr/frontend/docs/flight-selection-sequence.md).
 - `docs/mfe-routing.md` - спецификация маршрутизации между Shell и MFE: источник истины для route registry, порядок портов, события `event-bus`, публичные auth routes и правила навигации remote-приложений.
+- `docs/I18N.md` - спецификация мультиязычности RU/EN: источник локали, хранение строк, fallback и контракт Shell -> MFE.
+- `docs/TESTS.md` - правила создания и запуска тестов frontend-модулей.
+- `docs/bff.md` - спецификация Bun BFF: отдельное расположение вне `apps`, модули `import` и `proxy`, env и правила развития.
+- `docs/events-facilities-admin.md` - правила устойчивых events/notifications, общего airport constraint domain и admin security/readiness.
+- `docs/knowledge-base/` - markdown-источник пользовательской базы знаний; до реализации wiki UI новые инструкции для пользователей добавлять туда и связывать с соответствующими продуктовым сценариями.
+- `docs/map-state.md` - контракт BFF map-state и правила Shell-owned Dashboard -> Map remote visual widget.
+- `docs/passenger-demand-model.md` - реализованная модель пассажирского спроса, формулы, ограничения и связь с Grosche et al.
+- `docs/flight-load-model.md` - модель загрузки конкретного рейса (v2: эластичность + S-кривая частоты + spill), различие route-preview vs per-flight LF и ценообразование авто/оптимальная цена.
+- `docs/flight-phases.md` - синтез фаз рейса и косметической телеметрии (FL/скорость/топливо/пассажиры/ETA); разделение персистентного `status` и производного `phase`; контракт позиции борта на карте.
+- `docs/application-modules.md` - Mermaid-схема актуальных модулей приложения, BFF, backend и внешних источников.
 - `docs/swagger.yaml` - OpenAPI/Swagger контракт backend API; `docs/swagger.json` лежит рядом как fallback для генерации.
 - `docs/erd.txt` - доменная ERD модель.
 - `docs/to-be-enabled.md` - матрица shell admin страниц: что уже включено по OpenAPI, какие ERD-сущности пока disabled и условия их включения.
@@ -42,11 +58,13 @@ Shell лениво импортирует `World Map`, `Fleet & Ops`, `Finance &
 
 Целевые shared-пакеты из диаграммы: `event-bus`, `ui-kit`/`air-ui`, `api-contracts`, `game-sdk`.
 
-Shell routing должен оставаться URL-driven: sidebar/topbar меняют route, Shell определяет lazy remote по route и уже затем Module Federation подгружает нужный MFE. Для межмодульных действий использовать singleton `@airlinesim/event-bus`; примеры событий есть в `docs/MFE_EXAMPLE.png`, актуальная спецификация маршрутизации - в `docs/mfe-routing.md`.
+Shell routing должен оставаться URL-driven: sidebar/topbar меняют route, Shell определяет lazy remote по route и уже затем Module Federation подгружает нужный MFE. `/dashboard` принадлежит Shell и использует `apps/map` только как визуальный виджет с BFF `map-state`; правила контракта описаны в `docs/map-state.md`. Для межмодульных действий использовать singleton `@airlinesim/event-bus`; примеры событий есть в `docs/MFE_EXAMPLE.png`, актуальная спецификация маршрутизации - в `docs/mfe-routing.md`.
 
 `packages/api-contracts` генерируется из `docs/swagger.yaml` / `docs/swagger.json` и экспортирует backend контракты для `game-sdk` и remotes. Корневой `bun run dev` должен запускать генерацию OpenAPI контрактов до старта Turbo dev.
 
 Dev-порты приложений вычисляются из `VITE_DEV_PORT_BASE`: shell=`base`, map=`base+1`, fleet-ops=`base+2`, finance-stock=`base+3`, network-planner=`base+4`, events-news=`base+5`, hr-facilities=`base+6`. Для очистки занятых портов использовать `bun run ports:clear` из `frontend`.
+
+BFF не участвует в Module Federation, но входит в общий Turbo dev из `frontend`: корневой `bun run dev` запускает `@airlinesim/bff#dev` вместе с shell/remotes/packages. Для изолированного запуска можно использовать `bun --cwd bff run dev`; подробности в `docs/bff.md`.
 
 ## Styling
 

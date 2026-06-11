@@ -6,7 +6,6 @@
     import "maplibre-gl/dist/maplibre-gl.css";
 
     import ControlButton from "./Controls/ControlButton.svelte";
-    import ControlDropdown from "./Controls/ControlDropdown.svelte";
 
     let mapContainer: HTMLElement;
 
@@ -20,10 +19,6 @@
         theme?: "dark" | "light";
     } = $props();
 
-    const styleOptions = mapManager.AvailableStyles.map((style) => ({
-        label: style.name,
-        value: style.name,
-    }));
     let appliedTheme: "dark" | "light" | null = null;
 
     onMount((): void => {
@@ -46,7 +41,7 @@
 </script>
 
 <div
-    class="relative w-full h-screen bg-background transition-colors duration-300"
+    class="relative w-full h-full min-h-0 bg-background transition-colors duration-300"
     class:dark={mapManager.SelectedStyle.theme === "dark"}
 >
     <div bind:this={mapContainer} class="map-container"></div>
@@ -63,10 +58,6 @@
             <div
                 class="flex flex-col bg-surface/90 rounded-lg shadow-md overflow-hidden"
             >
-                <ControlDropdown
-                    options={styleOptions}
-                    change={(styleName) => mapManager.changeStyle(styleName)}
-                />
                 <ControlButton
                     click={() =>
                         mapManager.setGlobeProjection(!mapManager.Globe)}

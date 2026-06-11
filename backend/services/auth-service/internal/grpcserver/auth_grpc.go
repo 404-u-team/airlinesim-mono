@@ -54,3 +54,12 @@ func (s *authServer) VerifyToken(ctx context.Context, payload *authpb.VerifyToke
 
 	return verifyTokenResponse, nil
 }
+
+func (s *authServer) VerifyUser(ctx context.Context, payload *authpb.VerifyUserRequest) (*authpb.VerifyResponse, error) {
+	verifyUserResponse, err := s.authService.VerifyUser(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return verifyUserResponse, nil
+}

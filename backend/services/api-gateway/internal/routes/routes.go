@@ -73,6 +73,8 @@ func SetupRoutes(authClient *grpcclient.AuthClient, operationsClient *grpcclient
 				adminOnly.DELETE("/airport/:id", operationsHandler.DeleteAirport)
 
 				adminOnly.POST("/aircraft-types", fleetHandler.CreateAircraftType)
+
+				adminOnly.POST("/airline/:id/adjust-balance", airlineHandler.AdjustAirlineBalance)
 			}
 		}
 	}

@@ -12,16 +12,24 @@ Shell владеет историей браузера. Remote-приложен�
 
 | Префикс | Путь по умолчанию | Remote |
 | --- | --- | --- |
-| `/dashboard` | `/dashboard` | `map` |
 | `/fleet` | `/fleet/overview` | `fleet-ops` |
-| `/airports` | `/airports/hubs` | `network-planner` |
+| `/airports` | `/airports/routes` | `network-planner` |
 | `/operations` | `/operations/live-flights` | `fleet-ops` |
 | `/finances` | `/finances/overview` | `finance-stock` |
+| `/events` | `/events/feed` | `events-news` |
 | `/staff` | `/staff/overview` | `hr-facilities` |
-| `/settings` | `/settings/company` | `events-news` |
+
+`/settings/system` является shell-owned route. `events-news` больше не используется как settings remote.
+
+`/dashboard` является shell-owned route. Shell сам загружает dashboard summary и map-state из BFF, а `apps/map` монтируется внутри Dashboard как визуальный remote-виджет. Это исключение сделано потому, что Dashboard владеет глобальными CTA, прогрессом разделов, статусом компании и общей навигацией.
 
 Навигация боковой панели, guards маршрутов и резолвинг remote должны использовать этот реестр.
 Не дублируйте сопоставление prefix-to-remote в remote-приложениях.
+
+`ShellRemoteView` всегда определяет remote по текущему `route.path`. `route.meta.remoteId` нельзя
+использовать как источник истины: Vue Router переиспользует один экземпляр `ShellRemoteView` между
+route-record разных MFE, и metadata предыдущего record может привести к показу старого remote после
+смены URL.
 
 ## Поток навигации
 

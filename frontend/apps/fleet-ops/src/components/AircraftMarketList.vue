@@ -1,0 +1,105 @@
+<script setup lang="ts">
+import { AirBadge, AirPagination } from "@airlinesim/air-ui";
+import { computed, ref, watch } from "vue";
+
+import type { FleetMarketAircraftType, FleetReason } from "../types";
+
+const props = defineProps<{
+  formatMoney: (value: number | undefined) => string;
+  formatNumber: (value: number | undefined) => string;
+  reasonLabel: (reason: FleetReason) => string;
+  selectedTypeId: string;
+  statusLabel: (status: FleetMarketAircraftType["compatibility"]["status"]) => string;
+  statusVariant: (
+    status: FleetMarketAircraftType["compatibility"]["status"],
+  ) => "danger-soft" | "primary-soft" | "success-soft" | "warning-soft";
+  t: (key: string) => string;
+  types: FleetMarketAircraftType[];
+}>();
+
+const emit = defineEmits<{
+  "select-type": [type: FleetMarketAircraftType];
+}>();
+
+const PAGE_SIZE = 8;
+const page = ref(1);
+
+watch(
+  () => props.types,
+  () => {
+    page.value = 1;
+  },
+);
+
+const paginatedTypes = computed(() => {
+  const start = (page.value - 1) * PAGE_SIZE;
+
+  return props.types.slice(start, start + PAGE_SIZE);
+});
+</script>
+
+<template>
+  <div class="flex flex-col gap-4">
+    <div class="overflow-hidden rounded-lg border border-border bg-surface">
+      <button
+        v-for="type in paginatedTypes"
+        :key="type.id"
+        class="flex w-full min-w-0 items-center gap-3 border-b border-border px-3 py-2.5 text-left transition last:border-b-0 hover:bg-background"
+        :class="selectedTypeId === type.id ? 'bg-background font-medium' : ''"
+        type="button"
+        @click="emit('select-type', type)"
+      >
+        <span class="grid size-10 shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-background text-caption text-text-muted">
+          <img
+            v-if="type.image_url"
+            :alt="type.model_name || 'Aircraft type'"
+            class="size-full object-cover"
+            loading="lazy"
+            :src="type.image_url"
+          />
+          <template v-else>{{ type.icao_code || "----" }}</template>
+        </span>
+
+        <span class="min-w-0 flex-1">
+          <span class="flex min-w-0 items-center gap-2">
+            <span class="truncate text-subtitle">{{ type.model_name || "Aircraft type" }}</span>
+            <span class="shrink-0 text-caption text-text-muted">{{ type.icao_code || "----" }}</span>
+          </span>
+          <span class="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-caption text-text-muted">
+            <span>{{ formatNumber(type.max_planned_seat_capacity) }} {{ t("metric.seats") }}</span>
+            <span>{{ formatNumber(type.max_range_km) }} {{ t("unit.km") }}</span>
+            <span>{{ formatNumber(type.min_runway_length_m) }} {{ t("unit.m") }}</span>
+          </span>
+        </span>
+
+        <span class="flex shrink-0 flex-col items-end gap-1">
+          <span class="text-subtitle">{{ formatMoney(type.price_per_unit) }}</span>
+          <AirBadge
+            :label="statusLabel(type.compatibility.status)"
+            size="sm"
+            :variant="statusVariant(type.compatibility.status)"
+          />
+        </span>
+      </button>
+
+      <p
+        v-if="types.length === 0"
+        class="p-5 text-text-muted"
+      >
+        {{ t("market.empty") }}
+      </p>
+    </div>
+
+    <!-- Pagination controls -->
+    <div
+      v-if="types.length > PAGE_SIZE"
+      class="flex justify-end rounded-lg border border-border bg-surface p-2"
+    >
+      <AirPagination
+        v-model:page="page"
+        :page-size="PAGE_SIZE"
+        :total-items="types.length"
+      />
+    </div>
+  </div>
+</template>

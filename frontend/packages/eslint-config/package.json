@@ -10,7 +10,8 @@
   },
   "scripts": {
     "lint": "eslint . --max-warnings=0",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "bun test"
   },
   "dependencies": {
     "@eslint/js": "latest",

@@ -1,17 +1,57 @@
 <script setup lang="ts">
-import { AirIconButton } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
+import { type Locale, translate } from "@airlinesim/i18n";
 import { Bell, LogOut, Menu, Search, UserRound } from "@lucide/vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
 
 import { logout } from "../auth";
-import { statusMetrics } from "../navigation";
+import { dashboardState } from "../dashboard/state";
+import { fuelState } from "../fuel/state";
+import { type ShellMessageKey, shellMessages } from "../i18n/messages";
+import { getStatusMetrics } from "../navigation";
+
+const props = defineProps<{
+  appLocale: Locale;
+  unreadNotifications: number;
+}>();
 
 defineEmits<{
   "toggle-menu": [];
 }>();
 
 const router = useRouter();
+const t = computed(() => (key: ShellMessageKey): string =>
+  translate(shellMessages, props.appLocale, key),
+);
+const now = ref(new Date());
+const statusMetrics = computed(() =>
+  getStatusMetrics(t.value, dashboardState.statusSummary.value, fuelState.current.value, props.appLocale),
+);
+const formattedNow = computed(() =>
+  new Intl.DateTimeFormat(props.appLocale, {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "2-digit",
+    timeZone: "UTC",
+    timeZoneName: "short",
+    year: "numeric",
+  }).format(now.value),
+);
+let clockTimer: null | ReturnType<typeof setInterval> = null;
+
+onMounted(() => {
+  clockTimer = setInterval(() => {
+    now.value = new Date();
+  }, 30_000);
+});
+
+onUnmounted(() => {
+  if (clockTimer) {
+    clearInterval(clockTimer);
+  }
+});
 
 function requestPanel(panel: "notifications" | "profile"): void {
   airlineSimEventBus.emit("shell:panel-requested", {
@@ -27,14 +67,15 @@ function signOut(): void {
 
 <template>
   <header class="flex h-14 shrink-0 items-center border-b border-border bg-surface px-3 text-text-primary sm:px-5">
-    <AirIconButton
-      class="lg:hidden"
-      label="Open menu"
-      size="sm"
+    <button
+      type="button"
+      class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-text-primary transition hover:bg-surface-subtle lg:hidden"
+      :aria-label="t('topbar.menu')"
+      :title="t('topbar.menu')"
       @click="$emit('toggle-menu')"
     >
       <Menu :size="20" />
-    </AirIconButton>
+    </button>
 
     <div class="ml-2 hidden min-w-0 items-center gap-6 md:flex">
       <div
@@ -64,7 +105,7 @@ function signOut(): void {
         />
         <input
           class="min-w-0 flex-1 bg-transparent text-body text-text-primary outline-none placeholder:text-text-muted"
-          placeholder="Search aircraft, routes, airport..."
+          :placeholder="t('search.placeholder')"
           type="search"
         />
         <kbd class="rounded border border-border bg-surface px-1.5 py-0.5 text-caption text-text-muted">
@@ -73,25 +114,30 @@ function signOut(): void {
       </label>
 
       <div class="hidden whitespace-nowrap text-monospace text-text-muted sm:block">
-        14:36 UTC · 03.12.2025
+        {{ formattedNow }}
       </div>
 
       <button
         class="relative inline-flex size-9 items-center justify-center rounded-lg text-text-muted transition hover:bg-surface-subtle hover:text-text-primary"
         type="button"
-        aria-label="Notifications"
-        title="Notifications"
+        :aria-label="t('topbar.notifications')"
+        :title="t('topbar.notifications')"
         @click="requestPanel('notifications')"
       >
         <Bell :size="18" />
-        <span class="absolute right-1.5 top-1.5 size-2 rounded-full bg-error" />
+        <span
+          v-if="unreadNotifications > 0"
+          class="absolute -right-1 -top-1 min-w-4 rounded-full bg-error px-1 text-center text-[10px] font-semibold leading-4 text-white"
+        >
+          {{ unreadNotifications > 99 ? "99+" : unreadNotifications }}
+        </span>
       </button>
 
       <button
         class="inline-flex size-9 items-center justify-center rounded-lg text-text-muted transition hover:bg-surface-subtle hover:text-text-primary"
         type="button"
-        aria-label="Profile"
-        title="Profile"
+        :aria-label="t('topbar.profile')"
+        :title="t('topbar.profile')"
         @click="requestPanel('profile')"
       >
         <UserRound :size="18" />
@@ -100,8 +146,8 @@ function signOut(): void {
       <button
         class="inline-flex size-9 items-center justify-center rounded-lg text-text-muted transition hover:bg-surface-subtle hover:text-text-primary"
         type="button"
-        aria-label="Sign out"
-        title="Sign out"
+        :aria-label="t('topbar.signOut')"
+        :title="t('topbar.signOut')"
         @click="signOut"
       >
         <LogOut :size="18" />

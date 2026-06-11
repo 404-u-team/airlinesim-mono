@@ -14,6 +14,7 @@ const ignores = [
   "**/.storybook-static/**",
   "**/storybook-static/**",
   "**/*.d.ts",
+  "**/tests/**",
 ];
 
 const languageGlobals = {
@@ -50,6 +51,7 @@ export default tseslint.config(
       "func-style": ["error", "declaration", { allowArrowFunctions: true }],
       "import-x/no-cycle": "error",
       "import-x/no-extraneous-dependencies": "error",
+      "import-x/no-unresolved": ["error", { ignore: ["^bun:test$"] }],
 
       "logical-assignment-operators": ["error", "always"],
       "max-depth": ["error", 3],

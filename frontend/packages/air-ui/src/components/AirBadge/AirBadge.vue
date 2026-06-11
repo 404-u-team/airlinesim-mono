@@ -27,14 +27,14 @@ const props = withDefaults(
 );
 
 const variantClasses: Record<BadgeVariant, string> = {
-  danger: "bg-error text-white",
-  "danger-soft": "bg-error-bg text-slate-950",
+  danger: "bg-error text-on-error",
+  "danger-soft": "bg-error-bg text-on-error-soft",
   primary: "bg-primary text-on-primary",
   "primary-soft": "bg-primary-soft text-on-primary-soft",
-  success: "bg-success text-white",
-  "success-soft": "bg-success-bg text-slate-950",
-  warning: "bg-warning text-white",
-  "warning-soft": "bg-warning-bg text-slate-950",
+  success: "bg-success text-on-success",
+  "success-soft": "bg-success-bg text-on-success-soft",
+  warning: "bg-warning text-on-warning",
+  "warning-soft": "bg-warning-bg text-on-warning-soft",
 };
 
 const sizeClasses: Record<BadgeSize, string> = {

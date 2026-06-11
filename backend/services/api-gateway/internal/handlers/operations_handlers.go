@@ -312,7 +312,7 @@ func (h *OperationsHandler) ChangeRegionLink(c *gin.Context) {
 // @Failure      400  {object}  dto.ErrorResponse "1 - request validation error, 2 - country with such country_id dont exists, 3 - region with such region_id dont exists"
 // @Failure      401  "Unauthorized"
 // @Failure      403  "Forbidden"
-// @Failure      409  "Airport with such ICAO/IATA already exists"
+// @Failure      409  {object}  dto.ErrorResponse "4 - airport with such ICAO already exists, 5 - airport with such IATA already exists"
 // @Failure      500 "Internal server error"
 // @Router       /airport [post]
 func (h *OperationsHandler) CreateAirport(c *gin.Context) {
@@ -336,8 +336,12 @@ func (h *OperationsHandler) CreateAirport(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 3})
 			return
 		}
-		if errors.Is(err, customerrors.ErrAirportIcaoConflict) || errors.Is(err, customerrors.ErrAirportIataConflict) {
-			c.Status(http.StatusConflict)
+		if errors.Is(err, customerrors.ErrAirportIcaoConflict) {
+			c.JSON(http.StatusConflict, dto.ErrorResponse{ErrorCode: 4})
+			return
+		}
+		if errors.Is(err, customerrors.ErrAirportIataConflict) {
+			c.JSON(http.StatusConflict, dto.ErrorResponse{ErrorCode: 5})
 			return
 		}
 		log.Println("got error when tried to gRPC create airport, ", err)
@@ -361,7 +365,7 @@ func (h *OperationsHandler) CreateAirport(c *gin.Context) {
 // @Failure      401  "Unauthorized"
 // @Failure      403  "Forbidden"
 // @Failure      404  "Airport not found"
-// @Failure      409  "Airport conflict"
+// @Failure      409  {object}  dto.ErrorResponse "4 - airport with such ICAO already exists, 5 - airport with such IATA already exists"
 // @Failure      500  "Internal server error"
 // @Router       /airport/{id} [put]
 func (h *OperationsHandler) ChangeAirport(c *gin.Context) {
@@ -390,8 +394,12 @@ func (h *OperationsHandler) ChangeAirport(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, dto.ErrorResponse{ErrorCode: 3})
 			return
 		}
-		if errors.Is(err, customerrors.ErrAirportIcaoConflict) || errors.Is(err, customerrors.ErrAirportIataConflict) {
-			c.Status(http.StatusConflict)
+		if errors.Is(err, customerrors.ErrAirportIcaoConflict) {
+			c.JSON(http.StatusConflict, dto.ErrorResponse{ErrorCode: 4})
+			return
+		}
+		if errors.Is(err, customerrors.ErrAirportIataConflict) {
+			c.JSON(http.StatusConflict, dto.ErrorResponse{ErrorCode: 5})
 			return
 		}
 		log.Println("got error when tried to gRPC change airport, ", err)

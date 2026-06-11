@@ -42,6 +42,10 @@ func (c *AirlineClient) GetAirlineByOwnerID(ctx context.Context, req *airlinepb.
 	return c.client.GetAirlineByOwnerID(ctx, req)
 }
 
+func (c *AirlineClient) AdjustBalance(ctx context.Context, req *airlinepb.AdjustBalanceRequest) (*airlinepb.AdjustBalanceResponse, error) {
+	return c.client.AdjustBalance(ctx, req)
+}
+
 func (c *AirlineClient) UpdateAirline(ctx context.Context, req *airlinepb.UpdateAirlineRequest) (*airlinepb.AirlineResponse, error) {
 	return c.client.UpdateAirline(ctx, req)
 }

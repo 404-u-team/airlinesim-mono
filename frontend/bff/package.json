@@ -1,0 +1,30 @@
+{
+  "name": "@airlinesim/bff",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "generate:openapi": "bun src/scripts/generate-openapi.ts",
+    "import:world-data": "bun src/modules/import/cli.ts --import",
+    "import:world-data:dry-run": "bun src/modules/import/cli.ts",
+    "lint": "eslint . --max-warnings=0 && tsc --noEmit",
+    "lint:fix": "eslint . --fix",
+    "start": "bun src/server.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "js-yaml": "^4.2.0",
+    "papaparse": "^5.5.3",
+    "sharp": "^0.34.5",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "@airlinesim/eslint-config": "workspace:*",
+    "@types/bun": "latest",
+    "@types/js-yaml": "^4.0.9",
+    "@types/papaparse": "^5.5.2",
+    "eslint": "latest",
+    "typescript": "~6.0.2"
+  }
+}
