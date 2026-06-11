@@ -14,19 +14,19 @@ type MockAirport = {
   coordinates: [number, number];
   iata: string;
   label: string;
-  role: "hub" | "route_destination";
+  role: "base" | "opportunity";
 };
 
 const MOCK_AIRPORTS: MockAirport[] = [
-  { coordinates: [126.4407, 37.4602], iata: "ICN", label: "Seoul Incheon", role: "hub" },
-  { coordinates: [139.7811, 35.5494], iata: "HND", label: "Tokyo Haneda", role: "route_destination" },
-  { coordinates: [103.9893, 1.3644], iata: "SIN", label: "Singapore Changi", role: "route_destination" },
-  { coordinates: [55.3644, 25.2528], iata: "DXB", label: "Dubai Intl", role: "route_destination" },
-  { coordinates: [-0.4543, 51.47], iata: "LHR", label: "London Heathrow", role: "route_destination" },
-  { coordinates: [37.4146, 55.9726], iata: "SVO", label: "Moscow Sheremetyevo", role: "route_destination" },
-  { coordinates: [-73.7781, 40.6413], iata: "JFK", label: "New York JFK", role: "route_destination" },
-  { coordinates: [-118.4085, 33.9416], iata: "LAX", label: "Los Angeles Intl", role: "route_destination" },
-  { coordinates: [151.1772, -33.9461], iata: "SYD", label: "Sydney", role: "route_destination" },
+  { coordinates: [126.4407, 37.4602], iata: "ICN", label: "Seoul Incheon", role: "base" },
+  { coordinates: [139.7811, 35.5494], iata: "HND", label: "Tokyo Haneda", role: "opportunity" },
+  { coordinates: [103.9893, 1.3644], iata: "SIN", label: "Singapore Changi", role: "opportunity" },
+  { coordinates: [55.3644, 25.2528], iata: "DXB", label: "Dubai Intl", role: "opportunity" },
+  { coordinates: [-0.4543, 51.47], iata: "LHR", label: "London Heathrow", role: "base" },
+  { coordinates: [37.4146, 55.9726], iata: "SVO", label: "Moscow Sheremetyevo", role: "opportunity" },
+  { coordinates: [-73.7781, 40.6413], iata: "JFK", label: "New York JFK", role: "opportunity" },
+  { coordinates: [-118.4085, 33.9416], iata: "LAX", label: "Los Angeles Intl", role: "base" },
+  { coordinates: [151.1772, -33.9461], iata: "SYD", label: "Sydney", role: "opportunity" },
 ];
 
 // Маршруты из хаба ICN и пара межконтинентальных дуг.
