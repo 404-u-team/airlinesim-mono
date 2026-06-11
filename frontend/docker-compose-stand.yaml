@@ -18,7 +18,6 @@ services:
       - airlinesim_internal
 
   web:
-    image: airlinesim-frontend-web
     container_name: airlinesim-frontend-web
     build:
       context: .
