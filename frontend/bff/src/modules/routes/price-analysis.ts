@@ -5,8 +5,13 @@ import type { StoredRoute } from "./types";
 import { estimateFlightFinancials, type FlightLeg } from "../operations/flights";
 import { referenceFare } from "../operations/passenger-load";
 
-// Flat fee charged for one optimal-price analysis (debited to the airline ledger).
-export const PRICE_ANALYSIS_FEE = 50_000;
+// The analysis is priced as a slice of the route's annual revenue potential, so a
+// thick trunk route costs meaningfully more to analyse than a thin regional one. A
+// flat fee felt like nothing against a large airline's turnover.
+export const PRICE_ANALYSIS_MIN_FEE = 50_000;
+export const PRICE_ANALYSIS_MAX_FEE = 2_000_000;
+const PRICE_ANALYSIS_FEE_RATE = 0.015;
+const WEEKS_PER_YEAR = 52;
 
 // Fare search grid, as multipliers of the distance-based reference fare.
 const GRID_MIN = 0.4;
@@ -44,7 +49,7 @@ export function analyzeRoutePrice(
 
   return {
     currency: "USD",
-    fee: PRICE_ANALYSIS_FEE,
+    fee: priceAnalysisFee(route, type, origin, destination),
     flights_per_week: daysPerWeek,
     // Return-leg economics fly destination → origin; demand is selected by `leg`.
     outbound: adviseLeg(route, type, origin, destination, daysPerWeek, "outbound"),
@@ -52,14 +57,34 @@ export function analyzeRoutePrice(
   };
 }
 
+// The analysis fee scales with the route's annual revenue potential at the free
+// reference fare (a stable, fare-override-independent baseline), clamped to a floor
+// and a cap. Charging a fraction of what the route earns keeps the fee meaningful for
+// big airlines without punishing thin routes.
+export function priceAnalysisFee(
+  route: StoredRoute,
+  type: AircraftType,
+  origin: Airport,
+  destination: Airport,
+): number {
+  const daysPerWeek = Math.max(1, route.base_frequency_per_week || 3);
+  const reference = referenceFare(route.demand_snapshot.distance_km);
+  const outbound = financialsAtFare(route, type, origin, destination, daysPerWeek, "outbound", reference);
+  const inbound = financialsAtFare(route, type, destination, origin, daysPerWeek, "return", reference);
+  const annualRevenue = (outbound.revenue + inbound.revenue) * daysPerWeek * WEEKS_PER_YEAR;
+  const fee = annualRevenue * PRICE_ANALYSIS_FEE_RATE;
+
+  return Math.round(Math.max(PRICE_ANALYSIS_MIN_FEE, Math.min(PRICE_ANALYSIS_MAX_FEE, fee)));
+}
+
 // A flat debit charged for one analysis. Unique idempotency key per call so every
 // paid analysis is recorded (never deduped away).
-export function priceAnalysisFeeTransaction(airlineId: string, routeId: string): LedgerTransaction {
+export function priceAnalysisFeeTransaction(airlineId: string, routeId: string, fee: number): LedgerTransaction {
   const now = new Date().toISOString();
 
   return {
     airline_id: airlineId,
-    amount: PRICE_ANALYSIS_FEE,
+    amount: fee,
     category: "system",
     created_at: now,
     currency: "USD",

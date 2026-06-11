@@ -8,7 +8,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import type { FleetMessageKey } from "../i18n";
 import type { FlightDetail, FlightDetailResponse } from "../types";
 
-import { getFlightDetail } from "../api";
+import { cancelFlight, getFlightDetail } from "../api";
 import { formatMoneyValue, formatNumberValue } from "../formatters";
 
 const props = defineProps<{
@@ -20,6 +20,7 @@ const props = defineProps<{
 const detail = ref<FlightDetailResponse | null>(null);
 const error = ref("");
 const isLoading = ref(false);
+const isCancelling = ref(false);
 const now = ref(Date.now());
 let ticker: null | ReturnType<typeof setInterval> = null;
 let refresh: null | ReturnType<typeof setInterval> = null;
@@ -104,6 +105,22 @@ function back(): void {
   airlineSimEventBus.emit("navigation:intent", { source: "mfe", targetPath: "/operations/live-flights" });
 }
 
+async function cancel(): Promise<void> {
+  if (!props.flightId || isCancelling.value) {
+    return;
+  }
+  isCancelling.value = true;
+  try {
+    await cancelFlight(props.flightId);
+    await load();
+  } catch (cancelError) {
+    error.value = cancelError instanceof Error ? cancelError.message : "Could not cancel flight.";
+  } finally {
+    // eslint-disable-next-line require-atomic-updates
+    isCancelling.value = false;
+  }
+}
+
 function clearTimer(timer: null | ReturnType<typeof setInterval>): void {
   if (timer !== null) {
     clearInterval(timer);
@@ -173,10 +190,25 @@ async function load(): Promise<void> {
               {{ t("flight.detail.subtitle") }}
             </p>
           </div>
-          <AirBadge
-            :label="statusBadge.label"
-            :variant="statusBadge.variant"
-          />
+          <div class="flex items-center gap-2">
+            <AirButton
+              v-if="flight.status === 'scheduled' || flight.status === 'boarding'"
+              :label="t('action.cancel')"
+              size="sm"
+              variant="danger-soft"
+              :disabled="isCancelling"
+              @click="cancel"
+            />
+            <AirBadge
+              v-if="flight.out_of_position"
+              :label="t('warning.AIRCRAFT_OUT_OF_POSITION')"
+              variant="danger-soft"
+            />
+            <AirBadge
+              :label="statusBadge.label"
+              :variant="statusBadge.variant"
+            />
+          </div>
         </header>
 
         <section class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">

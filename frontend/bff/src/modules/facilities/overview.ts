@@ -8,8 +8,24 @@ import { aircraftStateConstraints, airportDataConstraints, arrivalLocalTime, nig
 import { airportCostProfile } from "./costs";
 import { buildSlotCapacity, slotCapacityConstraints } from "./slots";
 
-export function buildBaseFacilitiesOverview(snapshot: OperationsSnapshot): BaseFacilitiesOverview {
-  const base = snapshot.airports.find((airport) => airport.id === snapshot.airline.starting_airport_id);
+export function buildBaseFacilitiesOverview(
+  snapshot: OperationsSnapshot,
+  hubAirportIds: string[] = [],
+  selectedAirportId?: string,
+): BaseFacilitiesOverview {
+  const baseAirportId = snapshot.airline.starting_airport_id ?? "";
+  // The base is always selectable; purchased hubs (if any) are layered on top so the
+  // player can inspect the infrastructure of any owned airport, not just the home base.
+  const hubIds = hubAirportIds.length > 0 ? hubAirportIds : [baseAirportId];
+  const hubs = hubIds
+    .map((id) => snapshot.airports.find((airport) => airport.id === id))
+    .filter((airport): airport is Airport => Boolean(airport?.id))
+    .map((airport) => ({ airport_id: airport.id ?? "", is_base: airport.id === baseAirportId, label: airportLabel(airport) }));
+  // Fall back to the base when the requested airport isn't an owned hub.
+  const targetId = selectedAirportId && hubs.some((hub) => hub.airport_id === selectedAirportId)
+    ? selectedAirportId
+    : baseAirportId;
+  const base = snapshot.airports.find((airport) => airport.id === targetId);
   const basedAircraft = snapshot.aircrafts.filter((aircraft) => aircraft.base_airport_id === base?.id);
   const typeById = new Map(snapshot.aircraftTypes.map((type) => [type.id, type]));
   const compatibility = basedAircraft.map((aircraft) => {
@@ -44,6 +60,7 @@ export function buildBaseFacilitiesOverview(snapshot: OperationsSnapshot): BaseF
     base_airport: base ? { ...base, label: airportLabel(base) } : null,
     constraints: dedupe(constraints),
     costs: airportCostProfile(base),
+    hubs,
     next_actions: nextActions(Boolean(base), compatibility.length, constraints),
     night_operations: {
       affected_schedules: affectedSchedules,
@@ -55,6 +72,7 @@ export function buildBaseFacilitiesOverview(snapshot: OperationsSnapshot): BaseF
       incompatible_owned_aircraft: compatibility.filter((item) => !item.compatible).length,
       max_length_m: base?.max_runway_length_m ?? 0,
     },
+    selected_airport_id: base?.id ?? null,
     slots,
     status: getStatus(base, constraints),
   };

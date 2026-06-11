@@ -252,7 +252,15 @@ export async function handleGameRequest(
   }
 
   if (url.pathname === "/game/facilities-overview") {
-    return jsonResponse(buildBaseFacilitiesOverview(await loadFacilitiesSnapshot(request, config)));
+    const facilitiesSnapshot = await loadFacilitiesSnapshot(request, config);
+    const stored = await listHubsForAirline(facilitiesSnapshot.airline.id ?? "");
+    const hubAirportIds = [facilitiesSnapshot.airline.starting_airport_id ?? "", ...stored.map((hub) => hub.airport_id)];
+
+    return jsonResponse(buildBaseFacilitiesOverview(
+      facilitiesSnapshot,
+      hubAirportIds,
+      url.searchParams.get("airport_id") ?? undefined,
+    ));
   }
 
   if (url.pathname === "/game/events-feed") {

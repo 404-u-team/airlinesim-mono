@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { AirButton } from "@airlinesim/air-ui";
 import { type Locale, translate } from "@airlinesim/i18n";
-import { ArrowRight, RefreshCw } from "@lucide/vue";
-import { computed } from "vue";
+import { ArrowRight, RefreshCw, X } from "@lucide/vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 
 import type { DashboardSummary } from "./types";
@@ -25,6 +25,14 @@ const t = computed(() => (key: ShellMessageKey): string =>
 );
 const actionKey = computed(() => props.summary.next_action.code.toLowerCase() as Lowercase<typeof props.summary.next_action.code>);
 
+const isHidden = ref(false);
+
+onMounted(() => {
+  if (window.localStorage.getItem("hide_dashboard_next_action") === "true") {
+    isHidden.value = true;
+  }
+});
+
 function goToNextAction(): void {
   void router.push(props.summary.next_action.target_path);
 }
@@ -36,10 +44,22 @@ function goToSecondaryAction(): void {
     void router.push(path);
   }
 }
+
+function hidePanel(): void {
+  isHidden.value = true;
+  window.localStorage.setItem("hide_dashboard_next_action", "true");
+}
 </script>
 
 <template>
-  <section class="rounded-lg border border-border bg-surface p-5">
+  <section v-show="!isHidden" class="rounded-lg border border-border bg-surface p-5 pr-10">
+    <button
+      class="absolute right-3 top-3 text-text-muted transition-colors hover:text-text-neutral"
+      type="button"
+      @click="hidePanel"
+    >
+      <X :size="20" />
+    </button>
     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div class="min-w-0">
         <p class="text-caption text-text-muted">

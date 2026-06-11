@@ -127,7 +127,7 @@ function dayLabels(days: number[]): string {
       <AirButton
         class="mt-3 w-full"
         :disabled="isAnalyzing"
-        :label="isAnalyzing ? '...' : `${t('detail.analysis.run')} · ${formatMoney(analysis?.fee ?? 50000)}`"
+        :label="isAnalyzing ? '...' : analysis ? `${t('detail.analysis.run')} · ${formatMoney(analysis.fee)}` : `${t('detail.analysis.run')} · ${t('detail.analysis.feeFrom')} ${formatMoney(50000)}`"
         variant="warning"
         @click="emit('analyze')"
       />

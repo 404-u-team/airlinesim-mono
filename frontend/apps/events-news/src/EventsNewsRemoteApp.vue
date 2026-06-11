@@ -8,7 +8,7 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import type { EventItem, EventsResponse, NotificationItem } from "./types";
 
 import { getEvents, getNotifications, ignoreNotification, markAllRead, markRead } from "./api";
-import { type EventMessageKey, t } from "./i18n";
+import { type EventMessageKey, eventMessages, t } from "./i18n";
 
 const props = withDefaults(defineProps<{
   appLocale?: Locale;
@@ -82,7 +82,16 @@ function humanizeParams(parameters: Record<string, boolean | number | string>): 
   return Object.entries(parameters)
     .filter(([key]) => key !== "notification_code" && !key.endsWith("_id"))
     .slice(0, 4)
-    .map(([key, value]) => `${titleize(key)}: ${formatValue(value)}`)
+    .map(([key, value]) => {
+      const translatedKey = (eventMessages[props.appLocale] as Record<string, string>)[`param.${key}`];
+      const label = translatedKey || titleize(key);
+
+      const displayValue = typeof value === "string"
+        ? ((eventMessages[props.appLocale] as Record<string, string>)[`param.value.${value}`] || value)
+        : formatValue(value);
+
+      return `${label}: ${displayValue}`;
+    })
     .join(" · ");
 }
 

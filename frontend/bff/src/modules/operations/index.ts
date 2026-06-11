@@ -16,6 +16,7 @@ import { recordCompletedFlightEvents, recordScheduleReplacedEvent } from "./flig
 import { flightAircraftSummary, flightTelemetryFor } from "./flight-read";
 import { updateFlightStatuses } from "./flights";
 import { dedupeGeneratedFlights, loadOperationsSnapshot } from "./load";
+import { cancelFlight } from "./flight-cancel";
 import { buildSchedulePreview, createScheduleFromPreview, type OperationsSnapshot } from "./planning";
 import { normalizeReplaceBlocks, replaceAircraftSchedule, type ReplaceScheduleRequest } from "./schedule-replace";
 import { deleteFutureFlightsForSchedules, deleteSchedulesForAircraft, saveFlights, saveSchedule } from "./storage";
@@ -163,6 +164,11 @@ async function flightRequest(request: Request, url: URL, config: BffConfig): Pro
   const completeMatch = /^\/operations\/flights\/([^/]+)\/complete$/.exec(url.pathname);
   if (request.method === "POST" && completeMatch?.[1]) {
     return completeFlight(request, config, decodeURIComponent(completeMatch[1]));
+  }
+
+  const cancelMatch = /^\/operations\/flights\/([^/]+)\/cancel$/.exec(url.pathname);
+  if (request.method === "POST" && cancelMatch?.[1]) {
+    return cancelFlight(request, config, decodeURIComponent(cancelMatch[1]));
   }
 
   const detailMatch = /^\/operations\/flights\/([^/]+)$/.exec(url.pathname);

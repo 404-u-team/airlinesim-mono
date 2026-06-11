@@ -34,6 +34,10 @@ export type FleetMarketFilters = {
   sort?: string;
 };
 
+export async function cancelFlight(id: string): Promise<{ flight: unknown }> {
+  return apiClient.post<{ flight: unknown }>(`/operations/flights/${encodeURIComponent(id)}/cancel`, {});
+}
+
 export async function completeFlight(id: string): Promise<{ flight: unknown }> {
   return apiClient.post<{ flight: unknown }>(`/operations/flights/${encodeURIComponent(id)}/complete`, {});
 }

@@ -45,11 +45,31 @@ const airportFees = computed(() => {
 
   return (airport.runway_fee ?? 0) + (airport.gate_fee ?? 0) + (airport.stand_fee ?? 0);
 });
+
+function hasRouteTo(item: RouteOpportunityItem): boolean {
+  if (item.existing_route_id) {
+    return true;
+  }
+  if (!item.destination_airport.id) {
+    return false;
+  }
+  return props.existingRoutes.some(
+    (route) =>
+      (route.origin_airport_id === originId.value && route.destination_airport_id === item.destination_airport.id) ||
+      (route.destination_airport_id === originId.value && route.origin_airport_id === item.destination_airport.id),
+  );
+}
+
 const destinationOptions = computed<AirComboboxOption[]>(() => {
   const text = query.value.trim().toLowerCase();
 
   return opportunities.value
-    .filter((item) => !text || optionText(item).toLowerCase().includes(text))
+    .filter((item) => {
+      if (!text) {
+        return hasRouteTo(item);
+      }
+      return optionText(item).toLowerCase().includes(text);
+    })
     .slice(0, 60)
     .map((item) => ({
       label: `${item.destination_airport.iata_code ?? "---"} - ${item.destination_airport.label}`,
@@ -118,7 +138,9 @@ function resolveRoute(): void {
     return;
   }
   const existing = props.existingRoutes.find(
-    (route) => route.origin_airport_id === originId.value && route.destination_airport_id === destinationId.value,
+    (route) => 
+      (route.origin_airport_id === originId.value && route.destination_airport_id === destinationId.value) ||
+      (route.destination_airport_id === originId.value && route.origin_airport_id === destinationId.value),
   );
   if (existing) {
     emit("route-resolved", existing);

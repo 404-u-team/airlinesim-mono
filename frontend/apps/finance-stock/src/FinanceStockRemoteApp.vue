@@ -124,6 +124,7 @@ function transactionLabel(code: string): string {
     FINANCE_FUEL_COST: "transactionFuelCost",
     FINANCE_HUB_ESTABLISHMENT: "transactionHubEstablishment",
     FINANCE_MAINTENANCE_RESERVE: "transactionMaintenanceReserve",
+    FINANCE_PRICE_ANALYSIS_FEE: "transactionPriceAnalysisFee",
     FINANCE_SYSTEM_ADJUSTMENT: "transactionSystemAdjustment",
   } as const;
   return code in keys ? t.value(keys[code as keyof typeof keys]) : code.replaceAll("_", " ");

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Locale } from "@airlinesim/i18n";
 
-import { AirBadge, AirButton, AirMetricCard } from "@airlinesim/air-ui";
+import { AirBadge, AirButton, AirMetricCard, AirSelect } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
 import { ApiRequestError } from "@airlinesim/game-sdk";
 import { computed, onMounted, onUnmounted, ref } from "vue";
@@ -25,9 +25,15 @@ const props = withDefaults(defineProps<{
 const error = ref("");
 const isLoading = ref(false);
 const overview = ref<FacilitiesOverview | null>(null);
+// Which owned hub's infrastructure is being inspected; empty means the home base.
+const selectedHubId = ref("");
 let unsubscribeSnapshot: (() => void) | null = null;
 const message = computed(() => (key: FacilitiesMessageKey): string => t(props.appLocale, key));
 const busiestDay = computed(() => overview.value?.slots.days.find((day) => day.day === overview.value?.slots.busiest_day));
+const hubOptions = computed(() => (overview.value?.hubs ?? []).map((hub) => ({
+  label: hub.is_base ? `${hub.label} · ${message.value("hub.base")}` : hub.label,
+  value: hub.airport_id,
+})));
 
 onMounted(() => {
   airlineSimEventBus.emit("mfe:ready", { remoteId: "hr-facilities" });
@@ -57,7 +63,13 @@ async function loadFacilities(): Promise<void> {
   error.value = "";
 
   try {
-    overview.value = await getBaseFacilitiesOverview();
+    const requestHubId = selectedHubId.value || undefined;
+    const result = await getBaseFacilitiesOverview(requestHubId);
+    overview.value = result;
+    // Reflect the server's choice (it falls back to the base for an unknown hub).
+    if (selectedHubId.value === requestHubId || !selectedHubId.value) {
+      selectedHubId.value = result.selected_airport_id ?? "";
+    }
   } catch (loadError) {
     error.value = apiMessage(loadError);
   } finally {
@@ -67,6 +79,11 @@ async function loadFacilities(): Promise<void> {
 
 function navigate(targetPath: string): void {
   airlineSimEventBus.emit("navigation:intent", { source: "mfe", targetPath });
+}
+
+function onHubChange(airportId: string): void {
+  selectedHubId.value = airportId;
+  void loadFacilities();
 }
 </script>
 
@@ -82,12 +99,22 @@ function navigate(targetPath: string): void {
           {{ message("description") }}
         </p>
       </div>
-      <AirButton
-        :disabled="isLoading"
-        :label="message('action.refresh')"
-        size="sm"
-        @click="loadFacilities"
-      />
+      <div class="flex items-end gap-2">
+        <AirSelect
+          v-if="hubOptions.length > 1"
+          :disabled="isLoading"
+          :label="message('hub.selector')"
+          :model-value="selectedHubId"
+          :options="hubOptions"
+          @update:model-value="onHubChange"
+        />
+        <AirButton
+          :disabled="isLoading"
+          :label="message('action.refresh')"
+          size="sm"
+          @click="loadFacilities"
+        />
+      </div>
     </header>
 
     <div v-if="error" class="mt-4 rounded-lg border border-error bg-error-bg p-3 text-error">

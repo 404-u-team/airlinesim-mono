@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { AirBadge, AirButton, AirMetricCard, AirStatePanel, AirTextField } from "@airlinesim/air-ui";
+import { Plane } from "@lucide/vue";
 import { computed } from "vue";
 
 import type { FleetOwnedAircraftCard } from "../types";
@@ -29,6 +30,43 @@ const editTailNumberModel = computed({
 const statusTone = computed(() =>
   props.aircraft?.maintenanceRatio && props.aircraft.maintenanceRatio < 0.35 ? "warning-soft" : "success-soft",
 );
+
+function airportCity(label: string): string {
+  return label.includes(" - ") ? label.split(" - ").slice(1).join(" - ") : label;
+}
+
+function airportCode(label: string, fallback?: string): string {
+  return label.includes(" - ") ? label.split(" - ")[0] ?? fallback ?? "----" : fallback ?? label;
+}
+
+function formatDuration(ms: number): string {
+  const totalMinutes = Math.max(0, Math.round(ms / 60_000));
+
+  return `${Math.floor(totalMinutes / 60)}${props.t("unit.hourShort")} ${totalMinutes % 60}${props.t("unit.minuteShort")}`;
+}
+
+function statusBadge(flight: any) {
+  const phase = flight.telemetry?.phase;
+  const {status} = flight;
+
+  const isAirborne = flight.telemetry && !["arrived", "boarding", "deplaning", "scheduled"].includes(phase ?? "");
+  const isDone = phase === "arrived" || status === "completed";
+
+  if (status === "cancelled") {
+    return { label: props.t("flight.status.cancelled"), variant: "danger-soft" as const };
+  }
+  if (isDone) {
+    return { label: props.t("flight.phase.arrived"), variant: "success-soft" as const };
+  }
+  if (isAirborne) {
+    return { label: props.t("flight.operatesNormally") || props.t("flight.status.in_flight"), variant: "success-soft" as const };
+  }
+  if (phase === "boarding") {
+    return { label: props.t("flight.phase.boarding") || props.t("flight.status.boarding"), variant: "warning-soft" as const };
+  }
+
+  return { label: props.t(`flight.phase.${phase}`) || props.t(`flight.status.${status}`), variant: "primary-soft" as const };
+}
 </script>
 
 <template>
@@ -146,6 +184,96 @@ const statusTone = computed(() =>
       </section>
 
       <aside class="grid min-w-0 content-start gap-4">
+        <section
+          v-if="aircraft.currentLocation"
+          class="rounded-lg border border-border bg-surface p-4"
+        >
+          <h2 class="text-subtitle mb-4">
+            {{ t("aircraft.location.title") }}
+          </h2>
+          <div>
+            <!-- If at airport -->
+            <div v-if="aircraft.currentLocation.type === 'airport'" class="flex items-center gap-2 min-w-0">
+              <span class="text-primary text-lg shrink-0" aria-hidden="true">📍</span>
+              <div class="min-w-0">
+                <p class="text-body font-semibold">
+                  {{ t("aircraft.location.atAirport") }}
+                </p>
+                <p class="text-caption text-text-muted mt-0.5 truncate" :title="aircraft.currentLocation.airport?.label || t('aircraft.location.unknown')">
+                  {{ aircraft.currentLocation.airport?.label || t("aircraft.location.unknown") }}
+                </p>
+              </div>
+            </div>
+
+            <!-- If in flight -->
+            <div v-else-if="aircraft.currentLocation.type === 'flight' && aircraft.currentLocation.flight" class="flex flex-col gap-3">
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-1.5 text-body font-bold text-primary">
+                  <Plane class="size-4" /> {{ aircraft.currentLocation.flight.flight_number }}
+                </span>
+                <AirBadge
+                  :label="statusBadge(aircraft.currentLocation.flight).label"
+                  :variant="statusBadge(aircraft.currentLocation.flight).variant"
+                />
+              </div>
+
+              <div class="flex items-center justify-between gap-2 w-full min-w-0">
+                <div class="flex-1 min-w-0">
+                  <p
+                    class="text-h3 leading-none font-bold truncate"
+                    :title="airportCode(aircraft.currentLocation.flight.origin_airport?.label ?? '', aircraft.currentLocation.flight.origin_airport_id)"
+                  >
+                    {{ airportCode(aircraft.currentLocation.flight.origin_airport?.label ?? '', aircraft.currentLocation.flight.origin_airport_id) }}
+                  </p>
+                  <p
+                    class="mt-1 truncate text-caption text-text-muted"
+                    :title="airportCity(aircraft.currentLocation.flight.origin_airport?.label ?? aircraft.currentLocation.flight.origin_airport_id)"
+                  >
+                    {{ airportCity(aircraft.currentLocation.flight.origin_airport?.label ?? aircraft.currentLocation.flight.origin_airport_id) }}
+                  </p>
+                </div>
+                <span aria-hidden="true" class="shrink-0 px-1 text-subtitle text-primary">→</span>
+                <div class="flex-1 min-w-0 text-right">
+                  <p
+                    class="text-h3 leading-none font-bold truncate"
+                    :title="airportCode(aircraft.currentLocation.flight.destination_airport?.label ?? '', aircraft.currentLocation.flight.destination_airport_id)"
+                  >
+                    {{ airportCode(aircraft.currentLocation.flight.destination_airport?.label ?? '', aircraft.currentLocation.flight.destination_airport_id) }}
+                  </p>
+                  <p
+                    class="mt-1 truncate text-caption text-text-muted"
+                    :title="airportCity(aircraft.currentLocation.flight.destination_airport?.label ?? aircraft.currentLocation.flight.destination_airport_id)"
+                  >
+                    {{ airportCity(aircraft.currentLocation.flight.destination_airport?.label ?? aircraft.currentLocation.flight.destination_airport_id) }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Progress bar -->
+              <div class="h-1.5 overflow-hidden rounded-full bg-surface-subtle">
+                <div
+                  class="h-full rounded-full bg-primary transition-[width] duration-1000 ease-linear"
+                  :style="{ width: `${aircraft.currentLocation.flight.telemetry.progress * 100}%` }"
+                />
+              </div>
+
+              <div class="flex justify-between text-caption text-text-muted">
+                <span>
+                  {{ t("flight.detail.eta") }}: {{ formatDuration(aircraft.currentLocation.flight.telemetry.eta_minutes * 60_000) }}
+                </span>
+              </div>
+
+              <AirButton
+                class="w-full mt-1"
+                :label="t('aircraft.location.viewFlight')"
+                size="sm"
+                variant="primary-soft"
+                @click="emit('navigate', '/operations/live-flights/' + aircraft.currentLocation.flight.id)"
+              />
+            </div>
+          </div>
+        </section>
+
         <section class="rounded-lg border border-border bg-surface p-4">
           <h2 class="text-subtitle">
             {{ t("fleet.detail.identity") }}

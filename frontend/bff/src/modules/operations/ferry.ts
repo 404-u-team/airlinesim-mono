@@ -8,8 +8,8 @@ import { reconcileNotificationsAfterMutation } from "../events/reconcile";
 import { buildRouteOpportunity } from "../routes/planning";
 import { currentAircraftAirport } from "./aircraft-position";
 import { buildOneTimeFlight } from "./flights";
+import { currentFlightStatus, estimateBlockHours } from "./flights";
 import { dedupeGeneratedFlights, loadOperationsSnapshot } from "./load";
-import { zonedWallTimeToUtc } from "./schedule-time";
 import { saveFlights } from "./storage";
 
 export type FerryFlightRequest = {
@@ -19,7 +19,7 @@ export type FerryFlightRequest = {
   destination_airport_id?: string;
 };
 
-export type FerryFlightResult = FerryError | { flight: StoredFlight };
+export type FerryFlightResult = FerryError | { cancelledFlights: StoredFlight[]; flight: StoredFlight };
 
 type FerryContext = FerryEntities & { opportunity: RouteOpportunity };
 
@@ -45,9 +45,16 @@ export function buildFerryFlight(snapshot: OperationsSnapshot, payload: FerryFli
 
   const { aircraft, destination, opportunity, origin, type } = resolved;
   const route = syntheticRoute(snapshot, opportunity, origin.id ?? "", destination.id ?? "", aircraft.id ?? "", type.id ?? "");
-  const departureAt = ferryDeparture(payload, origin.timezone);
+  const departureAt = ferryDeparture(payload);
+  const flight = buildOneTimeFlight(snapshot, route, aircraft, type, origin, destination, departureAt);
+  const now = new Date().toISOString();
+  const cancelledFlights = getOverlappingFlights(snapshot, aircraft.id ?? "", payload, opportunity).map((f) => ({
+    ...f,
+    status: "cancelled" as const,
+    updated_at: now,
+  }));
 
-  return { flight: buildOneTimeFlight(snapshot, route, aircraft, type, origin, destination, departureAt) };
+  return { cancelledFlights, flight };
 }
 
 export async function createFerryFlightResponse(request: Request, config: BffConfig): Promise<Response> {
@@ -61,25 +68,19 @@ export async function createFerryFlightResponse(request: Request, config: BffCon
     return jsonResponse({ error: result.error }, { status });
   }
 
-  await saveFlights(dedupeGeneratedFlights(snapshot.flights, [result.flight]));
+  await saveFlights(dedupeGeneratedFlights(snapshot.flights, [...result.cancelledFlights, result.flight]));
   await reconcileNotificationsAfterMutation(request, config);
 
   return jsonResponse({ flight: result.flight }, { status: 201 });
 }
 
 function ferryAvailabilityError(
-  snapshot: OperationsSnapshot,
-  payload: FerryFlightRequest,
-  aircraftId: string,
-  timeZone: string | undefined,
   opportunity: RouteOpportunity,
+  aircraftId: string,
 ): FerryError | null {
   const blockers = ferryBlockers(opportunity, aircraftId);
   if (blockers.length > 0) {
     return { error: { code: "FERRY_BLOCKED", message: "Aircraft cannot fly this ferry leg.", reasons: blockers } };
-  }
-  if (hasOverlappingFlight(snapshot, aircraftId, payload, timeZone, opportunity)) {
-    return { error: { code: "AIRCRAFT_CONFLICT", message: "Aircraft already has a flight in that time window." } };
   }
 
   return null;
@@ -93,25 +94,24 @@ function ferryBlockers(opportunity: RouteOpportunity, aircraftId: string): Ferry
   return (option?.blockers ?? []).map((reason) => ({ code: reason.code, message: reason.message }));
 }
 
-function ferryDeparture(payload: FerryFlightRequest, timeZone: string | undefined): Date {
-  const date = new Date(`${payload.departure_date ?? new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
-  const [hour = "9", minute = "0"] = (payload.departure_local_time ?? "09:00").split(":");
+function ferryDeparture(payload: FerryFlightRequest): Date {
+  const dateStr = payload.departure_date ?? new Date().toISOString().slice(0, 10);
+  const timeStr = payload.departure_local_time ?? "09:00";
 
-  return zonedWallTimeToUtc(date, Number(hour), Number(minute), timeZone);
+  return new Date(`${dateStr}T${timeStr}:00.000Z`);
 }
 
-function hasOverlappingFlight(
+function getOverlappingFlights(
   snapshot: OperationsSnapshot,
   aircraftId: string,
   payload: FerryFlightRequest,
-  timeZone: string | undefined,
   opportunity: RouteOpportunity,
-): boolean {
-  const departureAt = ferryDeparture(payload, timeZone).getTime();
+): StoredFlight[] {
+  const departureAt = ferryDeparture(payload).getTime();
   const blockHours = Math.max(0.75, opportunity.demand.distance_km / 740 + 0.35);
   const arrivalAt = departureAt + blockHours * 60 * 60_000;
 
-  return snapshot.flights.some((flight) => {
+  return snapshot.flights.filter((flight) => {
     if (flight.aircraft_id !== aircraftId || flight.status === "cancelled" || flight.status === "completed") {
       return false;
     }
@@ -134,7 +134,7 @@ function resolveFerryContext(snapshot: OperationsSnapshot, payload: FerryFlightR
     return { error: { code: "FERRY_PREVIEW_FAILED", message: "Could not build ferry preview." } };
   }
 
-  const availabilityError = ferryAvailabilityError(snapshot, payload, aircraft.id ?? "", origin.timezone, opportunity);
+  const availabilityError = ferryAvailabilityError(opportunity, aircraft.id ?? "");
   if (availabilityError) {
     return availabilityError;
   }

@@ -23,8 +23,17 @@ const isOpen = ref(false);
 
 const hubs = ref<HubOption[]>([]);
 const destinationId = ref("");
-const date = ref(new Date().toISOString().slice(0, 10));
-const time = ref("09:00");
+const date = ref("");
+const time = ref("");
+
+function toggleOpen(): void {
+  isOpen.value = !isOpen.value;
+  if (isOpen.value) {
+    const nowPlus10 = new Date(Date.now() + 10 * 60_000);
+    date.value = nowPlus10.toISOString().slice(0, 10);
+    time.value = nowPlus10.toISOString().slice(11, 16);
+  }
+}
 const error = ref("");
 const success = ref("");
 const isSaving = ref(false);
@@ -79,7 +88,7 @@ async function submit(): Promise<void> {
     <button
       class="flex w-full items-center justify-between text-left text-caption font-bold text-text-primary outline-hidden cursor-pointer"
       type="button"
-      @click="isOpen = !isOpen"
+      @click="toggleOpen"
     >
       <span>{{ props.t("operations.ferry.title") }}</span>
       <span class="text-[10px] text-text-muted transition-transform duration-200" :class="isOpen ? 'rotate-180' : ''">▼</span>

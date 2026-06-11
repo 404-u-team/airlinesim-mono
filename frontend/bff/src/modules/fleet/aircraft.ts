@@ -1,4 +1,5 @@
 import type { BffConfig } from "../../config";
+import type { OperationsSnapshot } from "../operations/planning";
 import type { Aircraft, Airline, PurchasePayload } from "./types";
 
 import { getUserAuthorization } from "../../auth";
@@ -8,7 +9,13 @@ import { recordGameEvent } from "../events/producer";
 import { reconcileNotificationsAfterMutation } from "../events/reconcile";
 import { sumLedger } from "../finance/calculator";
 import { listLedgerForAirline } from "../finance/storage";
+import { currentAircraftAirport } from "../operations/aircraft-position";
+import { attachAirportRefs } from "../operations/flight-airports";
+import { flightTelemetryFor } from "../operations/flight-read";
+import { updateFlightStatuses } from "../operations/flights";
+import { listFlightsForAirline } from "../operations/storage";
 import { cache } from "../proxy";
+import { listRoutesForAirline } from "../routes/storage";
 import { buildPurchasePreview } from "./preview";
 import { enrichOwnedAircraft } from "./scoring";
 import { getCountryForAirport, loadFleetSnapshot } from "./snapshot";
@@ -20,13 +27,78 @@ export async function getAircraftDetail(
   aircraftId: string,
 ): Promise<Record<string, unknown>> {
   const authorization = getUserAuthorization(request) ?? "";
-  const [snapshot, aircraft] = await Promise.all([
+  const [fleetSnapshot, aircraft] = await Promise.all([
     loadFleetSnapshot(request, config),
     requestBackendJson<Aircraft>(config, `/aircraft/${encodeURIComponent(aircraftId)}`, { token: authorization }),
   ]);
 
+  const airlineId = fleetSnapshot.airline.id ?? "";
+  const [flightsList, routesList] = await Promise.all([
+    listFlightsForAirline(airlineId),
+    listRoutesForAirline(airlineId),
+  ]);
+
+  const flights = updateFlightStatuses(flightsList);
+  const aircraftFlights = flights.filter((f) => f.aircraft_id === aircraftId && f.status !== "cancelled");
+  const activeFlight = aircraftFlights.find((f) => f.status === "in_flight" || f.status === "boarding");
+
+  let currentLocation: {
+    airport?: {
+      id: string;
+      label: string;
+    };
+    flight?: unknown;
+    type: "airport" | "flight";
+  };
+
+  if (activeFlight) {
+    const [withAirports] = attachAirportRefs([activeFlight], fleetSnapshot.airports);
+    
+    const operationsSnapshot = {
+      aircraftTypes: fleetSnapshot.aircraftTypes,
+      aircrafts: fleetSnapshot.aircrafts,
+      airline: fleetSnapshot.airline,
+      airports: fleetSnapshot.airports,
+      flights: flightsList,
+      routes: routesList,
+      schedules: [],
+    } as unknown as OperationsSnapshot;
+    
+    const telemetryRefs = flightTelemetryFor(activeFlight, operationsSnapshot);
+    currentLocation = {
+      flight: {
+        ...withAirports,
+        ...telemetryRefs,
+      },
+      type: "flight",
+    };
+  } else {
+    const currentAirportId = currentAircraftAirport(aircraftId, flights, aircraft.base_airport_id);
+    const airport = fleetSnapshot.airports.find((a) => a.id === currentAirportId);
+    
+    let airportLabel = "Unknown Airport";
+    if (airport) {
+      airportLabel = `${airport.iata_code ?? airport.icao_code ?? "----"} - ${airport.intl_name ?? airport.local_name ?? "Airport"}`;
+    } else if (aircraft.base_airport_id) {
+      airportLabel = aircraft.base_airport_id;
+    }
+    
+    currentLocation = {
+      airport: {
+        id: currentAirportId ?? aircraft.base_airport_id ?? "",
+        label: airportLabel,
+      },
+      type: "airport",
+    };
+  }
+
+  const enriched = enrichOwnedAircraft(aircraft, fleetSnapshot.aircraftTypes, fleetSnapshot.airports);
+
   return {
-    aircraft: enrichOwnedAircraft(aircraft, snapshot.aircraftTypes, snapshot.airports),
+    aircraft: {
+      ...enriched,
+      currentLocation,
+    },
   };
 }
 

@@ -1,19 +1,5 @@
 import { clamp, round2 } from "../import/shared/math";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Passenger demand model v2 (layered). See docs/passenger-demand-model.md.
-//
-//   Layer 1  Gravity      shape: catchment^α · GDPpc^β · D(distance)
-//   Layer 2  Propensity   level: per-country aviation-propensity multiplier
-//   Layer 3  Affinity     business / tourism / diaspora
-//   Layer 4  Override     surgical per-pair multiplier (applied by the caller)
-//
-// This module is a pure function of its inputs. Catchment population and the
-// per-country propensity come from upstream (import artifact + calibration); the
-// caller supplies them. The metro→airport capacity split is applied by the caller
-// (route layer), not here — this computes the *market* (metro-pair) demand.
-// ─────────────────────────────────────────────────────────────────────────────
-
 export type CalibrationParams = {
   affinityBase: number;
   affinityBusiness: number;
@@ -26,21 +12,17 @@ export type CalibrationParams = {
   populationElasticity: number;
 };
 
-// Optional precomputed affinity (0..1). If omitted, synthesized from scores.
 export type DemandAffinity = {
   business?: number;
   diaspora?: number;
   tourism?: number;
 };
 
-// One end of a market pair (a metro market, or a single-airport market).
 export type MarketEndpoint = {
   businessScore?: number;
-  // Population this market can draw on (metro catchment), in people.
   catchmentPopulation: number;
   countryId?: string;
   gdpPerCapita?: number;
-  // Aviation-propensity multiplier for this market's country (1 = neutral).
   propensity?: number;
   tourismScore?: number;
 };
@@ -78,24 +60,12 @@ export type PassengerDemandResult = {
   tourism: number;
 };
 
-// Defaults are sane starting points; the calibration layer (Phase 3) fits and
-// overrides these against real Eurostat/BTS anchors. baseScale replaces the old
-// global K. Propensity defaults to 1 per country until calibration fills it in.
 export const DEFAULT_CALIBRATION: CalibrationParams = {
   affinityBase: 0.7,
   affinityBusiness: 0.75,
   affinityDiaspora: 0.45,
   affinityTourism: 0.55,
   baseScale: 1.8,
-  // Distance curve flattened 2026-06 (D0 1800→2500, p 1.25→1.0) after the
-  // benchmark — binned by distance (an independent variable, so not a regression-
-  // to-the-mean artefact) — showed the old curve over-predicted 500–2000 km hauls
-  // (×1.27) and under-predicted 2000 km+ (×0.79). Flattening lifts long-haul to
-  // ≈×0.87 and improves MAPE/R² without losing correlation. The aviation-gravity
-  // ceiling is corr≈0.53 (gravity explains ~28% of route-level variance); the
-  // real↔model traffic "slope" is mostly regression to the mean and is deliberately
-  // NOT chased via elasticities, which only inflate variance. See
-  // docs/passenger-demand-model.md "Калибровка формы".
   distanceD0: 2500,
   distanceP: 1.0,
   gdpElasticity: 0.55,
@@ -187,7 +157,6 @@ export function explainPairDemand(
   };
 }
 
-// Catchment-based gravity mass (no distance term — that is applied separately).
 export function gravityMass(origin: MarketEndpoint, destination: MarketEndpoint, calibration: CalibrationParams = DEFAULT_CALIBRATION): number {
   const originPopMln = catchmentOf(origin) / 1_000_000;
   const destinationPopMln = catchmentOf(destination) / 1_000_000;
@@ -202,24 +171,13 @@ export function gravityMass(origin: MarketEndpoint, destination: MarketEndpoint,
   );
 }
 
-// Short/medium hauls lose share to the ground (rail/road) and to substitute
-// airports. Same-country pairs are hit hardest — nobody flies Berlin–Cologne when
-// the train is competitive — with air share low under ~350 km and recovering by
-// ~1100 km, beyond which flying wins again (Moscow–Vladivostok, US transcon).
-// Cross-border pairs face a *milder* version of the same effect: short international
-// hops (Brussels–Amsterdam, Aachen–Liège catchments) also bleed to trains and to
-// adjacent airports, just less severely than domestic ones. Busy corridors that beat
-// this average (fast-rail-free routes) can be lifted via an override.
 export function groundCompetitionFactor(distanceKm: number, sameCountry: boolean): number {
   if (sameCountry) {
     return rampedShare(distanceKm, 350, 1100, 0.3);
   }
-  // Cross-border: weaker competition, only bites the genuinely short hops.
   return rampedShare(distanceKm, 200, 700, 0.6);
 }
 
-// Collapses demand for intra-metro / very short pairs (~40 km, a city's two
-// airports) where nobody flies. Ramps 0 → 1 between 60 and 300 km.
 export function shortHaulFactor(distanceKm: number): number {
   return clamp((distanceKm - 60) / 240, 0, 1);
 }
@@ -228,8 +186,6 @@ function catchmentOf(endpoint: MarketEndpoint): number {
   return Math.max(endpoint.catchmentPopulation || 0, MIN_CATCHMENT);
 }
 
-// Fallback diaspora affinity when no real migrant-corridor data is supplied. The
-// data-driven version (Layer 3) overrides this via the `affinity.diaspora` input.
 function diasporaAffinity(origin: MarketEndpoint, destination: MarketEndpoint, distanceKm: number, sameCountry: boolean): number {
   const a = Math.max(1, catchmentOf(origin));
   const b = Math.max(1, catchmentOf(destination));
@@ -237,11 +193,6 @@ function diasporaAffinity(origin: MarketEndpoint, destination: MarketEndpoint, d
 
   return (sameCountry ? 0.42 : 0.06) + 0.22 / (1 + distanceKm / 2200) + 0.32 * populationBalance;
 }
-
-// Directional skew centred on 1.0: the two directions of a pair average ~1× the
-// (symmetric) base demand, with a mild lean toward the wealthier origin and more
-// leisure-attractive destination. It must NOT roughly double one-way demand — that
-// was a v2.0 bug. Range ~0.75–1.3, so AB and BA together ≈ 2× base.
 function directionFactor(origin: MarketEndpoint, destination: MarketEndpoint, business: number, tourism: number, diaspora: number): number {
   void business;
   const wealthLean = (gdpOf(origin) / gdpOf(destination)) ** 0.1;
@@ -255,7 +206,6 @@ function gdpOf(endpoint: MarketEndpoint): number {
   return Math.max(endpoint.gdpPerCapita ?? 10_000, MIN_GDP);
 }
 
-// Air's share of a pair: `floor` at/below `low`, recovering linearly to 1 at `high`.
 function rampedShare(distanceKm: number, low: number, high: number, floor: number): number {
   if (distanceKm >= high) {
     return 1;

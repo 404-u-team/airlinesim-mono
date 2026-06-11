@@ -7,7 +7,9 @@ import { estimateFlightFinancials } from "../src/modules/operations/flights";
 import { referenceFare } from "../src/modules/operations/passenger-load";
 import {
   analyzeRoutePrice,
-  PRICE_ANALYSIS_FEE,
+  PRICE_ANALYSIS_MAX_FEE,
+  PRICE_ANALYSIS_MIN_FEE,
+  priceAnalysisFee,
   priceAnalysisFeeTransaction,
 } from "../src/modules/routes/price-analysis";
 
@@ -18,7 +20,28 @@ test("analysis returns the exact profit-maximising grid optimum (no noise)", () 
 
   // The paid analysis is now exact: the suggested fare is the grid optimum (±1 rounding).
   expect(Math.abs(analysis.outbound.suggested_fare - optimal)).toBeLessThanOrEqual(1);
-  expect(analysis.fee).toBe(PRICE_ANALYSIS_FEE);
+  // The fee is route-based: it matches the standalone fee calculation and stays within bounds.
+  expect(analysis.fee).toBe(priceAnalysisFee(route, type(), airport(), airport()));
+  expect(analysis.fee).toBeGreaterThanOrEqual(PRICE_ANALYSIS_MIN_FEE);
+  expect(analysis.fee).toBeLessThanOrEqual(PRICE_ANALYSIS_MAX_FEE);
+});
+
+test("the fee scales with the route's revenue potential and is clamped to its bounds", () => {
+  const thin = storedRoute();
+  thin.base_frequency_per_week = 1;
+  thin.demand_snapshot.origin_daily_passengers = 5;
+  thin.demand_snapshot.destination_daily_passengers = 5;
+  const thick = storedRoute();
+  thick.base_frequency_per_week = 14;
+  thick.demand_snapshot.origin_daily_passengers = 2000;
+  thick.demand_snapshot.destination_daily_passengers = 2000;
+
+  const thinFee = priceAnalysisFee(thin, type(), airport(), airport());
+  const thickFee = priceAnalysisFee(thick, type(), airport(), airport());
+
+  expect(thinFee).toBe(PRICE_ANALYSIS_MIN_FEE);
+  expect(thickFee).toBeGreaterThan(thinFee);
+  expect(thickFee).toBeLessThanOrEqual(PRICE_ANALYSIS_MAX_FEE);
 });
 
 test("the suggested fare never earns less than the auto fare (uplift ≥ 0)", () => {
@@ -47,10 +70,10 @@ test("projected profit matches the financials at the suggested fare", () => {
 });
 
 test("the fee transaction is a system debit with a unique idempotency key", () => {
-  const first = priceAnalysisFeeTransaction("airline-1", "route-1");
-  const second = priceAnalysisFeeTransaction("airline-1", "route-1");
+  const first = priceAnalysisFeeTransaction("airline-1", "route-1", 75_000);
+  const second = priceAnalysisFeeTransaction("airline-1", "route-1", 75_000);
 
-  expect(first.amount).toBe(PRICE_ANALYSIS_FEE);
+  expect(first.amount).toBe(75_000);
   expect(first.direction).toBe("debit");
   expect(first.category).toBe("system");
   expect(first.source_type).toBe("system_adjustment");

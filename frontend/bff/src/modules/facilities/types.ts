@@ -52,6 +52,7 @@ export type BaseFacilitiesOverview = {
   base_airport: AirportSummary | null;
   constraints: AirportConstraint[];
   costs: AirportCostProfile;
+  hubs: HubOption[];
   next_actions: Array<{
     code: string;
     target_path: string;
@@ -66,8 +67,15 @@ export type BaseFacilitiesOverview = {
     incompatible_owned_aircraft: number;
     max_length_m: number;
   };
+  selected_airport_id: null | string;
   slots: SlotCapacitySummary;
   status: "blocked" | "missing" | "ready" | "warning";
+};
+
+export type HubOption = {
+  airport_id: string;
+  is_base: boolean;
+  label: string;
 };
 
 export type SlotCapacityDay = {

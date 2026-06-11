@@ -34,9 +34,9 @@
 - `packages/eslint-config` - shared ESLint flat configs: `base`, `vue`, `svelte`.
 - `packages/event-bus` - целевой shared package для cross-MFE pub/sub.
 - `packages/api-contracts` - целевой shared package для OpenAPI -> TS types и Zod-схем.
-- `docs/FE.png` - целевая MFE-архитектура.
-- `docs/MFE-MF-CONNECT-EXAMPLE.png` - последовательность навигации Shell -> Vue Router -> Module Federation runtime -> remote app, включая кеширование remoteEntry и событие `mfe:ready`.
-- `docs/MFE_EXAMPLE.png` - пример cross-MFE сценария через singleton `event-bus`: выбор рейса/самолета на карте, обработка в Shell и подготовка виджета Fleet & Ops.
+- `docs/FE.png` - целевая MFE-архитектура. Реальная архитектурная схема в формате PlantUML описана в [docs/architecture-puml.md](file:///u:/DEV/airlinesim-kr/frontend/docs/architecture-puml.md).
+- `docs/MFE-MF-CONNECT-EXAMPLE.png` - последовательность навигации Shell -> Vue Router -> Module Federation runtime -> remote app, включая кеширование remoteEntry и событие `mfe:ready`. Реальная Mermaid-диаграмма логики описана в [docs/mfe-connection-sequence.md](file:///u:/DEV/airlinesim-kr/frontend/docs/mfe-connection-sequence.md).
+- `docs/MFE_EXAMPLE.png` - пример cross-MFE сценария через singleton `event-bus`: выбор рейса/самолета на карте, обработка в Shell и подготовка виджета Fleet & Ops. Реальная Mermaid-диаграмма логики описана в [docs/flight-selection-sequence.md](file:///u:/DEV/airlinesim-kr/frontend/docs/flight-selection-sequence.md).
 - `docs/mfe-routing.md` - спецификация маршрутизации между Shell и MFE: источник истины для route registry, порядок портов, события `event-bus`, публичные auth routes и правила навигации remote-приложений.
 - `docs/I18N.md` - спецификация мультиязычности RU/EN: источник локали, хранение строк, fallback и контракт Shell -> MFE.
 - `docs/TESTS.md` - правила создания и запуска тестов frontend-модулей.

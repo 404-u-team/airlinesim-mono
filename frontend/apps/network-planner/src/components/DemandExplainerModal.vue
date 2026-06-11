@@ -84,16 +84,18 @@ function factor(value: number): string {
     :title="t('demand.title')"
     @close="emit('close')"
   >
-    <div class="grid gap-4">
-      <p class="text-body text-text-muted">
+    <div class="grid gap-5">
+      <!-- Intro description -->
+      <p class="text-sm leading-relaxed text-text-muted">
         {{ t("demand.intro") }}
       </p>
 
+      <!-- Source badges -->
       <div
         v-if="breakdown"
-        class="flex flex-wrap items-center gap-2"
+        class="flex flex-wrap items-center gap-2 rounded-lg bg-background/20 p-2.5 border border-border/40"
       >
-        <span class="text-caption text-text-muted">{{ t("demand.source") }}:</span>
+        <span class="text-xs font-medium text-text-muted">{{ t("demand.source") }}:</span>
         <AirBadge
           :label="breakdown.catchmentSource === 'artifact' ? t('demand.source.artifact') : t('demand.source.fallback')"
           :variant="breakdown.catchmentSource === 'artifact' ? 'success-soft' : 'warning-soft'"
@@ -105,76 +107,137 @@ function factor(value: number): string {
         />
       </div>
 
-      <section>
-        <h3 class="text-subtitle">
+      <!-- Equation Block (Redesigned with HTML/CSS typesetting) -->
+      <section class="rounded-xl border border-border/80 bg-background/30 p-4 shadow-sm">
+        <h3 class="text-sm font-bold text-text-primary mb-3">
           {{ t("demand.section.formula") }}
         </h3>
-        <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded-md border border-border bg-background px-3 py-2 text-caption text-text-primary">{{ t("demand.formula") }}</pre>
+        <div class="space-y-3 font-mono text-xs md:text-sm leading-relaxed text-text-primary">
+          <!-- Step 1 -->
+          <div class="flex flex-wrap items-center gap-1">
+            <span class="font-bold text-primary">G</span>
+            <span class="text-text-muted font-sans">=</span>
+            <span class="text-amber-500 font-semibold">baseScale</span>
+            <span class="text-text-muted font-sans">&middot;</span>
+            <span>catch<sub>Origin</sub><sup>&alpha;</sup></span>
+            <span class="text-text-muted font-sans">&middot;</span>
+            <span>catch<sub>Dest</sub><sup>&alpha;</sup></span>
+            <span class="text-text-muted font-sans">&middot;</span>
+            <span>GDPpc<sub>Origin</sub><sup>&beta;</sup></span>
+            <span class="text-text-muted font-sans">&middot;</span>
+            <span>GDPpc<sub>Dest</sub><sup>&beta;</sup></span>
+            <span class="text-text-muted font-sans">&middot;</span>
+            <span>D(distance)</span>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="flex flex-wrap items-center gap-1 border-t border-border/40 pt-2.5">
+            <span class="font-bold text-primary">BaseDemand</span>
+            <span class="text-text-muted font-sans">=</span>
+            <span>G</span>
+            <span class="text-text-muted font-sans">&middot;</span>
+            <span class="flex items-center">
+              <span class="text-base leading-none font-sans font-normal">&radic;</span>
+              <span class="border-t border-text-primary px-1 mt-0.5 text-xs font-mono">prop<sub>Origin</sub> &middot; prop<sub>Dest</sub></span>
+            </span>
+            <span class="text-text-muted font-sans">&middot;</span>
+            <span>affinity</span>
+            <span class="text-text-muted font-sans">&middot;</span>
+            <span>shortHaul</span>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="flex flex-wrap items-center gap-1 border-t border-border/40 pt-2.5">
+            <span class="font-bold text-primary">DailyDemand</span>
+            <span class="text-text-muted font-sans">=</span>
+            <span>BaseDemand</span>
+            <span class="text-text-muted font-sans">&middot;</span>
+            <span>direction</span>
+            <span class="text-text-muted font-sans">&middot;</span>
+            <span>airportShare</span>
+            <span class="text-text-muted font-sans">&middot;</span>
+            <span>override</span>
+          </div>
+        </div>
       </section>
 
+      <!-- Factors Grid and Results Dashboard -->
       <section v-if="rows.length">
-        <h3 class="text-subtitle">
+        <h3 class="text-sm font-bold text-text-primary mb-3">
           {{ t("demand.section.factors") }}
         </h3>
-        <dl class="mt-2 grid gap-1.5">
+        
+        <!-- Two-column grid of parameters -->
+        <dl class="grid grid-cols-1 md:grid-cols-2 gap-2">
           <div
             v-for="row in rows"
             :key="row.label"
-            class="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2"
+            class="flex items-center justify-between gap-3 rounded-lg border border-border bg-background/30 px-3 py-2 text-sm transition-all hover:bg-background/80"
             :class="{
-              'border-warning bg-warning-bg text-warning': row.highlight === 'knob',
-              'border-primary bg-primary-soft text-on-primary-soft': row.highlight === 'override',
+              'border-warning/60 bg-warning-bg/40 text-warning font-medium': row.highlight === 'knob',
+              'border-primary/60 bg-primary-soft/40 text-on-primary-soft font-medium': row.highlight === 'override',
             }"
           >
-            <dt class="min-w-0 text-caption text-text-muted">
+            <dt class="min-w-0 text-text-muted text-xs">
               {{ row.label }}
             </dt>
-            <dd class="shrink-0 text-body font-semibold">
+            <dd class="shrink-0 font-mono font-semibold">
               {{ row.value }}
             </dd>
           </div>
-          <div class="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2">
-            <dt class="min-w-0 text-caption text-text-muted">
-              {{ t("demand.result.outbound") }}
-            </dt>
-            <dd class="shrink-0 text-body font-semibold">
-              {{ formatNumber(demand.origin_daily_passengers) }} {{ t("metric.paxPerDay") }}
-            </dd>
-          </div>
-          <div class="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2">
-            <dt class="min-w-0 text-caption text-text-muted">
-              {{ t("demand.result.return") }}
-            </dt>
-            <dd class="shrink-0 text-body font-semibold">
-              {{ formatNumber(demand.destination_daily_passengers) }} {{ t("metric.paxPerDay") }}
-            </dd>
-          </div>
-          <div class="flex items-center justify-between gap-3 rounded-md border border-primary bg-primary-soft px-3 py-2 text-on-primary-soft">
-            <dt class="min-w-0 text-caption">
-              {{ t("demand.result.average") }}
-            </dt>
-            <dd class="shrink-0 text-subtitle font-semibold">
-              {{ formatNumber(Math.round((demand.origin_daily_passengers + demand.destination_daily_passengers) / 2)) }} {{ t("metric.paxPerDay") }}
-            </dd>
-          </div>
         </dl>
-        <p class="mt-2 text-caption text-text-muted">
-          {{ t("demand.averageNote") }}
-        </p>
+
+        <!-- Dynamic Results Panel (3-column layout) -->
+        <div class="mt-4 rounded-xl border border-primary/20 bg-primary-soft/10 p-4">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-primary mb-3">
+            {{ t("demand.result") }}
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <!-- Outbound passengers card -->
+            <div class="rounded-lg bg-background/60 p-3 border border-border flex flex-col justify-between shadow-sm">
+              <span class="text-xs text-text-muted mb-1 block">{{ t("demand.result.outbound") }}</span>
+              <span class="text-lg font-bold font-mono text-text-primary">
+                {{ formatNumber(demand.origin_daily_passengers) }}
+                <span class="text-xs font-normal text-text-muted">{{ t("metric.paxPerDay") }}</span>
+              </span>
+            </div>
+            <!-- Return passengers card -->
+            <div class="rounded-lg bg-background/60 p-3 border border-border flex flex-col justify-between shadow-sm">
+              <span class="text-xs text-text-muted mb-1 block">{{ t("demand.result.return") }}</span>
+              <span class="text-lg font-bold font-mono text-text-primary">
+                {{ formatNumber(demand.destination_daily_passengers) }}
+                <span class="text-xs font-normal text-text-muted">{{ t("metric.paxPerDay") }}</span>
+              </span>
+            </div>
+            <!-- Average passenger card (main highlighted) -->
+            <div class="rounded-lg bg-primary/20 p-3 border border-primary/30 flex flex-col justify-between shadow-sm">
+              <span class="text-xs text-primary font-semibold mb-1 block">{{ t("demand.result.average") }}</span>
+              <span class="text-xl font-extrabold font-mono text-primary">
+                {{ formatNumber(Math.round((demand.origin_daily_passengers + demand.destination_daily_passengers) / 2)) }}
+                <span class="text-xs font-normal text-primary/80">{{ t("metric.paxPerDay") }}</span>
+              </span>
+            </div>
+          </div>
+          <p class="mt-3 text-xs text-text-muted leading-relaxed">
+            {{ t("demand.averageNote") }}
+          </p>
+        </div>
       </section>
 
+      <!-- Calibration warning if uncalibrated -->
       <p
         v-if="isUncalibrated"
-        class="rounded-lg border border-warning bg-warning-bg px-3 py-2 text-caption text-warning"
+        class="rounded-lg border border-warning/60 bg-warning-bg/40 px-3.5 py-2.5 text-xs text-warning leading-relaxed"
       >
         {{ t("demand.calibrationNote") }}
       </p>
 
-      <section>
-        <h3 class="text-subtitle">
+      <!-- Load calculation explanation -->
+      <section class="border-t border-border/60 pt-4">
+        <h3 class="text-sm font-bold text-text-primary">
           {{ t("demand.load.title") }}
         </h3>
-        <p class="mt-2 text-body text-text-muted">
+        <p class="mt-2 text-sm leading-relaxed text-text-muted">
           {{ t("demand.load.body") }}
         </p>
       </section>

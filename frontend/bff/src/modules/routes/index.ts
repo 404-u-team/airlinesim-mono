@@ -10,7 +10,7 @@ import { sumLedger } from "../finance/calculator";
 import { listLedgerForAirline, saveLedgerTransactions } from "../finance/storage";
 import { deleteFlightsForRoute, deleteSchedulesForRoute } from "../operations/storage";
 import { buildRouteListItem, buildRouteOpportunities, buildRouteOpportunity, createStoredRouteFromOpportunity, refreshStoredRoute, type RoutePlanningSnapshot } from "./planning";
-import { analyzeRoutePrice, PRICE_ANALYSIS_FEE, priceAnalysisFeeTransaction } from "./price-analysis";
+import { analyzeRoutePrice, priceAnalysisFeeTransaction } from "./price-analysis";
 import { loadRoutePlanningSnapshot } from "./snapshot";
 import { deleteRoute, findRoute, listRoutesForAirline, saveRoute } from "./storage";
 
@@ -76,17 +76,17 @@ async function analyzeRoutePriceRequest(request: Request, config: BffConfig, rou
     );
   }
 
+  const analysis = analyzeRoutePrice(route, type, origin, destination);
   const ledger = await listLedgerForAirline(airlineId);
   const availableBalance = (snapshot.airline.balance ?? 0) + sumLedger(ledger);
-  if (availableBalance < PRICE_ANALYSIS_FEE) {
+  if (availableBalance < analysis.fee) {
     return jsonResponse(
       { error: { code: "INSUFFICIENT_FUNDS", message: "Not enough balance to pay for the analysis." } },
       { status: 402 },
     );
   }
 
-  const analysis = analyzeRoutePrice(route, type, origin, destination);
-  await saveLedgerTransactions([priceAnalysisFeeTransaction(airlineId, route.id)]);
+  await saveLedgerTransactions([priceAnalysisFeeTransaction(airlineId, route.id, analysis.fee)]);
   await recordGameEvent({
     airline_id: airlineId,
     category: "finance",

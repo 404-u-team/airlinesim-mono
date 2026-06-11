@@ -3,6 +3,7 @@ import type { Locale } from "@airlinesim/i18n";
 
 import { AirAircraftThumb, AirButton, AirProgressBar, AirSelect } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
+import { Plane } from "@lucide/vue";
 import { computed, onMounted, ref, watch } from "vue";
 
 import type { FleetMessageKey } from "../i18n";
@@ -28,11 +29,7 @@ const routes = ref<OperationRoute[]>([]); const selectedAircraftId = ref(""); co
 const selectedAircraftOption = computed(() => aircraft.value.find((item) => item.aircraft.id === selectedAircraftId.value));
 const utilizationHours = computed(() => blocks.value.reduce((total, b) => total + routeHours(routeById.value.get(b.routeId)) * 2, 0));
 const utilizationPercent = computed(() => Math.min(100, Math.round((utilizationHours.value / 168) * 100)));
-const utilizationTone = computed(() => {
-  if (utilizationPercent.value > 90) {return "warning";}
-  if (utilizationPercent.value > 70) {return "success";}
-  return "primary";
-});
+const utilizationTone = computed(() => (utilizationPercent.value > 90 && "warning") || (utilizationPercent.value > 70 && "success") || "primary");
 const aircraftOptions = computed(() => aircraft.value.map((opt) => ({ label: `${opt.aircraft.tail_number ?? opt.aircraft.id ?? "-"}${opt.compatible ? "" : " · blocked"}`, value: opt.aircraft.id ?? "" })));
 const armedRoute = computed(() => routeById.value.get(armedRouteId.value));
 
@@ -259,10 +256,10 @@ function signatureFor(list: ScheduleBlock[]) {
         v-if="!selectedAircraftOption.compatible && selectedAircraftOption.blockers.length"
         class="mt-3 rounded-lg border border-error bg-error-bg p-3 text-caption text-error"
       >
-        <strong class="mb-1 block">Blocked constraints:</strong>
+        <strong class="mb-1 block">{{ props.t("operations.blockedConstraints") }}</strong>
         <ul class="list-disc pl-4 space-y-0.5">
           <li v-for="blocker in selectedAircraftOption.blockers" :key="blocker.code">
-            {{ blocker.message }}
+            {{ props.t('warning.' + blocker.code) || blocker.message }}
           </li>
         </ul>
       </div>
@@ -270,15 +267,15 @@ function signatureFor(list: ScheduleBlock[]) {
 
     <!-- Empty Aircraft Selector Placeholder -->
     <section v-else class="mt-4 rounded-lg border border-border bg-surface p-6 shadow-sm flex flex-col items-center justify-center gap-4 text-center max-w-lg mx-auto">
-      <div class="grid size-12 place-items-center rounded-full bg-primary/10 text-2xl text-primary">
-        ✈️
+      <div class="grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
+        <Plane class="size-6" />
       </div>
       <div>
         <h3 class="text-subtitle font-bold text-text-primary">
-          {{ aircraftOptions.length ? props.t("operations.selectAircraft") : "No Aircraft Available" }}
+          {{ aircraftOptions.length ? props.t("operations.selectAircraft") : props.t("aircraft.empty.noAircraft") }}
         </h3>
         <p class="text-caption text-text-muted mt-1 max-w-sm">
-          {{ aircraftOptions.length ? "Please select an aircraft to view and manage its schedule." : "You do not own any aircraft yet. Buy your first aircraft in the Aircraft Market to start planning flights." }}
+          {{ aircraftOptions.length ? props.t("aircraft.empty.select") : props.t("aircraft.empty.buyFirst") }}
         </p>
       </div>
       <div v-if="aircraftOptions.length" class="w-64">

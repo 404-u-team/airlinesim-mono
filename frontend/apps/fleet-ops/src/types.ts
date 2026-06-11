@@ -1,33 +1,11 @@
-export type AirportSearchOption = {
-  iata_code?: string;
-  icao_code?: string;
-  id: string;
-  intl_name?: string;
-  local_name?: string;
-  municipality?: string;
-};
-
-export type AirportSearchResponse = {
-  airports: AirportSearchOption[];
-};
-
-export type CreateRouteResponse = {
-  route: OperationRoute;
-};
-
+export type AirportSearchOption = { iata_code?: string; icao_code?: string; id: string; intl_name?: string; local_name?: string; municipality?: string; };
+export type AirportSearchResponse = { airports: AirportSearchOption[]; };
+export type CreateRouteResponse = { route: OperationRoute; };
 export type CreateScheduleResponse = SchedulePreviewResponse & {
   flights: FlightCard[];
-  schedule: {
-    id: string;
-    route_id: string;
-    status: string;
-  };
+  schedule: { id: string; route_id: string; status: string; };
 };
-
-export type FleetAircraftDetailResponse = {
-  aircraft: FleetOwnedAircraftCard;
-};
-
+export type FleetAircraftDetailResponse = { aircraft: FleetOwnedAircraftCard; };
 export type FleetAircraftResponse = {
   aircraft: FleetOwnedAircraftCard[];
   emptyState: null | {
@@ -35,7 +13,6 @@ export type FleetAircraftResponse = {
     recommendedActionRoute: string;
   };
 };
-
 export type FleetAirportCard = {
   id?: string;
   label: string;
@@ -44,7 +21,6 @@ export type FleetAirportCard = {
   timezone?: string;
   works_at_night: boolean;
 };
-
 export type FleetMarketAircraftType = {
   base_maintenance_points?: number;
   base_turnaround_points?: number;
@@ -75,7 +51,6 @@ export type FleetMarketAircraftType = {
   };
   price_per_unit?: number;
 };
-
 export type FleetMarketResponse = {
   aircraftTypes: FleetMarketAircraftType[];
   airline: {
@@ -104,6 +79,14 @@ export type FleetOwnedAircraftCard = {
   baseAirport: FleetAirportCard | null;
   baseAirportName: string;
   current_maintenance_points?: number;
+  currentLocation?: {
+    airport?: {
+      id: string;
+      label: string;
+    };
+    flight?: FlightDetail;
+    type: "airport" | "flight";
+  };
   id?: string;
   in_service?: boolean;
   maintenanceRatio: number;
@@ -121,7 +104,6 @@ export type FleetOwnedAircraftCard = {
   type?: FleetMarketAircraftType | null;
   type_id?: string;
 };
-
 export type FleetPurchasePreviewResponse = {
   aircraftPrice: number;
   aircraftType: FleetMarketAircraftType | null;
@@ -141,7 +123,6 @@ export type FleetPurchasePreviewResponse = {
   };
   warnings: FleetReason[];
 };
-
 export type FleetPurchaseResponse = {
   aircraft: FleetOwnedAircraftCard | null;
   finance: {
@@ -154,12 +135,10 @@ export type FleetPurchaseResponse = {
     route: string;
   };
 };
-
 export type FleetReason = {
   code: FleetReasonCode;
   message: string;
 };
-
 export type FleetReasonCode =
   | "FLEET_AIRCRAFT_TYPE_NOT_FOUND"
   | "FLEET_BASE_AIRPORT_NOT_FOUND"
@@ -173,7 +152,6 @@ export type FleetReasonCode =
   | "FLEET_RUNWAY_TOO_SHORT"
   | "FLEET_TAIL_NUMBER_EXISTS"
   | "FLEET_TAIL_NUMBER_INVALID";
-
 export type FlightAirportRef = {
   iata_code?: string;
   label?: string;
@@ -207,7 +185,6 @@ export type FlightDetailResponse = {
   flight: FlightDetail;
   route_id: string;
 };
-
 export type FlightFinancials = {
   cost: number;
   load_factor: number;
@@ -215,7 +192,6 @@ export type FlightFinancials = {
   profit: number;
   revenue: number;
 };
-
 export type FlightPhase =
   | "arrived"
   | "boarding"
@@ -228,7 +204,6 @@ export type FlightPhase =
   | "takeoff"
   | "taxi_in"
   | "taxi_out";
-
 export type FlightsResponse = {
   flights: FlightCard[];
   summary: {
@@ -237,7 +212,6 @@ export type FlightsResponse = {
     upcoming: number;
   };
 };
-
 export type FlightTelemetry = {
   air_progress: number;
   altitude_ft: number;
@@ -249,11 +223,9 @@ export type FlightTelemetry = {
   phase: FlightPhase;
   progress: number;
 };
-
 export type FuelHistoryResponse = {
   history: FuelPriceSnapshot[];
 };
-
 export type FuelPriceSnapshot = {
   price: number;
   recorded_at: string;
@@ -261,7 +233,6 @@ export type FuelPriceSnapshot = {
   unit_price: number;
   updated_at: string;
 };
-
 export type HubOption = {
   airport_id: string;
   fee: number;
@@ -270,23 +241,19 @@ export type HubOption = {
   profit: number;
   routes: number;
 };
-
 export type HubsResponse = {
   hubs: HubOption[];
 };
-
 export type OperationAircraftOption = {
   aircraft: FleetOwnedAircraftCard;
   blockers: OperationReason[];
   compatible: boolean;
   warnings: OperationReason[];
 };
-
 export type OperationReason = {
   code: string;
   message: string;
 };
-
 export type OperationRoute = {
   demand_snapshot: {
     distance_km: number;
@@ -308,7 +275,6 @@ export type OperationRoute = {
   origin_airport_id: string;
   status: string;
 };
-
 export type OperationSchedule = {
   aircraft_id: string;
   id: string;
@@ -321,13 +287,11 @@ export type OperationSchedule = {
   route_id: string;
   status: "active" | "draft" | "paused";
 };
-
 export type ReplaceScheduleResponse = {
   flights: FlightCard[];
   previews: Array<SchedulePreviewResponse["preview"]>;
   schedules: OperationSchedule[];
 };
-
 export type RouteAirportRef = {
   coordinates?: null | { latitude: number; longitude: number };
   gate_fee?: number;
@@ -341,12 +305,10 @@ export type RouteAirportRef = {
   stand_fee?: number;
   works_at_night?: boolean;
 };
-
 export type RouteOpportunitiesResponse = {
   opportunities: RouteOpportunityItem[];
   origin_airport: null | RouteAirportRef;
 };
-
 export type RouteOpportunityItem = {
   demand: { destination_daily_passengers: number; distance_km: number; origin_daily_passengers: number };
   destination_airport: RouteAirportRef;
@@ -355,7 +317,6 @@ export type RouteOpportunityItem = {
   origin_airport: RouteAirportRef;
   recommendation: "blocked" | "open" | "risky";
 };
-
 export type ScheduleOptionsResponse = {
   aircraft: OperationAircraftOption[];
   default_pattern: {
@@ -368,7 +329,6 @@ export type ScheduleOptionsResponse = {
   routes: OperationRoute[];
   schedules: OperationSchedule[];
 };
-
 export type SchedulePreviewResponse = {
   preview: {
     blockers: OperationReason[];

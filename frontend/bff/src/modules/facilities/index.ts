@@ -2,6 +2,7 @@ import type { BffConfig } from "../../config";
 
 import { BackendHttpError } from "../../backend-http";
 import { jsonResponse } from "../../http";
+import { listHubsForAirline } from "../hubs/storage";
 import { aircraftStateConstraints, airportDataConstraints, rangeConstraints, runwayConstraints } from "./constraints";
 import { buildBaseFacilitiesOverview } from "./overview";
 import { loadFacilitiesSnapshot } from "./snapshot";
@@ -19,7 +20,12 @@ export async function handleFacilitiesRequest(
     const snapshot = await loadFacilitiesSnapshot(request, config);
 
     if (url.pathname === "/facilities/base-overview") {
-      return jsonResponse(buildBaseFacilitiesOverview(snapshot));
+      const baseAirportId = snapshot.airline.starting_airport_id ?? "";
+      const stored = await listHubsForAirline(snapshot.airline.id ?? "");
+      const hubAirportIds = [baseAirportId, ...stored.map((hub) => hub.airport_id)];
+      const selected = url.searchParams.get("airport_id") ?? undefined;
+
+      return jsonResponse(buildBaseFacilitiesOverview(snapshot, hubAirportIds, selected));
     }
 
     const match = /^\/facilities\/airports\/([^/]+)\/constraints$/.exec(url.pathname);

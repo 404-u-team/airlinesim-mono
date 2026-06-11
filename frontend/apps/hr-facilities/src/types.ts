@@ -49,6 +49,7 @@ export type FacilitiesOverview = {
     stand_fee: number;
     turnaround_point_price: number;
   };
+  hubs: HubOption[];
   next_actions: Array<{
     code: "BUY_AIRCRAFT" | "FIX_SCHEDULE" | "PLAN_ROUTE" | "SELECT_BASE" | "VIEW_FLIGHTS";
     target_path: string;
@@ -63,6 +64,7 @@ export type FacilitiesOverview = {
     incompatible_owned_aircraft: number;
     max_length_m: number;
   };
+  selected_airport_id: null | string;
   slots: {
     busiest_day: number;
     capacity_per_day: number;
@@ -77,5 +79,11 @@ export type FacilitiesOverview = {
     model: "airline_planning_headroom";
   };
   status: "blocked" | "missing" | "ready" | "warning";
+};
+
+export type HubOption = {
+  airport_id: string;
+  is_base: boolean;
+  label: string;
 };
 
