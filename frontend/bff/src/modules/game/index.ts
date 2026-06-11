@@ -220,31 +220,11 @@ export async function handleGameRequest(
   const snapshot = await loadGameSnapshot(config, request, userAuthorization);
 
   if (url.pathname === "/game/dashboard-summary") {
-    const [routes, operations] = await Promise.all([
-      listRoutesForAirline(snapshot.airline.id ?? ""),
-      loadOverlayOperations(snapshot.airline.id ?? ""),
-    ]);
-    const notifications = await reconcileNotificationsForRequest(request, config).catch(async () =>
-      reconcileNotificationsForDashboard({
-        aircrafts: snapshot.aircrafts,
-        airlineId: snapshot.airline.id ?? "",
-        balance: snapshot.airline.balance ?? 0,
-        bankrupt: Boolean(snapshot.airline.is_bankrupt),
-        routes,
-      }));
-
-    return jsonResponse(buildDashboardSummary(snapshot, routes, operations, dashboardAlerts(notifications)));
+    return handleDashboardSummaryRequest(request, snapshot, config);
   }
 
   if (url.pathname === "/game/map-state") {
-    const [routes, operations, hubs] = await Promise.all([
-      listRoutesForAirline(snapshot.airline.id ?? ""),
-      loadOverlayOperations(snapshot.airline.id ?? ""),
-      listHubsForAirline(snapshot.airline.id ?? ""),
-    ]);
-    const hubAirportIds = hubs.map((hub) => hub.airport_id);
-
-    return jsonResponse(buildMapState(snapshot, url.searchParams, routes, operations, hubAirportIds));
+    return handleMapStateRequest(snapshot, url);
   }
 
   if (url.pathname === "/game/finance-overview") {
@@ -252,15 +232,7 @@ export async function handleGameRequest(
   }
 
   if (url.pathname === "/game/facilities-overview") {
-    const facilitiesSnapshot = await loadFacilitiesSnapshot(request, config);
-    const stored = await listHubsForAirline(facilitiesSnapshot.airline.id ?? "");
-    const hubAirportIds = [facilitiesSnapshot.airline.starting_airport_id ?? "", ...stored.map((hub) => hub.airport_id)];
-
-    return jsonResponse(buildBaseFacilitiesOverview(
-      facilitiesSnapshot,
-      hubAirportIds,
-      url.searchParams.get("airport_id") ?? undefined,
-    ));
+    return handleFacilitiesOverviewRequest(request, url, config);
   }
 
   if (url.pathname === "/game/events-feed") {
@@ -618,6 +590,57 @@ function dashboardAlerts(notifications: DashboardNotification[]): Array<Record<s
 
 function getBaseAirport(snapshot: GameSnapshot): Airport | undefined {
   return snapshot.airports.find((airport) => airport.id === snapshot.airline.starting_airport_id);
+}
+
+async function handleDashboardSummaryRequest(
+  request: Request,
+  snapshot: GameSnapshot,
+  config: BffConfig,
+): Promise<Response> {
+  const [routes, operations] = await Promise.all([
+    listRoutesForAirline(snapshot.airline.id ?? ""),
+    loadOverlayOperations(snapshot.airline.id ?? ""),
+  ]);
+  const notifications = await reconcileNotificationsForRequest(request, config).catch(async () =>
+    reconcileNotificationsForDashboard({
+      aircrafts: snapshot.aircrafts,
+      airlineId: snapshot.airline.id ?? "",
+      balance: snapshot.airline.balance ?? 0,
+      bankrupt: Boolean(snapshot.airline.is_bankrupt),
+      routes,
+    }));
+
+  return jsonResponse(buildDashboardSummary(snapshot, routes, operations, dashboardAlerts(notifications)));
+}
+
+async function handleFacilitiesOverviewRequest(
+  request: Request,
+  url: URL,
+  config: BffConfig,
+): Promise<Response> {
+  const facilitiesSnapshot = await loadFacilitiesSnapshot(request, config);
+  const stored = await listHubsForAirline(facilitiesSnapshot.airline.id ?? "");
+  const hubAirportIds = [facilitiesSnapshot.airline.starting_airport_id ?? "", ...stored.map((hub) => hub.airport_id)];
+
+  return jsonResponse(buildBaseFacilitiesOverview(
+    facilitiesSnapshot,
+    hubAirportIds,
+    url.searchParams.get("airport_id") ?? undefined,
+  ));
+}
+
+async function handleMapStateRequest(
+  snapshot: GameSnapshot,
+  url: URL,
+): Promise<Response> {
+  const [routes, operations, hubs] = await Promise.all([
+    listRoutesForAirline(snapshot.airline.id ?? ""),
+    loadOverlayOperations(snapshot.airline.id ?? ""),
+    listHubsForAirline(snapshot.airline.id ?? ""),
+  ]);
+  const hubAirportIds = hubs.map((hub) => hub.airport_id);
+
+  return jsonResponse(buildMapState(snapshot, url.searchParams, routes, operations, hubAirportIds));
 }
 
 function interpolateFlightPosition(

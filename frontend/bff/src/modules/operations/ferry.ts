@@ -8,7 +8,6 @@ import { reconcileNotificationsAfterMutation } from "../events/reconcile";
 import { buildRouteOpportunity } from "../routes/planning";
 import { currentAircraftAirport } from "./aircraft-position";
 import { buildOneTimeFlight } from "./flights";
-import { currentFlightStatus, estimateBlockHours } from "./flights";
 import { dedupeGeneratedFlights, loadOperationsSnapshot } from "./load";
 import { saveFlights } from "./storage";
 

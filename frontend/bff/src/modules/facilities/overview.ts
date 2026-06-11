@@ -1,6 +1,6 @@
 import type { Airport } from "../fleet/types";
 import type { OperationsSnapshot } from "../operations/planning";
-import type { AirportConstraint, BaseFacilitiesOverview } from "./types";
+import type { AircraftCompatibilitySummary, AirportConstraint, BaseFacilitiesOverview } from "./types";
 
 import { resolveAircraftImageUrl } from "../aircraft-images/resolve";
 import { estimateBlockHours } from "../operations/flights";
@@ -13,36 +13,8 @@ export function buildBaseFacilitiesOverview(
   hubAirportIds: string[] = [],
   selectedAirportId?: string,
 ): BaseFacilitiesOverview {
-  const baseAirportId = snapshot.airline.starting_airport_id ?? "";
-  // The base is always selectable; purchased hubs (if any) are layered on top so the
-  // player can inspect the infrastructure of any owned airport, not just the home base.
-  const hubIds = hubAirportIds.length > 0 ? hubAirportIds : [baseAirportId];
-  const hubs = hubIds
-    .map((id) => snapshot.airports.find((airport) => airport.id === id))
-    .filter((airport): airport is Airport => Boolean(airport?.id))
-    .map((airport) => ({ airport_id: airport.id ?? "", is_base: airport.id === baseAirportId, label: airportLabel(airport) }));
-  // Fall back to the base when the requested airport isn't an owned hub.
-  const targetId = selectedAirportId && hubs.some((hub) => hub.airport_id === selectedAirportId)
-    ? selectedAirportId
-    : baseAirportId;
-  const base = snapshot.airports.find((airport) => airport.id === targetId);
-  const basedAircraft = snapshot.aircrafts.filter((aircraft) => aircraft.base_airport_id === base?.id);
-  const typeById = new Map(snapshot.aircraftTypes.map((type) => [type.id, type]));
-  const compatibility = basedAircraft.map((aircraft) => {
-    const type = typeById.get(aircraft.type_id) ?? null;
-    const constraints = [
-      ...runwayConstraints(base, type),
-      ...aircraftStateConstraints(aircraft),
-    ];
-
-    return {
-      aircraft,
-      compatible: !constraints.some((item) => item.blocking),
-      constraints,
-      runway_margin_m: runwayMargin(base, type),
-      type: type ? { ...type, image_url: resolveAircraftImageUrl(type) } : null,
-    };
-  });
+  const { base, hubs } = resolveSelectedHubAndBase(snapshot, hubAirportIds, selectedAirportId);
+  const compatibility = buildAircraftCompatibility(snapshot, base);
   const slots = buildSlotCapacity(base, snapshot.routes, snapshot.schedules, snapshot.flights);
   const constraints = dedupe([
     ...airportDataConstraints(base),
@@ -80,6 +52,29 @@ export function buildBaseFacilitiesOverview(
 
 function airportLabel(airport: Airport): string {
   return `${airport.iata_code ?? airport.icao_code ?? "----"} - ${airport.intl_name ?? airport.local_name ?? "Airport"}`;
+}
+
+function buildAircraftCompatibility(
+  snapshot: OperationsSnapshot,
+  base: Airport | undefined,
+): AircraftCompatibilitySummary[] {
+  const basedAircraft = snapshot.aircrafts.filter((aircraft) => aircraft.base_airport_id === base?.id);
+  const typeById = new Map(snapshot.aircraftTypes.map((type) => [type.id, type]));
+  return basedAircraft.map((aircraft) => {
+    const type = typeById.get(aircraft.type_id) ?? null;
+    const constraints = [
+      ...runwayConstraints(base, type),
+      ...aircraftStateConstraints(aircraft),
+    ];
+
+    return {
+      aircraft,
+      compatible: !constraints.some((item) => item.blocking),
+      constraints,
+      runway_margin_m: runwayMargin(base, type),
+      type: type ? { ...type, image_url: resolveAircraftImageUrl(type) } : null,
+    };
+  });
 }
 
 function countAffectedNightSchedules(snapshot: OperationsSnapshot, airportId: string | undefined): number {
@@ -137,6 +132,26 @@ function nextActions(
     { code: "PLAN_ROUTE", target_path: "/airports/routes" },
     { code: "VIEW_FLIGHTS", target_path: "/operations/live-flights" },
   ];
+}
+
+function resolveSelectedHubAndBase(
+  snapshot: OperationsSnapshot,
+  hubAirportIds: string[],
+  selectedAirportId?: string,
+): { base: Airport | undefined; hubs: Array<{ airport_id: string; is_base: boolean; label: string }> } {
+  const baseAirportId = snapshot.airline.starting_airport_id ?? "";
+  const hubIds = hubAirportIds.length > 0 ? hubAirportIds : [baseAirportId];
+  const hubs = hubIds
+    .map((id) => snapshot.airports.find((airport) => airport.id === id))
+    .filter((airport): airport is Airport => Boolean(airport?.id))
+    .map((airport) => ({ airport_id: airport.id ?? "", is_base: airport.id === baseAirportId, label: airportLabel(airport) }));
+  
+  const targetId = selectedAirportId && hubs.some((hub) => hub.airport_id === selectedAirportId)
+    ? selectedAirportId
+    : baseAirportId;
+  const base = snapshot.airports.find((airport) => airport.id === targetId);
+
+  return { base, hubs };
 }
 
 function scheduleConflictsWithNight(

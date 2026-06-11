@@ -12,6 +12,8 @@ services:
       - "4200"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - bff-data:/app/bff/data
     networks:
       - airlinesim_internal
 
@@ -42,3 +44,6 @@ networks:
 
   intranet:
     external: true
+
+volumes:
+  bff-data:

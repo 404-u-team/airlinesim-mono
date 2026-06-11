@@ -258,6 +258,31 @@ export class MapManager {
         this.emit();
     }
 
+    public setRotation(rotationStatus: boolean): void {
+        const wasInRotation = this.isInRotation;
+        this.isInRotation = rotationStatus;
+
+        if (this.animationId !== null) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
+
+        if (this.isInRotation) {
+            if (!wasInRotation) {
+                this.interactableWasTrue = this.interactable;
+            }
+            this.interactable = false;
+            this.setMapInteractivity(false);
+            this.spinGlobe();
+            this.emit();
+            return;
+        }
+
+        this.interactable = this.interactableWasTrue;
+        this.setMapInteractivity(this.interactable);
+        this.emit();
+    }
+
     // Highlights the flight shown in the dashboard's flight card and re-centers the
     // camera on its current (interpolated) position. Pass null to clear.
     public setSelectedFlight(flightId: null | string): void {
@@ -286,31 +311,6 @@ export class MapManager {
         if (coordinates && this.map) {
             this.map.flyTo({ center: coordinates, duration: 800, zoom: Math.max(this.map.getZoom(), 4) });
         }
-    }
-
-    public setRotation(rotationStatus: boolean): void {
-        const wasInRotation = this.isInRotation;
-        this.isInRotation = rotationStatus;
-
-        if (this.animationId !== null) {
-            cancelAnimationFrame(this.animationId);
-            this.animationId = null;
-        }
-
-        if (this.isInRotation) {
-            if (!wasInRotation) {
-                this.interactableWasTrue = this.interactable;
-            }
-            this.interactable = false;
-            this.setMapInteractivity(false);
-            this.spinGlobe();
-            this.emit();
-            return;
-        }
-
-        this.interactable = this.interactableWasTrue;
-        this.setMapInteractivity(this.interactable);
-        this.emit();
     }
 
     public subscribe(listener: MapManagerListener): () => void {
@@ -507,6 +507,17 @@ export class MapManager {
         this.map.on("click", "airlinesim-flight-points", this.handleFlightClick);
     }
 
+    // Drives live aircraft movement entirely on the client: every second the flight
+    // positions are re-interpolated from the embedded origin/destination + airborne
+    // window and pushed to the source. No refetch, no remount, no camera change.
+    private ensureFlightTicker(): void {
+        if (this.flightTickerId !== null) {
+            return;
+        }
+
+        this.flightTickerId = setInterval(() => this.tickFlightPositions(), 1000);
+    }
+
     // Registers the plane glyph used by the flight symbol layer. Built as an SDF so the
     // layer can tint it per flight status via "icon-color". Re-added on demand because a
     // style swap drops all registered images.
@@ -520,17 +531,6 @@ export class MapManager {
         if (icon) {
             this.map.addImage("airlinesim-plane", icon, { pixelRatio: 2, sdf: true });
         }
-    }
-
-    // Drives live aircraft movement entirely on the client: every second the flight
-    // positions are re-interpolated from the embedded origin/destination + airborne
-    // window and pushed to the source. No refetch, no remount, no camera change.
-    private ensureFlightTicker(): void {
-        if (this.flightTickerId !== null) {
-            return;
-        }
-
-        this.flightTickerId = setInterval(() => this.tickFlightPositions(), 1000);
     }
 
     private ensureRouteLayer(): void {
@@ -794,50 +794,6 @@ export class MapManager {
     }
 }
 
-function debugLog(message: string, details: Record<string, unknown>): void {
-    if (isDebugLoggingEnabled()) {
-        console.warn(DEBUG_LOG_PREFIX, message, details);
-    }
-}
-
-function debugWarn(message: string, details: Record<string, unknown>): void {
-    if (isDebugLoggingEnabled()) {
-        console.warn(DEBUG_LOG_PREFIX, message, details);
-    }
-}
-
-function featureCount(data: Record<string, unknown>): number {
-    const {features} = data;
-
-    return Array.isArray(features) ? features.length : 0;
-}
-
-// Point a fraction `t` along the great circle between two [lng, lat] coordinates.
-// Mirrors how MapLibre densifies a 2-point line into a geodesic on the globe.
-function greatCirclePoint(start: [number, number], end: [number, number], t: number): [number, number] {
-    const toRad = Math.PI / 180;
-    const toDeg = 180 / Math.PI;
-    const lat1 = start[1] * toRad;
-    const lon1 = start[0] * toRad;
-    const lat2 = end[1] * toRad;
-    const lon2 = end[0] * toRad;
-    const delta = 2 * Math.asin(Math.sqrt(
-        Math.sin((lat2 - lat1) / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin((lon2 - lon1) / 2) ** 2,
-    ));
-
-    if (delta === 0) {
-        return start;
-    }
-
-    const a = Math.sin((1 - t) * delta) / Math.sin(delta);
-    const b = Math.sin(t * delta) / Math.sin(delta);
-    const x = a * Math.cos(lat1) * Math.cos(lon1) + b * Math.cos(lat2) * Math.cos(lon2);
-    const y = a * Math.cos(lat1) * Math.sin(lon1) + b * Math.cos(lat2) * Math.sin(lon2);
-    const z = a * Math.sin(lat1) + b * Math.sin(lat2);
-
-    return [Math.atan2(y, x) * toDeg, Math.atan2(z, Math.sqrt(x * x + y * y)) * toDeg];
-}
-
 // Initial bearing (degrees, 0 = north) from one [lng, lat] toward another.
 function bearingBetween(from: [number, number], to: [number, number]): number {
     const toRad = Math.PI / 180;
@@ -894,14 +850,26 @@ function createPlaneIcon(): ImageData | null {
     return ctx.getImageData(0, 0, size, size);
 }
 
+function debugLog(message: string, details: Record<string, unknown>): void {
+    if (isDebugLoggingEnabled()) {
+        console.warn(DEBUG_LOG_PREFIX, message, details);
+    }
+}
+
+function debugWarn(message: string, details: Record<string, unknown>): void {
+    if (isDebugLoggingEnabled()) {
+        console.warn(DEBUG_LOG_PREFIX, message, details);
+    }
+}
+
 // Expands each 2-point route LineString into a great-circle polyline so the rendered
 // line tracks the same arc as the great-circle flight dots under globe projection.
 function densifyRoutes(routeData: Record<string, unknown>): Record<string, unknown> {
     const features = (Array.isArray(routeData.features) ? routeData.features : []).map((feature) => {
-        const geometry = (feature as { geometry?: { coordinates?: unknown; type?: string } }).geometry;
+        const {geometry} = (feature as { geometry?: { coordinates?: unknown; type?: string } });
         const coordinates = geometry?.coordinates;
 
-        if (!geometry || geometry.type !== "LineString" || !Array.isArray(coordinates) || coordinates.length < 2) {
+        if (geometry?.type !== "LineString" || !Array.isArray(coordinates) || coordinates.length < 2) {
             return feature;
         }
 
@@ -915,6 +883,12 @@ function densifyRoutes(routeData: Record<string, unknown>): Record<string, unkno
     });
 
     return { features, type: "FeatureCollection" };
+}
+
+function featureCount(data: Record<string, unknown>): number {
+    const {features} = data;
+
+    return Array.isArray(features) ? features.length : 0;
 }
 
 // Sampled great-circle path with longitudes unwrapped past ±180 so a leg crossing the
@@ -942,6 +916,32 @@ function greatCircleLine(start: [number, number], end: [number, number]): Array<
     }
 
     return points;
+}
+
+// Point a fraction `t` along the great circle between two [lng, lat] coordinates.
+// Mirrors how MapLibre densifies a 2-point line into a geodesic on the globe.
+function greatCirclePoint(start: [number, number], end: [number, number], t: number): [number, number] {
+    const toRad = Math.PI / 180;
+    const toDeg = 180 / Math.PI;
+    const lat1 = start[1] * toRad;
+    const lon1 = start[0] * toRad;
+    const lat2 = end[1] * toRad;
+    const lon2 = end[0] * toRad;
+    const delta = 2 * Math.asin(Math.sqrt(
+        Math.sin((lat2 - lat1) / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin((lon2 - lon1) / 2) ** 2,
+    ));
+
+    if (delta === 0) {
+        return start;
+    }
+
+    const a = Math.sin((1 - t) * delta) / Math.sin(delta);
+    const b = Math.sin(t * delta) / Math.sin(delta);
+    const x = a * Math.cos(lat1) * Math.cos(lon1) + b * Math.cos(lat2) * Math.cos(lon2);
+    const y = a * Math.cos(lat1) * Math.sin(lon1) + b * Math.cos(lat2) * Math.sin(lon2);
+    const z = a * Math.sin(lat1) + b * Math.sin(lat2);
+
+    return [Math.atan2(y, x) * toDeg, Math.atan2(z, Math.sqrt(x * x + y * y)) * toDeg];
 }
 
 function isDebugLoggingEnabled(): boolean {

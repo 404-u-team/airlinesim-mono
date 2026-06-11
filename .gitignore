@@ -511,3 +511,6 @@ frontend/bff/data/import/world-data/mappings/
 frontend/bff/data/import/world-data/raw/
 frontend/bff/data/import/world-data/reports/
 frontend/bff/data/import/world-data/stage/
+frontend/bff/data/game-state/game.db-wal
+frontend/bff/data/game-state/game.db-wal
+frontend/bff/data/game-state/game.db-shm

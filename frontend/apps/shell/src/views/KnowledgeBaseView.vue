@@ -4,16 +4,12 @@ import { type Locale, translate } from "@airlinesim/i18n";
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-import { getDashboardSummary } from "../dashboard/api";
 import type { DashboardSummary } from "../dashboard/types";
-import { getFuelPrice } from "../fuel/api";
 import type { FuelPriceSnapshot } from "../fuel/types";
-import { type ShellMessageKey, shellMessages } from "../i18n/messages";
 
-type ArticleLink = {
-  label: Record<Locale, string>;
-  path: string;
-};
+import { getDashboardSummary } from "../dashboard/api";
+import { getFuelPrice } from "../fuel/api";
+import { type ShellMessageKey, shellMessages } from "../i18n/messages";
 
 type Article = {
   body: Record<Locale, string[]>;
@@ -21,6 +17,11 @@ type Article = {
   id: string;
   links?: ArticleLink[];
   title: Record<Locale, string>;
+};
+
+type ArticleLink = {
+  label: Record<Locale, string>;
+  path: string;
 };
 
 const props = defineProps<{
@@ -239,10 +240,6 @@ watch(
   { immediate: true },
 );
 
-function openArticle(article: Article): void {
-  void router.push(`/knowledge-base/${article.id}`);
-}
-
 function formatMoney(value: number): string {
   return new Intl.NumberFormat(props.appLocale, {
     currency: "USD",
@@ -256,7 +253,7 @@ function formatNumber(value: number): string {
 }
 
 function formatParagraph(text: string): string {
-  const badgeStyle = (color: "primary" | "success" | "warning" | "info" | "danger") => {
+  const badgeStyle = (color: "danger" | "info" | "primary" | "success" | "warning") => {
     return `inline-flex items-center px-1.5 py-0.5 rounded bg-${color}-soft text-on-${color}-soft text-xs font-semibold font-mono border border-${color}/25`;
   };
 
@@ -291,7 +288,7 @@ function formatParagraph(text: string): string {
       : "N/A";
 
     const nextActionCode = summary.value.next_action.code;
-    let nextDesc = nextActionCode;
+    let nextDesc: string = nextActionCode;
     if (nextActionCode === "BUY_FIRST_AIRCRAFT") {
       nextDesc = props.appLocale === "ru" ? "купите первый самолет во Fleet & Ops" : "buy your first aircraft in Fleet & Ops";
     } else if (nextActionCode === "PLAN_FIRST_ROUTE") {
@@ -340,6 +337,10 @@ function formatParagraph(text: string): string {
     .replace(/{alertsCount}/g, `<span class="${badgeStyle("danger")}">${vals.alertsCount}</span>`)
     .replace(/{fuelPrice}/g, `<span class="${badgeStyle("success")}">${vals.fuelPrice}</span>`)
     .replace(/{nextActionDescription}/g, `<span class="${badgeStyle("info")}">${vals.nextActionDescription}</span>`);
+}
+
+function openArticle(article: Article): void {
+  void router.push(`/knowledge-base/${article.id}`);
 }
 </script>
 

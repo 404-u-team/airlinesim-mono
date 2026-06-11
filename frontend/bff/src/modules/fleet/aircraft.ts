@@ -39,58 +39,14 @@ export async function getAircraftDetail(
   ]);
 
   const flights = updateFlightStatuses(flightsList);
-  const aircraftFlights = flights.filter((f) => f.aircraft_id === aircraftId && f.status !== "cancelled");
-  const activeFlight = aircraftFlights.find((f) => f.status === "in_flight" || f.status === "boarding");
-
-  let currentLocation: {
-    airport?: {
-      id: string;
-      label: string;
-    };
-    flight?: unknown;
-    type: "airport" | "flight";
-  };
-
-  if (activeFlight) {
-    const [withAirports] = attachAirportRefs([activeFlight], fleetSnapshot.airports);
-    
-    const operationsSnapshot = {
-      aircraftTypes: fleetSnapshot.aircraftTypes,
-      aircrafts: fleetSnapshot.aircrafts,
-      airline: fleetSnapshot.airline,
-      airports: fleetSnapshot.airports,
-      flights: flightsList,
-      routes: routesList,
-      schedules: [],
-    } as unknown as OperationsSnapshot;
-    
-    const telemetryRefs = flightTelemetryFor(activeFlight, operationsSnapshot);
-    currentLocation = {
-      flight: {
-        ...withAirports,
-        ...telemetryRefs,
-      },
-      type: "flight",
-    };
-  } else {
-    const currentAirportId = currentAircraftAirport(aircraftId, flights, aircraft.base_airport_id);
-    const airport = fleetSnapshot.airports.find((a) => a.id === currentAirportId);
-    
-    let airportLabel = "Unknown Airport";
-    if (airport) {
-      airportLabel = `${airport.iata_code ?? airport.icao_code ?? "----"} - ${airport.intl_name ?? airport.local_name ?? "Airport"}`;
-    } else if (aircraft.base_airport_id) {
-      airportLabel = aircraft.base_airport_id;
-    }
-    
-    currentLocation = {
-      airport: {
-        id: currentAirportId ?? aircraft.base_airport_id ?? "",
-        label: airportLabel,
-      },
-      type: "airport",
-    };
-  }
+  const currentLocation = getAircraftLocation(
+    aircraftId,
+    aircraft,
+    flights,
+    flightsList,
+    routesList,
+    fleetSnapshot,
+  );
 
   const enriched = enrichOwnedAircraft(aircraft, fleetSnapshot.aircraftTypes, fleetSnapshot.airports);
 
@@ -230,6 +186,59 @@ async function findAircraftByTailNumber(
   const response = await requestBackendJson<{ items?: Aircraft[] }>(config, "/aircrafts", { token: authorization });
 
   return response.items?.find((aircraft) => normalizeTailNumber(aircraft.tail_number) === tailNumber) ?? null;
+}
+
+function getAircraftLocation(
+  aircraftId: string,
+  aircraft: Aircraft,
+  flights: ReturnType<typeof updateFlightStatuses>,
+  rawFlightsList: unknown[],
+  routesList: unknown[],
+  fleetSnapshot: Awaited<ReturnType<typeof loadFleetSnapshot>>,
+): Record<string, unknown> {
+  const aircraftFlights = flights.filter((f) => f.aircraft_id === aircraftId && f.status !== "cancelled");
+  const activeFlight = aircraftFlights.find((f) => f.status === "in_flight" || f.status === "boarding");
+
+  if (activeFlight) {
+    const [withAirports] = attachAirportRefs([activeFlight], fleetSnapshot.airports);
+    
+    const operationsSnapshot = {
+      aircrafts: fleetSnapshot.aircrafts,
+      aircraftTypes: fleetSnapshot.aircraftTypes,
+      airline: fleetSnapshot.airline,
+      airports: fleetSnapshot.airports,
+      flights: rawFlightsList,
+      routes: routesList,
+      schedules: [],
+    } as unknown as OperationsSnapshot;
+    
+    const telemetryRefs = flightTelemetryFor(activeFlight, operationsSnapshot);
+    return {
+      flight: {
+        ...withAirports,
+        ...telemetryRefs,
+      },
+      type: "flight" as const,
+    };
+  }
+
+  const currentAirportId = currentAircraftAirport(aircraftId, flights, aircraft.base_airport_id);
+  const airport = fleetSnapshot.airports.find((a) => a.id === currentAirportId);
+  
+  let airportLabel = "Unknown Airport";
+  if (airport) {
+    airportLabel = `${airport.iata_code ?? airport.icao_code ?? "----"} - ${airport.intl_name ?? airport.local_name ?? "Airport"}`;
+  } else if (aircraft.base_airport_id) {
+    airportLabel = aircraft.base_airport_id;
+  }
+  
+  return {
+    airport: {
+      id: currentAirportId ?? aircraft.base_airport_id ?? "",
+      label: airportLabel,
+    },
+    type: "airport" as const,
+  };
 }
 
 async function getCreatedAircraft(
