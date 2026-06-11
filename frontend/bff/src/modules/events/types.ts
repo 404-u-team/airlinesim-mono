@@ -2,6 +2,7 @@ export type EventCategory = "finance" | "fleet" | "operations" | "route" | "syst
 export type EventCode =
   | "AIRCRAFT_PURCHASED"
   | "FINANCE_RESULT_RECORDED"
+  | "FLIGHT_AUTO_CANCELLED"
   | "FLIGHT_COMPLETED"
   | "HUB_ESTABLISHED"
   | "ROUTE_CREATED"

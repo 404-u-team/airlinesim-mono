@@ -1,13 +1,14 @@
 import { createRealtimeClient, type FuelPriceChangedEvent } from "@airlinesim/game-sdk/realtime";
 import { computed, ref, type Ref } from "vue";
 
-import type { FuelPriceSnapshot } from "./types";
+import type { FuelPriceSnapshot, FuelStorageSnapshot } from "./types";
 
-import { getFuelPrice } from "./api";
+import { getFuelPrice, getFuelStorage } from "./api";
 
 type FuelConnectionState = "connected" | "connecting" | "disconnected";
 
 const current = ref<FuelPriceSnapshot | null>(null);
+const storage = ref<FuelStorageSnapshot | null>(null);
 const error = ref("");
 const isLoading = ref(false);
 const connectionState = ref<FuelConnectionState>("disconnected");
@@ -19,12 +20,14 @@ export const fuelState: {
   error: Ref<string>;
   isLive: Ref<boolean>;
   isLoading: Ref<boolean>;
+  storage: Ref<FuelStorageSnapshot | null>;
 } = {
   connectionState,
   current,
   error,
   isLive: computed(() => connectionState.value === "connected"),
   isLoading,
+  storage,
 };
 
 export async function refreshFuelPrice(): Promise<void> {
@@ -37,6 +40,14 @@ export async function refreshFuelPrice(): Promise<void> {
     error.value = loadError instanceof Error ? loadError.message : "Could not load fuel price.";
   } finally {
     isLoading.value = false;
+  }
+}
+
+export async function refreshFuelStorage(): Promise<void> {
+  try {
+    storage.value = (await getFuelStorage()).storage;
+  } catch {
+    // Topbar metric simply keeps the previous value when the storage endpoint fails.
   }
 }
 

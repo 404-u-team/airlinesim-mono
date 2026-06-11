@@ -5,8 +5,8 @@ import type { StoredRoute } from "../routes/types";
 import type { OperationReason, SchedulePattern, SchedulePreview, StoredFlight, StoredSchedule } from "./types";
 
 import { arrivalLocalTime, nightOperationConstraints, rangeConstraints, runwayConstraints } from "../facilities/constraints";
-import { currentAircraftAirport } from "./aircraft-position";
 import { estimateBlockHours, estimateUtilizationHours, estimateWeeklyCost, generateFlightsForSchedule, stableScheduleId, summarizeWeeklyEconomics } from "./flights";
+import { addOneWayBlocker, addPositionWarning } from "./planning-checks";
 import { buildRoundTripSlotConstraints } from "./planning-slots";
 import { addMinutesToLocalTime } from "./schedule-time";
 
@@ -47,7 +47,7 @@ export function buildSchedulePreview(snapshot: OperationsSnapshot, input: Schedu
     economics: weeklyEconomics,
     sample_flights: previewFlights.slice(0, 8),
     warnings,
-    weekly_utilization_hours: estimateUtilizationHours(route, type, days.length, pattern.turnaround_minutes),
+    weekly_utilization_hours: estimateUtilizationHours(route, type, days.length, pattern.turnaround_minutes, pattern.round_trip),
   };
 }
 
@@ -153,11 +153,16 @@ function addNightOpsWarning(
     destination?.timezone,
     origin?.timezone,
   );
+  const returnConstraints = pattern.round_trip
+    ? [
+        ...nightOperationConstraints(destination, returnDepartureTime),
+        ...nightOperationConstraints(origin, returnArrivalTime ?? "12:00"),
+      ]
+    : [];
   const constraints = [
     ...nightOperationConstraints(origin, pattern.departure_local_time),
-    ...(arrivalTime ? nightOperationConstraints(destination, arrivalTime) : nightOperationConstraints(destination, "12:00")),
-    ...nightOperationConstraints(destination, returnDepartureTime),
-    ...(returnArrivalTime ? nightOperationConstraints(origin, returnArrivalTime) : nightOperationConstraints(origin, "12:00")),
+    ...nightOperationConstraints(destination, arrivalTime ?? "12:00"),
+    ...returnConstraints,
   ];
 
   for (const item of constraints) {
@@ -198,26 +203,6 @@ function addPerformanceBlockers(
     ...runwayConstraints(origin, type).map(toOperationReason),
     ...runwayConstraints(destination, type).map(toOperationReason),
   );
-}
-
-function addPositionBlocker(
-  blockers: OperationReason[],
-  snapshot: OperationsSnapshot,
-  route: StoredRoute | undefined,
-  aircraft: Aircraft | undefined,
-): void {
-  if (!route || !aircraft?.id) {
-    return;
-  }
-
-  // Position defaults to the aircraft's own base (its delivery hub), not the airline
-  // base — otherwise an aircraft delivered to a secondary hub looks out of position.
-  const homeBase = aircraft.base_airport_id ?? snapshot.airline.starting_airport_id;
-  const location = currentAircraftAirport(aircraft.id, snapshot.flights, homeBase);
-
-  if (location && location !== route.origin_airport_id) {
-    addReason(blockers, "AIRCRAFT_OUT_OF_POSITION", "Aircraft is not at the route origin and must finish its current rotation first.");
-  }
 }
 
 function addReason(reasons: OperationReason[], code: OperationReason["code"], message: string): void {
@@ -273,7 +258,7 @@ function buildBlockers(
 
   addRouteBlockers(blockers, route);
   addAircraftBlockers(blockers, aircraft);
-  addPositionBlocker(blockers, snapshot, route, aircraft);
+  addOneWayBlocker(blockers, snapshot, route, pattern);
   addPatternBlockers(blockers, pattern);
   addPerformanceBlockers(blockers, route, type, origin, destination);
   addConflictBlockers(blockers, snapshot, aircraft, pattern);
@@ -309,6 +294,7 @@ function buildWarnings(
 ): OperationReason[] {
   const warnings: OperationReason[] = [];
 
+  addPositionWarning(warnings, snapshot, route, aircraft);
   addNightOpsWarning([], warnings, route, type, origin, destination, pattern);
   addSlotWarnings(warnings, snapshot, route, type, origin, destination, pattern);
   addOversupplyWarning(warnings, route, type, pattern);

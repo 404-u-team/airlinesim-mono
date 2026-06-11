@@ -1,5 +1,8 @@
 export type FlightFinancials = {
   cost: number;
+  // Jet fuel the flight burns, in tonnes. Drawn from the airline's fuel storage at
+  // settlement (spot-purchased only for the shortfall). Optional: legacy rows miss it.
+  fuel_tonnes?: number;
   load_factor: number;
   passengers: number;
   profit: number;
@@ -32,6 +35,7 @@ export type OperationReasonCode =
   | "CASH_RESERVE_LOW"
   | "DESTINATION_RUNWAY_TOO_SHORT"
   | "NO_DAYS_SELECTED"
+  | "ONE_WAY_REQUIRES_HUBS"
   | "ORIGIN_RUNWAY_TOO_SHORT"
   | "OVERSUPPLY_RISK"
   | "ROUTE_NOT_FOUND"

@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import type { StoredFlight, StoredSchedule } from "./types";
 
 import { readDocument, writeDocument } from "../../db/database";
+import { currentFlightStatus } from "./flights";
 
 const flightsLegacyPath = resolve(import.meta.dir, "../../../data/game-state/flights.json");
 const schedulesLegacyPath = resolve(import.meta.dir, "../../../data/game-state/schedules.json");
@@ -17,14 +18,17 @@ export async function deleteFlightsForRoute(routeId: string): Promise<void> {
   }
 }
 
-export async function deleteFutureFlightsForSchedules(scheduleIds: string[]): Promise<void> {
+export async function deleteFutureFlightsForSchedules(scheduleIds: string[], keepFlightIds: string[] = []): Promise<void> {
   if (scheduleIds.length === 0) {
     return;
   }
   const targetIds = new Set(scheduleIds);
+  const keptIds = new Set(keepFlightIds);
   const currentFlights = readFlights();
+  // Status is derived live: a stored "scheduled" row may already be airborne, and a
+  // departed or explicitly kept leg (in-progress rotation) must survive the rebuild.
   const remaining = currentFlights.filter(
-    (flight) => !(targetIds.has(flight.schedule_id) && flight.status === "scheduled"),
+    (flight) => !(targetIds.has(flight.schedule_id) && currentFlightStatus(flight) === "scheduled" && !keptIds.has(flight.id)),
   );
 
   if (remaining.length !== currentFlights.length) {

@@ -5,7 +5,7 @@ export type FinanceRisk = {
   value?: number;
 };
 
-export type LedgerCategory = "airport" | "fuel" | "maintenance" | "operations" | "revenue" | "system";
+export type LedgerCategory = "airport" | "capital" | "fuel" | "maintenance" | "operations" | "revenue" | "system";
 
 export type LedgerTransaction = {
   airline_id: string;
@@ -14,13 +14,18 @@ export type LedgerTransaction = {
   created_at: string;
   currency: "USD";
   direction: "credit" | "debit";
+  // True for records that mirror a charge the backend already took from the balance
+  // (e.g. aircraft purchase). They show up in transaction lists but must not shift
+  // the BFF-side balance delta, or the charge would be counted twice.
+  excluded_from_balance?: boolean;
   flight_id?: string;
   id: string;
   idempotency_key: string;
   label_code: string;
   occurred_at: string;
+  parameters?: Record<string, boolean | number | string>;
   route_id?: string;
   schedule_id?: string;
   source_id?: string;
-  source_type: "airport_fee" | "flight_revenue" | "fuel_cost" | "maintenance_reserve" | "system_adjustment";
+  source_type: "aircraft_purchase" | "airport_fee" | "flight_revenue" | "fuel_cost" | "fuel_purchase" | "maintenance_reserve" | "system_adjustment";
 };

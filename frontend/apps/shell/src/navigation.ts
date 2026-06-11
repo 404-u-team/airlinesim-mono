@@ -25,7 +25,7 @@ import {
 } from "@lucide/vue";
 
 import type { ShellStatusSummary } from "./dashboard/types";
-import type { FuelPriceSnapshot } from "./fuel/types";
+import type { FuelStorageSnapshot } from "./fuel/types";
 import type { ShellMessageKey } from "./i18n/messages";
 
 import { resolveRemoteId } from "./mfe-routing";
@@ -111,6 +111,7 @@ export const navigationSections: NavigationSection[] = [
       { label: "Overview", path: "/finances/overview" },
       { label: "R&F profit", path: "/finances/profit" },
       { label: "Costs", path: "/finances/costs" },
+      { label: "Transactions", path: "/finances/transactions" },
       { enabled: false, label: "Loans & leasing", path: "/finances/loans-leasing" },
       { enabled: false, label: "Stock market", path: "/finances/stock-market" },
     ],
@@ -153,7 +154,7 @@ export const navigationSections: NavigationSection[] = [
 export function getStatusMetrics(
   t: (key: ShellMessageKey) => string,
   status: null | ShellStatusSummary,
-  fuel: FuelPriceSnapshot | null = null,
+  fuelStorage: FuelStorageSnapshot | null = null,
   locale = "en",
 ): StatusMetric[] {
   return [
@@ -165,7 +166,11 @@ export function getStatusMetrics(
     {
       icon: Fuel,
       label: t("status.fuel"),
-      value: fuel ? formatMoney(fuel.unit_price, locale) : "-",
+      // Stored fuel quantity (not the spot price): the point is catching cheap fuel
+      // and watching the tank, the market price lives on the fuel page.
+      value: fuelStorage
+        ? `${new Intl.NumberFormat(locale, { maximumFractionDigits: 0, notation: fuelStorage.stored_tonnes >= 100_000 ? "compact" : "standard" }).format(fuelStorage.stored_tonnes)} t`
+        : "-",
     },
     {
       icon: PlaneTakeoff,

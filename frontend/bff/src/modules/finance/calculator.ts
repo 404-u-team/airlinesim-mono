@@ -56,7 +56,10 @@ export function signedAmount(transaction: LedgerTransaction): number {
 }
 
 export function sumLedger(transactions: LedgerTransaction[]): number {
-  return transactions.reduce((total, transaction) => total + signedAmount(transaction), 0);
+  return transactions.reduce(
+    (total, transaction) => total + (transaction.excluded_from_balance ? 0 : signedAmount(transaction)),
+    0,
+  );
 }
 
 function stableLedgerId(idempotencyKey: string): string {

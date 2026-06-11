@@ -96,9 +96,10 @@ export function estimateFlightFinancials(
   const loadFactor = clamp(passengers / Math.max(seats, 1), 0, MAX_LOAD_FACTOR);
   const revenue = Math.round(fare * passengers);
   const blockHours = estimateBlockHours(route, type);
+  // fuel_consumption_per_hour is kg/h; the fuel unit price is per tonne, so convert.
+  const fuelTonnes = ((type.fuel_consumption_per_hour ?? 2000) / 1000) * blockHours;
   const cost = Math.round(
-    // fuel_consumption_per_hour is kg/h; the fuel unit price is per tonne, so convert.
-    ((type.fuel_consumption_per_hour ?? 2000) / 1000) * blockHours * getCurrentFuelUnitPrice() +
+    fuelTonnes * getCurrentFuelUnitPrice() +
       (type.maint_cost_per_flight_hour ?? 600) * blockHours +
       (origin.runway_fee ?? 0) +
       (origin.gate_fee ?? 0) +
@@ -108,6 +109,7 @@ export function estimateFlightFinancials(
 
   return {
     cost,
+    fuel_tonnes: Number(fuelTonnes.toFixed(3)),
     load_factor: Number(loadFactor.toFixed(2)),
     passengers,
     profit: revenue - cost,
@@ -120,8 +122,11 @@ export function estimateUtilizationHours(
   type: AircraftType | undefined,
   daysPerWeek: number,
   turnaroundMinutes = 0,
+  roundTrip = true,
 ): number {
-  return Number((roundTripHours(route, type, turnaroundMinutes) * Math.max(daysPerWeek, 0)).toFixed(1));
+  const hoursPerDay = roundTrip ? roundTripHours(route, type, turnaroundMinutes) : estimateBlockHours(route, type);
+
+  return Number((hoursPerDay * Math.max(daysPerWeek, 0)).toFixed(1));
 }
 
 export function estimateWeeklyCost(

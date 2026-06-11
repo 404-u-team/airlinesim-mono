@@ -4,26 +4,13 @@ import type { Locale } from "@airlinesim/i18n";
 import { computed } from "vue";
 import { Line } from "vue-chartjs";
 
-import type { LedgerTransaction } from "../types";
+import type { FuelStorageHistoryEntry } from "../types";
 
 import { chartPalette } from "./charts";
 
-const props = defineProps<{ baseline: number; locale: Locale; transactions: LedgerTransaction[] }>();
+const props = defineProps<{ history: FuelStorageHistoryEntry[]; locale: Locale }>();
 
-const points = computed(() => {
-  // Transactions mirroring backend charges (e.g. aircraft purchases) are display-only
-  // and must not shift the running balance — the baseline already includes them.
-  const sorted = [...props.transactions]
-    .filter((transaction) => !transaction.excluded_from_balance)
-    .sort((left, right) => left.occurred_at.localeCompare(right.occurred_at));
-  let running = props.baseline;
-
-  return sorted.map((transaction) => {
-    running += transaction.direction === "credit" ? transaction.amount : -transaction.amount;
-
-    return { label: transaction.occurred_at, value: running };
-  });
-});
+const points = computed(() => [...props.history].slice(0, 96).reverse());
 
 const chartData = computed(() => ({
   datasets: [
@@ -31,14 +18,14 @@ const chartData = computed(() => ({
       backgroundColor: chartPalette.primaryFill,
       borderColor: chartPalette.primary,
       borderWidth: 2,
-      data: points.value.map((point) => point.value),
+      data: points.value.map((point) => point.stored_tonnes),
       fill: true,
       pointRadius: 0,
-      tension: 0.3,
+      stepped: true,
     },
   ],
   labels: points.value.map((point) =>
-    new Intl.DateTimeFormat(props.locale, { day: "2-digit", month: "short" }).format(new Date(point.label)),
+    new Intl.DateTimeFormat(props.locale, { day: "2-digit", hour: "2-digit", minute: "2-digit", month: "2-digit" }).format(new Date(point.recorded_at)),
   ),
 }));
 
@@ -53,6 +40,7 @@ const options = computed(() => ({
       ticks: { autoSkip: true, color: chartPalette.ticks, maxRotation: 0, maxTicksLimit: 6 },
     },
     y: {
+      beginAtZero: true,
       grid: { color: chartPalette.grid },
       ticks: {
         callback: (value: number | string) =>
@@ -65,7 +53,7 @@ const options = computed(() => ({
 </script>
 
 <template>
-  <div class="h-56">
+  <div class="h-72">
     <Line
       :data="chartData"
       :options="options"

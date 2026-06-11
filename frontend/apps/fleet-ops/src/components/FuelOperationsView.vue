@@ -11,6 +11,7 @@ import type { FleetOwnedAircraftCard, FuelPriceSnapshot } from "../types";
 import { getFleetAircraft, getFuelHistory, getFuelPrice } from "../api";
 import { formatMoneyValue, formatNumberValue } from "../formatters";
 import FuelPriceChart from "./FuelPriceChart.vue";
+import FuelStoragePanel from "./FuelStoragePanel.vue";
 
 const props = defineProps<{
   appLocale: Locale;
@@ -204,6 +205,14 @@ function stopRealtime(): void {
           :value="priceRange"
         />
       </section>
+
+      <!-- Fuel storage: stock metrics, purchase form and stock-level chart -->
+      <FuelStoragePanel
+        :app-locale="props.appLocale"
+        :current-price="current?.price ?? null"
+        :owned-aircraft="ownedAircraft"
+        :t="props.t"
+      />
 
       <!-- Main Section: Chart and History list -->
       <div class="grid gap-4 lg:grid-cols-3">

@@ -13,6 +13,8 @@ import type {
   FlightsResponse,
   FuelHistoryResponse,
   FuelPriceSnapshot,
+  FuelPurchaseResult,
+  FuelStorageResponse,
   HubsResponse,
   ReplaceScheduleResponse,
   RouteOpportunitiesResponse,
@@ -136,6 +138,10 @@ export async function getFuelPrice(): Promise<FuelPriceSnapshot> {
   return apiClient.get<FuelPriceSnapshot>("/fuel/price");
 }
 
+export async function getFuelStorage(): Promise<FuelStorageResponse> {
+  return apiClient.get<FuelStorageResponse>("/fuel/storage");
+}
+
 export async function getHubs(): Promise<HubsResponse> {
   return apiClient.get<HubsResponse>("/hubs");
 }
@@ -178,9 +184,13 @@ export async function purchaseFleetAircraft(payload: {
   return apiClient.post<FleetPurchaseResponse>("/fleet/aircraft", payload);
 }
 
+export async function purchaseFuelTonnes(tonnes: number): Promise<FuelPurchaseResult> {
+  return apiClient.post<FuelPurchaseResult>("/fuel/storage/purchase", { tonnes });
+}
+
 export async function replaceAircraftSchedule(payload: {
   aircraft_id: string;
-  blocks: Array<{ day: number; departure_local_time: string; route_id: string }>;
+  blocks: Array<{ day: number; departure_local_time: string; round_trip?: boolean; route_id: string }>;
   round_trip: boolean;
   turnaround_minutes: number;
 }): Promise<ReplaceScheduleResponse> {

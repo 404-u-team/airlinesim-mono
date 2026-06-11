@@ -26,6 +26,8 @@ export type TimelineBar = {
   leftPct: number;
   saved?: boolean;
   tone: "outbound" | "return";
+  /** The readiness analyzer flagged this block: the aircraft will miss the departure. */
+  warning?: boolean;
   widthPct: number;
   wrapped?: boolean;
 };

@@ -22,6 +22,7 @@ export function computeActualFinancials(flight: StoredFlight): FlightFinancials 
 
   return {
     cost: expected.cost,
+    ...(expected.fuel_tonnes !== undefined ? { fuel_tonnes: expected.fuel_tonnes } : {}),
     load_factor: Number(loadFactor.toFixed(2)),
     passengers,
     profit: revenue - expected.cost,

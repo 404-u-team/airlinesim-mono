@@ -10,6 +10,7 @@ import { getFinanceLedger, getFinanceOverview, getRouteProfitability } from "./a
 import BalanceChart from "./components/BalanceChart.vue";
 import CashflowChart from "./components/CashflowChart.vue";
 import ProfitTable, { type ProfitRow } from "./components/ProfitTable.vue";
+import TransactionsView from "./components/TransactionsView.vue";
 import { financeText } from "./i18n";
 
 const props = defineProps<{ appLocale: Locale; shellPath?: string }>();
@@ -119,9 +120,11 @@ function transactionAmount(transaction: LedgerTransaction): number {
 
 function transactionLabel(code: string): string {
   const keys = {
+    FINANCE_AIRCRAFT_PURCHASE: "transactionAircraftPurchase",
     FINANCE_AIRPORT_FEES: "transactionAirportFees",
     FINANCE_FLIGHT_REVENUE: "transactionFlightRevenue",
     FINANCE_FUEL_COST: "transactionFuelCost",
+    FINANCE_FUEL_PURCHASE: "transactionFuelPurchase",
     FINANCE_HUB_ESTABLISHMENT: "transactionHubEstablishment",
     FINANCE_MAINTENANCE_RESERVE: "transactionMaintenanceReserve",
     FINANCE_PRICE_ANALYSIS_FEE: "transactionPriceAnalysisFee",
@@ -269,6 +272,17 @@ function transactionLabel(code: string): string {
           />
         </section>
       </div>
+
+      <!-- Transactions: full paginated ledger with capex toggle -->
+      <TransactionsView
+        v-else-if="view === 'transactions'"
+        class="mt-5"
+        :app-locale="props.appLocale"
+        :format-money="formatMoney"
+        :t="t"
+        :transaction-label="transactionLabel"
+        @error="error = $event"
+      />
 
       <!-- Overview: charts + top-3 tables -->
       <template v-else>

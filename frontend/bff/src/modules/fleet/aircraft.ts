@@ -8,7 +8,7 @@ import { jsonResponse, readJson } from "../../http";
 import { recordGameEvent } from "../events/producer";
 import { reconcileNotificationsAfterMutation } from "../events/reconcile";
 import { sumLedger } from "../finance/calculator";
-import { listLedgerForAirline } from "../finance/storage";
+import { listLedgerForAirline, saveLedgerTransactions } from "../finance/storage";
 import { currentAircraftAirport } from "../operations/aircraft-position";
 import { attachAirportRefs } from "../operations/flight-airports";
 import { flightTelemetryFor } from "../operations/flight-read";
@@ -93,6 +93,7 @@ export async function handlePurchaseAircraft(request: Request, config: BffConfig
   cache.clear();
 
   const purchaseResponse = await buildPurchaseResponse(config, authorization, snapshot, response.id, preview);
+  await recordAircraftPurchaseTransaction(snapshot.airline.id ?? "", response.id, preview.aircraftPrice);
   await recordPurchasedAircraftEvent(snapshot, response.id, preview);
   await reconcileNotificationsAfterMutation(request, config);
 
@@ -280,6 +281,36 @@ function invalidTailNumberResponse(validation: ReturnType<typeof validateTailNum
     },
     { status: validation.conflict ? 409 : 400 },
   );
+}
+
+// Mirrors the backend's aircraft charge into the BFF ledger so the purchase shows up
+// in the transactions page. Marked excluded_from_balance: the backend balance already
+// reflects it, so counting it in the ledger delta would double the charge.
+async function recordAircraftPurchaseTransaction(
+  airlineId: string,
+  aircraftId: string | undefined,
+  price: number,
+): Promise<void> {
+  if (!airlineId || price <= 0) {
+    return;
+  }
+  const now = new Date().toISOString();
+
+  await saveLedgerTransactions([{
+    airline_id: airlineId,
+    amount: Math.round(price),
+    category: "capital",
+    created_at: now,
+    currency: "USD",
+    direction: "debit",
+    excluded_from_balance: true,
+    id: `ledger-${crypto.randomUUID()}`,
+    idempotency_key: `aircraft-purchase:${aircraftId ?? crypto.randomUUID()}`,
+    label_code: "FINANCE_AIRCRAFT_PURCHASE",
+    occurred_at: now,
+    source_id: aircraftId ?? "",
+    source_type: "aircraft_purchase",
+  }]);
 }
 
 async function recordPurchasedAircraftEvent(

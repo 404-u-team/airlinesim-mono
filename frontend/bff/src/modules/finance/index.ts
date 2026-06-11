@@ -52,6 +52,14 @@ type RouteProfitability = FinanceSummary & {
   route_id: string;
 };
 
+// One-off capital purchases. The transactions page hides them behind a toggle and
+// route/hub profitability must not treat them as operating costs.
+const CAPEX_LABEL_CODES = new Set(["FINANCE_AIRCRAFT_PURCHASE", "FINANCE_HUB_ESTABLISHMENT"]);
+
+// Paid analysis fees are a planning expense, not a route operating cost: a single fee
+// would otherwise drown a thin route's P&L and flag it as loss-making.
+const ROUTE_PNL_EXCLUDED_LABEL_CODES = new Set(["FINANCE_PRICE_ANALYSIS_FEE", ...CAPEX_LABEL_CODES]);
+
 // The endpoint router intentionally keeps all finance paths in one BFF module.
 // eslint-disable-next-line complexity
 export async function handleFinanceRequest(
@@ -187,16 +195,21 @@ async function ledger(request: Request, url: URL, config: BffConfig): Promise<Re
   const snapshot = await loadFinanceSnapshot(request, config);
   const category = url.searchParams.get("category");
   const routeId = url.searchParams.get("route_id");
+  const direction = url.searchParams.get("direction");
+  const includeCapex = url.searchParams.get("include_capex") !== "0";
   const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? "100"), 1), 500);
-  const transactions = snapshot.ledger
+  const offset = Math.max(Number(url.searchParams.get("offset") ?? "0"), 0);
+  const filtered = snapshot.ledger
     .filter((item) => !category || item.category === category)
     .filter((item) => !routeId || item.route_id === routeId)
-    .sort((left, right) => right.occurred_at.localeCompare(left.occurred_at))
-    .slice(0, limit);
+    .filter((item) => !direction || item.direction === direction)
+    .filter((item) => includeCapex || !CAPEX_LABEL_CODES.has(item.label_code))
+    .sort((left, right) => right.occurred_at.localeCompare(left.occurred_at));
 
   return jsonResponse({
-    summary: summarize(transactions),
-    transactions,
+    summary: summarize(filtered),
+    total: filtered.length,
+    transactions: filtered.slice(offset, offset + limit),
   });
 }
 
@@ -268,7 +281,9 @@ function routeProfitability(
   const airportById = new Map(airports.map((airport) => [airport.id, airport]));
 
   return routesList.map((route) => {
-    const routeTransactions = transactions.filter((transaction) => transaction.route_id === route.id);
+    const routeTransactions = transactions.filter(
+      (transaction) => transaction.route_id === route.id && !ROUTE_PNL_EXCLUDED_LABEL_CODES.has(transaction.label_code),
+    );
     const flightIds = new Set(routeTransactions.map((transaction) => transaction.flight_id).filter(Boolean));
     const summary = summarize(routeTransactions);
 

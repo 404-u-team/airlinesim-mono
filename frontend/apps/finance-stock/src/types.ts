@@ -46,14 +46,22 @@ export type HubProfitability = FinanceSummary & {
   routes: number;
 };
 
+export type LedgerPage = {
+  summary: FinanceSummary;
+  total: number;
+  transactions: LedgerTransaction[];
+};
+
 export type LedgerTransaction = {
   amount: number;
   category: string;
   direction: "credit" | "debit";
+  excluded_from_balance?: boolean;
   flight_id?: string;
   id: string;
   label_code: string;
   occurred_at: string;
+  parameters?: Record<string, boolean | number | string>;
   route_id?: string;
 };
 

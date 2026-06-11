@@ -5,9 +5,10 @@ import type { StoredFlight } from "./types";
 import { refreshStoredRoute } from "../routes/planning";
 import { loadRoutePlanningSnapshot } from "../routes/snapshot";
 import { listRoutesForAirline } from "../routes/storage";
+import { autoCancelMispositionedFlights, recordAutoCancelledFlightEvents } from "./auto-cancel";
 import { recomputeFlightExpected } from "./flights";
 import { settleDepartedFlights } from "./settlement";
-import { listFlightsForAirline, listSchedulesForAirline } from "./storage";
+import { listFlightsForAirline, listSchedulesForAirline, saveFlights } from "./storage";
 
 // Drops generated flights whose (route, aircraft, departure) key already exists, so
 // re-saving an unchanged schedule does not create duplicate flight rows.
@@ -40,9 +41,19 @@ export async function loadOperationsSnapshot(request: Request, config: BffConfig
     schedules,
   };
 
-  // Recompute the live estimate first, then freeze `actual` for any flight that has
-  // already departed so finance/operations consumers settle on the same numbers.
+  // Recompute the live estimate first, auto-cancel departures the aircraft physically
+  // missed, then freeze `actual` for the flights that really departed so
+  // finance/operations consumers settle on the same numbers.
   const recomputed = flights.map((flight) => recomputeFlightExpected(flight, snapshot));
+  const baseByAircraft = new Map(
+    snapshot.aircrafts.map((aircraft) => [aircraft.id, aircraft.base_airport_id ?? snapshot.airline.starting_airport_id]),
+  );
+  const { cancelled, flights: consistentFlights } = autoCancelMispositionedFlights(recomputed, baseByAircraft);
 
-  return { ...snapshot, flights: settleDepartedFlights(recomputed) };
+  if (cancelled.length > 0) {
+    await saveFlights(cancelled);
+    await recordAutoCancelledFlightEvents(airlineId, cancelled);
+  }
+
+  return { ...snapshot, flights: settleDepartedFlights(consistentFlights) };
 }

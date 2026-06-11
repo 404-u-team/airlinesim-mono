@@ -93,9 +93,9 @@ function factor(value: number): string {
       <!-- Source badges -->
       <div
         v-if="breakdown"
-        class="flex flex-wrap items-center gap-2 rounded-lg bg-background/20 p-2.5 border border-border/40"
+        class="flex flex-wrap items-center gap-2"
       >
-        <span class="text-xs font-medium text-text-muted">{{ t("demand.source") }}:</span>
+        <span class="text-[0.7rem] font-semibold uppercase tracking-wide text-text-muted">{{ t("demand.source") }}</span>
         <AirBadge
           :label="breakdown.catchmentSource === 'artifact' ? t('demand.source.artifact') : t('demand.source.fallback')"
           :variant="breakdown.catchmentSource === 'artifact' ? 'success-soft' : 'warning-soft'"
@@ -107,56 +107,62 @@ function factor(value: number): string {
         />
       </div>
 
-      <!-- Equation Block (Redesigned with HTML/CSS typesetting) -->
+      <!-- Equation Block (HTML/CSS typesetting) -->
       <section class="rounded-xl border border-border/80 bg-background/30 p-4 shadow-sm">
-        <h3 class="text-sm font-bold text-text-primary mb-3">
+        <h3 class="mb-4 text-sm font-bold text-text-primary">
           {{ t("demand.section.formula") }}
         </h3>
-        <div class="space-y-3 font-mono text-xs md:text-sm leading-relaxed text-text-primary">
-          <!-- Step 1 -->
-          <div class="flex flex-wrap items-center gap-1">
-            <span class="font-bold text-primary">G</span>
-            <span class="text-text-muted font-sans">=</span>
-            <span class="text-amber-500 font-semibold">baseScale</span>
-            <span class="text-text-muted font-sans">&middot;</span>
-            <span>catch<sub>Origin</sub><sup>&alpha;</sup></span>
-            <span class="text-text-muted font-sans">&middot;</span>
-            <span>catch<sub>Dest</sub><sup>&alpha;</sup></span>
-            <span class="text-text-muted font-sans">&middot;</span>
-            <span>GDPpc<sub>Origin</sub><sup>&beta;</sup></span>
-            <span class="text-text-muted font-sans">&middot;</span>
-            <span>GDPpc<sub>Dest</sub><sup>&beta;</sup></span>
-            <span class="text-text-muted font-sans">&middot;</span>
-            <span>D(distance)</span>
-          </div>
-
-          <!-- Step 2 -->
-          <div class="flex flex-wrap items-center gap-1 border-t border-border/40 pt-2.5">
-            <span class="font-bold text-primary">BaseDemand</span>
-            <span class="text-text-muted font-sans">=</span>
-            <span>G</span>
-            <span class="text-text-muted font-sans">&middot;</span>
-            <span class="flex items-center">
-              <span class="text-base leading-none font-sans font-normal">&radic;</span>
-              <span class="border-t border-text-primary px-1 mt-0.5 text-xs font-mono">prop<sub>Origin</sub> &middot; prop<sub>Dest</sub></span>
+        <div class="math-block">
+          <!-- Step 1: gravity mass -->
+          <div class="math-row">
+            <span class="math-lhs text-primary">G</span>
+            <span class="math-eq">=</span>
+            <span class="math-rhs">
+              <span class="math-term text-amber-500 font-semibold">baseScale</span>
+              <span class="math-op">&middot;</span>
+              <span class="math-term">catch<sub>O</sub><sup>&alpha;</sup></span>
+              <span class="math-op">&middot;</span>
+              <span class="math-term">catch<sub>D</sub><sup>&alpha;</sup></span>
+              <span class="math-op">&middot;</span>
+              <span class="math-term">GDPpc<sub>O</sub><sup>&beta;</sup></span>
+              <span class="math-op">&middot;</span>
+              <span class="math-term">GDPpc<sub>D</sub><sup>&beta;</sup></span>
+              <span class="math-op">&middot;</span>
+              <span class="math-term">D(dist)</span>
             </span>
-            <span class="text-text-muted font-sans">&middot;</span>
-            <span>affinity</span>
-            <span class="text-text-muted font-sans">&middot;</span>
-            <span>shortHaul</span>
           </div>
 
-          <!-- Step 3 -->
-          <div class="flex flex-wrap items-center gap-1 border-t border-border/40 pt-2.5">
-            <span class="font-bold text-primary">DailyDemand</span>
-            <span class="text-text-muted font-sans">=</span>
-            <span>BaseDemand</span>
-            <span class="text-text-muted font-sans">&middot;</span>
-            <span>direction</span>
-            <span class="text-text-muted font-sans">&middot;</span>
-            <span>airportShare</span>
-            <span class="text-text-muted font-sans">&middot;</span>
-            <span>override</span>
+          <!-- Step 2: base demand -->
+          <div class="math-row">
+            <span class="math-lhs text-primary">BaseDemand</span>
+            <span class="math-eq">=</span>
+            <span class="math-rhs">
+              <span class="math-term">G</span>
+              <span class="math-op">&middot;</span>
+              <span class="math-sqrt">
+                <span class="math-radical">&radic;</span>
+                <span class="math-radicand">prop<sub>O</sub> &middot; prop<sub>D</sub></span>
+              </span>
+              <span class="math-op">&middot;</span>
+              <span class="math-term">affinity</span>
+              <span class="math-op">&middot;</span>
+              <span class="math-term">shortHaul</span>
+            </span>
+          </div>
+
+          <!-- Step 3: daily demand -->
+          <div class="math-row">
+            <span class="math-lhs text-primary">DailyDemand</span>
+            <span class="math-eq">=</span>
+            <span class="math-rhs">
+              <span class="math-term">BaseDemand</span>
+              <span class="math-op">&middot;</span>
+              <span class="math-term">direction</span>
+              <span class="math-op">&middot;</span>
+              <span class="math-term">airportShare</span>
+              <span class="math-op">&middot;</span>
+              <span class="math-term">override</span>
+            </span>
           </div>
         </div>
       </section>
@@ -244,3 +250,85 @@ function factor(value: number): string {
     </div>
   </AirModal>
 </template>
+
+<style scoped>
+/* Aligned three-column equation layout: [lhs] = [rhs] */
+.math-block {
+  display: grid;
+  grid-template-columns: max-content max-content 1fr;
+  align-items: baseline;
+  column-gap: 0.65rem;
+  row-gap: 0.9rem;
+  font-family: var(--font-source-code), monospace;
+  font-size: 0.8125rem;
+}
+
+.math-row {
+  display: contents;
+}
+
+.math-row + .math-row .math-lhs,
+.math-row + .math-row .math-eq,
+.math-row + .math-row .math-rhs {
+  border-top: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  padding-top: 0.9rem;
+}
+
+.math-lhs {
+  justify-self: end;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.math-eq {
+  color: var(--text-muted);
+  font-family: var(--font-montserrat), sans-serif;
+}
+
+.math-rhs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.4rem;
+  line-height: 1.6;
+}
+
+.math-op {
+  color: var(--text-muted);
+}
+
+.math-term sub,
+.math-radicand sub {
+  font-size: 0.7em;
+  vertical-align: sub;
+}
+
+.math-term sup {
+  font-size: 0.7em;
+  vertical-align: super;
+}
+
+/* Square root with proper overline over the radicand */
+.math-sqrt {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.math-radical {
+  font-size: 1.2em;
+  line-height: 1;
+  transform: translateY(-0.04em);
+}
+
+.math-radicand {
+  border-top: 1.5px solid currentColor;
+  padding: 0.12em 0.3em 0;
+  margin-left: 0.05em;
+}
+
+@media (min-width: 768px) {
+  .math-block {
+    font-size: 0.875rem;
+  }
+}
+</style>

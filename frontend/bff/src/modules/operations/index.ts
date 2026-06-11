@@ -287,7 +287,10 @@ async function operationRequest(request: Request, url: URL, config: BffConfig): 
 }
 
 async function replaceSchedules(request: Request, config: BffConfig): Promise<Response> {
-  const snapshot = await loadOperationsSnapshot(request, config);
+  const loaded = await loadOperationsSnapshot(request, config);
+  // Statuses are derived live: a stored "scheduled" row may already be airborne, and the
+  // rotation-protection logic below relies on seeing the real in_flight/completed state.
+  const snapshot: OperationsSnapshot = { ...loaded, flights: updateFlightStatuses(loaded.flights) };
   const payload = await readJson<ReplaceScheduleRequest>(request);
   const aircraftId = payload.aircraft_id ?? "";
 
@@ -295,19 +298,23 @@ async function replaceSchedules(request: Request, config: BffConfig): Promise<Re
     return jsonResponse({ error: { code: "AIRCRAFT_REQUIRED", message: "aircraft_id is required." } }, { status: 400 });
   }
 
-  const { flights, previews, schedules } = replaceAircraftSchedule(snapshot, {
+  const { flights, previews, protectedFlights, schedules } = replaceAircraftSchedule(snapshot, {
     aircraft_id: aircraftId,
     blocks: normalizeReplaceBlocks(payload.blocks),
     round_trip: payload.round_trip,
     turnaround_minutes: payload.turnaround_minutes,
   });
+  const protectedIds = new Set(protectedFlights.map((flight) => flight.id));
 
-  // Drop the aircraft's old schedules and their future flights, then persist the rebuilt set.
-  // Dedupe the rebuilt flights against everything *except* the aircraft's own future flights
-  // we are replacing, so an unchanged leg is not deduped away and then lost.
-  const keptFlights = snapshot.flights.filter((flight) => !(flight.aircraft_id === aircraftId && flight.status === "scheduled"));
+  // Drop the aircraft's old schedules and their future flights — except the in-progress
+  // rotation legs — then persist the rebuilt set. Dedupe the rebuilt flights against
+  // everything *except* the aircraft's own future flights we are replacing, so an
+  // unchanged leg is not deduped away and then lost.
+  const keptFlights = snapshot.flights.filter(
+    (flight) => !(flight.aircraft_id === aircraftId && flight.status === "scheduled" && !protectedIds.has(flight.id)),
+  );
   const removedScheduleIds = await deleteSchedulesForAircraft(snapshot.airline.id ?? "", aircraftId);
-  await deleteFutureFlightsForSchedules(removedScheduleIds);
+  await deleteFutureFlightsForSchedules(removedScheduleIds, [...protectedIds]);
   await Promise.all(schedules.map(saveSchedule));
   if (flights.length > 0) {
     await saveFlights(dedupeGeneratedFlights(keptFlights, flights));

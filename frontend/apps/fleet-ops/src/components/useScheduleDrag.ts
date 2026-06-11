@@ -4,7 +4,7 @@ import type { ScheduleDragState } from "./schedule-types";
 
 import { timeToHour } from "./schedule-bars";
 
-export type ScheduleBlock = { day: number; id: string; routeId: string; saved?: boolean; time: string };
+export type ScheduleBlock = { day: number; id: string; oneWay?: boolean; routeId: string; saved?: boolean; time: string };
 
 type DragContext = {
   drag: ScheduleDragState;
@@ -17,6 +17,8 @@ type DragOptions = {
   blocks: Ref<ScheduleBlock[]>;
   hasConflict: (candidate: ScheduleBlock, ignoredBlockId?: string) => boolean;
   moveBlock: (blockId: string, day: number, time: string) => void;
+  /** Whether a drop of this payload would create (or move) a one-way block — hides the return-leg preview. */
+  oneWayForPayload?: (payloadId: string, kind: "block" | "route") => boolean;
   placeBlock: (day: number, time: string, routeId?: string) => void;
   previewWidthForRoute: (routeId: string) => number;
   /** Total block-hours for the route (one-way, excluding turnaround) */
@@ -191,15 +193,7 @@ function handleMove(context: DragContext, event: PointerEvent): void {
   drag.localTime = localTime;
   drag.valid = !options.hasConflict(candidate, drag.kind === "block" ? drag.payloadId : "");
 
-  // Return-leg preview: computed in UTC (flight duration is timezone-independent)
-  const routeId = drag.kind === "block"
-    ? (options.blocks.value.find((b) => b.id === drag.payloadId)?.routeId ?? drag.payloadId)
-    : drag.payloadId;
-  const blockHours = options.routeHoursForRoute(routeId);
-  const returnUTCHour = timeToHour(utcTime) + blockHours + options.turnaroundHours;
-  const returnDayOffset = Math.floor(returnUTCHour / 24);
-  drag.returnPreviewDay = (utcDay + returnDayOffset) % 7;
-  drag.returnPreviewLeftPct = ((returnUTCHour % 24) / 24) * 100;
+  updateReturnPreview(context, utcDay, utcTime);
 }
 
 function timeFromPointer(clientX: number, track: HTMLElement): string {
@@ -209,4 +203,23 @@ function timeFromPointer(clientX: number, track: HTMLElement): string {
   const whole = Math.floor(hour);
 
   return `${String(whole).padStart(2, "0")}:${hour - whole >= 0.5 ? "30" : "00"}`;
+}
+
+// Return-leg preview: computed in UTC (flight duration is timezone-independent).
+function updateReturnPreview(context: DragContext, utcDay: number, utcTime: string): void {
+  const { drag, options } = context;
+
+  if (drag.kind && options.oneWayForPayload?.(drag.payloadId, drag.kind)) {
+    drag.returnPreviewDay = null;
+    drag.returnPreviewLeftPct = null;
+    return;
+  }
+  const routeId = drag.kind === "block"
+    ? (options.blocks.value.find((b) => b.id === drag.payloadId)?.routeId ?? drag.payloadId)
+    : drag.payloadId;
+  const blockHours = options.routeHoursForRoute(routeId);
+  const returnUTCHour = timeToHour(utcTime) + blockHours + options.turnaroundHours;
+  const returnDayOffset = Math.floor(returnUTCHour / 24);
+  drag.returnPreviewDay = (utcDay + returnDayOffset) % 7;
+  drag.returnPreviewLeftPct = ((returnUTCHour % 24) / 24) * 100;
 }

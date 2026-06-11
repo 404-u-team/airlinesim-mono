@@ -1,21 +1,22 @@
 <script setup lang="ts">
 import type { Locale } from "@airlinesim/i18n";
 
-import { AirAircraftThumb, AirButton, AirProgressBar, AirSelect } from "@airlinesim/air-ui";
+import { AirButton } from "@airlinesim/air-ui";
 import { airlineSimEventBus } from "@airlinesim/event-bus";
-import { Plane } from "@lucide/vue";
 import { computed, onMounted, ref, watch } from "vue";
 
 import type { FleetMessageKey } from "../i18n";
-import type { OperationAircraftOption, OperationRoute, OperationSchedule, ScheduleOptionsResponse } from "../types";
+import type { HubOption, OperationAircraftOption, OperationRoute, OperationSchedule, ScheduleOptionsResponse } from "../types";
 import type { TimelineBar } from "./schedule-types";
 
-import { createRoute, getScheduleOptions, replaceAircraftSchedule } from "../api";
+import { createRoute, getHubs, getScheduleOptions, replaceAircraftSchedule } from "../api";
 import { useUtcOffset } from "../composables/useUtcOffset";
 import { formatMoneyValue } from "../formatters";
+import { analyzeScheduleReadiness } from "../schedule-readiness";
 import FerryFlightForm from "./FerryFlightForm.vue";
 import RoutePicker from "./RoutePicker.vue";
 import { barsConflict, buildBlockBars, routeCode, routeHours } from "./schedule-bars";
+import ScheduleAircraftPanel from "./ScheduleAircraftPanel.vue";
 import ScheduleTimeline from "./ScheduleTimeline.vue";
 import { type ScheduleBlock, useScheduleDrag } from "./useScheduleDrag";
 
@@ -25,33 +26,52 @@ const initialRouteId = new URLSearchParams(props.shellPath?.split("?")[1] ?? "")
 const aircraft = ref<OperationAircraftOption[]>([]); const armedRouteId = ref(""); const blocks = ref<ScheduleBlock[]>([]);
 const baselineSignature = ref(""); const error = ref(""); const isLoading = ref(false); const isSaving = ref(false);
 const routes = ref<OperationRoute[]>([]); const selectedAircraftId = ref(""); const success = ref(""); const schedules = ref<OperationSchedule[]>([]);
+const hubs = ref<HubOption[]>([]); const oneWayMode = ref(false);
 
 const selectedAircraftOption = computed(() => aircraft.value.find((item) => item.aircraft.id === selectedAircraftId.value));
-const utilizationHours = computed(() => blocks.value.reduce((total, b) => total + routeHours(routeById.value.get(b.routeId)) * 2, 0));
+const utilizationHours = computed(() => blocks.value.reduce((total, b) => total + routeHours(routeById.value.get(b.routeId)) * legsPerBlock(b), 0));
 const utilizationPercent = computed(() => Math.min(100, Math.round((utilizationHours.value / 168) * 100)));
 const utilizationTone = computed(() => (utilizationPercent.value > 90 && "warning") || (utilizationPercent.value > 70 && "success") || "primary");
 const aircraftOptions = computed(() => aircraft.value.map((opt) => ({ label: `${opt.aircraft.tail_number ?? opt.aircraft.id ?? "-"}${opt.compatible ? "" : " · blocked"}`, value: opt.aircraft.id ?? "" })));
 const armedRoute = computed(() => routeById.value.get(armedRouteId.value));
 
 const placements = computed(() => {
+  const flagged = new Set(readiness.value.issues.map((issue) => issue.blockId));
   const byDay = new Map<number, TimelineBar[]>();
   for (const block of blocks.value) {
-    for (const bar of barsForBlock(block)) { byDay.set(bar.day, [...(byDay.get(bar.day) ?? []), bar]); }
+    for (const bar of barsForBlock(block)) {
+      byDay.set(bar.day, [...(byDay.get(bar.day) ?? []), { ...bar, warning: flagged.has(block.id) }]);
+    }
   }
   return [...byDay.entries()].map(([day, bars]) => ({ bars, day }));
 });
 
 const currentSignature = computed(() => signatureFor(blocks.value));
 const isDirty = computed(() => currentSignature.value !== baselineSignature.value);
-const weeklyFlights = computed(() => blocks.value.length * 2);
-const weeklyProfit = computed(() => blocks.value.reduce((tot, b) => tot + (routeById.value.get(b.routeId)?.economics_snapshot?.estimated_profit_per_flight ?? 0) * 2, 0));
+const weeklyFlights = computed(() => blocks.value.reduce((total, b) => total + legsPerBlock(b), 0));
+const weeklyProfit = computed(() => blocks.value.reduce((tot, b) => tot + (routeById.value.get(b.routeId)?.economics_snapshot?.estimated_profit_per_flight ?? 0) * legsPerBlock(b), 0));
 const routeById = computed(() => new Map(routes.value.map((route) => [route.id, route])));
+const hubIdSet = computed(() => new Set(hubs.value.map((hub) => hub.airport_id)));
+const armedRouteHubToHub = computed(() => isHubToHub(armedRoute.value));
+const startAirportId = computed(() => {
+  const card = selectedAircraftOption.value?.aircraft;
+  return card?.currentLocation?.airport?.id || card?.base_airport_id || card?.baseAirport?.id || undefined;
+});
+const readiness = computed(() => analyzeScheduleReadiness({
+  blocks: blocks.value,
+  routeById: routeById.value,
+  startAirportId: startAirportId.value,
+}));
 
 /** UTC offset of the selected aircraft's hub airport (hours). Reactive: updates when aircraft changes. */
 const hubUtcOffsetHours = useUtcOffset(() => selectedAircraftOption.value?.aircraft?.baseAirport?.timezone);
 
 const { drag, onBarPointerDown, startRouteDrag } = useScheduleDrag({
-  blocks, hasConflict: blockHasConflict, moveBlock, placeBlock,
+  blocks, hasConflict: blockHasConflict, moveBlock,
+  oneWayForPayload: (payloadId, kind) => kind === "block"
+    ? Boolean(blocks.value.find((b) => b.id === payloadId)?.oneWay)
+    : oneWayMode.value && isHubToHub(routeById.value.get(payloadId)),
+  placeBlock,
   previewWidthForRoute: (rId) => (routeHours(routeById.value.get(rId)) / 24) * 100,
   routeHoursForRoute: (rId) => routeHours(routeById.value.get(rId)),
   routeLabel: (rId) => routeCode(routeById.value.get(rId)),
@@ -86,14 +106,29 @@ function existingBlocksForAircraft(aircraftId: string) {
   return schedules.value
     .filter((s) => s.status === "active" && s.aircraft_id === aircraftId)
     .flatMap((s) => s.pattern.days_of_week.map((day) => ({
-      day, id: `existing-${s.id}-${day}`, routeId: s.route_id, saved: true, time: s.pattern.departure_local_time,
+      day, id: `existing-${s.id}-${day}`, oneWay: s.pattern.round_trip === false, routeId: s.route_id, saved: true, time: s.pattern.departure_local_time,
     })));
+}
+
+function isHubToHub(route: OperationRoute | undefined): boolean {
+  return Boolean(route && hubIdSet.value.has(route.origin_airport_id) && hubIdSet.value.has(route.destination_airport_id));
+}
+
+function legsPerBlock(block: ScheduleBlock): number {
+  return block.oneWay ? 1 : 2;
 }
 
 async function loadOptions(): Promise<void> {
   isLoading.value = true;
   error.value = "";
-  try { applyOptionsResponse(await getScheduleOptions(initialRouteId || undefined)); }
+  try {
+    const [options, hubsResponse] = await Promise.all([
+      getScheduleOptions(initialRouteId || undefined),
+      getHubs().catch(() => ({ hubs: [] })),
+    ]);
+    hubs.value = hubsResponse.hubs;
+    applyOptionsResponse(options);
+  }
   catch (err) { error.value = err instanceof Error ? err.message : props.t("error.operations"); }
   finally { isLoading.value = false; }
 }
@@ -127,6 +162,14 @@ const onFerryCreated = () => {
   void loadOptions();
 };
 
+function airportLabelById(airportId: string): string {
+  for (const route of routes.value) {
+    if (route.origin_airport_id === airportId && route.origin_airport) { return route.origin_airport.iata_code ?? route.origin_airport.label; }
+    if (route.destination_airport_id === airportId && route.destination_airport) { return route.destination_airport.iata_code ?? route.destination_airport.label; }
+  }
+  return hubs.value.find((hub) => hub.airport_id === airportId)?.label ?? airportId;
+}
+
 const onRouteResolved = (route: OperationRoute) => {
   if (!routes.value.some((item) => item.id === route.id)) {routes.value = [...routes.value, route];}
   armedRouteId.value = route.id;
@@ -136,7 +179,8 @@ const onRouteResolved = (route: OperationRoute) => {
 function placeBlock(day: number, time: string, routeId?: string): void {
   const selRoute = routeId ?? armedRouteId.value;
   if (!selRoute) { error.value = props.t("operations.builder.armFirst"); return; }
-  const candidate = { day, id: crypto.randomUUID(), routeId: selRoute, time };
+  const oneWay = oneWayMode.value && isHubToHub(routeById.value.get(selRoute));
+  const candidate = { day, id: crypto.randomUUID(), oneWay, routeId: selRoute, time };
   if (blockHasConflict(candidate)) { error.value = props.t("operations.builder.overlap"); return; }
   error.value = "";
   armedRouteId.value = selRoute;
@@ -170,7 +214,12 @@ async function save(): Promise<void> {
     const routeIdMap = await materializePendingRoutes();
     await replaceAircraftSchedule({
       aircraft_id: selectedAircraftId.value,
-      blocks: blocks.value.map((b) => ({ day: b.day, departure_local_time: b.time, route_id: routeIdMap.get(b.routeId) ?? b.routeId })),
+      blocks: blocks.value.map((b) => ({
+        day: b.day,
+        departure_local_time: b.time,
+        round_trip: !b.oneWay,
+        route_id: routeIdMap.get(b.routeId) ?? b.routeId,
+      })),
       round_trip: true,
       turnaround_minutes: TURNAROUND_MINUTES,
     });
@@ -187,7 +236,7 @@ async function save(): Promise<void> {
 }
 
 function signatureFor(list: ScheduleBlock[]) {
-  return list.map((b) => `${b.day}|${b.time}|${b.routeId}`).sort().join(";");
+  return list.map((b) => `${b.day}|${b.time}|${b.routeId}|${b.oneWay ? "ow" : "rt"}`).sort().join(";");
 }
 </script>
 
@@ -202,96 +251,15 @@ function signatureFor(list: ScheduleBlock[]) {
       </p>
     </header>
 
-    <!-- Selected Aircraft Details & Utilization Card -->
-    <section v-if="selectedAircraftOption" class="mt-4 rounded-lg border border-border bg-surface p-4 shadow-sm">
-      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div class="flex items-center gap-3">
-          <AirAircraftThumb
-            v-if="selectedAircraftOption.aircraft.type?.image_url"
-            :alt="selectedAircraftOption.aircraft.modelName"
-            :image-url="selectedAircraftOption.aircraft.type.image_url"
-            size="md"
-          />
-          <div v-else class="grid size-12 select-none place-items-center rounded-lg bg-primary/10 text-xl font-bold uppercase text-primary">
-            {{ selectedAircraftOption.aircraft.modelName.slice(0, 3) }}
-          </div>
-          <div>
-            <div class="flex flex-wrap items-center gap-2">
-              <h2 class="text-subtitle font-bold text-text-primary">
-                {{ selectedAircraftOption.aircraft.tail_number || "No Tail Number" }}
-              </h2>
-              <span class="rounded border border-border bg-surface px-2 py-0.5 text-caption font-semibold text-text-muted">
-                {{ selectedAircraftOption.aircraft.modelName }}
-              </span>
-            </div>
-            <p class="mt-1 text-caption text-text-muted">
-              {{ props.t("market.base") }}: <strong class="text-text-primary">{{ selectedAircraftOption.aircraft.baseAirportName }}</strong> · 
-              {{ props.t("aircraft.status") }}: <strong class="text-text-primary">{{ selectedAircraftOption.aircraft.status || "Active" }}</strong>
-            </p>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-6">
-          <div class="flex flex-col gap-1 min-w-40">
-            <span class="text-caption text-text-muted font-medium">{{ props.t("operations.selectAircraft") }}</span>
-            <AirSelect
-              v-model="selectedAircraftId"
-              label="Aircraft"
-              :options="aircraftOptions"
-            />
-          </div>
-
-          <div class="w-full shrink-0 md:max-w-xs">
-            <div class="mb-1 flex items-center justify-between text-caption font-medium">
-              <span class="text-text-muted">{{ props.t("operations.utilization") }}</span>
-              <span class="font-bold text-text-primary">{{ utilizationHours.toFixed(1) }}{{ props.t("unit.hourShort") }} / 168{{ props.t("unit.hourShort") }} ({{ utilizationPercent }}%)</span>
-            </div>
-            <AirProgressBar :percent="utilizationPercent" :tone="utilizationTone" />
-          </div>
-        </div>
-      </div>
-
-      <!-- Compatibility alerts if any -->
-      <div
-        v-if="!selectedAircraftOption.compatible && selectedAircraftOption.blockers.length"
-        class="mt-3 rounded-lg border border-error bg-error-bg p-3 text-caption text-error"
-      >
-        <strong class="mb-1 block">{{ props.t("operations.blockedConstraints") }}</strong>
-        <ul class="list-disc pl-4 space-y-0.5">
-          <li v-for="blocker in selectedAircraftOption.blockers" :key="blocker.code">
-            {{ props.t('warning.' + blocker.code) || blocker.message }}
-          </li>
-        </ul>
-      </div>
-    </section>
-
-    <!-- Empty Aircraft Selector Placeholder -->
-    <section v-else class="mt-4 rounded-lg border border-border bg-surface p-6 shadow-sm flex flex-col items-center justify-center gap-4 text-center max-w-lg mx-auto">
-      <div class="grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
-        <Plane class="size-6" />
-      </div>
-      <div>
-        <h3 class="text-subtitle font-bold text-text-primary">
-          {{ aircraftOptions.length ? props.t("operations.selectAircraft") : props.t("aircraft.empty.noAircraft") }}
-        </h3>
-        <p class="text-caption text-text-muted mt-1 max-w-sm">
-          {{ aircraftOptions.length ? props.t("aircraft.empty.select") : props.t("aircraft.empty.buyFirst") }}
-        </p>
-      </div>
-      <div v-if="aircraftOptions.length" class="w-64">
-        <AirSelect
-          v-model="selectedAircraftId"
-          label="Aircraft"
-          :options="aircraftOptions"
-          class="w-full"
-        />
-      </div>
-      <div v-else>
-        <a href="/fleet/order/new" class="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-caption font-semibold text-on-primary transition hover:bg-primary/90">
-          {{ props.t("market.title") }}
-        </a>
-      </div>
-    </section>
+    <ScheduleAircraftPanel
+      v-model="selectedAircraftId"
+      :aircraft-options="aircraftOptions"
+      :selected-aircraft-option="selectedAircraftOption"
+      :t="props.t"
+      :utilization-hours="utilizationHours"
+      :utilization-percent="utilizationPercent"
+      :utilization-tone="utilizationTone"
+    />
 
     <div
       v-if="error || success"
@@ -325,6 +293,17 @@ function signatureFor(list: ScheduleBlock[]) {
           <span class="truncate font-semibold">{{ routeCode(armedRoute) }}</span>
           <span class="shrink-0">{{ formatMoney(armedRoute.economics_snapshot?.estimated_profit_per_flight ?? 0) }}</span>
         </div>
+        <label
+          v-if="armedRouteHubToHub"
+          class="flex cursor-pointer items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-caption text-text-primary"
+        >
+          <input
+            v-model="oneWayMode"
+            class="accent-primary"
+            type="checkbox"
+          />
+          <span>{{ props.t("operations.oneWay") }}</span>
+        </label>
         <p class="text-caption text-text-muted">
           {{ props.t("operations.routePicker.dragHint") }}
         </p>
@@ -349,6 +328,28 @@ function signatureFor(list: ScheduleBlock[]) {
           @place="placeBlock"
           @remove="removeBar"
         />
+
+        <div
+          v-if="readiness.issues.length || !readiness.periodic"
+          class="rounded-lg border border-warning bg-warning-bg p-4 text-warning"
+        >
+          <strong class="block text-caption font-bold uppercase tracking-wide">
+            {{ props.t("operations.readiness.title") }}
+          </strong>
+          <ul class="mt-2 grid gap-1 pl-4 text-caption list-disc">
+            <li
+              v-for="issue in readiness.issues"
+              :key="issue.blockId"
+            >
+              {{ routeCode(routeById.get(issue.routeId)) }} · {{ dayLabel(issue.day) }} {{ issue.time }} —
+              {{ props.t("operations.readiness.expectedAt") }} {{ airportLabelById(issue.expectedAirportId) }}.
+              {{ props.t("operations.readiness.autoCancel") }}
+            </li>
+            <li v-if="!readiness.periodic">
+              {{ props.t("operations.readiness.notPeriodic") }}
+            </li>
+          </ul>
+        </div>
 
         <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-4 shadow-sm">
           <div class="flex flex-wrap items-center gap-6">

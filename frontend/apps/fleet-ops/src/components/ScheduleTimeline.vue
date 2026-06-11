@@ -297,12 +297,14 @@ watch(() => props.timezone, () => {});
             :key="bar.id"
             class="group absolute flex h-6 cursor-grab touch-none select-none items-center overflow-hidden rounded px-2 text-[10px] font-semibold shadow-xs transition-opacity duration-150 active:cursor-grabbing"
             :class="[
-              bar.tone === 'return' ? 'bg-success-bg text-success border border-success/20' : 'bg-primary-soft text-on-primary-soft border border-primary/20',
+              bar.warning
+                ? 'bg-error-bg text-error border border-error/60'
+                : bar.tone === 'return' ? 'bg-success-bg text-success border border-success/20' : 'bg-primary-soft text-on-primary-soft border border-primary/20',
               !bar.saved ? 'border-dashed' : 'border-solid',
               props.drag.active && props.drag.kind === 'block' && bar.id.startsWith(props.drag.payloadId) ? 'opacity-40' : 'hover:opacity-95',
             ]"
+            :title="bar.warning ? props.t('operations.readiness.barTitle') : bar.label"
             :style="{ left: `${bar.leftPct}%`, top: `${4 + bar.row * 30}px`, width: `${Math.max(bar.widthPct, 4)}%` }"
-            :title="bar.label"
             @pointerdown="emit('bar-pointer-down', bar.id, $event)"
           >
             <span

@@ -29,8 +29,10 @@ export function buildBlockBars(block: ScheduleBlock, route: OperationRoute | und
   const returnStart = startHour + hours + turnaroundMinutes / 60;
 
   return [
-    ...legSegments(block.id, code, "outbound", startHour, hours, block.day, block.saved),
-    ...legSegments(`${block.id}~r`, `${code} R`, "return", returnStart, hours, block.day, block.saved),
+    ...legSegments(block.id, block.oneWay ? `${code} →` : code, "outbound", startHour, hours, block.day, block.saved),
+    ...(block.oneWay
+      ? []
+      : legSegments(`${block.id}~r`, `${code} R`, "return", returnStart, hours, block.day, block.saved)),
   ];
 }
 

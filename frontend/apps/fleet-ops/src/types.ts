@@ -1,3 +1,5 @@
+export type * from "./fuel-types";
+
 export type AirportSearchOption = { iata_code?: string; icao_code?: string; id: string; intl_name?: string; local_name?: string; municipality?: string; };
 export type AirportSearchResponse = { airports: AirportSearchOption[]; };
 export type CreateRouteResponse = { route: OperationRoute; };
@@ -222,16 +224,6 @@ export type FlightTelemetry = {
   passengers_on_board: number;
   phase: FlightPhase;
   progress: number;
-};
-export type FuelHistoryResponse = {
-  history: FuelPriceSnapshot[];
-};
-export type FuelPriceSnapshot = {
-  price: number;
-  recorded_at: string;
-  source: "backend-realtime" | "fallback" | "storage";
-  unit_price: number;
-  updated_at: string;
 };
 export type HubOption = {
   airport_id: string;

@@ -110,7 +110,7 @@ function hubFeeTransaction(airlineId: string, airportId: string, fee: number, no
   return {
     airline_id: airlineId,
     amount: fee,
-    category: "airport",
+    category: "capital",
     created_at: now,
     currency: "USD",
     direction: "debit",
@@ -124,8 +124,10 @@ function hubFeeTransaction(airlineId: string, airportId: string, fee: number, no
 
 function hubSummary(airportId: string, routes: StoredRoute[], ledger: LedgerTransaction[]): { profit: number; routes: number } {
   const routeIds = new Set(routes.filter((route) => route.origin_airport_id === airportId).map((route) => route.id));
+  // Planning fees (e.g. fare optimization) are not route operating costs.
   const profit = ledger
     .filter((transaction) => transaction.route_id && routeIds.has(transaction.route_id))
+    .filter((transaction) => transaction.label_code !== "FINANCE_PRICE_ANALYSIS_FEE")
     .reduce((sum, transaction) => sum + signedAmount(transaction), 0);
 
   return { profit, routes: routeIds.size };

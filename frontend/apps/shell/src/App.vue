@@ -17,7 +17,7 @@ import AppSidebar from "./components/AppSidebar.vue";
 import AppTopbar from "./components/AppTopbar.vue";
 import NotificationPanel from "./components/NotificationPanel.vue";
 import { refreshDashboardSummary, setDashboardSummary } from "./dashboard/state";
-import { refreshFuelPrice, startFuelRealtime, stopFuelRealtime } from "./fuel/state";
+import { refreshFuelPrice, refreshFuelStorage, startFuelRealtime, stopFuelRealtime } from "./fuel/state";
 import { type ShellMessageKey, shellMessages } from "./i18n/messages";
 import {
   clearNotifications,
@@ -120,6 +120,7 @@ onMounted(() => {
   });
   unsubscribeSnapshotInvalidated = airlineSimEventBus.on("game:snapshot-invalidated", () => {
     void refreshDashboardSummary();
+    void refreshFuelStorage();
   });
   unsubscribeNotificationCreated = airlineSimEventBus.on("notification:created", () => {
     void refreshNotifications();
@@ -166,6 +167,7 @@ watch(
       void refreshNotifications();
       void refreshDashboardSummary();
       void refreshFuelPrice();
+      void refreshFuelStorage();
       startFuelRealtime(() => authState.accessToken.value);
     } else {
       clearNotifications();

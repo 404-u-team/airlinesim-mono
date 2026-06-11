@@ -26,7 +26,7 @@ const t = computed(() => (key: ShellMessageKey): string =>
 );
 const now = ref(new Date());
 const statusMetrics = computed(() =>
-  getStatusMetrics(t.value, dashboardState.statusSummary.value, fuelState.current.value, props.appLocale),
+  getStatusMetrics(t.value, dashboardState.statusSummary.value, fuelState.storage.value, props.appLocale),
 );
 const formattedNow = computed(() =>
   new Intl.DateTimeFormat(props.appLocale, {
