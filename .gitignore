@@ -514,3 +514,5 @@ frontend/bff/data/import/world-data/stage/
 frontend/bff/data/game-state/game.db-wal
 frontend/bff/data/game-state/game.db-wal
 frontend/bff/data/game-state/game.db-shm
+/.env
+/.airlinesim-secrets/

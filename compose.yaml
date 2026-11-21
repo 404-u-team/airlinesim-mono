@@ -1,0 +1,323 @@
+name: airlinesim
+
+x-service: &service
+  restart: unless-stopped
+
+x-postgres: &postgres
+  <<: *service
+  image: postgres:18-alpine
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+    interval: 5s
+    timeout: 3s
+    retries: 20
+
+x-postgres-environment: &postgres-environment
+  POSTGRES_USER: postgres
+  POSTGRES_DB: db
+
+x-game-clock: &game-clock
+  START_REAL_TIME: ${START_REAL_TIME:-1777971530}
+  START_GAME_TIME: ${START_GAME_TIME:-1777971530}
+  TIME_MULTIPLIER: ${TIME_MULTIPLIER:-15}
+
+x-kafka-client: &kafka-client
+  KAFKA_BROKERS: kafka:29092
+
+x-kafka-image: &kafka-image confluentinc/cp-kafka:8.1.7
+
+services:
+  user-db:
+    <<: *postgres
+    environment: &user-db
+      <<: *postgres-environment
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:?set AUTH_DB_PASSWORD in .env}
+      POSTGRES_HOST: user-db
+    volumes:
+      - user_postgres_data:/var/lib/postgresql
+
+  airline-db:
+    <<: *postgres
+    environment: &airline-db
+      <<: *postgres-environment
+      POSTGRES_PASSWORD: ${AIRLINE_DB_PASSWORD:?set AIRLINE_DB_PASSWORD in .env}
+      POSTGRES_HOST: airline-db
+    volumes:
+      - airline_postgres_data:/var/lib/postgresql
+
+  fleet-db:
+    <<: *postgres
+    environment: &fleet-db
+      <<: *postgres-environment
+      POSTGRES_PASSWORD: ${FLEET_DB_PASSWORD:?set FLEET_DB_PASSWORD in .env}
+      POSTGRES_HOST: fleet-db
+    volumes:
+      - fleet_postgres_data:/var/lib/postgresql
+
+  operations-db:
+    <<: *postgres
+    image: postgis/postgis:18-3.7-alpine
+    platform: linux/amd64
+    environment: &operations-db
+      <<: *postgres-environment
+      POSTGRES_PASSWORD: ${OPERATIONS_DB_PASSWORD:?set OPERATIONS_DB_PASSWORD in .env}
+      POSTGRES_HOST: operations-db
+    volumes:
+      - operations_postgres_data:/var/lib/postgresql
+
+  tick-db:
+    <<: *postgres
+    environment: &tick-db
+      <<: *postgres-environment
+      POSTGRES_PASSWORD: ${TICK_DB_PASSWORD:?set TICK_DB_PASSWORD in .env}
+      POSTGRES_HOST: tick-db
+    volumes:
+      - tick_postgres_data:/var/lib/postgresql
+
+  kafka:
+    <<: *service
+    image: *kafka-image
+    environment:
+      CLUSTER_ID: ${KAFKA_CLUSTER_ID:?set KAFKA_CLUSTER_ID in .env}
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      KAFKA_HEAP_OPTS: -Xms512m -Xmx512m
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "127.0.0.1:29092", "--list"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+
+  kafka-init:
+    image: *kafka-image
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-ec"]
+    command:
+      - |
+        for topic in operations_airport_created operations_airports_deleted; do
+          kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists \
+            --topic "$$topic" --partitions 3 --replication-factor 1
+        done
+        for topic in operations_fuel_price_changed tick_15_min_elapsed tick_1_hour_elapsed; do
+          kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists \
+            --topic "$$topic" --partitions 1 --replication-factor 1
+        done
+
+  auth-service:
+    <<: *service
+    build:
+      context: .
+      dockerfile: backend/services/auth-service/Dockerfile
+      target: runtime
+    environment:
+      <<: *user-db
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?set ADMIN_EMAIL in .env}
+      ADMIN_NICKNAME: ${ADMIN_NICKNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      JWT_ACCESS_TOKEN_EXPIRE_TIME: ${JWT_ACCESS_TOKEN_EXPIRE_TIME:-900}
+      JWT_REFRESH_TOKEN_EXPIRE_TIME: ${JWT_REFRESH_TOKEN_EXPIRE_TIME:-86400}
+    secrets:
+      - source: jwt_private_key
+        target: /app/private_key.pem
+      - source: jwt_public_key
+        target: /app/public_key.pem
+    depends_on:
+      user-db:
+        condition: service_healthy
+
+  airline-service:
+    <<: *service
+    build:
+      context: .
+      dockerfile: backend/services/airline-service/Dockerfile
+    environment:
+      <<: [*airline-db, *kafka-client, *game-clock]
+    depends_on:
+      airline-db:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      kafka-init:
+        condition: service_completed_successfully
+
+  fleet-service:
+    <<: *service
+    build:
+      context: .
+      dockerfile: backend/services/fleet-service/Dockerfile
+    environment:
+      <<: *fleet-db
+      GRPC_PORT: ":50054"
+      AIRLINE_GRPC_ADDR: airline-service:50051
+    depends_on:
+      fleet-db:
+        condition: service_healthy
+      airline-service:
+        condition: service_started
+
+  operations-service:
+    <<: *service
+    build:
+      context: .
+      dockerfile: backend/services/operations-service/Dockerfile
+    environment:
+      <<: [*operations-db, *kafka-client]
+      START_FUEL_PRICE: ${START_FUEL_PRICE:-100}
+    depends_on:
+      operations-db:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+
+  tick-service:
+    <<: *service
+    build:
+      context: .
+      dockerfile: backend/services/tick-service/Dockerfile
+    environment:
+      <<: [*tick-db, *kafka-client, *game-clock]
+      PRODUCE_MISSED_EVENTS: ${PRODUCE_MISSED_EVENTS:-false}
+    depends_on:
+      tick-db:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      operations-service:
+        condition: service_started
+
+  api-gateway:
+    <<: *service
+    build:
+      context: .
+      dockerfile: backend/services/api-gateway/Dockerfile
+    environment:
+      <<: *kafka-client
+      GIN_MODE: release
+      HTTP_PORT: "8080"
+      JWT_ACCESS_TOKEN_EXPIRE_TIME: ${JWT_ACCESS_TOKEN_EXPIRE_TIME:-900}
+      JWT_REFRESH_TOKEN_EXPIRE_TIME: ${JWT_REFRESH_TOKEN_EXPIRE_TIME:-86400}
+      REQUEST_TIMEOUT_SECONDS: ${REQUEST_TIMEOUT_SECONDS:-3}
+    secrets:
+      - source: jwt_public_key
+        target: /app/public_key.pem
+    depends_on:
+      auth-service:
+        condition: service_started
+      airline-service:
+        condition: service_started
+      fleet-service:
+        condition: service_started
+      operations-service:
+        condition: service_started
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      default:
+        aliases:
+          - airlinesim-api-gateway
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/swagger/index.html"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  bff:
+    <<: *service
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.bff
+    environment:
+      BFF_PORT: "4200"
+      BFF_BACKEND_BASE_URL: http://api-gateway:8080
+      BFF_PUBLIC_BASE_URL: /bff
+      BACKEND_ADMIN_LOGIN: ${ADMIN_EMAIL:?set ADMIN_EMAIL in .env}
+      BACKEND_ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      REST_COUNTRIES_API_KEY: ${REST_COUNTRIES_API_KEY:-}
+      OPENVERSE_CLIENT_ID: ${OPENVERSE_CLIENT_ID:-}
+      OPENVERSE_CLIENT_SECRET: ${OPENVERSE_CLIENT_SECRET:-}
+    volumes:
+      - bff-data:/app/bff/data
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bun", "-e", "if (!(await fetch('http://127.0.0.1:4200/health')).ok) process.exit(1)"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  web:
+    <<: *service
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.web
+      args:
+        VITE_BACKEND_URL: /bff
+        VITE_BFF_URL: /bff
+        VITE_SOCKET_URL: ${AIRLINESIM_PUBLIC_URL:?set AIRLINESIM_PUBLIC_URL in .env}
+        VITE_MFE_BASE_URL: ${AIRLINESIM_PUBLIC_URL:?set AIRLINESIM_PUBLIC_URL in .env}
+    depends_on:
+      bff:
+        condition: service_healthy
+    networks:
+      default:
+        aliases:
+          - airlinesim-web
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/bff/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api-reference:
+    <<: *service
+    image: scalarapi/api-reference:latest
+    environment:
+      API_REFERENCE_CONFIG: |
+        {"servers":[{"url":"${AIRLINESIM_PUBLIC_URL:?set AIRLINESIM_PUBLIC_URL in .env}/bff"}]}
+    volumes:
+      - type: bind
+        source: ./backend/services/api-gateway/cmd/gateway/docs/swagger.json
+        target: /docs/swagger.json
+        read_only: true
+        bind:
+          create_host_path: false
+    networks:
+      default:
+        aliases:
+          - airlinesim-api-reference
+
+secrets:
+  jwt_private_key:
+    file: ./.airlinesim-secrets/private_key.pem
+  jwt_public_key:
+    file: ./.airlinesim-secrets/public_key.pem
+
+volumes:
+  user_postgres_data:
+  airline_postgres_data:
+  fleet_postgres_data:
+  operations_postgres_data:
+  tick_postgres_data:
+  kafka-data:
+  bff-data:
+
+networks:
+  default:
+    name: intranet
+    external: true

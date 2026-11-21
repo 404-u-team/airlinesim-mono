@@ -1,4 +1,4 @@
-COMPOSE_FILE := backend/infrustructure/docker/docker-compose.yaml
+COMPOSE_FILE ?= compose.yaml
 GATEWAY_DIR := backend/services/api-gateway/cmd/gateway
 FRONTEND_DOCS_DIR := frontend/docs
 SWAGGER_CMD := swag init -g main.go --dir ./,../../internal/handlers,../../internal/dto,../../../../shared/contracts/proto/airline,../../../../shared/contracts/proto/operations,../../../../shared/contracts/proto/fleet

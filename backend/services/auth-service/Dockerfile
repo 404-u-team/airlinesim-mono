@@ -29,8 +29,6 @@ RUN apk add --no-cache ca-certificates \
 WORKDIR /app
 
 COPY --from=build /out/auth-service ./auth-service
-COPY --chown=appuser:appgroup backend/services/auth-service/internal/config/public_key.pem ./public_key.pem
-COPY --chown=appuser:appgroup backend/services/auth-service/internal/config/private_key.pem ./private_key.pem
 COPY --chown=appuser:appgroup backend/services/auth-service/internal/db/migrations ./migrations
 
 RUN chmod 755 /app/auth-service \
@@ -41,3 +39,8 @@ EXPOSE 50051
 USER appuser
 
 ENTRYPOINT ["/app/auth-service"]
+
+FROM runtime AS standalone
+
+COPY --chown=appuser:appgroup backend/services/auth-service/internal/config/public_key.pem ./public_key.pem
+COPY --chown=appuser:appgroup backend/services/auth-service/internal/config/private_key.pem ./private_key.pem

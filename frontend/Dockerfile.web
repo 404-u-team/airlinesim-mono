@@ -16,7 +16,6 @@ ARG VITE_BFF_URL=/bff
 ARG VITE_SOCKET_URL=https://api.master.stand.airlinesim.ms0ur.dev/
 ARG VITE_MFE_BASE_URL=http://localhost:4100
 
-ENV NODE_ENV=production
 ENV VITE_DEV_PORT_BASE=4100
 ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
 ENV VITE_BFF_URL=${VITE_BFF_URL}
@@ -25,6 +24,9 @@ ENV VITE_MFE_BASE_URL=${VITE_MFE_BASE_URL}
 ENV TURBO_TELEMETRY_DISABLED=1
 
 RUN bun install --frozen-lockfile
+
+ENV NODE_ENV=production
+
 RUN bun run generate:bff-openapi && bun run generate:openapi
 RUN bun run turbo run build
 
