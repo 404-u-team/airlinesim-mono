@@ -181,22 +181,6 @@ export async function buildAircraftTypes(
   rawSources: RawSources,
   options: BuildOptions = {},
 ): Promise<FinalAircraftType[]> {
-  const synonymsMap = new Map<string, string>();
-  try {
-    const synonymsRows = Papa.parse(rawSources.openapSynonyms, {
-      dynamicTyping: true,
-      header: true,
-      skipEmptyLines: true,
-    }).data as any[];
-    for (const r of synonymsRows) {
-      if (r.orig && r.target) {
-        synonymsMap.set(String(r.orig).toLowerCase(), String(r.target).toLowerCase());
-      }
-    }
-  } catch (e) {
-    issues.warn("aircraft-type", "aircraft-type:openap-synonyms", `Failed to parse synonyms: ${String(e)}`);
-  }
-
   const icaoToIata = new Map<string, string>();
   const icaoToName = new Map<string, string>();
   try {

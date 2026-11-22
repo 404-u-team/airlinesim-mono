@@ -30,13 +30,13 @@ export function buildCountries(
   return [...selectedCountries].sort().map((iso) => {
     const row = ourAirports.get(iso);
     const rest = context.raw.restCountries.get(iso);
-    const iso3 = rest?.cca3 ?? "";
     const wbCountry = context.raw.worldBankCountries.get(iso);
+    const worldBankCode = wbCountry?.id ?? rest?.cca3 ?? "";
     const incomeLevelCode = wbCountry?.incomeLevel?.id ?? null;
     const override = overrideFor(context.raw.manual.countries, iso, `country:${iso}`);
-    const population = context.raw.worldBankPopulation.get(iso3) ?? rest?.population ?? null;
-    const gdp = context.raw.worldBankGdp.get(iso3) ?? null;
-    const tourism = context.raw.worldBankTourism.get(iso3) ?? null;
+    const population = context.raw.worldBankPopulation.get(worldBankCode) ?? rest?.population ?? null;
+    const gdp = context.raw.worldBankGdp.get(worldBankCode) ?? null;
+    const tourism = context.raw.worldBankTourism.get(worldBankCode) ?? null;
     const continent = clean(row?.continent ?? continentFromRest(rest));
     const payload = countryPayload(context, {
       areaKm2: rest?.area ?? null,
@@ -92,14 +92,14 @@ function buildCountryStats(
 ): CountryStats {
   const countries = [...selectedCountries].map((iso) => {
     const rest = raw.restCountries.get(iso);
-    const iso3 = rest?.cca3 ?? "";
     const wbCountry = raw.worldBankCountries.get(iso);
+    const worldBankCode = wbCountry?.id ?? rest?.cca3 ?? "";
 
     return {
       airportScore: airportScores.get(iso) ?? 0,
       area: rest?.area ?? 100000,
-      gdp: raw.worldBankGdp.get(iso3) ?? fallbackGdp(wbCountry?.incomeLevel?.id ?? null),
-      population: raw.worldBankPopulation.get(iso3) ?? rest?.population ?? 1000000,
+      gdp: raw.worldBankGdp.get(worldBankCode) ?? fallbackGdp(wbCountry?.incomeLevel?.id ?? null),
+      population: raw.worldBankPopulation.get(worldBankCode) ?? rest?.population ?? 1000000,
     };
   });
 

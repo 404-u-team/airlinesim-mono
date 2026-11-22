@@ -1,6 +1,5 @@
-import type { ImportLogger } from "./logger";
-
-import { loadJsonArray } from "./storage";
+import { errorDetails, type ImportLogger } from "./logger";
+import { fetchSource, loadCachedSource, loadCachedText } from "./source-fetch";
 
 export type RestCountry = {
   area?: number;
@@ -22,19 +21,22 @@ export type RestCountry = {
 // REST Countries v3.1 (датасет и был его первоисточником), но native-имена
 // лежат в `name.native`, а популяция отсутствует (основной источник - World Bank).
 type MledozeCountry = Omit<RestCountry, "name"> & {
-  name?: { common?: string; native?: Record<string, { common?: string }> };
+  name?: NonNullable<RestCountry["name"]> & { native?: RestCountryNameMap };
 };
+
+type RestCountryNameMap = Record<string, { common?: string }>;
 
 // Строка REST Countries v5 (https://api.restcountries.com/countries/v5):
 // JSON:API-формат с переименованными полями относительно v3.1.
 type RestCountriesV5Row = {
   area?: { kilometers?: number };
   borders?: string[];
-  capital?: string[];
+  capitals?: Array<{ name: string }>;
   codes?: { alpha_2?: string; alpha_3?: string };
+  coordinates?: { lat?: number; lng?: number };
   landlocked?: boolean;
   languages?: unknown;
-  names?: { common?: string; native?: Record<string, { common?: string }> };
+  names?: { common?: string; native?: RestCountryNameMap; translations?: RestCountryNameMap };
   population?: number;
   region?: string;
   subregion?: string;
@@ -42,7 +44,7 @@ type RestCountriesV5Row = {
 
 type RestCountriesV5Page = {
   data?: {
-    meta?: { more?: boolean };
+    meta?: { more?: boolean; total?: number };
     objects?: RestCountriesV5Row[];
   };
 };
@@ -57,20 +59,25 @@ export async function loadRestCountries(rawDir: string, refreshRaw: boolean, log
   const apiKey = (Bun.env.REST_COUNTRIES_API_KEY ?? "").trim();
 
   if (apiKey) {
-    return loadRestCountriesV5(`${rawDir}/rest-countries-v5.json`, apiKey, refreshRaw, log);
+    try {
+      const path = `${rawDir}/rest-countries-v5.json`;
+      return await loadCachedSource(path, refreshRaw, parseCountries, async () => downloadV5Countries(path, apiKey, log), log);
+    } catch (error) {
+      log?.({
+        details: errorDetails(error),
+        level: "warning",
+        message: "REST Countries v5 is unavailable, using mledoze/countries dataset",
+        operation: "source.fetch",
+        stage: "building",
+      });
+    }
   }
 
-  log?.({
-    level: "info",
-    message: "REST_COUNTRIES_API_KEY is not set, using mledoze/countries dataset",
-    operation: "source.fetch",
-    stage: "building",
-  });
-  const rows = await loadJsonArray<MledozeCountry>(`${rawDir}/rest-countries.json`, FALLBACK_URL, refreshRaw, log);
+  const rows = await loadCachedText(`${rawDir}/rest-countries.json`, FALLBACK_URL, refreshRaw, parseCountries, log);
 
   return rows.map((country) => ({
     ...country,
-    name: { common: country.name?.common, nativeName: country.name?.native },
+    name: { common: country.name?.common, nativeName: country.name?.native ?? country.name?.nativeName },
   }));
 }
 
@@ -80,77 +87,61 @@ export function indexRestCountries(rows: RestCountry[]): Map<string, RestCountry
 
 // Кэш хранит уже приведенные к RestCountry строки, чтобы смена схемы v5 не
 // требовала повторной миграции старых кэшей.
-async function loadRestCountriesV5(path: string, apiKey: string, refreshRaw: boolean, log?: ImportLogger): Promise<RestCountry[]> {
-  if (!refreshRaw) {
-    const cached = await readCachedRestCountries(path, log);
-    if (cached) {
-      return cached;
-    }
-  }
-
+async function downloadV5Countries(path: string, apiKey: string, log?: ImportLogger): Promise<string> {
   const rows: RestCountriesV5Row[] = [];
+  const headers = { Authorization: `Bearer ${apiKey}` };
   const pageLimit = 100;
 
-  for (let offset = 0; ; offset += pageLimit) {
-    const url = `${V5_URL}?limit=${String(pageLimit)}&offset=${String(offset)}`;
-    log?.({ details: { url }, level: "info", message: "Downloading import source", operation: "source.fetch", stage: "building" });
-    const response = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch ${url}: ${String(response.status)}`);
+  for (;;) {
+    const url = `${V5_URL}?limit=${String(pageLimit)}&offset=${String(rows.length)}`;
+    const payload = await fetchSource(url, path, async (response) => (await response.json()) as RestCountriesV5Page, log, headers);
+    const { meta, objects } = payload.data ?? {};
+    if (!Array.isArray(objects) || objects.length === 0 || typeof meta?.total !== "number" || typeof meta.more !== "boolean") {
+      throw new Error("REST Countries v5 returned invalid pagination data");
     }
-
-    const payload = (await response.json()) as RestCountriesV5Page;
-    const page = payload.data?.objects;
-
-    if (!Array.isArray(page)) {
-      throw new Error(`REST Countries v5 returned unexpected payload: ${JSON.stringify(payload).slice(0, 200)}`);
+    rows.push(...objects);
+    if (rows.length > meta.total || meta.more !== (rows.length < meta.total)) {
+      throw new Error("REST Countries v5 returned an incomplete dataset");
     }
-
-    rows.push(...page);
-
-    if (page.length === 0 || payload.data?.meta?.more !== true) {
-      break;
+    if (!meta.more) {
+      return JSON.stringify(rows.map(mapV5Country));
     }
   }
-
-  const mapped = rows.map(mapV5Country);
-  await Bun.write(path, JSON.stringify(mapped));
-
-  return mapped;
 }
 
-async function readCachedRestCountries(path: string, log?: ImportLogger): Promise<null | RestCountry[]> {
-  const file = Bun.file(path);
-
-  if (!(await file.exists())) {
-    return null;
+function parseCountries(text: string): MledozeCountry[] {
+  const rows = JSON.parse(text) as unknown;
+  if (!Array.isArray(rows) || rows.length === 0 || !rows.every(isCountry)) {
+    throw new Error("Invalid countries dataset");
   }
-
-  const cached = JSON.parse(await file.text()) as unknown;
-
-  if (!Array.isArray(cached)) {
-    return null;
+  if (new Set(rows.map((country) => country.cca2)).size !== rows.length) {
+    throw new Error("Duplicate country codes in the countries dataset");
   }
+  return rows;
+}
 
-  log?.({ details: { path }, level: "info", message: "Using cached source", operation: "source.cache", stage: "building" });
-
-  return cached as RestCountry[];
+function isCountry(value: unknown): value is MledozeCountry {
+  const country = value as MledozeCountry | null;
+  return Boolean(country?.cca2 && country.cca3 && country.name?.common);
 }
 
 function mapV5Country(row: RestCountriesV5Row): RestCountry {
   return {
     area: row.area?.kilometers,
     borders: row.borders,
-    capital: row.capital,
+    capital: row.capitals?.map((capital) => capital.name),
     cca2: row.codes?.alpha_2,
     cca3: row.codes?.alpha_3,
     landlocked: row.landlocked,
     languages: v5Languages(row.languages),
+    latlng: typeof row.coordinates?.lat === "number" && typeof row.coordinates.lng === "number"
+      ? [row.coordinates.lat, row.coordinates.lng]
+      : undefined,
     name: { common: row.names?.common, nativeName: row.names?.native },
     population: row.population,
     region: row.region,
     subregion: row.subregion,
+    translations: row.names?.translations,
   };
 }
 
@@ -165,10 +156,10 @@ function v5Languages(languages: unknown): Record<string, string> {
       return [String(index), language];
     }
 
-    const record = language as Record<string, unknown>;
-    const code = typeof record.code === "string" ? record.code : String(index);
+    const record = (language ?? {}) as Record<string, unknown>;
+    const code = record.iso639_3 ?? record.code;
 
-    return [code, v5LanguageName(record)];
+    return [typeof code === "string" ? code : String(index), v5LanguageName(record)];
   });
 
   return Object.fromEntries(entries.filter(([, name]) => name));

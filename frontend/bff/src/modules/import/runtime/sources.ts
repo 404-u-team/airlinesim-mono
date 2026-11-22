@@ -1,16 +1,13 @@
-import type { BuildOptions } from "../shared/types";
+import { mkdir } from "node:fs/promises";
+
+import type { BuildOptions, SourceIssueSink } from "../shared/types";
 import type { ImportLogger } from "./logger";
 
 import { indexRestCountries, loadRestCountries, type RestCountry } from "./rest-countries";
-import {
-  fetchCachedText,
-  fetchCachedZipText,
-  getImportPaths,
-  loadJsonArray,
-  parseCsv,
-  parseTsv,
-  readJsonFile,
-} from "./storage";
+import { fetchCachedText, loadCachedText } from "./source-fetch";
+import { loadCachedZip } from "./source-zip";
+import { getImportPaths, parseCsv, parseTsv, readJsonFile } from "./storage";
+import { loadWorldBankCountries, loadWorldBankIndicator, type WorldBankCountry } from "./world-bank";
 
 export type { RestCountry } from "./rest-countries";
 
@@ -30,17 +27,6 @@ export type GeoCity = {
   timezone: string;
 };
 
-export type WorldBankCountry = {
-  id?: string;
-  incomeLevel?: { id?: string };
-  iso2Code?: string;
-};
-
-export type WorldBankValue = {
-  countryiso3code?: string;
-  value?: null | number;
-};
-
 export type ManualOverrides = {
   aircraftTypes: Record<string, Record<string, unknown>>;
   airports: Record<string, Record<string, unknown>>;
@@ -57,7 +43,6 @@ export type RawSources = {
   openapAircraftYamlFiles: Array<{ filename: string; content: string }>;
   openapEngines: string;
   openapFuel: string;
-  openapSynonyms: string;
   openflightsPlanes: string;
   regions: RegionRow[];
   restCountries: Map<string, RestCountry>;
@@ -73,52 +58,42 @@ const URLS = {
   countries: "https://davidmegginson.github.io/ourairports-data/countries.csv",
   geoAdmin1: "https://download.geonames.org/export/dump/admin1CodesASCII.txt",
   geoCities: "https://download.geonames.org/export/dump/cities5000.zip",
-  geoTimeZones: "https://download.geonames.org/export/dump/timeZones.txt",
   openapEngines: "https://raw.githubusercontent.com/junzis/openap/refs/heads/master/openap/data/engine/engines.csv",
   openapFuel: "https://raw.githubusercontent.com/junzis/openap/refs/heads/master/openap/data/fuel/fuel_models.csv",
-  openapSynonyms: "https://raw.githubusercontent.com/junzis/openap/refs/heads/master/openap/data/aircraft/_synonym.csv",
   openflightsPlanes: "https://raw.githubusercontent.com/jpatokal/openflights/refs/heads/master/data/planes.dat",
   regions: "https://davidmegginson.github.io/ourairports-data/regions.csv",
   runways: "https://davidmegginson.github.io/ourairports-data/runways.csv",
-  wbCountries: "https://api.worldbank.org/v2/country?format=json&per_page=400",
-  wbGdp:
-    "https://api.worldbank.org/v2/country/all/indicator/NY.GDP.PCAP.CD?format=json&per_page=20000&MRV=1",
-  wbPopulation:
-    "https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL?format=json&per_page=20000&MRV=1",
-  wbTourism:
-    "https://api.worldbank.org/v2/country/all/indicator/ST.INT.ARVL?format=json&per_page=20000&MRV=1",
 };
 
-export async function loadRawSources(options: BuildOptions, log?: ImportLogger): Promise<RawSources> {
+export async function loadRawSources(options: BuildOptions, issues: SourceIssueSink, log?: ImportLogger): Promise<RawSources> {
   const paths = getImportPaths(options.dataDir);
   const refreshRaw = options.refreshRaw ?? options.source === "fetch";
   const [
-    openflightsPlanes, openapSynonyms, openapFuel, openapEngines, openapAircraftYamlFiles,
+    openflightsPlanes, openapFuel, openapEngines, openapAircraftYamlFiles,
     airports, countries, regions, runways, restRows, wbCountries, wbPopulation,
     wbGdp, wbTourism, geoAdmin1, geoCities, manual
   ] = await Promise.all([
     fetchCachedText(`${paths.rawDir}/openflights-planes.dat`, URLS.openflightsPlanes, refreshRaw, log),
-    fetchCachedText(`${paths.rawDir}/openap-synonyms.csv`, URLS.openapSynonyms, refreshRaw, log),
     fetchCachedText(`${paths.rawDir}/openap-fuel.csv`, URLS.openapFuel, refreshRaw, log),
     fetchCachedText(`${paths.rawDir}/openap-engines.csv`, URLS.openapEngines, refreshRaw, log),
-    loadOpenapAircraftYamlFiles(paths.rawDir, refreshRaw, log),
-    loadCsv(`${paths.rawDir}/airports.csv`, URLS.airports, refreshRaw, log),
-    loadCsv(`${paths.rawDir}/countries.csv`, URLS.countries, refreshRaw, log),
-    loadCsv(`${paths.rawDir}/regions.csv`, URLS.regions, refreshRaw, log),
-    loadCsv(`${paths.rawDir}/runways.csv`, URLS.runways, refreshRaw, log),
+    loadOpenapAircraftYamlFiles(paths.rawDir, refreshRaw, issues, log),
+    loadCsv(`${paths.rawDir}/airports.csv`, URLS.airports, "ident", refreshRaw, log),
+    loadCsv(`${paths.rawDir}/countries.csv`, URLS.countries, "code", refreshRaw, log),
+    loadCsv(`${paths.rawDir}/regions.csv`, URLS.regions, "iso_country", refreshRaw, log),
+    loadCsv(`${paths.rawDir}/runways.csv`, URLS.runways, "airport_ident", refreshRaw, log),
     loadRestCountries(paths.rawDir, refreshRaw, log),
-    loadWorldBankCountries(`${paths.rawDir}/worldbank-countries.json`, refreshRaw, log),
-    loadWorldBankValues(`${paths.rawDir}/worldbank-population.json`, URLS.wbPopulation, refreshRaw, log),
-    loadWorldBankValues(`${paths.rawDir}/worldbank-gdp.json`, URLS.wbGdp, refreshRaw, log),
-    loadWorldBankValues(`${paths.rawDir}/worldbank-tourism.json`, URLS.wbTourism, refreshRaw, log),
+    loadWorldBankCountries(paths.rawDir, refreshRaw, issues, log),
+    loadWorldBankIndicator(paths.rawDir, "population", refreshRaw, issues, log),
+    loadWorldBankIndicator(paths.rawDir, "gdp", refreshRaw, issues, log),
+    loadWorldBankIndicator(paths.rawDir, "tourism", refreshRaw, issues, log),
     loadGeoAdmin1(`${paths.rawDir}/admin1CodesASCII.txt`, refreshRaw, log),
-    loadGeoCities(`${paths.rawDir}/cities5000.zip`, refreshRaw, log),
+    loadCachedZip(`${paths.rawDir}/cities5000.txt`, URLS.geoCities, "cities5000.txt", refreshRaw, parseGeoCities, log),
     loadManual(paths.manualDir),
   ]);
 
   return {
     airports, countries, geoAdmin1, geoCities, manual,
-    openapAircraftYamlFiles, openapEngines, openapFuel, openapSynonyms,
+    openapAircraftYamlFiles, openapEngines, openapFuel,
     openflightsPlanes, regions, restCountries: indexRestCountries(restRows),
     runways, worldBankCountries: wbCountries, worldBankGdp: wbGdp,
     worldBankPopulation: wbPopulation, worldBankTourism: wbTourism,
@@ -128,56 +103,71 @@ export async function loadRawSources(options: BuildOptions, log?: ImportLogger):
 async function loadOpenapAircraftYamlFiles(
   rawDir: string,
   refreshRaw: boolean,
+  issues: SourceIssueSink,
   log?: ImportLogger,
 ): Promise<Array<{ filename: string; content: string }>> {
   const listPath = `${rawDir}/openap-file-list.json`;
   const fileListUrl = "https://api.github.com/repos/junzis/openap/contents/openap/data/aircraft";
 
-  const listText = await fetchCachedText(listPath, fileListUrl, refreshRaw, log);
-  const files = JSON.parse(listText) as Array<{ download_url?: string; name: string }>;
+  const filenames = await loadCachedText(listPath, fileListUrl, refreshRaw, parseOpenapFilenames, log);
 
   const yamlFiles: Array<{ filename: string; content: string }> = [];
   const yamlDir = `${rawDir}/openap-aircraft`;
 
-  const { mkdir } = await import("node:fs/promises");
   await mkdir(yamlDir, { recursive: true });
 
-  const ymlFiles = files.filter((f) => f.name.endsWith(".yml"));
-
-  for (const file of ymlFiles) {
-    const filePath = `${yamlDir}/${file.name}`;
-    const downloadUrl = `https://raw.githubusercontent.com/junzis/openap/refs/heads/master/openap/data/aircraft/${file.name}`;
+  for (const filename of filenames) {
+    const downloadUrl = `https://raw.githubusercontent.com/junzis/openap/refs/heads/master/openap/data/aircraft/${filename}`;
     try {
-      const content = await fetchCachedText(filePath, downloadUrl, refreshRaw, log);
-      yamlFiles.push({ content, filename: file.name });
+      const content = await fetchCachedText(`${yamlDir}/${filename}`, downloadUrl, refreshRaw, log);
+      yamlFiles.push({ content, filename });
     } catch (error) {
-      log?.({
-        entityType: "aircraft-type",
-        level: "warning",
-        message: `Failed to download OpenAP file ${file.name}: ${error instanceof Error ? error.message : String(error)}`,
-        operation: "source.fetch",
-        sourceKey: file.name,
-        stage: "building",
-      });
+      issues.warn("aircraft-type", filename, `Failed to download OpenAP file ${filename}: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  if (yamlFiles.length === 0) {
+    throw new Error("Could not load any OpenAP aircraft files");
   }
 
   return yamlFiles;
 }
 
-async function loadCsv(path: string, url: string, refreshRaw: boolean, log?: ImportLogger): Promise<Array<Record<string, string>>> {
-  return parseCsv(await fetchCachedText(path, url, refreshRaw, log));
+function parseOpenapFilenames(text: string): string[] {
+  const payload = JSON.parse(text) as Array<null | { name?: string }>;
+  const names = Array.isArray(payload) ? payload.flatMap((file) =>
+    file?.name && /^[a-z0-9]+\.yml$/iu.test(file.name) ? [file.name] : []) : [];
+  if (names.length === 0) {
+    throw new Error("OpenAP did not return a list of aircraft files");
+  }
+  return names;
+}
+
+async function loadCsv(path: string, url: string, column: string, refreshRaw: boolean, log?: ImportLogger): Promise<Array<Record<string, string>>> {
+  return loadCachedText(path, url, refreshRaw, (text) => {
+    const rows = parseCsv(text);
+    if (!rows[0]?.[column]) {
+      throw new Error(`Invalid CSV from ${url}: missing data for ${column}`);
+    }
+    return rows;
+  }, log);
 }
 
 async function loadGeoAdmin1(path: string, refreshRaw: boolean, log?: ImportLogger): Promise<Map<string, string>> {
-  const rows = parseTsv(await fetchCachedText(path, URLS.geoAdmin1, refreshRaw, log));
-
-  return new Map(rows.map((row) => [row[0] ?? "", normalizeName(row[2] ?? row[1] ?? "")]));
+  return loadCachedText(path, URLS.geoAdmin1, refreshRaw, (text) => {
+    const rows = parseTsv(text).filter((row) => row.length >= 4);
+    if (rows.length === 0) {
+      throw new Error("GeoNames admin1 contains no regions");
+    }
+    return new Map(rows.map((row) => [row[0] ?? "", normalizeName(row[2] ?? row[1] ?? "")]));
+  }, log);
 }
 
-async function loadGeoCities(path: string, refreshRaw: boolean, log?: ImportLogger): Promise<GeoCity[]> {
-  const rows = parseTsv(await fetchCachedZipText(path, URLS.geoCities, "cities5000.txt", refreshRaw, log));
-
+function parseGeoCities(text: string): GeoCity[] {
+  const rows = parseTsv(text).filter((row) => row.length >= 19);
+  if (rows.length === 0) {
+    throw new Error("GeoNames cities5000 contains no cities");
+  }
   return rows.map((row) => ({
     admin1Code: row[10] ?? "",
     countryCode: row[8] ?? "",
@@ -198,29 +188,6 @@ async function loadManual(manualDir: string): Promise<ManualOverrides> {
   ]);
 
   return { aircraftTypes, airports, countries, regions };
-}
-
-// World Bank API отдает [meta, rows]; rows извлекаются после валидации формы массива.
-async function loadWorldBankRows<TRow>(path: string, url: string, refreshRaw: boolean, log?: ImportLogger): Promise<TRow[]> {
-  const payload = await loadJsonArray<unknown>(path, url, refreshRaw, log);
-
-  return Array.isArray(payload[1]) ? (payload[1] as TRow[]) : [];
-}
-
-async function loadWorldBankCountries(path: string, refreshRaw: boolean, log?: ImportLogger): Promise<Map<string, WorldBankCountry>> {
-  const rows = await loadWorldBankRows<WorldBankCountry>(path, URLS.wbCountries, refreshRaw, log);
-
-  return new Map(rows.filter((row) => row.iso2Code).map((row) => [row.iso2Code ?? "", row]));
-}
-
-async function loadWorldBankValues(path: string, url: string, refreshRaw: boolean, log?: ImportLogger): Promise<Map<string, number>> {
-  const rows = await loadWorldBankRows<WorldBankValue>(path, url, refreshRaw, log);
-
-  return new Map(
-    rows
-      .filter((row) => row.countryiso3code && typeof row.value === "number")
-      .map((row) => [row.countryiso3code ?? "", row.value ?? 0]),
-  );
 }
 
 export function normalizeName(value: string): string {

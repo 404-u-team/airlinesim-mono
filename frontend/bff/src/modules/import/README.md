@@ -2,13 +2,7 @@
 
 Модуль `import` в BFF строит базовые world-data для AirlineSim и отправляет их в backend API. Это ETL-пайплайн: он не прокидывает CSV в backend напрямую, а собирает несколько открытых источников, нормализует данные, синтезирует игровые поля, валидирует результат, выполняет dry-run или импорт и сохраняет отчет с сопоставлением исходных ключей с backend ID.
 
-Для типов воздушных судов OpenSky Aircraft Metadata Database используется как
-внешний реальный источник идентичности и наблюдаемого флота по ICAO typecode.
-Статический список заранее созданных AircraftType не используется: импорт агрегирует
-OpenSky rows по ICAO typecode, фильтрует поддерживаемых производителей и оценивает
-игровые параметры по семейству модели. Wikipedia/Wikimedia summary используется для
-визуальных metadata (`characteristics.visual.imageUrl`, `pageUrl`, `source`), потому
-что backend `image_upload_id` сейчас является UUID-полем, а не URL-хранилищем.
+Типы самолётов строятся по данным OpenAP, а коды IATA берутся из OpenFlights. Изображения самолётов можно загрузить отдельной задачей в админке.
 
 ## Где находится код
 
@@ -16,7 +10,7 @@ OpenSky rows по ICAO typecode, фильтрует поддерживаемых
 - `cli.ts` - CLI-вход для dry-run и импорта.
 - `build/` - нормализация и синтез AircraftType, Country, Region и Airport.
   - `index.ts` - orchestration сборки dataset.
-  - `aircraftTypes.ts` - генерация реальных типов самолетов из OpenSky metadata, игровые поля эксплуатации и Wikipedia visual metadata.
+  - `aircraftTypes.ts` - сборка типов самолётов из OpenAP и OpenFlights, расчёт игровых параметров.
   - `countries.ts`, `regions.ts`, `airports.ts`, `runways.ts` - доменные этапы сборки.
   - `shared.ts`, `types.ts` - helpers и типы, относящиеся именно к build-слою.
 - `runtime/` - orchestration выполнения, storage и отчеты.
@@ -103,7 +97,7 @@ bun src/modules/import/cli.ts --refresh-raw
 bun src/modules/import/cli.ts --import
 ```
 
-`--fetch` и `--refresh-raw` скачивают raw-источники заново. Без этих флагов importer сначала пытается читать cached raw files.
+`--fetch` и `--refresh-raw` запрашивают свежие данные. Загрузчик повторяет запрос при сетевой ошибке, HTTP 408, 429 или 5xx. Если обновление не удалось, он использует пригодную копию из кэша и пишет предупреждение в журнал. При обычном импорте загрузчик сначала проверяет кэш.
 
 ## Env и авторизация
 
@@ -128,7 +122,7 @@ frontend/bff/data/import/world-data
 
 Структура:
 
-- `raw/` - cached raw sources: OurAirports CSV, REST Countries JSON, World Bank JSON, GeoNames TXT/ZIP.
+- `raw/` - кэш источников OurAirports, REST Countries, World Bank, GeoNames, OpenAP и OpenFlights. CSV из архива World Bank и TXT из архива GeoNames сохраняются в распакованном виде.
 - `manual/` - ручные overrides, отслеживаются git:
   - `aircraft-types.json`
   - `countries.json`
@@ -149,17 +143,18 @@ Importer использует:
   - `runways.csv`
   - `countries.csv`
   - `regions.csv`
-- REST Countries v3.1:
+- REST Countries v5 при заданном `REST_COUNTRIES_API_KEY`:
   - названия стран, ISO3, языки, площадь, fallback для населения, границы, признак landlocked.
+  - без ключа или при недоступности v5 и его кэша используется открытый набор `mledoze/countries`.
 - World Bank API v2:
-  - population `SP.POP.TOTL`
-  - GDP per capita `NY.GDP.PCAP.CD`
-  - tourism arrivals `ST.INT.ARVL`
-  - income level страны.
+  - население `SP.POP.TOTL`, ВВП на душу населения `NY.GDP.PCAP.CD` и число прибытий туристов `ST.INT.ARVL` берутся из официальных CSV-архивов. Для каждой страны используется последнее опубликованное значение.
+  - категории дохода берутся из справочника стран API.
+  - при недоступности источника используются кэш, включая старый JSON-кэш показателей, или игровые оценки с предупреждением.
 - GeoNames:
   - `cities5000.zip`
   - `admin1CodesASCII.txt`
   - распределение населения по городам и fallback для timezone.
+- OpenAP и OpenFlights поставляют характеристики типов самолётов, двигателей, модели расхода топлива и коды IATA.
 - Manual overrides:
   - игровые значения и исправления, которые нельзя надежно получить из открытых данных.
 
@@ -216,7 +211,7 @@ Importer использует:
 
 ## Сборка AircraftType
 
-Importer содержит tracked справочник реальных популярных типов самолетов: Airbus A220/A320/A321/A330/A350/A380, ATR 72, Boeing 737/777/787 и Embraer E190-E2. Базовые поля берутся из открыто известных характеристик самолетов и переводятся в backend payload:
+Importer строит справочник по файлам OpenAP и кодам OpenFlights. Характеристики самолётов используются для формирования полей backend:
 
 - `iata_code`, `icao_code`, `model_name`.
 - `max_planned_seat_capacity`, `max_range_km`, `cruising_speed_kph`, `min_runway_length_m`, `mtow_kg`.
@@ -224,7 +219,7 @@ Importer содержит tracked справочник реальных попу
 - эксплуатационные расходы и расход топлива.
 - `characteristics` как JSON-строка с range/runway/category классами.
 
-`manual/aircraft-types.json` может переопределять отдельные поля по ICAO или model name. Для Boeing, Airbus, Embraer и ATR BFF использует стабильные UUID производителей из backend seed. Если производителя нет в backend seed и `manufacturer_id` не задан manual override, тип самолёта будет отмечен как skipped и не отправится в backend, чтобы не нарушать обязательный FK `aircraft_type.manufacturer_id`.
+`manual/aircraft-types.json` может переопределять отдельные поля по ICAO или названию модели, включая `manufacturer_id`. Для Boeing, Airbus, Embraer и ATR BFF использует стабильные UUID производителей из backend seed.
 
 ## Выбор аэропортов
 

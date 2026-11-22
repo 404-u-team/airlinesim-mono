@@ -66,7 +66,6 @@ engine:
     "Boeing 737-800,738,B738",
     "ATR 72-600,AT7,AT76"
   ].join("\n"),
-  openapSynonyms: "",
   openapFuel: "",
   openapEngines: "",
   airports: [],

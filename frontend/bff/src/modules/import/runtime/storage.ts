@@ -1,7 +1,7 @@
 import type { ImportMapping, ImportReport } from "../shared/types";
 import { mkdir } from "node:fs/promises";
-import { inflateRawSync } from "node:zlib";
-import { errorDetails, type ImportLogger } from "./logger";
+
+export { fetchCachedText } from "./source-fetch";
 
 const DEFAULT_DATA_DIR = "data/import/world-data";
 
@@ -33,125 +33,6 @@ export async function ensureImportDirs(paths: ImportPaths): Promise<void> {
     mkdir(paths.reportsDir, { recursive: true }),
     mkdir(paths.stageDir, { recursive: true }),
   ]);
-}
-
-export async function fetchCachedText(
-  path: string,
-  url: string,
-  refreshRaw: boolean,
-  log?: ImportLogger,
-): Promise<string> {
-  if (!refreshRaw) {
-    const cached = await readTextIfExists(path);
-
-    if (cached != null) {
-      log?.({ details: { path }, level: "info", message: "Using cached source", operation: "source.cache", stage: "building" });
-      return cached;
-    }
-  }
-
-  const response = await fetchSource(url, path, log);
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${String(response.status)}`);
-  }
-
-  const text = await response.text();
-  await Bun.write(path, text);
-
-  return text;
-}
-
-export async function fetchCachedZipText(
-  path: string,
-  url: string,
-  fileName: string,
-  refreshRaw: boolean,
-  log?: ImportLogger,
-): Promise<string> {
-  const textPath = path.replace(/\.zip$/u, ".txt");
-
-  if (!refreshRaw) {
-    const cached = await readTextIfExists(textPath);
-
-    if (cached != null) {
-      log?.({ details: { path: textPath }, level: "info", message: "Using cached source", operation: "source.cache", stage: "building" });
-      return cached;
-    }
-  }
-
-  const response = await fetchSource(url, path, log);
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${String(response.status)}`);
-  }
-
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  await Bun.write(path, bytes);
-
-  const text = extractZipText(bytes, fileName);
-  await Bun.write(textPath, text);
-
-  return text;
-}
-
-async function fetchSource(url: string, path: string, log?: ImportLogger): Promise<Response> {
-  const startedAt = performance.now();
-  log?.({ details: { path, url }, level: "info", message: "Downloading import source", operation: "source.fetch", stage: "building" });
-  try {
-    const response = await fetch(url);
-    log?.({
-      details: { durationMs: Math.round(performance.now() - startedAt), path, status: response.status, url },
-      level: response.ok ? "info" : "error",
-      message: response.ok ? "Import source downloaded" : "Import source request failed",
-      operation: "source.fetch",
-      stage: "building",
-    });
-    return response;
-  } catch (error) {
-    log?.({
-      details: { ...errorDetails(error), durationMs: Math.round(performance.now() - startedAt), path, url },
-      level: "error",
-      message: "Import source download failed",
-      operation: "source.fetch",
-      stage: "building",
-    });
-    throw error;
-  }
-}
-
-export async function loadJson<TValue>(path: string, url: string, refreshRaw: boolean, log?: ImportLogger): Promise<TValue> {
-  const text = await fetchCachedText(path, url, refreshRaw, log);
-
-  return JSON.parse(text) as TValue;
-}
-
-// Внешние JSON API (REST Countries, World Bank) могут вернуть объект ошибки с
-// HTTP 200; такой ответ попадает в кэш и ломает все последующие импорты.
-// Поэтому при невалидной форме данных кэш игнорируется и источник скачивается заново.
-export async function loadJsonArray<TItem>(path: string, url: string, refreshRaw: boolean, log?: ImportLogger): Promise<TItem[]> {
-  const payload = await loadJson<unknown>(path, url, refreshRaw, log);
-
-  if (Array.isArray(payload)) {
-    return payload as TItem[];
-  }
-
-  if (!refreshRaw) {
-    log?.({
-      details: { path, payloadPreview: JSON.stringify(payload).slice(0, 200), url },
-      level: "warning",
-      message: "Cached source is not a JSON array, refetching",
-      operation: "source.fetch",
-      stage: "building",
-    });
-    const refetched = await loadJson<unknown>(path, url, true, log);
-
-    if (Array.isArray(refetched)) {
-      return refetched as TItem[];
-    }
-  }
-
-  throw new Error(`Source ${url} returned non-array JSON: ${JSON.stringify(payload).slice(0, 200)}`);
 }
 
 export async function readJsonFile<TValue>(path: string, fallback: TValue): Promise<TValue> {
@@ -205,55 +86,8 @@ export function parseTsv(text: string): string[][] {
   return parseDelimited(text, "\t");
 }
 
-function extractZipText(bytes: Uint8Array, fileName: string): string {
-  const entry = findZipEntry(bytes, fileName);
-  const content = bytes.slice(entry.offset, entry.offset + entry.compressedSize);
-  const inflated = inflateRawSync(content);
-
-  return new TextDecoder().decode(inflated);
-}
-
 function compareMappings(left: ImportMapping, right: ImportMapping): number {
   return `${left.entityType}:${left.sourceKey}`.localeCompare(`${right.entityType}:${right.sourceKey}`);
-}
-
-function findZipEntry(bytes: Uint8Array, fileName: string): { compressedSize: number; offset: number } {
-  const centralDirectoryOffset = findCentralDirectoryOffset(bytes);
-  let offset = centralDirectoryOffset;
-
-  while (offset < bytes.length - 46 && readUint32(bytes, offset) === 0x02014b50) {
-    const compressedSize = readUint32(bytes, offset + 20);
-    const nameLength = readUint16(bytes, offset + 28);
-    const extraLength = readUint16(bytes, offset + 30);
-    const commentLength = readUint16(bytes, offset + 32);
-    const localHeaderOffset = readUint32(bytes, offset + 42);
-    const nameStart = offset + 46;
-    const name = new TextDecoder().decode(bytes.slice(nameStart, nameStart + nameLength));
-
-    if (name === fileName) {
-      const localNameLength = readUint16(bytes, localHeaderOffset + 26);
-      const localExtraLength = readUint16(bytes, localHeaderOffset + 28);
-
-      return {
-        compressedSize,
-        offset: localHeaderOffset + 30 + localNameLength + localExtraLength,
-      };
-    }
-
-    offset = nameStart + nameLength + extraLength + commentLength;
-  }
-
-  throw new Error(`Could not find ${fileName} in zip file`);
-}
-
-function findCentralDirectoryOffset(bytes: Uint8Array): number {
-  for (let offset = bytes.length - 22; offset >= 0; offset -= 1) {
-    if (readUint32(bytes, offset) === 0x06054b50) {
-      return readUint32(bytes, offset + 16);
-    }
-  }
-
-  throw new Error("Could not find zip central directory");
 }
 
 function parseDelimited(text: string, delimiter: string): string[][] {
@@ -295,19 +129,6 @@ function parseDelimited(text: string, delimiter: string): string[][] {
   }
 
   return rows;
-}
-
-function readUint16(bytes: Uint8Array, offset: number): number {
-  return bytes[offset] ?? 0 | ((bytes[offset + 1] ?? 0) << 8);
-}
-
-function readUint32(bytes: Uint8Array, offset: number): number {
-  return (
-    (bytes[offset] ?? 0) |
-    ((bytes[offset + 1] ?? 0) << 8) |
-    ((bytes[offset + 2] ?? 0) << 16) |
-    ((bytes[offset + 3] ?? 0) << 24)
-  ) >>> 0;
 }
 
 async function readTextIfExists(path: string): Promise<null | string> {

@@ -11,7 +11,7 @@ import { clean } from "./shared";
 import { loadRawSources } from "../runtime/sources";
 
 export async function buildWorldData(options: BuildOptions, issues: SourceIssueSink, log?: ImportLogger): Promise<WorldData> {
-  const raw = await loadRawSources(options, log);
+  const raw = await loadRawSources(options, issues, log);
   const context = { issues, raw };
   const aircraftTypes = await buildAircraftTypes(issues, raw.manual.aircraftTypes, raw, options);
   const runways = buildRunwayMap(raw, issues);
