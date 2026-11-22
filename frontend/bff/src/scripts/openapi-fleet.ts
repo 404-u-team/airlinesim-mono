@@ -1,27 +1,4 @@
-type JsonSchema = {
-  $ref?: string;
-  type?: string;
-};
-
-type SwaggerDocument = {
-  definitions?: Record<string, JsonSchema>;
-  paths?: Record<string, Record<string, SwaggerOperation>>;
-};
-
-type SwaggerOperation = {
-  description?: string;
-  parameters?: SwaggerParameter[];
-  produces?: string[];
-  responses?: Record<string, { schema?: JsonSchema }>;
-};
-
-type SwaggerParameter = {
-  description?: string;
-  in: "query";
-  name: string;
-  required: boolean;
-  type: "boolean" | "number" | "string";
-};
+import type { JsonSchema, SwaggerDocument, SwaggerOperation, SwaggerQueryParameter } from "./openapi-types";
 
 export function addFleetOverlay(swagger: SwaggerDocument): void {
   swagger.definitions ??= {};
@@ -127,7 +104,7 @@ function objectSchema(): JsonSchema {
   };
 }
 
-function queryParameter(name: string, description: string, required = false): SwaggerParameter {
+function queryParameter(name: string, description: string, required = false): SwaggerQueryParameter {
   return {
     description,
     in: "query",

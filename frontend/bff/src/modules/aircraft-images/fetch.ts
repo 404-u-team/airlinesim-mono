@@ -1,5 +1,6 @@
 import type { AircraftVisualImage } from "./storage";
 
+import { fetchExternal } from "../../external-http";
 import { searchOpenverseCandidates } from "./openverse";
 
 // Resolves a representative photo for an aircraft type.
@@ -191,7 +192,7 @@ async function fetchWikimediaJson<TValue>(url: string, signal?: AbortSignal): Pr
     await waitForWikimediaThrottle();
 
     // eslint-disable-next-line no-await-in-loop
-    const response = await fetch(url, {
+    const response = await fetchExternal(url, {
       headers: {
         Accept: "application/json",
         "Api-User-Agent": WIKIMEDIA_USER_AGENT,

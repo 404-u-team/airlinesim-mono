@@ -5,6 +5,7 @@ import { BackendHttpError } from "../../backend-http";
 import { jsonResponse } from "../../http";
 import { handleAdminAirlinesRequest } from "./airlines";
 import { listAdminAudit } from "./audit";
+import { handleExternalProxySettings } from "./external-proxy";
 import { buildWorldReadiness } from "./readiness";
 import { handleAdminWorldRequest } from "./world";
 
@@ -52,6 +53,9 @@ async function routeAdminRequest(request: Request, url: URL, config: BffConfig):
   }
   if (request.method === "GET" && url.pathname === "/admin/audit") {
     return jsonResponse({ entries: await listAdminAudit() });
+  }
+  if (url.pathname === "/admin/settings/external-proxy") {
+    return handleExternalProxySettings(request);
   }
   if (url.pathname.startsWith("/admin/import/")) {
     return null;

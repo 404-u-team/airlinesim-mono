@@ -1,5 +1,7 @@
 import type { AircraftVisualImage } from "./storage";
 
+import { fetchExternal } from "../../external-http";
+
 // Openverse (openverse.org) image search — a secondary source of aircraft type
 // photos that aggregates openly-licensed images from Flickr, Wikimedia Commons
 // and others behind a single API. Used alongside the Wikipedia/Wikidata lookups
@@ -42,7 +44,7 @@ export async function searchOpenverseCandidates(query: string, signal?: AbortSig
     url.searchParams.set("mature", "false");
 
     const token = await getOpenverseToken();
-    const response = await fetch(url, {
+    const response = await fetchExternal(url, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       signal,
     });
@@ -86,7 +88,7 @@ async function getOpenverseToken(): Promise<null | string> {
       client_secret: clientSecret,
       grant_type: "client_credentials",
     });
-    const response = await fetch(`${API_BASE}/auth_tokens/token/`, {
+    const response = await fetchExternal(`${API_BASE}/auth_tokens/token/`, {
       body,
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       method: "POST",

@@ -1,6 +1,8 @@
 import type { AnchorRecord } from "./anchors";
 import type { CalibrationLogger } from "./calibration-runner";
 
+import { fetchExternal } from "../../external-http";
+
 // Live anchor source: Eurostat `avia_par_<cc>` (air passenger transport by pairs of
 // airports), PAS_BRD passengers carried, latest pre-pandemic full year. JSON-stat
 // format. Best-effort and defensive — any failure is swallowed so calibration falls
@@ -78,7 +80,7 @@ async function fetchCountry(
   });
   try {
     const url = `${EUROSTAT_BASE}/avia_par_${country}?format=JSON&unit=PAS&tra_meas=PAS_BRD&freq=A&time=${EUROSTAT_YEAR}`;
-    const response = await fetch(url);
+    const response = await fetchExternal(url);
     if (!response.ok) {
       log?.({
         level: "warning",

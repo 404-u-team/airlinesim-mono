@@ -3641,6 +3641,76 @@
         }
       }
     },
+    "/admin/settings/external-proxy": {
+      "get": {
+        "description": "Returns the external source proxy origin without credentials. Requires world.manage.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "schema": {
+              "properties": {
+                "origin": {
+                  "type": "string",
+                  "x-nullable": true
+                }
+              },
+              "required": [
+                "origin"
+              ],
+              "type": "object"
+            }
+          },
+          "401": {},
+          "403": {}
+        }
+      },
+      "put": {
+        "description": "Sets the HTTP or HTTPS proxy for external downloads. Send null to remove it. Requires world.manage.",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "settings",
+            "required": true,
+            "schema": {
+              "properties": {
+                "proxyUrl": {
+                  "type": "string",
+                  "x-nullable": true
+                }
+              },
+              "required": [
+                "proxyUrl"
+              ],
+              "type": "object"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "schema": {
+              "properties": {
+                "origin": {
+                  "type": "string",
+                  "x-nullable": true
+                }
+              },
+              "required": [
+                "origin"
+              ],
+              "type": "object"
+            }
+          },
+          "400": {},
+          "401": {},
+          "403": {}
+        }
+      }
+    },
     "/admin/world/airports": {
       "get": {
         "description": "Lists protected admin world resource airports. Requires world.manage.",

@@ -9,6 +9,7 @@ import type {
 } from "../shared/types";
 import type { RawSources } from "../runtime/sources";
 
+import { fetchExternal } from "../../../external-http";
 import {
   getImportPaths,
   readJsonFile,
@@ -906,7 +907,7 @@ async function fetchCachedWikimediaText(
 
   await limitWikimediaRate();
 
-  const response = await fetch(url, {
+  const response = await fetchExternal(url, {
     headers: { "User-Agent": WIKIMEDIA_USER_AGENT },
   });
 

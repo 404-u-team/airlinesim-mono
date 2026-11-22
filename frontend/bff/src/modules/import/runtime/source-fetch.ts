@@ -1,5 +1,6 @@
 import { rename, rm } from "node:fs/promises";
 
+import { fetchExternal } from "../../../external-http";
 import { errorDetails, type ImportLogger } from "./logger";
 
 const MAX_ATTEMPTS = 3;
@@ -19,7 +20,7 @@ export async function fetchSource<T>(
     let response: Response | undefined;
 
     try {
-      response = await fetch(url, { headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+      response = await fetchExternal(url, { headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
       if (!response.ok) {
         await response.body?.cancel();
         throw new Error(`Failed to fetch ${url}: ${String(response.status)}`);

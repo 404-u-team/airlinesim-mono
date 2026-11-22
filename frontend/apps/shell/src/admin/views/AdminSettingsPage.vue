@@ -4,6 +4,7 @@ import type { Locale } from "@airlinesim/i18n";
 import { computed } from "vue";
 
 import AppPreferences from "../../components/AppPreferences.vue";
+import AdminExternalProxySettings from "../components/AdminExternalProxySettings.vue";
 import { adminText, type AdminTextKey } from "../i18n";
 
 type AppTheme = "dark" | "light";
@@ -33,7 +34,7 @@ const at = computed(() => (key: AdminTextKey): string =>
       </h1>
     </header>
 
-    <div class="max-w-4xl">
+    <div class="max-w-4xl space-y-6">
       <AppPreferences
         :app-locale="props.appLocale"
         :app-theme="props.appTheme"
@@ -41,6 +42,7 @@ const at = computed(() => (key: AdminTextKey): string =>
         @set-locale="emit('set-locale', $event)"
         @set-theme="emit('set-theme', $event)"
       />
+      <AdminExternalProxySettings :app-locale="props.appLocale" />
     </div>
   </div>
 </template>

@@ -45,6 +45,12 @@ BFF проверяет токен обычного пользователя из
 
 Все browser-facing admin/import endpoints требуют пользовательский `Authorization` token и capability `world.manage`. Service admin credentials используются только внутри реального import pipeline и никогда не возвращаются клиенту.
 
+## Прокси для внешних источников
+
+В **Админка → Настройки → Прокси для внешних источников** можно указать HTTP- или HTTPS-прокси для скачивания справочников мира, изображений самолётов и данных Eurostat. Допускается Basic-аутентификация в URL, например `http://username:password@proxy.example:3128`. Изменение сохраняется в SQLite BFF и применяется к следующим внешним запросам без перезапуска. Доступ к backend API использует свою обычную конфигурацию.
+
+`GET /admin/settings/external-proxy` возвращает `{ "origin": "http://proxy.example:3128" }` без учётных данных. `PUT` принимает `proxyUrl`, а значение `null` удаляет настройку и возвращает обычный сетевой маршрут BFF. Оба запроса требуют `world.manage`.
+
 ## Модули
 
 ### Общий backend HTTP

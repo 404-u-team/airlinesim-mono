@@ -3,6 +3,8 @@ import { unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import sharp from "sharp";
 
+import { fetchExternal } from "../../external-http";
+
 // On-disk cache of optimized aircraft photos. Remote source images (Wikipedia /
 // Wikimedia Commons) are downloaded once, re-encoded to a small WebP, and stored
 // under data/aircraft-images/<ICAO>.webp. The BFF then serves these bytes itself
@@ -35,7 +37,7 @@ export async function cacheAircraftImage(icaoCode: string, sourceUrl: string): P
 
   let input: Buffer;
   try {
-    const response = await fetch(sourceUrl, {
+    const response = await fetchExternal(sourceUrl, {
       headers: { "User-Agent": FETCH_USER_AGENT },
       redirect: "follow",
       signal: controller.signal,

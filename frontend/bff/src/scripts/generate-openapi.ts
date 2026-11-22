@@ -1,41 +1,7 @@
 /* eslint-disable max-lines */
+import type { JsonSchema, SwaggerDocument, SwaggerOperation, SwaggerParameter } from "./openapi-types";
+
 import { addFleetOverlay } from "./openapi-fleet";
-
-type JsonSchema = {
-  $ref?: string;
-  items?: JsonSchema;
-  properties?: Record<string, JsonSchema>;
-  type?: string;
-};
-
-type SwaggerDocument = {
-  definitions?: Record<string, JsonSchema>;
-  host?: string;
-  info?: {
-    description?: string;
-    title?: string;
-    version?: string;
-  };
-  paths?: Record<string, Record<string, SwaggerOperation>>;
-  schemes?: string[];
-  swagger: string;
-};
-
-type SwaggerOperation = {
-  description?: string;
-  parameters?: SwaggerParameter[];
-  produces?: string[];
-  responses?: Record<string, { schema?: JsonSchema }>;
-};
-
-type SwaggerParameter = {
-  description?: string;
-  enum?: string[];
-  in: "query";
-  name: string;
-  required: boolean;
-  type: "boolean" | "number" | "string";
-};
 
 const cachedListPaths = new Set([
   "/aircraft-types",
@@ -135,7 +101,35 @@ function addEventsFacilitiesAdminOverlay(swagger: SwaggerDocument): void {
       responses: { "202": {}, "401": {}, "403": {}, "500": {} },
     },
   };
+  swagger.paths["/admin/settings/external-proxy"] = externalProxyOperations();
   addAdminWorldOverlay(swagger);
+}
+
+function externalProxyOperations(): Record<string, SwaggerOperation> {
+  const nullableString: JsonSchema = { type: "string", "x-nullable": true };
+  const schema: JsonSchema = {
+    properties: { origin: nullableString },
+    required: ["origin"],
+    type: "object",
+  };
+  return {
+    get: {
+      description: "Returns the external source proxy origin without credentials. Requires world.manage.",
+      produces: ["application/json"],
+      responses: { "200": { schema }, "401": {}, "403": {} },
+    },
+    put: {
+      description: "Sets the HTTP or HTTPS proxy for external downloads. Send null to remove it. Requires world.manage.",
+      parameters: [{
+        in: "body",
+        name: "settings",
+        required: true,
+        schema: { properties: { proxyUrl: nullableString }, required: ["proxyUrl"], type: "object" },
+      }],
+      produces: ["application/json"],
+      responses: { "200": { schema }, "400": {}, "401": {}, "403": {} },
+    },
+  };
 }
 
 function addAdminWorldOverlay(swagger: SwaggerDocument): void {
